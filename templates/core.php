@@ -4011,6 +4011,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-text-field>
 					</v-col>
 					</v-row>
+					<!-- Label facet -->
+					<v-row v-if="labelFacets.length" no-gutters class="px-1 pb-1">
+						<v-col cols="12" class="d-flex flex-wrap align-center ga-2">
+							<span class="text-caption text-medium-emphasis mr-1">Labels:</span>
+							<v-chip
+								v-for="facet in labelFacets"
+								:key="facet.type"
+								size="small"
+								label
+								:variant="selected_label_types.includes(facet.type) ? 'flat' : 'tonal'"
+								:color="facet.color"
+								@click="toggleLabelFacet(facet.type)"
+							>
+								<v-icon v-if="facet.icon" :icon="facet.icon" size="x-small" start></v-icon>
+								{{ facet.text }}
+								<span class="ml-1 font-weight-bold">{{ facet.count }}</span>
+							</v-chip>
+						</v-col>
+					</v-row>
 					<!-- Version and Status Filters -->
 					<v-card color="transparent" class="pt-4" flat v-if="site_filter_version || site_filter_status">
 					<v-row>
@@ -4224,6 +4243,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<h3 class="text-subtitle-2 font-weight-black">
 													{{ item.raw.name }}
 												</h3>
+												<div v-if="item.raw.labels && item.raw.labels.length" class="d-flex flex-wrap align-center ga-1 ml-3" @click.stop.prevent>
+													<v-tooltip v-for="label in item.raw.labels" :key="label.id" location="top" :text="label.evidence || label.text">
+														<template v-slot:activator="{ props }">
+															<v-chip v-bind="props" size="x-small" label :color="label.color || 'grey'" variant="flat" class="font-weight-bold">
+																<v-icon v-if="label.icon" :icon="label.icon" size="x-small" start></v-icon>
+																{{ label.text }}
+															</v-chip>
+														</template>
+													</v-tooltip>
+												</div>
 												<v-spacer></v-spacer>
 											</a>
 
@@ -4494,6 +4523,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								>
 									{{ item.current_env.environment.toUpperCase() }}
 								</v-chip>
+								<v-tooltip v-for="label in (item.labels || [])" :key="label.id" location="top" :text="label.evidence || label.text">
+									<template v-slot:activator="{ props }">
+										<v-chip v-bind="props" size="x-small" label :color="label.color || 'grey'" variant="flat" class="ml-1 font-weight-bold" @click.stop>
+											<v-icon v-if="label.icon" :icon="label.icon" size="x-small" start></v-icon>
+											{{ label.text }}
+										</v-chip>
+									</template>
+								</v-tooltip>
 							</div>
 							<div class="text-caption text-medium-emphasis" v-if="item.current_env.home_url">
 								{{ item.current_env.home_url }}
@@ -4566,14 +4603,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<v-fade-transition>
 													<div v-if="!isHovering" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.8)); height: 100%;" class="d-flex align-end justify-space-between pa-2">
 														<div class="body-1 text-white font-weight-bold text-truncate">{{ item.raw.name }}</div>
-														<v-chip 
-															size="x-small" 
-															label 
-															class="font-weight-black mb-1 ml-2" 
-															:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
-														>
-															{{ item.raw.current_env.environment.toUpperCase() }}
-														</v-chip>
+														<div class="d-flex align-center flex-wrap justify-end ga-1">
+															<v-tooltip v-for="label in (item.raw.labels || [])" :key="label.id" location="top" :text="label.text + (label.evidence ? ' — ' + label.evidence : '')">
+																<template v-slot:activator="{ props }">
+																	<v-chip v-bind="props" size="x-small" label :color="label.color || 'grey'" variant="flat" class="mb-1 px-1">
+																		<v-icon :icon="label.icon || 'mdi-tag'" size="x-small"></v-icon>
+																	</v-chip>
+																</template>
+															</v-tooltip>
+															<v-chip
+																size="x-small"
+																label
+																class="font-weight-black mb-1 ml-2"
+																:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+															>
+																{{ item.raw.current_env.environment.toUpperCase() }}
+															</v-chip>
+														</div>
 													</div>
 												</v-fade-transition>
 												<template v-slot:placeholder>
@@ -13628,6 +13674,7 @@ const app = createApp({
 		search: null,
 		users_search: "",
 		sites_selected: [],
+		selected_label_types: [],
 		filter_logic: "and",
 		filter_version_logic: "and",
 		filter_status_logic: "and",
@@ -14271,7 +14318,21 @@ const app = createApp({
 			return this.applied_core_filters.length > 0;
 		},
 		isAnySiteFilterActive() {
-			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied || this.backupModeFilter !== null;
+			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied || this.backupModeFilter !== null || this.selected_label_types.length > 0;
+		},
+		labelFacets() {
+			// Aggregate distinct label types across all sites with counts.
+			const byType = {};
+			this.sites.filter(site => site.filtered).forEach(site => {
+				(site.labels || []).forEach(label => {
+					if (!label.type) return;
+					if (!byType[label.type]) {
+						byType[label.type] = { type: label.type, text: label.type, color: label.color || 'grey', icon: label.icon || 'mdi-tag', count: 0 };
+					}
+					byType[label.type].count++;
+				});
+			});
+			return Object.values(byType).sort((a, b) => b.count - a.count);
 		},
 		combinedAppliedFilters() {
 			return [...this.applied_theme_filters, ...this.applied_plugin_filters];
@@ -14337,9 +14398,14 @@ const app = createApp({
 				filtered = filtered.filter(site => site.account_id === "" || site.account_id === "0");
 			}
 
+			// Apply Label facet: keep sites carrying at least one selected label type.
+			if (this.selected_label_types.length > 0) {
+				filtered = filtered.filter(site => (site.labels || []).some(label => this.selected_label_types.includes(label.type)));
+			}
+
 			// Apply Client-Side filtering based on environments
 			// A site is visible if AT LEAST ONE of its environments matches the criteria.
-			
+
 			// Optimizations:
 			// If no search and no filters, show everything returned by base logic
 			if (!this.search && this.combinedAppliedFilters.length === 0) {
@@ -25791,6 +25857,7 @@ const app = createApp({
 			this.applied_core_filters = [];
 			this.filter_version_mode = "include";
 			this.filter_status_mode = "include";
+			this.selected_label_types = [];
 			this.filtered_environment_ids = []; // Clear server results
 			
 			// Manually reset all sites to be visible.
@@ -25803,6 +25870,14 @@ const app = createApp({
 		},
 		toggleUnassignedFilter() {
 			this.isUnassignedFilterActive = !this.isUnassignedFilterActive;
+		},
+		toggleLabelFacet(type) {
+			const index = this.selected_label_types.indexOf(type);
+			if (index === -1) {
+				this.selected_label_types.push(type);
+			} else {
+				this.selected_label_types.splice(index, 1);
+			}
 		},
 		applySiteFilters() {
 			this.sites.forEach(site => {
