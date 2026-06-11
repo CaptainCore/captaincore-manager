@@ -8926,6 +8926,100 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</a>
 								</div>
 							</div>
+							
+							<!-- Update-before-audit queue -->
+							<v-divider class="my-5"></v-divider>
+							<div class="d-flex align-center mb-1 flex-wrap" style="gap:8px;">
+								<div class="text-subtitle-1 font-weight-medium">Update before audit</div>
+								<v-chip v-if="update_queue.needs_update" size="small" color="warning" variant="tonal">{{ update_queue.needs_update }} need updating</v-chip>
+								<v-spacer></v-spacer>
+								<v-text-field v-model="update_queue_search" density="compact" hide-details variant="outlined" placeholder="Search" prepend-inner-icon="mdi-magnify" style="max-width:200px;"></v-text-field>
+								<v-btn size="small" variant="tonal" :loading="update_queue_loading" prepend-icon="mdi-refresh" @click="fetchUpdateQueue()">Refresh</v-btn>
+							</div>
+							<div class="text-caption text-medium-emphasis mb-2">
+								Out-of-date and unaudited plugins/themes. Steering drifted sites clears their stale builds from the audit queue. wp.org components show the published latest; others show the newest build already in the fleet. Rebuilt nightly by <code>wp captaincore update-queue</code>.
+							</div>
+							<v-alert v-if="update_queue.not_built" type="info" variant="tonal" density="compact" class="mb-3">
+								The scheduled refresh hasn't run yet. Run <code>wp captaincore update-queue</code> (or wait for the nightly cron) to populate this list.
+							</v-alert>
+							<div class="d-flex align-center mb-2 flex-wrap" style="gap:16px;">
+								<v-switch v-model="update_queue_needs_only" color="primary" density="compact" hide-details label="Needs update only"></v-switch>
+								<v-btn-toggle v-model="update_queue_type" density="compact" variant="outlined" divided>
+									<v-btn value="plugin" size="small">Plugins</v-btn>
+									<v-btn value="theme" size="small">Themes</v-btn>
+								</v-btn-toggle>
+								<v-btn-toggle v-model="update_queue_source" density="compact" variant="outlined" divided>
+									<v-btn value="wp.org" size="small">wp.org</v-btn>
+									<v-btn value="drift" size="small">drift</v-btn>
+								</v-btn-toggle>
+								<span v-if="update_queue.generated_at" class="text-caption text-medium-emphasis">Updated {{ new Date(update_queue.generated_at).toLocaleString() }}</span>
+							</div>
+							<v-data-table
+								:loading="update_queue_loading"
+								:headers="[
+									{ title: 'Component', key: 'title' },
+									{ title: 'Type', key: 'type', width: '90px' },
+									{ title: 'Installed → Update to', key: 'update_to', sortable: false },
+									{ title: 'Source', key: 'update_source', align: 'center', width: '90px' },
+									{ title: 'Sites', key: 'sites', align: 'center', width: '110px' },
+									{ title: 'Status', key: 'status', align: 'center', sortable: false },
+									{ title: '', key: 'actions', align: 'end', width: '160px', sortable: false }
+								]"
+								:items="filteredUpdateQueue()"
+								:items-per-page="25"
+								density="compact"
+								item-value="slug"
+							>
+								<template v-slot:item.title="{ item }">
+									<div class="font-weight-medium">{{ item.title }}</div>
+									<div class="text-caption text-medium-emphasis" style="font-family:monospace;">{{ item.slug }}</div>
+								</template>
+								<template v-slot:item.type="{ item }">
+									<v-chip size="x-small" variant="tonal">{{ item.type }}</v-chip>
+								</template>
+								<template v-slot:item.update_to="{ item }">
+									<span style="font-family:monospace;">{{ item.installed }}</span>
+									<template v-if="item.needs_update">
+										<v-icon size="x-small" class="mx-1">mdi-arrow-right</v-icon>
+										<span style="font-family:monospace;" class="font-weight-medium">{{ item.update_to }}</span>
+										<v-chip v-if="!item.steer_reaches" size="x-small" color="info" variant="tonal" class="ml-1">wp.org {{ item.wporg_latest }}</v-chip>
+									</template>
+									<span v-else class="text-caption text-medium-emphasis ml-1">on latest</span>
+								</template>
+								<template v-slot:item.update_source="{ item }">
+									<v-chip size="x-small" :color="item.update_source === 'wp.org' ? 'primary' : 'grey'" variant="tonal">{{ item.update_source }}</v-chip>
+								</template>
+								<template v-slot:item.sites="{ item }">
+									<span :class="item.sites_on_target < item.sites ? 'text-warning' : ''">{{ item.sites_on_target }}/{{ item.sites }}</span>
+								</template>
+								<template v-slot:item.status="{ item }">
+									<v-chip v-if="item.latest_audited" size="x-small" color="success" variant="tonal">latest audited</v-chip>
+									<v-chip v-else size="x-small" color="warning" variant="tonal">needs audit</v-chip>
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<v-btn v-if="item.needs_update" size="small" variant="tonal" color="primary" :loading="update_queue_running[item.type + '|' + item.slug]" @click="runUpdate(item)">Steer →{{ item.steer_to }}</v-btn>
+								</template>
+								<template v-slot:no-data>
+									<div class="py-6 text-medium-emphasis">Nothing to update — every surfaced component is on its latest build.</div>
+								</template>
+							</v-data-table>
+							<v-dialog v-model="update_queue_run_dialog.show" max-width="520">
+								<v-card v-if="update_queue_run_dialog.item">
+									<v-card-title class="text-h6">Steer {{ update_queue_run_dialog.item.slug }}</v-card-title>
+									<v-card-text>
+										Update the <strong>{{ update_queue_run_dialog.item.sites - update_queue_run_dialog.item.sites_on_target }}</strong> drifted site(s) to <strong>{{ update_queue_run_dialog.item.steer_to }}</strong> via
+										<div class="mt-1" style="font-family:monospace;font-size:12px;">captaincore drift --steer --{{ update_queue_run_dialog.item.type }} {{ update_queue_run_dialog.item.slug }} --force</div>
+										<v-alert v-if="!update_queue_run_dialog.item.steer_reaches" type="info" variant="tonal" density="compact" class="mt-3">
+											wp.org has {{ update_queue_run_dialog.item.wporg_latest }}, newer than any fleet site. Steer converges to the newest in-fleet build ({{ update_queue_run_dialog.item.steer_to }}); the wp.org release lands via the normal per-site update cycle.
+										</v-alert>
+									</v-card-text>
+									<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn variant="text" @click="update_queue_run_dialog.show = false">Cancel</v-btn>
+										<v-btn color="primary" variant="flat" :loading="update_queue_run_dialog.running" @click="confirmRunUpdate()">Steer now</v-btn>
+									</v-card-actions>
+								</v-card>
+							</v-dialog>
 						</v-card-text>
 					</v-window-item>
 					<v-window-item value="checksum-failures" :transition="false" :reverse-transition="false">
@@ -13140,6 +13234,14 @@ const app = createApp({
 		security_threats_loading: false,
 		security_coverage: null,
 		security_coverage_loading: false,
+		update_queue: { items: [], generated_at: null, needs_update: 0, count: 0, not_built: false },
+		update_queue_loading: false,
+		update_queue_needs_only: true,
+		update_queue_type: null,
+		update_queue_source: null,
+		update_queue_search: "",
+		update_queue_running: {},
+		update_queue_run_dialog: { show: false, item: null, running: false },
 		security_threat_dialog: { show: false, threat: null },
 		audit_coverage_dialog: { show: false, loading: false, environment_id: null, environment_name: "", components: [], grouped: {}, summary: null },
 		audit_findings_dialog: { show: false, loading: false, hash: "", detail: null },
@@ -14938,6 +15040,7 @@ const app = createApp({
 				this.fetchSecurityThreats();
 				this.fetchSecurityPatches();
 				this.fetchSecurityCoverage();
+				this.fetchUpdateQueue();
 				this.fetchAuditQueue();
 				this.loading_page = false;
 				this.selected_nav = "";
@@ -17826,6 +17929,58 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.security_coverage_loading = false;
+			});
+		},
+		fetchUpdateQueue() {
+			this.update_queue_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/update-queue', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.update_queue = response.data;
+				this.update_queue_loading = false;
+			})
+			.catch(error => {
+				this.update_queue_loading = false;
+			});
+		},
+		filteredUpdateQueue() {
+			let items = this.update_queue.items || [];
+			if (this.update_queue_needs_only) { items = items.filter(i => i.needs_update); }
+			if (this.update_queue_type) { items = items.filter(i => i.type === this.update_queue_type); }
+			if (this.update_queue_source) { items = items.filter(i => i.update_source === this.update_queue_source); }
+			if (this.update_queue_search) {
+				const q = this.update_queue_search.toLowerCase();
+				items = items.filter(i => (i.slug + ' ' + (i.title || '')).toLowerCase().includes(q));
+			}
+			return items;
+		},
+		runUpdate(item) {
+			this.update_queue_run_dialog.item = item;
+			this.update_queue_run_dialog.running = false;
+			this.update_queue_run_dialog.show = true;
+		},
+		confirmRunUpdate() {
+			const item = this.update_queue_run_dialog.item;
+			if (!item) { return; }
+			const key = item.type + '|' + item.slug;
+			this.update_queue_run_dialog.running = true;
+			axios.post(
+			'/wp-json/captaincore/v1/update-queue/run',
+			{ slug: item.slug, type: item.type, target: item.steer_to },
+			{ headers: {'X-WP-Nonce':this.wp_nonce} })
+			.then(response => {
+				this.update_queue_run_dialog.running = false;
+				this.update_queue_run_dialog.show = false;
+				this.update_queue_running[key] = true;
+				this.snackbar.message = 'Steering ' + item.slug + ' to ' + item.steer_to + '. Coverage refreshes on the next scheduled update-queue run.';
+				this.snackbar.show = true;
+			})
+			.catch(error => {
+				this.update_queue_run_dialog.running = false;
+				this.snackbar.message = 'Failed to start update for ' + item.slug + '.';
+				this.snackbar.show = true;
 			});
 		},
 		updateThreatStatus(threat, status) {

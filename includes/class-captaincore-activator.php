@@ -30,7 +30,10 @@ class Captaincore_Activator {
 	 * @since    0.1.0
 	 */
 	public static function activate() {
-		wp_schedule_event( time(), 'hourly', 'captaincore_cron' );
+		// NOTE: Renewal/billing processing has been moved to a real system crontab
+		// (see captaincore_cron_run() below) to give it a single deterministic trigger
+		// and avoid traffic-dependent WP-Cron timing + concurrent-run races. Do NOT
+		// re-add wp_schedule_event( ..., 'captaincore_cron' ) here.
 		CaptainCore\DB::upgrade();
 		// Add the rewrite rules first
         ( new CaptainCore\Router() )->add_rewrite_rules();

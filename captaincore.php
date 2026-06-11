@@ -85,6 +85,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore top-plugins', 'CaptainCore\TopPluginsCLI' );
 	WP_CLI::add_command( 'captaincore scan-queue', 'CaptainCore\ScanQueueCLI' );
 	WP_CLI::add_command( 'captaincore component-queue', 'CaptainCore\ComponentQueueCLI' );
+	WP_CLI::add_command( 'captaincore update-queue', 'CaptainCore\UpdateQueueCLI' );
 	WP_CLI::add_command( 'captaincore restic-cache', 'CaptainCore\ResticCacheCLI' );
 	WP_CLI::add_command( 'captaincore security-log-sizes', 'CaptainCore\SecurityLogCLI' );
 	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
@@ -8860,6 +8861,34 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Update queue endpoint (admin only) — unaudited / out-of-date components with
+	// the version they should move to (wp.org-latest when known, else fleet-latest).
+	// Read-only; the cache is built by `wp captaincore update-queue` on a schedule.
+	register_rest_route(
+		'captaincore/v1', '/update-queue', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_update_queue_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Update queue action — dispatch a fleet update for one component.
+	// drift --steer is the only slug-scoped fleet updater (converges drifted
+	// sites to the latest build already present in the fleet).
+	register_rest_route(
+		'captaincore/v1', '/update-queue/run', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_update_queue_run_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Component hashes endpoint — all distinct hashes for a slug+version across the fleet
 	register_rest_route(
 		'captaincore/v1', '/component-hashes', [
@@ -10781,6 +10810,135 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 
 	usort( $unaudited, $tier_then_sites );
 	return array_slice( $unaudited, 0, $limit );
+}
+
+/**
+ * Build the update-before-audit queue (heavy: walks every production site),
+ * resolves each component's update target, sorts (needs-update first, then
+ * sites), and caches the result. Intended to run from WP-CLI on a schedule
+ * (`wp captaincore update-queue`), not inline on a web request. When
+ * $live_wporg is true it performs live api.wordpress.org lookups for the
+ * published-latest versions (safe under CLI — no request-timeout pressure);
+ * otherwise it overlays only already-cached wp.org versions.
+ */
+function captaincore_build_update_queue_data( $live_wporg = false ) {
+	$sites_data = CaptainCore\ComponentQueueCLI::gather_sites();
+
+	$hash_map = [];
+	$no_hash  = [];
+	foreach ( $sites_data as $site ) {
+		$ssh = '';
+		if ( ! empty( $site->address ) && ! empty( $site->username ) ) {
+			$ssh = "{$site->username}@{$site->address}";
+			if ( ! empty( $site->port ) && $site->port !== '22' ) {
+				$ssh .= " -p {$site->port}";
+			}
+		}
+		$components = CaptainCore\ComponentQueueCLI::extract_components( $site );
+		foreach ( $components as $comp ) {
+			$hash = $comp['hash'] ?? '';
+			if ( $hash ) {
+				if ( ! isset( $hash_map[ $hash ] ) ) {
+					$hash_map[ $hash ] = array_merge( $comp, [ 'sites' => 0 ] );
+				}
+				$hash_map[ $hash ]['sites']++;
+			} else {
+				$key = "{$comp['type']}|{$comp['slug']}|{$comp['version']}";
+				if ( ! isset( $no_hash[ $key ] ) ) {
+					$no_hash[ $key ] = array_merge( $comp, [ 'sites' => 0 ] );
+				}
+				$no_hash[ $key ]['sites']++;
+			}
+		}
+	}
+
+	$all       = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
+	$annotated = CaptainCore\ComponentQueueCLI::annotate_tiers( $all, '' );
+	$items     = CaptainCore\ComponentQueueCLI::build_update_queue( $annotated, (bool) $live_wporg );
+
+	// Needs-update first, then most sites, then alphabetical.
+	usort( $items, function ( $a, $b ) {
+		if ( $a['needs_update'] !== $b['needs_update'] ) {
+			return $a['needs_update'] ? -1 : 1;
+		}
+		if ( $a['sites'] !== $b['sites'] ) {
+			return $b['sites'] - $a['sites'];
+		}
+		return strcmp( $a['slug'], $b['slug'] );
+	} );
+
+	$needs_update = 0;
+	foreach ( $items as $it ) {
+		if ( $it['needs_update'] ) {
+			$needs_update++;
+		}
+	}
+
+	$data = [
+		'generated_at'   => gmdate( 'c' ),
+		'count'          => count( $items ),
+		'needs_update'   => $needs_update,
+		'items'          => $items,
+	];
+	set_transient( 'cc_update_queue', $data, 25 * HOUR_IN_SECONDS );
+	return $data;
+}
+
+/**
+ * REST: GET /update-queue — return the cached update-before-audit queue. The
+ * heavy build (fleet walk + wp.org lookups) runs from WP-CLI on a schedule
+ * (`wp captaincore update-queue`); this endpoint never builds inline so web
+ * requests stay fast. `not_built` is true until the scheduled job first runs.
+ */
+function captaincore_update_queue_func( WP_REST_Request $request ) {
+	$data = get_transient( 'cc_update_queue' );
+	if ( $data === false || ! is_array( $data ) ) {
+		return [
+			'generated_at' => null,
+			'count'        => 0,
+			'needs_update' => 0,
+			'items'        => [],
+			'not_built'    => true,
+		];
+	}
+	$data['not_built'] = false;
+	return $data;
+}
+
+/**
+ * REST: POST /update-queue/run — dispatch a fleet update for one component via
+ * `captaincore drift --steer` (the only slug-scoped fleet updater; converges
+ * drifted sites to the latest build present in the fleet). Returns a job token.
+ */
+function captaincore_update_queue_run_func( WP_REST_Request $request ) {
+	$slug   = sanitize_text_field( (string) $request->get_param( 'slug' ) );
+	$type   = sanitize_text_field( (string) $request->get_param( 'type' ) );
+	$target = sanitize_text_field( (string) $request->get_param( 'target' ) );
+
+	if ( $slug === '' || ( $type !== 'plugin' && $type !== 'theme' ) ) {
+		return new WP_Error( 'invalid_request', 'A valid slug and type (plugin|theme) are required.', [ 'status' => 400 ] );
+	}
+
+	$flag = $type === 'theme' ? '--theme' : '--plugin';
+	// Array form = exec'd verbatim by the CLI server (no shell, no injection).
+	// Always pass an explicit --target: the fleet's raw max version may be a
+	// bogus pin (9999/99999999/etc.), so we steer to the version resolved
+	// client-side from wp.org (or the fleet's newest multi-site build).
+	$argv = [ 'drift', '--steer', $flag, $slug, '--force', '--json' ];
+	if ( $target !== '' ) {
+		$argv[] = '--target';
+		$argv[] = $target;
+	}
+	$result = CaptainCore\Run::background_task( $argv );
+
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+
+	// Steering runs async on the fleet; the cached queue refreshes on the next
+	// scheduled `wp captaincore update-queue` run. Leave the cache in place so
+	// the table doesn't empty — the row is shown "updating" client-side.
+	return $result; // [ status => queued, token => ... ]
 }
 
 /**
