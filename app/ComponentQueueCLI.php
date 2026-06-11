@@ -741,4 +741,182 @@ class ComponentQueueCLI {
 		" );
 	}
 
+	/**
+	 * Build the "update-before-audit" queue: one row per plugin/theme slug that
+	 * has audit OR upgrade work outstanding, with the version it should move to.
+	 *
+	 * Unlike build_slug_latest_queue (which only surfaces slugs whose LATEST
+	 * build is still unaudited), this includes slugs whose latest is already
+	 * audited but that still have stale, unaudited OLDER versions installed —
+	 * those are the highest-value pure-drain upgrades (steering them to the
+	 * already-audited latest clears the queue with no follow-up audit).
+	 *
+	 * wp.org enrichment is intentionally NOT done here (it would mean hundreds
+	 * of serial HTTP calls). Pass $wporg_lookup = true only from a context that
+	 * can absorb that latency (cron warm); otherwise the caller overlays cached
+	 * wp.org versions afterward via wporg_latest_version (transient-backed).
+	 *
+	 * Per-row fields:
+	 *   slug, type, title
+	 *   fleet_latest        — highest version present in the fleet
+	 *   wporg_latest        — wp.org published latest (null if premium/unknown or not looked up)
+	 *   update_to           — version to move to: wp.org-latest when known+>=fleet, else fleet_latest
+	 *   update_source       — 'wp.org' when update_to came from wp.org, else 'drift'
+	 *   steer_target        — version `drift --steer` actually reaches (always fleet_latest)
+	 *   steer_reaches       — bool: does steer reach update_to (false = whole fleet trails wp.org)
+	 *   needs_update        — bool: sites not all on update_to, or fleet trails wp.org
+	 *   latest_audited      — bool: every hash variant at fleet_latest is already audited
+	 *   unaudited           — bool: any hash (any version) is not yet audited
+	 *   missing_hashes      — bool: some installs lack content hashes (need sync-data)
+	 *   sites, sites_on_latest, versions_in_fleet
+	 */
+	public static function build_update_queue( array $annotated_components, bool $wporg_lookup = false ): array {
+		$buckets = []; // "type|slug" → bucket
+
+		foreach ( $annotated_components as $comp ) {
+			$type = $comp['type'] ?? '';
+			$slug = $comp['slug'] ?? '';
+			if ( $slug === '' || ( $type !== 'plugin' && $type !== 'theme' ) ) {
+				continue;
+			}
+			// Hard rule: child themes are per-site unique customizations that
+			// merely share a slug. Grouping them and steering one over another
+			// would overwrite a site's bespoke child theme. Never surface them
+			// in the update queue (they're still audited via the normal queue).
+			if ( $type === 'theme' && stripos( $slug, '-child' ) !== false ) {
+				continue;
+			}
+			$key = "{$type}|{$slug}";
+			if ( ! isset( $buckets[ $key ] ) ) {
+				$buckets[ $key ] = [
+					'slug'          => $slug,
+					'type'          => $type,
+					'title'         => $comp['title'] ?? $slug,
+					'total_sites'   => 0,
+					'unaudited_any' => false,
+					'missing_hashes'=> false,
+					'ver_sites'     => [], // version → site count
+					'ver_unaudited' => [], // version → true if any unaudited hash
+				];
+			}
+
+			$ver   = $comp['version'] ?? '';
+			$sites = (int) ( $comp['sites'] ?? 0 );
+			$buckets[ $key ]['total_sites'] += $sites;
+			if ( $ver !== '' ) {
+				$buckets[ $key ]['ver_sites'][ $ver ] = ( $buckets[ $key ]['ver_sites'][ $ver ] ?? 0 ) + $sites;
+			}
+
+			$hash = $comp['hash'] ?? '';
+			if ( $hash === '' ) {
+				$buckets[ $key ]['missing_hashes'] = true;
+			} elseif ( empty( $comp['_audited_by_anyone'] ) ) {
+				$buckets[ $key ]['unaudited_any'] = true;
+				if ( $ver !== '' ) {
+					$buckets[ $key ]['ver_unaudited'][ $ver ] = true;
+				}
+			}
+		}
+
+		$out = [];
+		foreach ( $buckets as $b ) {
+			if ( empty( $b['ver_sites'] ) ) {
+				continue;
+			}
+			// Versions newest → oldest.
+			$versions = array_keys( $b['ver_sites'] );
+			usort( $versions, function ( $a, $c ) { return version_compare( $c, $a ); } );
+			$total = (int) $b['total_sites'];
+
+			// Dominant = most-installed version (what most sites actually run).
+			// Used as the "installed" baseline; robust to single-site bogus pins.
+			$dominant = $versions[0];
+			$maxsites = -1;
+			foreach ( $b['ver_sites'] as $v => $n ) {
+				if ( $n > $maxsites ) {
+					$maxsites  = $n;
+					$dominant  = $v;
+				}
+			}
+
+			// Fleet's newest version that MORE THAN ONE site runs — mirrors the
+			// CLI's bogus-safe auto target. A version pinned on a single site is
+			// almost always a dev / anti-update stamp (9999, 99999999, or any
+			// arbitrary value), so we never trust the raw max. Value-agnostic:
+			// the signal is share (one site), not the number.
+			$fleet_newest_multisite = $versions[0];
+			foreach ( $versions as $v ) {
+				if ( ( $b['ver_sites'][ $v ] ?? 0 ) >= 2 ) {
+					$fleet_newest_multisite = $v;
+					break;
+				}
+			}
+
+			// wp.org's published version is the authority when the slug is on
+			// wp.org; otherwise fall back to the fleet's newest multi-site build.
+			$wporg = null;
+			if ( $wporg_lookup ) {
+				$wporg = self::wporg_latest_version( $b['slug'], $b['type'] );
+			} else {
+				// Overlay-from-cache only: read the transient without a live call.
+				$cache_key = 'cc_wporg_latest_' . $b['type'] . '_' . md5( $b['slug'] );
+				$cached    = get_transient( $cache_key );
+				if ( $cached !== false ) {
+					$wporg = ( $cached === '__none__' ) ? null : (string) $cached;
+				}
+			}
+
+			if ( $wporg ) {
+				$update_to = $wporg;
+				$source    = 'wp.org';
+			} else {
+				$update_to = $fleet_newest_multisite;
+				$source    = 'drift';
+			}
+
+			$sites_on_target  = (int) ( $b['ver_sites'][ $update_to ] ?? 0 );
+			$fleet_has_target = $sites_on_target > 0;
+
+			// The version a drift-steer can actually reach now: the target when a
+			// fleet site already runs it (drift sources the zip from a peer), else
+			// the newest multi-site build the fleet has. Reaching a wp.org release
+			// that no site runs yet needs a normal `wp plugin update`, not a steer.
+			$steer_to      = $fleet_has_target ? $update_to : $fleet_newest_multisite;
+			$steer_reaches = ( version_compare( (string) $steer_to, (string) $update_to ) === 0 );
+
+			$needs_update = ( $sites_on_target < $total );
+
+			// Whether the target build is already audited (an update would be a
+			// pure drain). Unknown when no fleet site runs the target yet.
+			$latest_audited = $fleet_has_target && empty( $b['ver_unaudited'][ $update_to ] );
+
+			// Only surface rows that have outstanding work (audit or upgrade).
+			if ( ! $b['unaudited_any'] && ! $needs_update ) {
+				continue;
+			}
+
+			$out[] = [
+				'slug'              => $b['slug'],
+				'type'              => $b['type'],
+				'title'             => $b['title'],
+				'installed'         => $dominant,
+				'wporg_latest'      => $wporg ?: null,
+				'update_to'         => $update_to,
+				'update_source'     => $source,
+				'steer_to'          => $steer_to,
+				'steer_reaches'     => $steer_reaches,
+				'fleet_has_target'  => $fleet_has_target,
+				'needs_update'      => $needs_update,
+				'latest_audited'    => $latest_audited,
+				'unaudited'         => (bool) $b['unaudited_any'],
+				'missing_hashes'    => (bool) $b['missing_hashes'],
+				'sites'             => $total,
+				'sites_on_target'   => $sites_on_target,
+				'versions_in_fleet' => count( $versions ),
+			];
+		}
+
+		return $out;
+	}
+
 }
