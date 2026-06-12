@@ -107,7 +107,8 @@ class SiteAudit {
 
         $date_prefix = date( 'Y-m-d', strtotime( $audit->created_at ) );
         $slug        = sanitize_title( $audit->site_name );
-        $filename    = "{$date_prefix}_{$slug}-security-audit.html";
+        $type_slug   = sanitize_title( str_replace( '_', '-', $audit->report_type ?: 'security-audit' ) );
+        $filename    = "{$date_prefix}_{$slug}-{$type_slug}.html";
         $html        = $this->render_html();
         $reports_dir = ABSPATH . 'reports';
         $file_path   = $reports_dir . '/' . $filename;
