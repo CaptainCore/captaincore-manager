@@ -10328,7 +10328,7 @@ function captaincore_site_audits_request_func( WP_REST_Request $request ) {
 	$report_type    = sanitize_text_field( $params['report_type'] ?? 'security_audit' );
 	$notes          = sanitize_textarea_field( $params['notes'] ?? '' );
 
-	$allowed_report_types = [ 'security_audit', 'malware_incident', 'performance_review', 'debug_report', 'incident_report' ];
+	$allowed_report_types = [ 'security_audit', 'malware_incident', 'performance_review', 'accessibility_audit', 'debug_report', 'incident_report' ];
 	if ( ! in_array( $report_type, $allowed_report_types, true ) ) {
 		return new WP_Error( 'invalid_report_type', 'Invalid report type.', [ 'status' => 400 ] );
 	}

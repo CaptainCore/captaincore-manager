@@ -9768,6 +9768,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									{ title: 'Security Audit', value: 'security_audit' },
 									{ title: 'Malware Incident Report', value: 'malware_incident' },
 									{ title: 'Performance Review', value: 'performance_review' },
+									{ title: 'Accessibility Audit', value: 'accessibility_audit' },
 									{ title: 'Debug Report', value: 'debug_report' },
 									{ title: 'Incident Report', value: 'incident_report' }
 								]"

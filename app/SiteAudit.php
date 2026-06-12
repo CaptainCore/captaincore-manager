@@ -256,6 +256,7 @@ class SiteAudit {
             'security_audit'  => 'Security Audit Report',
             'malware_incident' => 'Malware Incident Report',
             'performance_review' => 'Performance Review',
+            'accessibility_audit' => 'Accessibility Audit Report',
             'debug_report'    => 'Debug Report',
             'incident_report' => 'Incident Report',
         ];
