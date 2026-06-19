@@ -66,10 +66,13 @@ class SessionAlertsCLI {
 			$site = Sites::get( $r->site_id );
 			$env  = ( new Environments )->get( $r->environment_id );
 			$name = $site->name ?? ( 'site ' . $r->site_id );
+			// Use the environment's own home_url so Production vs Staging cards are distinct
+			// (the site name is identical across environments). Fall back to the site domain.
+			$home_url = ! empty( $env->home_url ) ? $env->home_url : ( $name ? "https://{$name}" : '' );
 			$items[] = [
 				'site_name'    => $name,
 				'environment'  => $env->environment ?? '',
-				'home_url'     => $name ? "https://{$name}" : '',
+				'home_url'     => $home_url,
 				'max_severity' => $r->max_severity,
 				'collected_at' => $r->collected_at,
 				'anomalies'    => json_decode( $r->anomalies ) ?: [],
