@@ -744,7 +744,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "46";
+        $required_version = (int) "47";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -1222,6 +1222,34 @@ class DB {
         KEY site_audit_id (site_audit_id),
         KEY severity (severity),
         KEY status (status)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Append-only time-series of per-environment user-session / privilege snapshots.
+        // One row per environment per day-sync. Summary columns are graph/query-friendly;
+        // `payload` holds the full collector JSON (admin accounts, sessions, injected_users,
+        // redefined_role_audit). Phase 1 is store-only — change detection reads this history.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_session_snapshots` (
+            session_snapshot_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            collected_at datetime DEFAULT NULL,
+            total_users int(11) DEFAULT 0,
+            session_token_rows int(11) DEFAULT 0,
+            admin_users int(11) DEFAULT 0,
+            admin_sessions int(11) DEFAULT 0,
+            admin_unique_ips int(11) DEFAULT 0,
+            admin_capable_users int(11) DEFAULT 0,
+            injected_caps_count int(11) DEFAULT 0,
+            super_admin_count int(11) DEFAULT 0,
+            payload longtext,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (session_snapshot_id),
+        KEY site_id (site_id),
+        KEY environment_id (environment_id),
+        KEY created_at (created_at),
+        KEY injected_caps_count (injected_caps_count)
         ) $charset_collate;";
 
         dbDelta($sql);

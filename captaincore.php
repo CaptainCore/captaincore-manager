@@ -1107,6 +1107,47 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
+	// Store a user-session / privilege snapshot (Phase 1: append-only history, no detection).
+	// Payload is produced by the CLI session-signal collector (efficient: admin-scoped, cost
+	// independent of total user count). Summary columns are extracted for fast querying; the
+	// full collector JSON is retained in `payload` for later change-detection + the backdoor
+	// signal (injected_users = takeover caps on a non-admin role).
+	if ( $command == 'session-snapshot' and ! empty( $post->data ) ) {
+
+		// data may arrive as a JSON object or a JSON-encoded string; normalize to object.
+		$signal = is_string( $post->data ) ? json_decode( $post->data ) : $post->data;
+
+		if ( empty( $signal ) || ! is_object( $signal ) ) {
+			return new WP_Error( 'session_snapshot_invalid', 'Invalid session-snapshot payload', [ 'status' => 400 ] );
+		}
+
+		$target_environment_id = ! empty( $environment_id ) ? $environment_id : ( $signal->environment_id ?? 0 );
+		$admin                 = $signal->administrator ?? (object) [];
+		$admin_capable         = $signal->admin_capable ?? (object) [];
+
+		$collected_at = ! empty( $signal->collected_at ) ? gmdate( 'Y-m-d H:i:s', strtotime( $signal->collected_at ) ) : null;
+
+		CaptainCore\SessionSnapshots::insert( [
+			"site_id"             => (int) $site_id,
+			"environment_id"      => (int) $target_environment_id,
+			"collected_at"        => $collected_at,
+			"total_users"         => (int) ( $signal->total_users ?? 0 ),
+			"session_token_rows"  => (int) ( $signal->session_token_rows ?? 0 ),
+			"admin_users"         => (int) ( $admin->users ?? 0 ),
+			"admin_sessions"      => (int) ( $admin->active_sessions ?? 0 ),
+			"admin_unique_ips"    => (int) ( $admin->unique_ips ?? 0 ),
+			"admin_capable_users" => (int) ( $admin_capable->users ?? ( $admin->users ?? 0 ) ),
+			"injected_caps_count" => isset( $signal->injected_users ) ? count( (array) $signal->injected_users ) : 0,
+			"super_admin_count"   => isset( $signal->super_admins ) ? count( (array) $signal->super_admins ) : 0,
+			"payload"             => wp_json_encode( $signal ),
+			"created_at"          => current_time( 'mysql' ),
+		] );
+
+		$response = [
+			"response" => "Stored session snapshot for site $site_id environment $target_environment_id",
+		];
+	}
+
 	// Add capture
 	if ( $command == 'new-capture' ) {
 
@@ -6470,6 +6511,27 @@ function captaincore_admin_permission_check() {
     return ( new CaptainCore\User )->is_admin();
 }
 
+// Read user-session / privilege snapshot history for a site environment (admin only —
+// payloads contain admin IPs). Returns newest-first summary rows plus decoded payloads.
+function captaincore_session_snapshots_func( WP_REST_Request $request ) {
+	$site_id        = (int) $request['id'];
+	$environment    = $request['environment'];
+	$limit          = ! empty( $request['limit'] ) ? min( 365, max( 1, (int) $request['limit'] ) ) : 90;
+	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+
+	$rows = CaptainCore\SessionSnapshots::where( [
+		"site_id"        => $site_id,
+		"environment_id" => $environment_id,
+	] );
+
+	$rows = array_slice( (array) $rows, 0, $limit );
+	foreach ( $rows as $row ) {
+		$row->payload = ! empty( $row->payload ) ? json_decode( $row->payload ) : null;
+	}
+
+	return [ "snapshots" => $rows ];
+}
+
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
 
 function captaincore_register_rest_endpoints() {
@@ -6480,6 +6542,12 @@ function captaincore_register_rest_endpoints() {
 		'permission_callback' => function() {
 			return is_user_logged_in();
 		},
+	] );
+
+	register_rest_route( 'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[^/]+)/session-snapshots', [
+		'methods'             => 'GET',
+		'callback'            => 'captaincore_session_snapshots_func',
+		'permission_callback' => 'captaincore_admin_permission_check',
 	] );
 
 	// Custom endpoint for CaptainCore API
