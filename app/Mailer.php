@@ -1675,6 +1675,173 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  SESSION ANOMALY ALERT (Admin Notify) — Phase 2 compromise telemetry.
+     *  Sent only for high/critical changes in admin sessions or account privileges.
+     *  Detection is delta-gated, so this fires on a CHANGE, not daily for a standing state.
+     * ------------------------------------------------------------------------- */
+    static public function send_session_anomaly_alert( $site_name, $environment_name, $home_url, $max_severity, $anomalies ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        $sev_style = [
+            'critical' => [ '#FED7D7', '#9B2C2C' ],
+            'high'     => [ '#FEEBC8', '#9C4221' ],
+            'medium'   => [ '#FEFCBF', '#975A16' ],
+            'low'      => [ '#E2E8F0', '#4A5568' ],
+        ];
+
+        $rows = '';
+        foreach ( (array) $anomalies as $a ) {
+            $a   = (array) $a;
+            $sev = $a['severity'] ?? 'low';
+            list( $bg, $fg ) = $sev_style[ $sev ] ?? $sev_style['low'];
+            $rows .= "
+                <tr>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; white-space: nowrap;'>
+                        <span style='display: inline-block; background-color: {$bg}; color: {$fg}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>" . esc_html( $sev ) . "</span>
+                    </td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
+                </tr>";
+        }
+
+        list( $hbg, $hfg ) = $sev_style[ $max_severity ] ?? $sev_style['low'];
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: {$hbg}; color: {$hfg}; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        " . esc_html( ucfirst( $max_severity ) ) . " Session Anomaly
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>A change in administrator sessions or account privileges was detected on this site. This can indicate a compromised account, an injected-capability backdoor, or an unexpected privilege escalation. Review the changes below.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Detected Changes</strong>
+                    </div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        {$rows}
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: " . ucfirst( $max_severity ) . " session anomaly on {$site_name}",
+            "Session Anomaly Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
+    // Severity badge palette shared by the session-anomaly alert + digest.
+    private static $session_sev_style = [
+        'critical' => [ '#FED7D7', '#9B2C2C' ],
+        'high'     => [ '#FEEBC8', '#9C4221' ],
+        'medium'   => [ '#FEFCBF', '#975A16' ],
+        'low'      => [ '#E2E8F0', '#4A5568' ],
+    ];
+
+    private static function session_anomaly_rows_html( $anomalies ) {
+        $rows = '';
+        foreach ( (array) $anomalies as $a ) {
+            $a   = (array) $a;
+            $sev = $a['severity'] ?? 'low';
+            list( $bg, $fg ) = self::$session_sev_style[ $sev ] ?? self::$session_sev_style['low'];
+            $rows .= "
+                <tr>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; white-space: nowrap;'>
+                        <span style='display: inline-block; background-color: {$bg}; color: {$fg}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>" . esc_html( $sev ) . "</span>
+                    </td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
+                </tr>";
+        }
+        return $rows;
+    }
+
+    /* -------------------------------------------------------------------------
+     *  SESSION ANOMALY DIGEST (Admin Notify) — one email covering N environments.
+     *  Sent hourly by `wp captaincore session-alerts` (system cron). $items is a list of
+     *  [ site_name, environment, home_url, max_severity, collected_at, anomalies[] ].
+     * ------------------------------------------------------------------------- */
+    static public function send_session_anomaly_digest( $to, $items ) {
+        $items = array_values( (array) $items );
+        if ( empty( $items ) ) {
+            return false;
+        }
+        $brand_color = '#0D47A1';
+        $count       = count( $items );
+
+        $cards = '';
+        foreach ( $items as $it ) {
+            $it   = (array) $it;
+            $sev  = $it['max_severity'] ?? 'low';
+            list( $hbg, $hfg ) = self::$session_sev_style[ $sev ] ?? self::$session_sev_style['low'];
+            $site = esc_html( $it['site_name'] ?? '' );
+            $env  = esc_html( $it['environment'] ?? '' );
+            $when = ! empty( $it['collected_at'] ) ? esc_html( $it['collected_at'] ) . ' UTC' : '';
+            $url  = $it['home_url'] ?? '';
+            $site_link = $url ? "<a href='" . esc_url( $url ) . "' style='color: {$brand_color}; text-decoration: none;'>{$site}</a>" : $site;
+            $rows = self::session_anomaly_rows_html( $it['anomalies'] ?? [] );
+
+            $cards .= "
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 20px;'>
+                    <div style='padding: 14px 16px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between;'>
+                        <span style='font-size: 16px; font-weight: 700; color: #2d3748;'>{$site_link}</span>
+                        <span style='display: inline-block; background-color: {$hbg}; color: {$hfg}; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase; float: right;'>" . esc_html( $sev ) . "</span>
+                    </div>
+                    <div style='padding: 6px 16px; color: #718096; font-size: 13px;'>{$env}" . ( $when ? " &middot; {$when}" : '' ) . "</div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>{$rows}</table>
+                </div>";
+        }
+
+        $plural = $count === 1 ? 'environment' : 'environments';
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p style='margin-bottom: 25px;'>Session / privilege change-detection flagged <strong>{$count} {$plural}</strong> since the last digest. Each item is a CHANGE from the prior daily snapshot — a new admin-capable account, a role gaining takeover capabilities, an injected-capability backdoor, or an admin session/IP spike. Review the changes below.</p>
+                {$cards}
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $to,
+            "Security Alert: session anomalies on {$count} {$plural}",
+            "Session Anomaly Digest",
+            "{$count} {$plural} flagged",
+            $content_html
+        );
+        return true;
+    }
+
+    /* -------------------------------------------------------------------------
      *  PLUGIN CHECKSUM FAILURE ALERT (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_plugin_checksum_alert( $site_name, $environment_name, $home_url, $plugin_checksum_details ) {

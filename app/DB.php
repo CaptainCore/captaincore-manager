@@ -744,7 +744,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "47";
+        $required_version = (int) "49";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -1243,13 +1243,19 @@ class DB {
             admin_capable_users int(11) DEFAULT 0,
             injected_caps_count int(11) DEFAULT 0,
             super_admin_count int(11) DEFAULT 0,
+            anomaly_count int(11) DEFAULT 0,
+            max_severity varchar(20) DEFAULT 'none',
+            anomalies longtext,
+            alerted_at datetime DEFAULT NULL,
             payload longtext,
             created_at datetime NOT NULL,
         PRIMARY KEY  (session_snapshot_id),
         KEY site_id (site_id),
         KEY environment_id (environment_id),
         KEY created_at (created_at),
-        KEY injected_caps_count (injected_caps_count)
+        KEY injected_caps_count (injected_caps_count),
+        KEY max_severity (max_severity),
+        KEY alerted_at (alerted_at)
         ) $charset_collate;";
 
         dbDelta($sql);
