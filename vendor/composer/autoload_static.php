@@ -320,6 +320,8 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\SecurityPatches' => __DIR__ . '/../..' . '/app/SecurityPatches.php',
         'CaptainCore\\SecurityThreatTracking' => __DIR__ . '/../..' . '/app/SecurityThreatTracking.php',
         'CaptainCore\\SecurityThreats' => __DIR__ . '/../..' . '/app/SecurityThreats.php',
+        'CaptainCore\\SessionAlertsCLI' => __DIR__ . '/../..' . '/app/SessionAlertsCLI.php',
+        'CaptainCore\\SessionAnomalyDetector' => __DIR__ . '/../..' . '/app/SessionAnomalyDetector.php',
         'CaptainCore\\SessionSnapshots' => __DIR__ . '/../..' . '/app/SessionSnapshots.php',
         'CaptainCore\\Sessions' => __DIR__ . '/../..' . '/app/Sessions.php',
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',

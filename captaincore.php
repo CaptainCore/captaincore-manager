@@ -95,6 +95,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore provider-sync', 'CaptainCore\ProviderSyncCLI' );
 	WP_CLI::add_command( 'captaincore remote', 'CaptainCore\RemoteCLI' );
 	WP_CLI::add_command( 'captaincore site-label', 'CaptainCore\SiteLabelCLI' );
+	WP_CLI::add_command( 'captaincore session-alerts', 'CaptainCore\SessionAlertsCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -1107,11 +1108,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	// Store a user-session / privilege snapshot (Phase 1: append-only history, no detection).
+	// Store a user-session / privilege snapshot + run delta change-detection (Phase 2).
 	// Payload is produced by the CLI session-signal collector (efficient: admin-scoped, cost
 	// independent of total user count). Summary columns are extracted for fast querying; the
-	// full collector JSON is retained in `payload` for later change-detection + the backdoor
-	// signal (injected_users = takeover caps on a non-admin role).
+	// full collector JSON is retained in `payload`. Detection compares this snapshot to the
+	// previous one for the same environment and records any anomalies on the row + timeline.
 	if ( $command == 'session-snapshot' and ! empty( $post->data ) ) {
 
 		// data may arrive as a JSON object or a JSON-encoded string; normalize to object.
@@ -1127,6 +1128,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$collected_at = ! empty( $signal->collected_at ) ? gmdate( 'Y-m-d H:i:s', strtotime( $signal->collected_at ) ) : null;
 
+		// Detect changes vs the most recent prior snapshot for this environment (baseline).
+		$prior          = CaptainCore\SessionSnapshots::latest_for( $site_id, $target_environment_id );
+		$prev_payload   = ! empty( $prior->payload ) ? json_decode( $prior->payload ) : null;
+		$detection      = CaptainCore\SessionAnomalyDetector::detect( $signal, $prev_payload );
+
 		CaptainCore\SessionSnapshots::insert( [
 			"site_id"             => (int) $site_id,
 			"environment_id"      => (int) $target_environment_id,
@@ -1139,12 +1145,33 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			"admin_capable_users" => (int) ( $admin_capable->users ?? ( $admin->users ?? 0 ) ),
 			"injected_caps_count" => isset( $signal->injected_users ) ? count( (array) $signal->injected_users ) : 0,
 			"super_admin_count"   => isset( $signal->super_admins ) ? count( (array) $signal->super_admins ) : 0,
+			"anomaly_count"       => $detection['count'],
+			"max_severity"        => $detection['max_severity'],
+			"anomalies"           => wp_json_encode( $detection['anomalies'] ),
 			"payload"             => wp_json_encode( $signal ),
 			"created_at"          => current_time( 'mysql' ),
 		] );
 
+		// Surface fired anomalies on the activity timeline (one entry per snapshot that fired).
+		// Email is intentionally NOT sent here — high/critical alerts are delivered as an hourly
+		// digest by `wp captaincore session-alerts` (system cron), which reads unalerted rows via
+		// the alerted_at column. This keeps SMTP off the ingest request path and batches alerts.
+		if ( $detection['count'] > 0 ) {
+			$lines = array_map( function ( $x ) { return "[{$x['severity']}] {$x['detail']}"; }, $detection['anomalies'] );
+			CaptainCore\ActivityLog::log(
+				'session_anomaly',
+				'environment',
+				(int) $target_environment_id,
+				$domain_name ?: $site_name,
+				"Session anomaly detected ({$detection['max_severity']}): " . implode( ' | ', $lines ),
+				[ 'site_id' => (int) $site_id, 'environment_id' => (int) $target_environment_id, 'anomalies' => $detection['anomalies'] ]
+			);
+		}
+
 		$response = [
-			"response" => "Stored session snapshot for site $site_id environment $target_environment_id",
+			"response"      => "Stored session snapshot for site $site_id environment $target_environment_id",
+			"anomalies"     => $detection['count'],
+			"max_severity"  => $detection['max_severity'],
 		];
 	}
 
@@ -6526,10 +6553,40 @@ function captaincore_session_snapshots_func( WP_REST_Request $request ) {
 
 	$rows = array_slice( (array) $rows, 0, $limit );
 	foreach ( $rows as $row ) {
-		$row->payload = ! empty( $row->payload ) ? json_decode( $row->payload ) : null;
+		$row->payload   = ! empty( $row->payload ) ? json_decode( $row->payload ) : null;
+		$row->anomalies = ! empty( $row->anomalies ) ? json_decode( $row->anomalies ) : [];
 	}
 
 	return [ "snapshots" => $rows ];
+}
+
+// Fleet-wide feed of snapshots that fired anomalies, newest first (admin only). Default to
+// the actionable tiers (high/critical); ?severity= and ?limit= override. Summary columns +
+// decoded anomalies only — full session payloads are omitted to keep the feed light.
+function captaincore_session_anomalies_func( WP_REST_Request $request ) {
+	global $wpdb;
+	$table    = $wpdb->prefix . 'captaincore_session_snapshots';
+	$ranks    = [ 'low' => 1, 'medium' => 2, 'high' => 3, 'critical' => 4 ];
+	$min      = ! empty( $request['severity'] ) && isset( $ranks[ $request['severity'] ] ) ? $ranks[ $request['severity'] ] : $ranks['high'];
+	$limit    = ! empty( $request['limit'] ) ? min( 500, max( 1, (int) $request['limit'] ) ) : 100;
+	$severities = array_keys( array_filter( $ranks, function ( $r ) use ( $min ) { return $r >= $min; } ) );
+	$in       = implode( ',', array_fill( 0, count( $severities ), '%s' ) );
+
+	$sql  = "SELECT session_snapshot_id, site_id, environment_id, collected_at, created_at,
+				anomaly_count, max_severity, anomalies, injected_caps_count, admin_users,
+				admin_unique_ips, admin_sessions
+			FROM $table
+			WHERE anomaly_count > 0 AND max_severity IN ($in)
+			ORDER BY created_at DESC LIMIT %d";
+	$rows = $wpdb->get_results( $wpdb->prepare( $sql, array_merge( $severities, [ $limit ] ) ) );
+
+	foreach ( $rows as $row ) {
+		$row->anomalies = ! empty( $row->anomalies ) ? json_decode( $row->anomalies ) : [];
+		$site           = CaptainCore\Sites::get( $row->site_id );
+		$row->site_name = $site->name ?? '';
+	}
+
+	return [ "anomalies" => $rows, "count" => count( $rows ) ];
 }
 
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
@@ -6547,6 +6604,12 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[^/]+)/session-snapshots', [
 		'methods'             => 'GET',
 		'callback'            => 'captaincore_session_snapshots_func',
+		'permission_callback' => 'captaincore_admin_permission_check',
+	] );
+
+	register_rest_route( 'captaincore/v1', '/session-anomalies', [
+		'methods'             => 'GET',
+		'callback'            => 'captaincore_session_anomalies_func',
 		'permission_callback' => 'captaincore_admin_permission_check',
 	] );
 
