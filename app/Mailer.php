@@ -1805,11 +1805,14 @@ class Mailer {
             $it   = (array) $it;
             $sev  = $it['max_severity'] ?? 'low';
             list( $hbg, $hfg ) = self::$session_sev_style[ $sev ] ?? self::$session_sev_style['low'];
-            $site = esc_html( $it['site_name'] ?? '' );
             $env  = esc_html( $it['environment'] ?? '' );
             $when = ! empty( $it['collected_at'] ) ? esc_html( $it['collected_at'] ) . ' UTC' : '';
             $url  = $it['home_url'] ?? '';
-            $site_link = $url ? "<a href='" . esc_url( $url ) . "' style='color: {$brand_color}; text-decoration: none;'>{$site}</a>" : $site;
+            // Heading is the environment's home_url host (distinct per environment), not the
+            // shared site name — so Production and Staging cards are clearly different.
+            $label     = $url ? preg_replace( '#^https?://#', '', rtrim( $url, '/' ) ) : ( $it['site_name'] ?? '' );
+            $label     = esc_html( $label );
+            $site_link = $url ? "<a href='" . esc_url( $url ) . "' style='color: {$brand_color}; text-decoration: none;'>{$label}</a>" : $label;
             $rows = self::session_anomaly_rows_html( $it['anomalies'] ?? [] );
 
             $cards .= "
