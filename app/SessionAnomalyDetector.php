@@ -49,9 +49,11 @@ class SessionAnomalyDetector {
 				continue; // already alerted on a prior snapshot — delta-gated, no daily repeat
 			}
 			$caps  = implode( ', ', (array) ( $u['injected_caps'] ?? [] ) );
-			$roles = implode( ', ', (array) ( $u['roles'] ?? [] ) );
+			// New collector payload carries clean base_roles; fall back to legacy `roles` field.
+			$roles = implode( ', ', (array) ( $u['base_roles'] ?? $u['roles'] ?? [] ) );
+			$roles = $roles !== '' ? $roles : 'none';
 			$a[]   = self::mk( 'injected_caps', 'critical',
-				"User #{$uid} holds takeover cap(s) [{$caps}] with non-admin role(s) [{$roles}] — likely injected-capability backdoor" );
+				"User #{$uid} (role: {$roles}) holds individually-granted takeover cap(s) [{$caps}] — likely injected-capability backdoor" );
 		}
 
 		// First snapshot: establish baseline, only absolute rules apply.
