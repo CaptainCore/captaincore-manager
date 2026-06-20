@@ -9,6 +9,7 @@ return array(
     'Symfony\\Component\\OptionsResolver\\' => array($vendorDir . '/symfony/options-resolver'),
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-factory/src', $vendorDir . '/psr/http-message/src'),
     'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
+    'Psr\\Clock\\' => array($vendorDir . '/psr/clock/src'),
     'PhpIP\\' => array($vendorDir . '/rlanvin/php-ip/src'),
     'ParagonIE\\ConstantTime\\' => array($vendorDir . '/paragonie/constant_time_encoding/src'),
     'OTPHP\\' => array($vendorDir . '/spomky-labs/otphp/src'),

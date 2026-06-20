@@ -10,8 +10,6 @@ interface HOTPInterface extends OTPInterface
 
     /**
      * The initial counter (a positive integer).
-     *
-     * @return 0|positive-int
      */
     public function getCounter(): int;
 
@@ -35,7 +33,9 @@ interface HOTPInterface extends OTPInterface
     ): self;
 
     /**
-     * @param 0|positive-int $counter
+     * @deprecated Deprecated since v11.4, use {@see self::withCounter()} instead
      */
     public function setCounter(int $counter): void;
+
+    public function withCounter(int $counter): self;
 }

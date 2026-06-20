@@ -4,30 +4,55 @@ declare(strict_types=1);
 
 namespace OTPHP;
 
-use function assert;
 use function count;
-use InvalidArgumentException;
+use OTPHP\Exception\InvalidProvisioningUriException;
+use Psr\Clock\ClockInterface;
+use function sprintf;
 use Throwable;
 
 /**
  * This class is used to load OTP object from a provisioning Uri.
  *
+ * @readonly
+ *
  * @see \OTPHP\Test\FactoryTest
  */
 final class Factory implements FactoryInterface
 {
-    public static function loadFromProvisioningUri(string $uri): OTPInterface
+    public static function loadFromProvisioningUri(string $uri, ?ClockInterface $clock = null): OTPInterface
     {
         try {
             $parsed_url = Url::fromString($uri);
-            $parsed_url->getScheme() === 'otpauth' || throw new InvalidArgumentException('Invalid scheme.');
+            $parsed_url->getScheme() === 'otpauth' || throw new InvalidProvisioningUriException('Invalid scheme.');
         } catch (Throwable $throwable) {
-            throw new InvalidArgumentException('Not a valid OTP provisioning URI', $throwable->getCode(), $throwable);
+            throw new InvalidProvisioningUriException(
+                'Not a valid OTP provisioning URI',
+                $throwable->getCode(),
+                $throwable
+            );
+        }
+        if ($clock === null) {
+            trigger_deprecation(
+                'spomky-labs/otphp',
+                '11.3.0',
+                'The parameter "$clock" will become mandatory in 12.0.0. Please set a valid PSR Clock implementation instead of "null".'
+            );
+            $clock = new InternalClock();
         }
 
-        $otp = self::createOTP($parsed_url);
+        try {
+            $otp = self::createOTP($parsed_url, $clock);
 
-        self::populateOTP($otp, $parsed_url);
+            self::populateOTP($otp, $parsed_url);
+        } catch (InvalidProvisioningUriException $exception) {
+            throw $exception;
+        } catch (Throwable $throwable) {
+            throw new InvalidProvisioningUriException(
+                'Not a valid OTP provisioning URI',
+                $throwable->getCode(),
+                $throwable
+            );
+        }
 
         return $otp;
     }
@@ -42,7 +67,7 @@ final class Factory implements FactoryInterface
     private static function populateOTP(OTPInterface $otp, Url $data): void
     {
         self::populateParameters($otp, $data);
-        $result = explode(':', rawurldecode(mb_substr($data->getPath(), 1)));
+        $result = explode(':', rawurldecode(substr($data->getPath(), 1)));
 
         if (count($result) < 2) {
             $otp->setIssuerIncludedAsParameter(false);
@@ -50,23 +75,27 @@ final class Factory implements FactoryInterface
             return;
         }
 
-        if ($otp->getIssuer() !== null) {
-            $result[0] === $otp->getIssuer() || throw new InvalidArgumentException(
-                'Invalid OTP: invalid issuer in parameter'
-            );
+        $issuerFromLabel = $result[0];
+        $issuerFromParameter = $otp->getIssuer();
+
+        if ($issuerFromParameter !== null) {
+            // Issuer parameter takes precedence over issuer in label
+            // According to Google Authenticator spec: "they should be equal" but not required to be
             $otp->setIssuerIncludedAsParameter(true);
+        } else {
+            // No issuer parameter, use the issuer from label
+            $issuerFromLabel !== '' || throw new InvalidProvisioningUriException(
+                'Issuer from label must not be empty.'
+            );
+            $otp->setIssuer($issuerFromLabel);
         }
-
-        assert($result[0] !== '');
-
-        $otp->setIssuer($result[0]);
     }
 
-    private static function createOTP(Url $parsed_url): OTPInterface
+    private static function createOTP(Url $parsed_url, ClockInterface $clock): OTPInterface
     {
         switch ($parsed_url->getHost()) {
             case 'totp':
-                $totp = TOTP::createFromSecret($parsed_url->getSecret());
+                $totp = TOTP::createFromSecret($parsed_url->getSecret(), $clock);
                 $totp->setLabel(self::getLabel($parsed_url->getPath()));
 
                 return $totp;
@@ -76,7 +105,7 @@ final class Factory implements FactoryInterface
 
                 return $hotp;
             default:
-                throw new InvalidArgumentException(sprintf('Unsupported "%s" OTP type', $parsed_url->getHost()));
+                throw new InvalidProvisioningUriException(sprintf('Unsupported "%s" OTP type', $parsed_url->getHost()));
         }
     }
 
@@ -86,9 +115,9 @@ final class Factory implements FactoryInterface
      */
     private static function getLabel(string $data): string
     {
-        $result = explode(':', rawurldecode(mb_substr($data, 1)));
+        $result = explode(':', rawurldecode(substr($data, 1)));
         $label = count($result) === 2 ? $result[1] : $result[0];
-        assert($label !== '');
+        $label !== '' || throw new InvalidProvisioningUriException('Label must not be empty.');
 
         return $label;
     }
