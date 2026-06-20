@@ -228,11 +228,21 @@ class ComponentQueueCLI {
 	 * surfaceability per-slug instead of per-hash.
 	 *
 	 * Annotated keys:
-	 *   _audited_by_anyone  — bool, hash exists in any-model manifest
-	 *   _audited_by_me      — bool, hash exists in $model's manifest (false when $model is '')
+	 *   _audited_by_anyone  — bool, THIS exact content hash exists in any-model manifest
+	 *   _audited_by_me      — bool, this hash exists in $model's manifest (false when $model is '')
 	 *   _audit_tier         — 0 if not audited by anyone OR audited only by me;
 	 *                         1 if audited by someone else but not by $model
 	 *                         (the existing tier semantics callers already use)
+	 *   _code_audited       — bool, the registry holds at least one audit of this
+	 *                         component's (slug, version) under ANY hash. This is the
+	 *                         "is this CODE reviewed?" signal — distinct from
+	 *                         _audited_by_anyone (which is per exact content hash).
+	 *                         A build resurfaces in the queue when a per-site file
+	 *                         (cache, license token, .build stamp) forks its content
+	 *                         hash; those new hashes are absent from the manifest
+	 *                         (_audited_by_anyone=false) even though the code is fully
+	 *                         audited (_code_audited=true). Callers use this to route
+	 *                         a row to a cheap variant-merge instead of a full re-audit.
 	 *
 	 * Fail-open: if the registry isn't configured or the fetch fails, every
 	 * component is annotated as tier-0 / un-audited so the queue still works.
@@ -243,6 +253,7 @@ class ComponentQueueCLI {
 				$c['_audit_tier']         = 0;
 				$c['_audited_by_anyone']  = false;
 				$c['_audited_by_me']      = false;
+				$c['_code_audited']       = false;
 			}
 			return $components;
 		}
@@ -263,10 +274,30 @@ class ComponentQueueCLI {
 				$needed_types[ $t ] = true;
 			}
 		}
+		$any_sv = []; // [type]["slug|version"] => true — (slug,version) audited under ANY hash
 		foreach ( array_keys( $needed_types ) as $t ) {
 			$endpoint = $type_to_endpoint[ $t ];
 			$any[ $t ]  = RegistryClient::manifest( $endpoint, '' );
 			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model ) : [];
+
+			// The manifest is hash-keyed, but each entry carries its own slug+version.
+			// Roll those up into a (slug,version) coverage set so we can tell "this
+			// CODE is audited" even when the fleet's current content hashes are new
+			// per-site variants the manifest has never seen.
+			$sv = [];
+			if ( is_array( $any[ $t ] ) ) {
+				foreach ( $any[ $t ] as $meta ) {
+					if ( ! is_array( $meta ) ) {
+						continue;
+					}
+					$s = (string) ( $meta['slug'] ?? '' );
+					if ( $s === '' ) {
+						continue;
+					}
+					$sv[ $s . '|' . (string) ( $meta['version'] ?? '' ) ] = true;
+				}
+			}
+			$any_sv[ $t ] = $sv;
 		}
 
 		foreach ( $components as &$comp ) {
@@ -280,6 +311,7 @@ class ComponentQueueCLI {
 				$comp['_audited_by_anyone'] = false;
 				$comp['_audited_by_me']     = false;
 				$comp['_audit_tier']        = 0;
+				$comp['_code_audited']      = false;
 				continue;
 			}
 
@@ -288,6 +320,9 @@ class ComponentQueueCLI {
 			$comp['_audited_by_anyone'] = $by_anyone;
 			$comp['_audited_by_me']     = $by_me;
 			$comp['_audit_tier']        = ( $by_anyone && ! $by_me ) ? 1 : 0;
+
+			$sv_key = (string) ( $comp['slug'] ?? '' ) . '|' . (string) ( $comp['version'] ?? '' );
+			$comp['_code_audited'] = isset( $any_sv[ $type ][ $sv_key ] );
 		}
 		return $components;
 	}
@@ -590,19 +625,52 @@ class ComponentQueueCLI {
 			} );
 			$primary = $picked_hashes[0];
 
+			// Variant-aware coverage across ALL hashes of the picked (slug,version),
+			// not just the primary. `_code_audited` answers "is this CODE reviewed?"
+			// (any hash of this slug+version audited in the registry); the per-hash
+			// `_audited_by_anyone` flags split the fleet's current hashes into
+			// already-covered vs new variants. This is what lets a caller route a
+			// resurfaced-but-audited build (e.g. a per-site cache/license fork) to a
+			// cheap variant merge instead of a wasted full re-audit.
+			$audited_variant_count = 0;
+			foreach ( $picked_data['hashes'] as $h ) {
+				if ( ! empty( $h['_audited_by_anyone'] ) ) {
+					$audited_variant_count++;
+				}
+			}
+			$total_variants   = count( $picked_data['hashes'] );
+			$unaudited_count  = $total_variants - $audited_variant_count;
+			$code_audited     = ! empty( $primary['_code_audited'] );
+
+			// queue_action reflects ANY-model coverage (the default, no-model flow the
+			// scanner uses). In model-layering mode 'covered' means "covered by some
+			// model — a layered re-audit candidate for you", not "nothing to do".
+			if ( ! $code_audited ) {
+				$queue_action = 'full_audit';     // genuinely new code, never audited
+			} elseif ( $unaudited_count > 0 ) {
+				$queue_action = 'variant_merge';  // code already reviewed; new per-site variants only
+			} else {
+				$queue_action = 'covered';        // every fleet hash already audited
+			}
+
 			$result[] = [
-				'slug'              => $bucket['slug'],
-				'latest_version'    => $picked_ver,
-				'sites'             => $bucket['total_sites'],
-				'versions_in_fleet' => count( $bucket['versions'] ),
-				'type'              => $bucket['type'],
-				'title'             => $bucket['title'],
-				'hash'              => $primary['hash'],
-				'hashes_count'      => count( $picked_data['hashes'] ),
-				'source_ssh'        => $primary['source_ssh'] ?? '',
-				'home_directory'    => $primary['home_directory'] ?? '',
-				'audit_tier'        => (int) ( $primary['_audit_tier'] ?? 0 ),
-				'sites_on_latest'   => $picked_data['sites'],
+				'slug'                  => $bucket['slug'],
+				'latest_version'        => $picked_ver,
+				'sites'                 => $bucket['total_sites'],
+				'versions_in_fleet'     => count( $bucket['versions'] ),
+				'type'                  => $bucket['type'],
+				'title'                 => $bucket['title'],
+				'hash'                  => $primary['hash'],
+				'hashes_count'          => $total_variants,
+				'source_ssh'            => $primary['source_ssh'] ?? '',
+				'home_directory'        => $primary['home_directory'] ?? '',
+				'audit_tier'            => (int) ( $primary['_audit_tier'] ?? 0 ),
+				'sites_on_latest'       => $picked_data['sites'],
+				// New variant-aware signals (see annotate_tiers / _code_audited):
+				'code_audited'          => $code_audited,
+				'audited_variant_count' => $audited_variant_count,
+				'unaudited_variant_count' => $unaudited_count,
+				'queue_action'          => $queue_action,
 			];
 		}
 
