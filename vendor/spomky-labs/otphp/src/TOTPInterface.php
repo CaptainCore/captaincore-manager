@@ -30,14 +30,18 @@ interface TOTPInterface extends OTPInterface
     ): self;
 
     /**
-     * @param positive-int $period
+     * @deprecated Deprecated since v11.4, use {@see self::withPeriod()} instead
      */
     public function setPeriod(int $period): void;
 
+    public function withPeriod(int $period): self;
+
     /**
-     * @param 0|positive-int $epoch
+     * @deprecated Deprecated since v11.4, use {@see self::withEpoch()} instead
      */
     public function setEpoch(int $epoch): void;
+
+    public function withEpoch(int $epoch): self;
 
     /**
      * Return the TOTP at the current time.
@@ -48,18 +52,10 @@ interface TOTPInterface extends OTPInterface
 
     /**
      * Get the period of time for OTP generation (a non-null positive integer, in second).
-     *
-     * @return positive-int
      */
     public function getPeriod(): int;
 
-    /**
-     * @return 0|positive-int
-     */
     public function expiresIn(): int;
 
-    /**
-     * @return 0|positive-int
-     */
     public function getEpoch(): int;
 }

@@ -19,6 +19,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         array (
             'Psr\\Http\\Message\\' => 17,
             'Psr\\Http\\Client\\' => 16,
+            'Psr\\Clock\\' => 10,
             'PhpIP\\' => 6,
             'ParagonIE\\ConstantTime\\' => 23,
         ),
@@ -67,6 +68,10 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'Psr\\Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-client/src',
+        ),
+        'Psr\\Clock\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/psr/clock/src',
         ),
         'PhpIP\\' =>
         array (
@@ -403,13 +408,19 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'MaxMind\\WebService\\Http\\CurlRequest' => __DIR__ . '/..' . '/maxmind/web-service-common/src/WebService/Http/CurlRequest.php',
         'MaxMind\\WebService\\Http\\Request' => __DIR__ . '/..' . '/maxmind/web-service-common/src/WebService/Http/Request.php',
         'MaxMind\\WebService\\Http\\RequestFactory' => __DIR__ . '/..' . '/maxmind/web-service-common/src/WebService/Http/RequestFactory.php',
+        'OTPHP\\Exception\\InvalidLabelException' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/InvalidLabelException.php',
+        'OTPHP\\Exception\\InvalidParameterException' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/InvalidParameterException.php',
+        'OTPHP\\Exception\\InvalidProvisioningUriException' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/InvalidProvisioningUriException.php',
+        'OTPHP\\Exception\\OTPExceptionInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/OTPExceptionInterface.php',
+        'OTPHP\\Exception\\ParameterNotFoundException' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/ParameterNotFoundException.php',
+        'OTPHP\\Exception\\SecretDecodingException' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Exception/SecretDecodingException.php',
         'OTPHP\\Factory' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Factory.php',
         'OTPHP\\FactoryInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/FactoryInterface.php',
         'OTPHP\\HOTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/HOTP.php',
         'OTPHP\\HOTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/HOTPInterface.php',
+        'OTPHP\\InternalClock' => __DIR__ . '/..' . '/spomky-labs/otphp/src/InternalClock.php',
         'OTPHP\\OTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/OTP.php',
         'OTPHP\\OTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/OTPInterface.php',
-        'OTPHP\\ParameterTrait' => __DIR__ . '/..' . '/spomky-labs/otphp/src/ParameterTrait.php',
         'OTPHP\\TOTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/TOTP.php',
         'OTPHP\\TOTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/TOTPInterface.php',
         'OTPHP\\Url' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Url.php',
@@ -433,6 +444,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'PhpIP\\IPv4Block' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IPv4Block.php',
         'PhpIP\\IPv6' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IPv6.php',
         'PhpIP\\IPv6Block' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IPv6Block.php',
+        'Psr\\Clock\\ClockInterface' => __DIR__ . '/..' . '/psr/clock/src/ClockInterface.php',
         'Psr\\Http\\Client\\ClientExceptionInterface' => __DIR__ . '/..' . '/psr/http-client/src/ClientExceptionInterface.php',
         'Psr\\Http\\Client\\ClientInterface' => __DIR__ . '/..' . '/psr/http-client/src/ClientInterface.php',
         'Psr\\Http\\Client\\NetworkExceptionInterface' => __DIR__ . '/..' . '/psr/http-client/src/NetworkExceptionInterface.php',

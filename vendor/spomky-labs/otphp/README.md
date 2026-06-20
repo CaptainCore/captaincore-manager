@@ -1,12 +1,12 @@
 TOTP / HOTP library in PHP
 ==========================
 
-![Build Status](https://github.com/spomky-labs/otphp/workflows/Integrate/badge.svg)
+[![Build Status](https://github.com/spomky-labs/otphp/actions/workflows/ci.yml/badge.svg)](https://github.com/spomky-labs/otphp/actions/workflows/ci.yml)
 
-[![Latest Stable Version](https://poser.pugx.org/spomky-labs/otphp/v/stable.png)](https://packagist.org/packages/spomky-labs/otphp)
-[![Total Downloads](https://poser.pugx.org/spomky-labs/otphp/downloads.png)](https://packagist.org/packages/spomky-labs/otphp)
-[![Latest Unstable Version](https://poser.pugx.org/spomky-labs/otphp/v/unstable.png)](https://packagist.org/packages/spomky-labs/otphp)
-[![License](https://poser.pugx.org/spomky-labs/otphp/license.png)](https://packagist.org/packages/spomky-labs/otphp)
+[![Latest Stable Version](https://poser.pugx.org/spomky-labs/otphp/v/stable.svg)](https://packagist.org/packages/spomky-labs/otphp)
+[![Total Downloads](https://poser.pugx.org/spomky-labs/otphp/downloads.svg)](https://packagist.org/packages/spomky-labs/otphp)
+[![Latest Unstable Version](https://poser.pugx.org/spomky-labs/otphp/v/unstable.svg)](https://packagist.org/packages/spomky-labs/otphp)
+[![License](https://poser.pugx.org/spomky-labs/otphp/license.svg)](https://packagist.org/packages/spomky-labs/otphp)
 
 A php library for generating one-time passwords according to [RFC 4226](https://datatracker.ietf.org/doc/html/rfc4226) (HOTP Algorithm) and [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238) (TOTP Algorithm)
 
@@ -31,9 +31,9 @@ Or
 
 ## Contributing
 
-Requests for new features, bug fixed and all other ideas to make this project useful are welcome.
+Requests for new features, bug fixes and all other ideas to make this project useful are welcome.
 
-Please report all issues in [the repository bug tracker](hhttps://github.com/Spomky-Labs/otphp/issues).
+Please report all issues in [the repository bug tracker](https://github.com/Spomky-Labs/otphp/issues).
 
 Also make sure to [follow these best practices](.github/CONTRIBUTING.md).
 
