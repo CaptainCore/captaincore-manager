@@ -16184,7 +16184,9 @@ const app = createApp({
 		},
 		openTerminalForCurrentEnv( focusInput = true ) {
 			const site = this.dialog_site.site;
-			const env = this.dialog_site.environment_selected;
+			// Guard against a stale environment_selected after a site switch (see currentSiteEnvironment).
+			const env = this.currentSiteEnvironment( site.site_id ) || this.dialog_site.environment_selected;
+			if ( ! site || ! env ) { return; }
 			
 			// 1. Set the target
 			this.view_console.selected_targets = [{
@@ -17252,6 +17254,29 @@ const app = createApp({
 				
 				return null;
 			}).filter(id => id !== null);
+		},
+		// Resolve the environment object to target for a single-site Script/action.
+		// dialog_site.site is updated synchronously when switching sites, but
+		// dialog_site.environment_selected is only refreshed after fetchSiteEnvironments
+		// resolves. During that async window environment_selected can still point at the
+		// previously-viewed site, which would target the wrong site/environment. Only trust
+		// it when it actually belongs to the site being acted on; otherwise fall back to the
+		// site's Production environment from the sites store.
+		currentSiteEnvironment( site_id ) {
+			const selected = this.dialog_site.environment_selected;
+			const belongs = this.dialog_site.site &&
+				this.dialog_site.site.site_id == site_id &&
+				selected && selected.environment_id &&
+				Array.isArray( this.dialog_site.site.environments ) &&
+				this.dialog_site.site.environments.some( e => e.environment_id == selected.environment_id );
+			if ( belongs ) {
+				return selected;
+			}
+			const fullSite = this.sites.find( s => s.site_id == site_id );
+			if ( fullSite && Array.isArray( fullSite.environments ) ) {
+				return fullSite.environments.find( e => e.environment === 'Production' ) || fullSite.environments[0] || null;
+			}
+			return null;
 		},
 		openEnvironmentTool(site, env, slug) {
 			// 1. Tell the dialog which environment ID we want to load once data is fetched
@@ -18794,10 +18819,10 @@ const app = createApp({
 				const envName = this.dialog_bulk_tools.environment_selected || "Production";
 				envIds = this.getEnvironmentIdsFromSelection(this.sites_selected, envName);
 			} else {
-				// Single site context: use the currently viewed environment
-				if (this.dialog_site.environment_selected && this.dialog_site.environment_selected.environment_id) {
-					envIds = [this.dialog_site.environment_selected.environment_id];
-				}
+				// Single site context: use the currently viewed environment, guarded against a stale
+				// environment_selected after a site switch (see currentSiteEnvironment).
+				const targetEnv = this.currentSiteEnvironment( site_id );
+				if ( targetEnv ) { envIds = [ targetEnv.environment_id ]; }
 			}
 
 			if (envIds.length === 0) {
@@ -20778,17 +20803,10 @@ const app = createApp({
 				// Single site context
 				const siteId = this.dialog_launch.site.site_id;
 				
-				// If we are currently viewing the site in the main dialog, use the selected environment
-				if (this.dialog_site.site && this.dialog_site.site.site_id == siteId && this.dialog_site.environment_selected) {
-					envIds = [this.dialog_site.environment_selected.environment_id];
-				} else {
-					// Fallback: Find Production environment for the site
-					const fullSite = this.sites.find(s => s.site_id == siteId);
-					if (fullSite && fullSite.environments) {
-						const prod = fullSite.environments.find(e => e.environment === 'Production') || fullSite.environments[0];
-						if (prod) envIds = [prod.environment_id];
-					}
-				}
+				// Resolve the environment for the site being launched, guarding against a stale
+				// environment_selected after a site switch (see currentSiteEnvironment).
+				const targetEnv = this.currentSiteEnvironment( siteId );
+				if ( targetEnv ) envIds = [ targetEnv.environment_id ];
 			}
 
 			if (envIds.length === 0) {
@@ -21017,7 +21035,9 @@ const app = createApp({
 		},
 		resetPermissions( site_id ) {
 			site = this.dialog_site.site
-			site_name = this.dialog_site.environment_selected.home_url || this.dialog_site.site.name || ""
+			// Guard against a stale environment_selected after a site switch (see currentSiteEnvironment).
+			env = this.currentSiteEnvironment( site_id ) || this.dialog_site.environment_selected
+			site_name = ( env && env.home_url ) || this.dialog_site.site.name || ""
 			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
 			
 			should_proceed = confirm( `Reset file permissions to defaults on ${site_name}?` )
@@ -21028,7 +21048,7 @@ const app = createApp({
 			}
 
 			var data = {
-				environment: this.dialog_site.environment_selected.environment,
+				environment: env.environment,
 				post_id: site_id,
 				command: 'reset-permissions'
 			};
@@ -21229,12 +21249,14 @@ const app = createApp({
 				return;
 			}
 
+			// Guard against a stale environment_selected after a site switch (see currentSiteEnvironment).
+			env = this.currentSiteEnvironment( site_id ) || this.dialog_site.environment_selected
 			var data = {
 				post_id: site_id,
 				command: 'migrate',
 				value: this.dialog_migration.backup_url,
 				update_urls: this.dialog_migration.update_urls,
-				environment: this.dialog_site.environment_selected.environment
+				environment: env.environment
 			};
 
 			self = this;
@@ -21344,7 +21366,9 @@ const app = createApp({
 		siteDeploy( site_id ) {
 
 			site = this.dialog_site.site
-			site_name = this.dialog_site.environment_selected.home_url || this.dialog_site.site.name || ""
+			// Guard against a stale environment_selected after a site switch (see currentSiteEnvironment).
+			env = this.currentSiteEnvironment( site_id ) || this.dialog_site.environment_selected
+			site_name = ( env && env.home_url ) || this.dialog_site.site.name || ""
 			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
 			
 			should_proceed = confirm( `Deploy defaults on ${site_name}?` )
@@ -21355,7 +21379,7 @@ const app = createApp({
 			}
 
 			var data = {
-				environment: this.dialog_site.environment_selected.environment,
+				environment: env.environment,
 				post_id: site_id,
 				command: 'deploy-defaults'
 			};
@@ -23044,9 +23068,11 @@ const app = createApp({
 		},
 		viewApplyHttpsUrls( site_id ) {
 			site = this.dialog_site.site
+			// Guard against a stale environment_selected after a site switch (see currentSiteEnvironment).
+			const env = this.currentSiteEnvironment( site_id );
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site_id = site_id
-			this.dialog_apply_https_urls.site_name = this.dialog_site.environment_selected.home_url;
+			this.dialog_apply_https_urls.site_name = ( env && env.home_url ) || ( site && site.name ) || "";
 		},
 		viewApplyHttpsUrlsBulk() {
 			this.dialog_apply_https_urls.show = true;
