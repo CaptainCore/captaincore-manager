@@ -20792,6 +20792,7 @@ const app = createApp({
 			}
 
 			let envIds = [];
+			let syncSiteId = null, syncEnvName = null;
 			const domain = this.dialog_launch.domain;
 			const siteName = this.dialog_launch.site.name;
 
@@ -20806,7 +20807,11 @@ const app = createApp({
 				// Resolve the environment for the site being launched, guarding against a stale
 				// environment_selected after a site switch (see currentSiteEnvironment).
 				const targetEnv = this.currentSiteEnvironment( siteId );
-				if ( targetEnv ) envIds = [ targetEnv.environment_id ];
+				if ( targetEnv ) {
+					envIds = [ targetEnv.environment_id ];
+					syncSiteId = siteId;
+					syncEnvName = targetEnv.environment;
+				}
 			}
 
 			if (envIds.length === 0) {
@@ -20823,12 +20828,20 @@ const app = createApp({
 			const description = `Launching ${siteName} to ${domain}`;
 			const job_id = Math.round((new Date()).getTime());
 			
-			this.jobs.push({
+			const launchJob = {
 				"job_id": job_id,
 				"description": description, 
 				"status": "queued", 
 				"stream": []
-			});
+			};
+			// Single-site launches sync the affected environment once the job finishes
+			// (see the command == "manage" branch in runCommand's completion handler).
+			if ( syncSiteId && syncEnvName ) {
+				launchJob.command = "manage";
+				launchJob.site_id = syncSiteId;
+				launchJob.environment = syncEnvName;
+			}
+			this.jobs.push( launchJob );
 
 			// Use the bulk-tools endpoint which handles 'launch' and params
 			axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
@@ -21384,9 +21397,10 @@ const app = createApp({
 				command: 'deploy-defaults'
 			};
 
-			// Start job
+			// Start job. Tag with command "manage" + environment so the affected environment is
+			// synced once the job finishes (see the completion handler in runCommand).
 			job_id = Math.round((new Date()).getTime())
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []})
+			this.jobs.push({"job_id": job_id, "site_id": site_id, "command": "manage", "environment": env.environment, "description": description, "status": "queued", stream: []})
 
 			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
