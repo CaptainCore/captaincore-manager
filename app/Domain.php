@@ -569,8 +569,8 @@ class Domain {
         $alias_input = (object) $alias_input;
         
         // Build the Mailgun route expression
-        $alias_name = $alias_input->name ?? '';
-        
+        $alias_name = self::sanitize_email_token( $alias_input->name ?? '' );
+
         if ( $alias_name === '*' || $alias_name === '' ) {
             // Catch-all alias
             $expression = 'match_recipient(".*@' . $domain->name . '")';
@@ -588,6 +588,10 @@ class Domain {
         
         foreach ( $recipients as $recipient ) {
             $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
+            $recipient_email = self::sanitize_email_token( $recipient_email );
+            if ( $recipient_email === '' ) {
+                continue;
+            }
             $actions[] = 'forward("' . $recipient_email . '")';
         }
         $actions[] = 'stop()';
@@ -626,7 +630,7 @@ class Domain {
 
         // If name is being updated, rebuild the expression
         if ( isset( $alias_input->name ) ) {
-            $alias_name = $alias_input->name;
+            $alias_name = self::sanitize_email_token( $alias_input->name );
             if ( $alias_name === '*' || $alias_name === '' ) {
                 $update_data['expression'] = 'match_recipient(".*@' . $domain->name . '")';
                 $update_data['priority'] = 100;
@@ -647,6 +651,10 @@ class Domain {
             
             foreach ( $recipients as $recipient ) {
                 $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
+                $recipient_email = self::sanitize_email_token( $recipient_email );
+                if ( $recipient_email === '' ) {
+                    continue;
+                }
                 $actions[] = 'forward("' . $recipient_email . '")';
             }
             $actions[] = 'stop()';
@@ -685,6 +693,32 @@ class Domain {
      * @param string $domain_name The domain name for context.
      * @return object|null The alias object or null if not a valid forward route.
      */
+    /**
+     * Scrub invisible characters out of an email alias / recipient before it is
+     * embedded in a Mailgun route. Rich-text and webpage copy-paste routinely
+     * smuggle in zero-width spaces (U+200B), BOM (U+FEFF), word joiners,
+     * soft hyphens, bidi controls, NBSP, and ASCII control chars. These render
+     * the address as UTF-8 and silently break forwarding — e.g. GoDaddy's MX
+     * rejects it with "554 destination SMTP server doesn't support UTF-8
+     * addresses". Visible Unicode is preserved so IDN/EAI addresses still work.
+     */
+    private static function sanitize_email_token( $value ) {
+        $value = (string) $value;
+        // Strip every Unicode "Other" char (Cc control, Cf format incl. zero-width
+        // spaces & BOM, surrogates, private-use, unassigned).
+        $stripped = preg_replace( '/\p{C}+/u', '', $value );
+        if ( $stripped !== null ) {
+            $value = $stripped;
+        }
+        // Strip all whitespace/separators (NBSP et al.) — no valid email/local
+        // part contains them.
+        $stripped = preg_replace( '/[\p{Z}\s]+/u', '', $value );
+        if ( $stripped !== null ) {
+            $value = $stripped;
+        }
+        return $value;
+    }
+
     private static function _mailgun_route_to_alias( $route, $domain_name ) {
         if ( empty( $route ) ) {
             return null;
