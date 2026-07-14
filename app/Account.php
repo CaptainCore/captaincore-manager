@@ -106,8 +106,8 @@ class Account {
             $order      = wc_get_order( $invoice );
             $item_count = $order->get_item_count();
             $invoices[$key]  = [
-                "order_id" => $order->id,
-                "name"     => get_the_author_meta( 'display_name', $order->user_id ),
+                "order_id" => $order->get_id(),
+                "name"     => get_the_author_meta( 'display_name', $order->get_user_id() ),
                 "date"     => wc_format_datetime( $order->get_date_created() ),
                 "status"   => wc_get_order_status_name( $order->get_status() ),
                 "total"    => $order->get_total(),

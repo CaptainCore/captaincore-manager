@@ -2631,7 +2631,7 @@ function captaincore_dns_bulk_func( WP_REST_Request $request ) {
 				$response->errors = $errors;
 			}
 			$response->record_status = "new-record";
-			$response->record_id     = $response->data->id;
+			$response->record_id     = $response->data->id ?? null;
 			$response->record_name   = $record_name;
 			$response->record_value  = $record_value;
 			$response->type          = $record_type;

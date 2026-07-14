@@ -291,6 +291,11 @@ class DB {
         $where_statements = [];
         foreach ( $conditions as $row => $value ) {
             if ( is_array($value) ) {
+                // An empty array yields `IN ()`, which is invalid SQL. With no
+                // possible matches, return nothing rather than emit a broken query.
+                if ( empty( $value ) ) {
+                    return [];
+                }
                 $values = implode( ", ", $value );
                 $where_statements[] =  "{$table}.{$row} IN ($values)";
                 continue;
