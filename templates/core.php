@@ -6880,10 +6880,21 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-toolbar elevation="0" color="transparent">
 				<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
-				<v-btn icon="mdi-close" @click="dialog_site.step = 2"></v-btn>
+				<v-btn icon="mdi-close" @click="dialog_edit_site.loading = false; dialog_site.step = 2"></v-btn>
 			</v-toolbar>
 			<v-card-text v-if="role == 'administrator'">
-				<v-form ref="form" :disabled="dialog_edit_site.loading">
+				<div v-if="dialog_edit_site.loading" class="d-flex flex-column align-center justify-center py-12">
+					<v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
+					<div class="text-medium-emphasis">Loading full site credentials…</div>
+				</div>
+				<div v-else-if="dialog_edit_site.errors && dialog_edit_site.errors.length && !siteEnvironmentsComplete(dialog_edit_site.site.environments)" class="py-8">
+					<v-alert v-for="(error, index) in dialog_edit_site.errors" :key="index" variant="tonal" type="error" class="mb-2">{{ error }}</v-alert>
+					<div class="text-center mt-4">
+						<v-btn color="primary" @click="editSite()">Retry</v-btn>
+						<v-btn variant="text" class="ml-2" @click="dialog_edit_site.errors = []; dialog_site.step = 2">Cancel</v-btn>
+					</div>
+				</div>
+				<v-form v-else ref="form" :disabled="dialog_edit_site.loading">
 				<v-row v-for="(error, index) in dialog_edit_site.errors" :key="index">
 					<v-col cols="12">
 					<v-alert variant="tonal" type="error" class="mb-2"> {{ error }} </v-alert>
@@ -7031,8 +7042,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 				<v-row>
-					<v-col cols="6"><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-circular></v-col>
-					<v-col cols="6" class="text-right">
+					<v-col cols="12" class="text-right">
 					<v-dialog v-model="dialog_edit_site.show_vars" scrollable scrim="false" max-width="700px">
 						<template v-slot:activator="{ props }">
 						<v-btn v-bind="props" class="mr-2">Configure Environment Vars</v-btn>
@@ -12256,7 +12266,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)" prepend-icon="mdi-content-duplicate">
 							Copy Site
 						</v-btn>
-						<v-btn size="small" variant="outlined" @click="editSite()" prepend-icon="mdi-pencil">
+						<v-btn size="small" variant="outlined" @click="editSite()" prepend-icon="mdi-pencil" :disabled="dialog_site.loading || dialog_edit_site.loading || !siteEnvironmentsComplete(dialog_site.site.environments)" :loading="dialog_site.loading || dialog_edit_site.loading">
 							Edit Site
 						</v-btn>
 						<v-btn size="small" variant="outlined" color="error" @click="deleteSite(dialog_site.site.site_id)" prepend-icon="mdi-delete">
@@ -17289,10 +17299,19 @@ const app = createApp({
 			this.goToPath(path);
 		},
 		fetchSiteEnvironments( site_id ) {
+			// Only flip loading when we still have list-cache envs (missing password/home_directory/protocol).
+			// Avoid blanking the whole site view on every background re-fetch.
+			if ( this.dialog_site.site && this.dialog_site.site.site_id == site_id && ! this.siteEnvironmentsComplete( this.dialog_site.site.environments ) ) {
+				this.dialog_site.loading = true
+			}
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
 				headers: {'X-WP-Nonce':this.wp_nonce}
 			})
 			.then( response => {
+				// Stale response: user switched to another site while this request was in flight
+				if ( this.dialog_site.site.site_id != site_id ) {
+					return
+				}
 				this.dialog_site.site.environments = response.data
 				this.dialog_site.site.environments.forEach( e => {
 					e.environment_label = e.environment + " Environment"
@@ -17354,6 +17373,12 @@ const app = createApp({
 				}
 				if ( this.dialog_site.site.tabs_management == "tab-Info" && this.route_path.endsWith( "/visual-captures" ) ) {
 					this.showCaptures( this.dialog_site.site.site_id )
+				}
+			})
+			.catch( error => {
+				console.log( error )
+				if ( this.dialog_site.site && this.dialog_site.site.site_id == site_id ) {
+					this.dialog_site.loading = false
 				}
 			});
 		},
@@ -18711,9 +18736,89 @@ const app = createApp({
 
 			this.sites.map(site => site.name).filter(site => site != site_name );
 		},
+		// List endpoint caches only a subset of env fields (address/username/port).
+		// Full credentials (password, home_directory, protocol, …) arrive via
+		// GET /sites/{id}/environments. Never open the edit form from list-cache data.
+		siteEnvironmentsComplete( environments ) {
+			if ( ! Array.isArray( environments ) || environments.length === 0 ) {
+				return false
+			}
+			return environments.every( env =>
+				env && Object.prototype.hasOwnProperty.call( env, 'home_directory' ) && Object.prototype.hasOwnProperty.call( env, 'protocol' )
+			)
+		},
 		editSite() {
-			this.dialog_edit_site.site = JSON.parse ( JSON.stringify ( this.dialog_site.site ) )
+			const siteId = this.dialog_site.site.site_id
+			// Seed title/name immediately so the edit sheet isn't blank while loading
+			this.dialog_edit_site.site = JSON.parse( JSON.stringify( this.dialog_site.site ) )
+			this.dialog_edit_site.errors = []
+			this.dialog_edit_site.show_vars = false
+			this.dialog_edit_site.loading = true
 			this.dialog_site.step = 4
+
+			// Always load full environments + site details before editing. The sites list
+			// embeds a partial env cache; cloning it caused empty Home Directory / Password / Protocol.
+			Promise.all([
+				axios.get( `/wp-json/captaincore/v1/sites/${siteId}/environments`, { headers: { 'X-WP-Nonce': this.wp_nonce } } ),
+				axios.get( `/wp-json/captaincore/v1/sites/${siteId}/details`, { headers: { 'X-WP-Nonce': this.wp_nonce } } ),
+			])
+			.then( ( [ envsRes, detailsRes ] ) => {
+				// User navigated away or closed edit while the request was in flight
+				if ( this.dialog_site.step !== 4 || this.dialog_edit_site.site.site_id != siteId ) {
+					return
+				}
+
+				const environments = Array.isArray( envsRes.data ) ? envsRes.data : []
+				environments.forEach( e => {
+					e.environment_label = e.environment + " Environment"
+					try {
+						if ( e.details ) {
+							const details = typeof e.details === 'string' ? JSON.parse( e.details ) : e.details
+							e.performance_monitor_enabled = details.performance_monitor_enabled || false
+							e.audit_summary = details.audit_summary || null
+						}
+					} catch ( err ) {
+						e.performance_monitor_enabled = false
+						e.audit_summary = null
+					}
+				})
+
+				// Keep the live site view in sync with the full payload
+				this.dialog_site.site.environments = environments
+				if ( detailsRes.data && detailsRes.data.site ) {
+					Object.keys( detailsRes.data.site ).forEach( key => {
+						// Don't clobber tabs the user is on
+						if ( key === 'tabs' || key === 'tabs_management' ) return
+						this.dialog_site.site[ key ] = detailsRes.data.site[ key ]
+					})
+				}
+				if ( detailsRes.data ) {
+					if ( detailsRes.data.account ) this.dialog_site.site.account = detailsRes.data.account
+					if ( detailsRes.data.domains ) this.dialog_site.site.domains = detailsRes.data.domains
+					if ( detailsRes.data.shared_with ) this.dialog_site.site.shared_with = detailsRes.data.shared_with
+				}
+				// Preserve selected environment if possible
+				if ( this.dialog_site.environment_selected && this.dialog_site.environment_selected.environment ) {
+					const match = environments.find( e => e.environment === this.dialog_site.environment_selected.environment )
+					this.dialog_site.environment_selected = match || environments[0] || this.dialog_site.environment_selected
+				} else if ( environments[0] ) {
+					this.dialog_site.environment_selected = environments[0]
+				}
+				this.dialog_site.loading = false
+
+				this.dialog_edit_site.site = JSON.parse( JSON.stringify( this.dialog_site.site ) )
+				if ( ! Array.isArray( this.dialog_edit_site.site.environment_vars ) ) {
+					this.dialog_edit_site.site.environment_vars = []
+				}
+				this.dialog_edit_site.loading = false
+			})
+			.catch( error => {
+				console.log( error )
+				if ( this.dialog_site.step === 4 && this.dialog_edit_site.site.site_id == siteId ) {
+					this.dialog_edit_site.loading = false
+					this.dialog_edit_site.errors = [ 'Failed to load full site credentials. Close and try again.' ]
+				}
+			})
 		},
 		cancelSiteRemoved() {
 			site_id = this.dialog_site.site.site_id
@@ -21162,6 +21267,9 @@ const app = createApp({
 				show_site.key = null
 			}
 			this.dialog_site.site = show_site
+			// List cache omits password/home_directory/protocol — keep the detail pane in
+			// a loading state until fetchSiteEnvironments fills full credentials.
+			this.dialog_site.loading = ! this.siteEnvironmentsComplete( show_site.environments )
 			this.dialog_site.step = 2
 			this.dialog_new_site = {
 				provider: "kinsta",
