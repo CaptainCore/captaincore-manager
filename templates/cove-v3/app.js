@@ -644,7 +644,9 @@ class Component extends DCLogic {
         this.setState({ copied: 'apppw' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
       sessRows: sessions.map(se => ({ ...se, killable: !se.current,
         kill: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.id !== se.id) })) })),
-      killOthers: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.current) }))
+      killOthers: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.current) })),
+      profPw: '', onProfPw: () => {}, profMsg: '', profHasMsg: false, tfaSecret: '', tfaHasSecret: false,
+      ...(this._hydrated ? this.realProfileVals(s) : {})
     };
   }
 

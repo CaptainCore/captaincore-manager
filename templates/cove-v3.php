@@ -48,9 +48,14 @@ $cc_boot = [
     'homeLink'        => home_url(),
     'loginUrl'        => home_url( $config_path . 'login' ),
     'socket'          => captaincore_fetch_socket_address() . '/ws',
+    // Profile state is server-rendered by User::profile() (same as v1) so the
+    // Profile screen needs no extra fetch for its initial state.
+    'tfaEnabled'      => ! empty( $user->tfa_enabled ),
+    'appPassword'     => isset( $user->application_password ) ? $user->application_password : null,
+    'sessions'        => isset( $user->sessions ) ? $user->sessions : [],
 ];
 
-$v3_scripts = [ 'app.js', 'data.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'version-recovery.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'version-recovery.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>

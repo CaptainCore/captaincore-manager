@@ -1772,9 +1772,15 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Email</span>
               <input value="{{ profEmail }}" onInput="{{ onProfEmail }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--mono);padding:0 9px;outline:none">
             </div>
-            <div style="display:flex;gap:12px;padding:12px 16px">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+              <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">New password</span>
+              <input value="{{ profPw }}" onInput="{{ onProfPw }}" type="password" placeholder="leave blank to keep current" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--mono);padding:0 9px;outline:none">
+            </div>
+            <div style="display:flex;gap:12px;padding:12px 16px;align-items:center">
               <button onClick="{{ saveProfile }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:7px 14px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ profSaveLabel }}</button>
-              <span style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer;align-self:center">Change password…</span>
+              <sc-if value="{{ profHasMsg }}" hint-placeholder-val="{{ false }}">
+                <span style="font:500 12.5px var(--sans);color:var(--bad)">{{ profMsg }}</span>
+              </sc-if>
             </div>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
@@ -1791,9 +1797,12 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </div>
             <sc-if value="{{ tfaSetup }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;align-items:center;gap:16px;padding:14px 16px">
-                <div style="width:96px;height:96px;border:1.5px dashed var(--rule);border-radius:10px;display:grid;place-items:center;font:400 11px var(--sans);color:var(--ink-dim);text-align:center">QR code<br>scan in app</div>
+                <div style="width:96px;height:96px;border:1.5px dashed var(--rule);border-radius:10px;display:grid;place-items:center;font:400 11px var(--sans);color:var(--ink-dim);text-align:center">Enter key<br>in app</div>
                 <div style="display:flex;flex-direction:column;gap:8px">
-                  <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Scan with your authenticator, then enter the 6-digit code.</span>
+                  <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Add this secret to your authenticator, then enter the 6-digit code.</span>
+                  <sc-if value="{{ tfaHasSecret }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:600 12.5px var(--mono);background:var(--panel-2);border-radius:6px;padding:5px 9px;word-break:break-all;user-select:all">{{ tfaSecret }}</span>
+                  </sc-if>
                   <div style="display:flex;gap:8px">
                     <input value="{{ tfaCode }}" onInput="{{ onTfaCode }}" placeholder="000000" style="width:110px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:500 14px var(--mono);padding:0 9px;outline:none;letter-spacing:.15em">
                     <button onClick="{{ tfaActivate }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate</button>
