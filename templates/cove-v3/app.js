@@ -839,6 +839,21 @@ class Component extends DCLogic {
       ndZoneLabel: s.ndZone ? 'On — records editable here' : 'Off — DNS stays external',
       ndZoneFlip: () => this.setState(st => ({ ndZone: !st.ndZone })),
       ndCreate: () => { const v = this.state.ndName.trim().toLowerCase(); if (!v) return;
+        if (this._hydrated) {
+          const acc = this.ACCOUNTS.find(a => a.name === this.state.ndAcc);
+          this.setState({ ndOpen: false, ndName: '' });
+          this.api('/domains', { method: 'POST', body: { name: v, account_id: acc ? acc.id : '', create_dns_zone: !!this.state.ndZone } })
+            .then(res => {
+              if (res && res.code) { console.warn('domain create failed', res); return; }
+              this.api('/domains/').then(domains => {
+                this.DOMAINS = (Array.isArray(domains) ? domains : []).map(x => ({ id: String(x.domain_id), name: x.name,
+                  account: '', registrar: x.provider_id ? 'Registrar' : '—', dns: !!x.remote_id,
+                  expires: '—', auto: null, owned: true }));
+                this.setState({});
+              }).catch(() => {});
+            }).catch(() => {});
+          return;
+        }
         this.setState(st => ({ domList: [{ id: 'd' + Date.now(), name: v, account: st.ndAcc, registrar: 'Hover', dns: st.ndZone, expires: 'Jul 2027', auto: true, owned: true }, ...(st.domList || this.DOMAINS)], ndOpen: false, ndName: '' }));
         this.runJob('domain-create', v + (this.state.ndZone ? ' + DNS zone' : '')); },
       domRows: filtered.map(d => ({ ...d,
@@ -944,7 +959,12 @@ class Component extends DCLogic {
       mgHost: 'mg.' + d.name,
       mgRecs, mgEvents: this.MG_EVENTS,
       mgSupp: '2 bounces · 0 unsubscribes · 0 complaints',
-      mgDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site')
+      mgDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
+      dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
+      fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
+      mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
+      regShowRenew: true, mgShowDeploy: true,
+      ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };
   }
 
