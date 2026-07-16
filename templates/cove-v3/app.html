@@ -294,7 +294,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
               <span style="font:500 12px var(--sans);color:var(--ink-dim)">Labels:</span>
               <sc-for list="{{ labelChips }}" as="c" hint-placeholder-count="2">
-                <span onClick="{{ c.go }}" style="display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">{{ c.label }} <span style="font:600 11px var(--mono)">{{ c.n }}</span></span>
+                <span onClick="{{ c.go }}" style="display:flex;align-items:center;gap:6px;padding:4px 11px 4px 9px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ c.icon }}"></path></svg>
+                  {{ c.label }} <span style="font:600 11px var(--mono)">{{ c.n }}</span></span>
               </sc-for>
             </div>
           </sc-if>
