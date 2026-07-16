@@ -1274,7 +1274,7 @@ class Component extends DCLogic {
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
-      else if (e.ctrlKey && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
       else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
@@ -1374,7 +1374,9 @@ class Component extends DCLogic {
       right: j.state === 'running' ? Math.round(j.pct) + '%' : j.right,
       running: j.state === 'running',
       fg: j.state === 'running' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      dot: j.state === 'running' ? 'var(--brand)' : 'var(--ok)' }));
+      dot: j.state === 'running' ? 'var(--brand)' : j.state === 'error' ? 'var(--bad)' : 'var(--ok)',
+      rowBg: s.jobSel === j.id ? 'var(--brand-soft)' : 'transparent',
+      pick: () => this.setState({ jobSel: j.id }) }));
 
     const activity = isOp ? [
       { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed' },
@@ -1462,6 +1464,7 @@ class Component extends DCLogic {
       goProfile: this.go('profile'),
       consoleRef: (el) => { this._consoleEl = el; if (el) el.scrollTop = el.scrollHeight; },
       runningCount: jobs.filter(j => j.running).length,
+      hasRunning: jobs.some(j => j.running),
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       termCmd: s.termCmd || '',
       onTermCmd: e => this.setState({ termCmd: e.target.value }),

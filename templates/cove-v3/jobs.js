@@ -16,7 +16,7 @@ Object.assign(Component.prototype, {
     this._jobObjs = this._jobObjs || {};
     const job = { id, label, target, command, siteId, environment, onFinish, stream: [], ws: null, token: null };
     this._jobObjs[id] = job;
-    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: true }));
+    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: true, jobSel: id }));
     if (!dispatch) return id;
     Promise.resolve().then(dispatch).then(res => {
       const token = typeof res === 'string' ? res : (res && res.token);
@@ -78,9 +78,11 @@ Object.assign(Component.prototype, {
     this.patchJob(job.id, { state, pct: 100, right: state === 'done' ? 'just now' : 'error' });
   },
 
-  // Console feed: most recent running real job, else the last real job with output.
+  // Console feed: the user-selected job, else the most recent running real
+  // job, else the last real job with output.
   activeJob() {
     if (!this._jobObjs) return null;
+    if (this.state.jobSel && this._jobObjs[this.state.jobSel]) return this._jobObjs[this.state.jobSel];
     const order = this.state.jobs.filter(j => j.real);
     const running = order.find(j => j.state === 'running' && this._jobObjs[j.id]);
     const withOutput = order.find(j => this._jobObjs[j.id] && this._jobObjs[j.id].stream.length);
