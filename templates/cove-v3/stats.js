@@ -117,6 +117,7 @@ Object.assign(Component.prototype, {
     return {
       statTilesBig: ['Visitors', 'Pageviews', 'Avg time on site', 'Bounce rate'].map(k => ({ k, v: '—', delta: '', deltaFg: 'var(--ink-dim)' })),
       statBars: [], topPages: [], topRefs: [],
+      statsShowPerf: false, chartLeave: () => {}, chartTipShow: false, chartTipLeft: 0, chartTipDate: '', chartTipViews: '', chartTipVisits: '',
       statsNotice: true, statsNoticeText: 'Loading analytics…'
     };
   },
@@ -133,6 +134,26 @@ Object.assign(Component.prototype, {
     const note = cur.empty ? 'Fathom analytics is not configured for this environment.'
       : cur.error ? cur.error
       : cur.loading ? 'Loading analytics…' : '';
+    const statBars = (() => {
+      if (!items.length) return [];
+      const byDate = {}; items.forEach(i => { byDate[i.date] = i; });
+      let buckets = this.statBuckets(s);
+      if (!buckets.some(label => byDate[label])) buckets = items.map(i => i.date);
+      return buckets.map((label, idx) => {
+        const i = byDate[label];
+        const views = i ? (parseFloat(i.pageviews) || 0) : 0;
+        return {
+          h: views && max ? Math.max(4, Math.round(92 * views / max)) : 4,
+          date: label, views: fmtN(views), visits: i ? fmtN(i.visits) : '0',
+          tip: label + ' · ' + fmtN(views) + ' views' + (i ? ' · ' + fmtN(i.visits) + ' visits' : ''),
+          bg: !views ? 'var(--panel-2)'
+            : idx === buckets.length - 1 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)',
+          enter: () => this.setState({ chartHoverIdx: idx })
+        };
+      });
+    })();
+    const hi = s.chartHoverIdx;
+    const hovered = (hi != null && hi >= 0 && hi < statBars.length) ? statBars[hi] : null;
     return {
       statTilesBig: [
         { k: 'Visitors', v: sum ? fmtN(sum.visits) : '—', delta: '', deltaFg: 'var(--ink-dim)' },
@@ -140,22 +161,13 @@ Object.assign(Component.prototype, {
         { k: 'Avg time on site', v: sum ? this.fmtDuration(sum.avg_duration) : '—', delta: '', deltaFg: 'var(--ink-dim)' },
         { k: 'Bounce rate', v: sum ? Math.round(parseFloat(sum.bounce_rate) || 0) + '%' : '—', delta: '', deltaFg: 'var(--ink-dim)' }
       ],
-      statBars: (() => {
-        if (!items.length) return [];
-        const byDate = {}; items.forEach(i => { byDate[i.date] = i; });
-        let buckets = this.statBuckets(s);
-        if (!buckets.some(label => byDate[label])) buckets = items.map(i => i.date);
-        return buckets.map((label, idx) => {
-          const i = byDate[label];
-          const views = i ? (parseFloat(i.pageviews) || 0) : 0;
-          return {
-            h: views && max ? Math.max(4, Math.round(92 * views / max)) : 4,
-            tip: label + ' · ' + fmtN(views) + ' views' + (i ? ' · ' + fmtN(i.visits) + ' visits' : ''),
-            bg: !views ? 'var(--panel-2)'
-              : idx === buckets.length - 1 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)'
-          };
-        });
-      })(),
+      statBars, statsShowPerf: false,
+      chartLeave: () => this.setState({ chartHoverIdx: -1 }),
+      chartTipShow: !!hovered,
+      chartTipLeft: hovered ? (100 * (hi + 0.5) / statBars.length).toFixed(2) : 0,
+      chartTipDate: hovered ? hovered.date : '',
+      chartTipViews: hovered ? hovered.views : '',
+      chartTipVisits: hovered ? hovered.visits : '',
       statsNotice: !!note, statsNoticeText: note,
       topPages: (st.pages || []).map(p => ({ k: p.pathname || '/', v: fmtN(p.pageviews) })),
       topRefs: (st.refs || []).map(r => ({ k: r.referrer_hostname || 'direct', v: fmtN(r.visits) })),
