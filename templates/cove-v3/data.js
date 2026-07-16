@@ -44,7 +44,8 @@ Object.assign(Component.prototype, {
       });
       this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: a.name,
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
-        domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true }));
+        domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true,
+        due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));
       this.DOMAINS = (Array.isArray(domains) ? domains : []).map(d => ({ id: String(d.domain_id), name: d.name,
         account: '', registrar: d.provider_id ? 'Registrar' : '\u2014', dns: !!d.remote_id,
         expires: '\u2014', auto: null, owned: true }));
