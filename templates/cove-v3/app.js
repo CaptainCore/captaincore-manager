@@ -312,10 +312,12 @@ class Component extends DCLogic {
       accTabs: tabs,
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
+      accShowTransfer: true, accShowTrusted: true,
       accUsers: this.ACC_USERS.map(u => ({ ...u,
         init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         lvlBg: u.level === 'Owner' ? 'var(--brand-soft)' : 'var(--panel-2)',
         lvlFg: u.level === 'Owner' ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        canSwitch: true, removable: true,
         switchTo: () => this.runJob('switch-to', u.e + ' (reason + duration logged)'),
         remove: () => this.runJob('remove-user', u.e + ' from ' + acc.name) })),
       accInvites: (s.accInvites || []).map(iv => ({ ...iv,
@@ -346,7 +348,8 @@ class Component extends DCLogic {
         { k: 'Auto-pay', v: 'On · Visa ··4242' }, { k: 'Addons', v: 'Priority support +$10/mo' }, { k: 'Credits', v: '−$15.00' }
       ],
       planRequest: () => this.runJob('plan-request', acc.name + ' — change request sent'),
-      accActivity: this.ACC_ACTIVITY
+      accActivity: this.ACC_ACTIVITY,
+      ...(this._hydrated ? this.realAccountVals(s) : {})
     };
   }
 

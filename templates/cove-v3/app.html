@@ -1051,7 +1051,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
             <div style="flex:1"></div>
-            <button style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
+            <sc-if value="{{ accShowTransfer }}" hint-placeholder-val="{{ true }}">
+              <button style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
+            </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ accMeta }}</div>
           <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:18px">
@@ -1069,8 +1071,12 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
                   <span style="font:500 12px var(--sans);background:{{ u.lvlBg }};color:{{ u.lvlFg }};border-radius:99px;padding:3px 10px">{{ u.level }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim);width:60px;text-align:right">{{ u.last }}</span>
-                  <span onClick="{{ u.switchTo }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Access as</span>
-                  <span onClick="{{ u.remove }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                  <sc-if value="{{ u.canSwitch }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ u.switchTo }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Access as</span>
+                  </sc-if>
+                  <sc-if value="{{ u.removable }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ u.remove }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                  </sc-if>
                 </div>
               </sc-for>
               <sc-for list="{{ accInvites }}" as="iv" hint-placeholder-count="1">
@@ -1107,6 +1113,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <button onClick="{{ sendInvite }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Invite</button>
               </div>
             </div>
+            <sc-if value="{{ accShowTrusted }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule)">
                 <h2 style="margin:0;font:600 14px var(--sans)">Trusted devices &amp; locations</h2>
@@ -1120,6 +1127,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 </div>
               </sc-for>
             </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ accTabSites }}" hint-placeholder-val="{{ false }}">
