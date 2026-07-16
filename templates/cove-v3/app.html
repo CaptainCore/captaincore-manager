@@ -815,6 +815,14 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span onClick="{{ openZoneDlg }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">Import zone…</span>
               <span onClick="{{ exportZone }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">Export BIND</span>
             </div>
+            <sc-if value="{{ dnsNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ dnsNoticeText }}</span>
+                <sc-if value="{{ dnsShowActivate }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ activateZone }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate DNS zone</button>
+                </sc-if>
+              </div>
+            </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ dnsRows }}" as="r" hint-placeholder-count="7">
                 <div style="border-bottom:1px solid var(--rule)">
@@ -934,6 +942,15 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Forwards route through Mailgun on the root domain. New addresses verify automatically.</span>
             </div>
+            <sc-if value="{{ fwdInactive }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Email forwarding is not active on this domain.</span>
+                <button onClick="{{ activateFwd }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate forwarding</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fwdNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--warn)">{{ fwdNoticeText }}</div>
+            </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ fwdRows }}" as="f" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
@@ -958,8 +975,19 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Transactional sending via <span style="font:500 12.5px var(--mono);color:var(--ink)">{{ mgHost }}</span> · {{ mgSupp }}</span>
               <div style="flex:1"></div>
-              <button onClick="{{ mgDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to site (SMTP)</button>
+              <sc-if value="{{ mgShowDeploy }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ mgDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to site (SMTP)</button>
+              </sc-if>
             </div>
+            <sc-if value="{{ mgInactive }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Mailgun sending is not set up for this domain.</span>
+                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up mg.{{ domName }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mgNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--warn)">{{ mgNoticeText }}</div>
+            </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">DNS verification</h2></div>
               <sc-for list="{{ mgRecs }}" as="r" hint-placeholder-count="3">
