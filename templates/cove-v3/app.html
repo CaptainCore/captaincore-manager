@@ -2314,17 +2314,38 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
   <!-- ══ Site defaults edit dialog ══ -->
   <sc-if value="{{ defDlgOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeDefaults }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
-      <div onClick="{{ stopProp }}" style="width:460px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
-        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+      <div onClick="{{ stopProp }}" style="width:620px;max-width:calc(100vw - 40px);max-height:86vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper);z-index:1">
           <span style="font:600 15px var(--sans)">Site defaults</span>
+          <span style="font:400 12px var(--sans);color:var(--ink-dim)">applied to newly created sites</span>
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
           <div style="display:flex;align-items:center;gap:12px"><span style="width:100px;font:500 12.5px var(--sans);color:var(--ink-dim)">Default email</span><input value="{{ defEmail }}" onInput="{{ onDefEmail }}" placeholder="support@example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
           <div style="display:flex;align-items:center;gap:12px"><span style="width:100px;font:500 12.5px var(--sans);color:var(--ink-dim)">Timezone</span><input value="{{ defTimezone }}" onInput="{{ onDefTimezone }}" placeholder="America/New_York" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div style="border-top:1px solid var(--rule);padding-top:11px">
+            <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:8px">Default recipes to run on new sites</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto">
+              <sc-for list="{{ defRecipeChips }}" as="c" hint-placeholder-count="4">
+                <span onClick="{{ c.toggle }}" style="padding:4px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">{{ c.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--rule);padding-top:11px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font:500 12px var(--sans);color:var(--ink-dim)">Default users to create</span><div style="flex:1"></div><span onClick="{{ addDefUser }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">+ Add user</span></div>
+            <sc-for list="{{ defUserRows }}" as="u" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+                <input value="{{ u.username }}" onInput="{{ u.onUsername }}" placeholder="username" style="width:120px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none">
+                <input value="{{ u.email }}" onInput="{{ u.onEmail }}" placeholder="email" style="flex:1;min-width:120px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none">
+                <input value="{{ u.first_name }}" onInput="{{ u.onFirst }}" placeholder="first" style="width:80px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none">
+                <input value="{{ u.role }}" onInput="{{ u.onRole }}" placeholder="role" style="width:110px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none">
+                <span onClick="{{ u.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 13px var(--sans)" style-hover="color:var(--bad)">✕</span>
+              </div>
+            </sc-for>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);position:sticky;bottom:0;background:var(--paper)">
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>

@@ -103,13 +103,26 @@ Object.assign(Component.prototype, {
       // handbook viewer
       procDlgOpen: s.procDlgOpen, procDlgName: s.procDlgName, procDlgBody: s.procDlgBody,
       closeProcDlg: () => this.setState({ procDlgOpen: false }),
-      // site defaults editor
+      // site defaults editor (email/timezone + default recipes + default users)
       defDlgOpen: s.defDlgOpen, defEmail: s.defEmail, defTimezone: s.defTimezone,
       onDefEmail: e => this.setState({ defEmail: e.target.value }),
       onDefTimezone: e => this.setState({ defTimezone: e.target.value }),
-      openDefaults: () => this.setState({ defDlgOpen: true, defEmail: d.email || '', defTimezone: d.timezone || '' }),
+      openDefaults: () => this.setState({ defDlgOpen: true, defEmail: d.email || '', defTimezone: d.timezone || '',
+        defRecipes: (d.recipes || []).map(String),
+        defUsers: (d.users || []).map(u => ({ ...u })) }),
       closeDefaults: () => this.setState({ defDlgOpen: false }),
       saveDefaults: () => this.saveDefaultsReal(),
+      defRecipeChips: set.recipes.map(r => { const on = (s.defRecipes || []).includes(String(r.recipe_id));
+        return { label: r.title, on, bd: on ? 'var(--brand)' : 'var(--rule)',
+          bg: on ? 'var(--brand-soft)' : 'var(--paper)', fg: on ? 'var(--brand-ink)' : 'var(--ink-dim)',
+          toggle: () => this.setState(st => { const id = String(r.recipe_id); const cur = st.defRecipes || [];
+            return { defRecipes: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] }; }) }; }),
+      defUserRows: (s.defUsers || []).map((u, i) => { const set2 = (k, v) => this.setState(st => ({ defUsers: (st.defUsers || []).map((x, j) => j === i ? { ...x, [k]: v } : x) }));
+        return { username: u.username || '', email: u.email || '', first_name: u.first_name || '', last_name: u.last_name || '', role: u.role || 'administrator',
+          onUsername: e => set2('username', e.target.value), onEmail: e => set2('email', e.target.value),
+          onFirst: e => set2('first_name', e.target.value), onLast: e => set2('last_name', e.target.value), onRole: e => set2('role', e.target.value),
+          remove: () => this.setState(st => ({ defUsers: (st.defUsers || []).filter((_, j) => j !== i) })) }; }),
+      addDefUser: () => this.setState(st => ({ defUsers: [...(st.defUsers || []), { username: '', email: '', first_name: '', last_name: '', role: 'administrator' }] })),
       // provider add/edit
       provShowAdd: true,
       addProvider: () => this.setState({ provDlgOpen: true, provEditId: null, provName: '', provType: '', provCreds: [{ name: '', value: '' }] }),
@@ -180,9 +193,15 @@ Object.assign(Component.prototype, {
   saveDefaultsReal() {
     const set = this._set;
     if (!set) return;
-    const body = { ...(set.defaults || {}), email: (this.state.defEmail || '').trim(), timezone: (this.state.defTimezone || '').trim() };
+    const body = { ...(set.defaults || {}),
+      email: (this.state.defEmail || '').trim(), timezone: (this.state.defTimezone || '').trim(),
+      recipes: this.state.defRecipes || [],
+      users: (this.state.defUsers || []).filter(u => (u.username || '').trim()) };
     this.setState({ defDlgOpen: false });
-    this.api('/defaults/global', { method: 'PUT', body }).then(() => this.loadSettings(true)).catch(() => {});
+    const tid = this.toast('Saving site defaults…', { kind: 'loading' });
+    this.api('/defaults/global', { method: 'PUT', body })
+      .then(() => { this.updateToast(tid, 'Site defaults saved', { kind: 'success' }); this.loadSettings(true); })
+      .catch(() => this.updateToast(tid, 'Save failed', { kind: 'error' }));
   },
 
   openRecipe(r) {
