@@ -45,6 +45,12 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
   (Fathom omits empty buckets; labels must byte-match PHP `date('M d Y'/'M Y'/'Y')`).
   Sharing chips POST `/stats/share`; private password auto-saves debounced. No Chart.js
   needed — the design's bar chart renders the series directly.
+- **`domains.js`** — Domains/DNS/Email. `openDomain()` override loads `GET /domain/{id}`
+  (registrar `provider`, accounts, mailgun `details`) + `GET /dns/{id}` (Constellix zone;
+  `no_zone` → Activate flow). DNS edits stage locally, then commit per-record via
+  `POST|PUT|DELETE /dns/{domain_id}/records[/{rid}]` — **not** v1's bulk endpoint, whose
+  `{id}` is the Constellix `remote_id` (audited trap). Forwarding/Sending tabs lazy-load
+  Mailgun routes / sending-domain records; registrar toggles hit `lock_`/`privacy_` routes.
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -101,6 +107,14 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   environment picker (fleet-wide multi-select — the terminal no longer requires an
   open site); cookbook popup inserts recipes; multiline auto-growing input; console
   caret only blinks while streaming; input reliably clears after a run.
+- **Domains / DNS / Email** (verified live: TXT add/save/delete cycle on the real
+  austinginder.com Constellix zone; forwarding + sending real on wpfreighter.com) —
+  domain detail on real data across all four tabs. DNS staged editor with per-record
+  commit, zone import (staged) / BIND export / activate-zone; Registrar shows real
+  nameservers, contacts, lock/privacy toggles (wired, not live-toggled — registrar
+  writes), auth-code fetch+copy; Email forwarding activate/list/add/delete + status
+  badge; Mailgun sending records + verify + setup + live events. Domain create wired
+  to `POST /domains`.
 
 ## Remaining work (rough priority; each is a "slice")
 
@@ -108,23 +122,20 @@ Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
 `captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
 arrays in the matching `compute*()` to consult real data with mock fallback, test live.
 
-1. **Domains / DNS / Email** — `computeDomains`/`computeDomain` are mock. DNS record
-   editor, registrar (Hover/Spaceship), email forwarding (Mailgun routes, U+200B guard),
-   Mailgun sending. Big surface — see spec §7.5.
-2. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
+1. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
    detail tabs, 4 access levels, invites, transfer ownership, trusted devices (backend
    exists, zero UI), self-service profile (TFA/app-password/sessions). Spec §7.6.
-3. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
+2. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
    methods, invoices+PDF, plan editors, admin subscriptions. Spec §7.7. Gated by
    `modules.billing`.
-4. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
+3. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
    threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-5. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-6. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
+4. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
+5. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
    keys, cookbook, handbook. Spec §7.10.
-7. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
+6. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
    EventSource progress, 7-day B2 share links. Spec §7.11.
-8. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+7. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -156,6 +167,13 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - **Customer-role attention is minimal.** The admin-gated signals 403 for customers,
   so they get real activity plus an "all clear"/site-count row. The design's customer
   mock (invoice due, report ready) belongs to the Billing and Reports slices.
+- **Domains slice leftovers.** Not wired: Mailgun deploy-to-site (needs a site/env/
+  from-name picker — button hidden when real), suppressions view/delete, forwarding
+  logs pager, domain→account assignment (admin `PUT /domains/{id}/account`),
+  update-site-link, domain delete, DNS-zone delete. Wired but not live-toggled
+  (registrar writes on real domains): lock/privacy toggles, contacts save,
+  nameservers save. Domains list still can't show account or expiry columns
+  (list payload carries neither).
 - **Stats tab leftovers.** The "Performance monitor" card is design-only (no v1
   endpoint exists — needs a backend before it can be real). Multi-tracker sites
   (v1 shows a tracker autocomplete when `fathom_analytics.length > 1`) always use
@@ -179,3 +197,4 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `bb320e9` IMPROVE: idle dock pill — compact dot-only circle
 - `14059da` NEW: Stats tab on real Fathom data + top-pages/referrers routes
 - `6fdf9fe` NEW: terminal round — multi-target picker, cookbook, multiline input
+- `4aa3402` NEW: Domains/DNS/Email slice on real data
