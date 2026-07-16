@@ -1725,7 +1725,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)">
                   <span style="font:500 13.5px var(--sans)">{{ r.name }}</span>
                   <span style="font:500 11.5px var(--sans);background:{{ r.visBg }};color:var(--ink-dim);border-radius:99px;padding:2px 9px">{{ r.vis }}</span>
-                  <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ r.runs }} runs</span>
+                  <sc-if value="{{ r.hasRuns }}" hint-placeholder-val="{{ true }}">
+                    <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ r.runs }} runs</span>
+                  </sc-if>
                   <div style="flex:1"></div>
                   <span onClick="{{ r.run }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Run…</span>
                   <span style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
