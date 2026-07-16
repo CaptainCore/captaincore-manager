@@ -531,12 +531,12 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <h2 style="margin:0;font:600 14px var(--sans)">Pageviews</h2>
                 <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">{{ statChartLabel }}</span>
               </div>
-              <div onMouseLeave="{{ chartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:150px;margin-top:12px">
+              <div onMouseMove="{{ chartMove }}" onMouseLeave="{{ chartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:150px;margin-top:12px">
                 <sc-for list="{{ statBars }}" as="b" hint-placeholder-count="28">
                   <div onMouseEnter="{{ b.enter }}" style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px 2px 0 0;transition:filter .1s" style-hover="filter:brightness(.9)"></div>
                 </sc-for>
                 <sc-if value="{{ chartTipShow }}" hint-placeholder-val="{{ false }}">
-                  <div style="position:absolute;bottom:calc(100% + 8px);left:{{ chartTipLeft }}%;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5;animation:ccfade .1s ease">
+                  <div style="position:absolute;bottom:calc(100% + 10px);left:{{ chartTipLeft }}px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5">
                     <div style="font:600 12px var(--sans)">{{ chartTipDate }}</div>
                     <div style="font:400 11.5px var(--mono);opacity:.85;margin-top:2px">{{ chartTipViews }} views · {{ chartTipVisits }} visits</div>
                   </div>

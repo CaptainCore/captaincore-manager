@@ -41,7 +41,7 @@ class Component extends DCLogic {
     provDlgOpen: false, provEditId: null, provName: '', provType: '', provCreds: [],
     schedEditOpen: false, schedEditId: null, schedEditInt: 'Monthly', schedEditEmail: '',
     transferOpen: false, transferPick: null, toasts: [],
-    cardDlgOpen: false, cardErr: '', cardSaving: false, chartHoverIdx: -1,
+    cardDlgOpen: false, cardErr: "", cardSaving: false, chartHoverIdx: -1, chartHoverX: 0,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -1233,7 +1233,7 @@ class Component extends DCLogic {
       statBars: (() => { const n = s.statG === 'Daily' ? 28 : s.statG === 'Weekly' ? 12 : 6;
         return Array.from({ length: n }, (_, i) => { const h = 28 + ((i * 37 + 11) % 58);
           return { h, tip: Math.round(h * 14) + ' views', date: 'Day ' + (i + 1), views: String(Math.round(h * 14)), visits: String(Math.round(h * 9)), enter: () => this.setState({ chartHoverIdx: i }), bg: i === n - 1 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' }; }); })(),
-      statsShowPerf: true, chartLeave: () => this.setState({ chartHoverIdx: -1 }),
+      statsShowPerf: true, chartMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ chartHoverX: Math.round(e.clientX - r.left) }); }, chartLeave: () => this.setState({ chartHoverIdx: -1 }),
       chartTipShow: false, chartTipLeft: 0, chartTipDate: '', chartTipViews: '', chartTipVisits: '',
       topPages: [['/', '4,812'], ['/shop/', '2,391'], ['/about/', '1,204'], ['/blog/summer-arrangements/', '986'], ['/contact/', '743']].map(([k, v]) => ({ k, v })),
       topRefs: [['direct', '4,201'], ['google.com', '3,104'], ['instagram.com', '1,822'], ['facebook.com', '640'], ['pinterest.com', '512']].map(([k, v]) => ({ k, v })),
