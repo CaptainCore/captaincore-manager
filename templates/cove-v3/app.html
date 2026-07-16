@@ -56,9 +56,11 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <span style="margin-left:auto;font:500 11.5px var(--mono);border:1px solid var(--rule);border-radius:5px;padding:2px 5px;background:var(--paper)">⌘K</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px">
-      <div title="Provider activity" style="position:relative;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+      <div onClick="{{ openDock }}" title="Activity" style="position:relative;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6m4 9.5a2 2 0 004 0"></path></svg>
-        <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--paper)"></span>
+        <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
+          <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--paper)"></span>
+        </sc-if>
       </div>
       <div onClick="{{ toggleTheme }}" title="Toggle theme" style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
@@ -897,11 +899,13 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                     <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
                   </sc-if>
                 </div>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">{{ togAuto.label }}</span>
-                  <span onClick="{{ togAuto.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togAuto.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togAuto.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
-                  <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ togAuto.state }}</span>
-                </div>
+                <sc-if value="{{ regShowAuto }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                    <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">{{ togAuto.label }}</span>
+                    <span onClick="{{ togAuto.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togAuto.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togAuto.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                    <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ togAuto.state }}</span>
+                  </div>
+                </sc-if>
                 <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
                   <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">{{ togLock.label }}</span>
                   <span onClick="{{ togLock.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togLock.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togLock.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
@@ -1024,7 +1028,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ aq }}" onInput="{{ onAq }}" placeholder="Filter accounts…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New account</button>
+            <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New account</button>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
@@ -1181,7 +1185,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <div style="display:flex;gap:12px;padding:12px 16px">
                   <button onClick="{{ planRequest }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Request changes</button>
                   <span style="flex:1"></span>
-                  <span style="font:500 12.5px var(--sans);color:var(--bad);cursor:pointer;align-self:center">Cancel plan…</span>
+                  <sc-if value="{{ accShowCancel }}" hint-placeholder-val="{{ true }}">
+                    <span style="font:500 12.5px var(--sans);color:var(--bad);cursor:pointer;align-self:center">Cancel plan…</span>
+                  </sc-if>
                 </div>
               </section>
             </div>
@@ -1234,8 +1240,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <sc-if value="{{ billTabPm }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ billShowAdd }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;gap:10px;margin-top:16px">
-                <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add card</button>
-                <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add bank (ACH)</button>
+                <button onClick="{{ addPaymentMethod }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add payment method</button>
               </div>
             </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
@@ -1258,7 +1263,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
           <sc-if value="{{ billTabAddr }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden;max-width:520px">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Billing address</h2><span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Billing address</h2><span onClick="{{ openBillAddr }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></div>
               <div style="padding:14px 16px">
                 <div style="font:500 13.5px var(--sans)">{{ addrL1 }}</div>
                 <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">{{ addrL2 }}<br>{{ addrL3 }}<br>{{ addrL4 }}</div>
@@ -1723,7 +1728,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Reusable scripts — run on one site or the whole fleet from the terminal.</span>
               <div style="flex:1"></div>
-              <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ New recipe</button>
+              <button onClick="{{ newRecipe }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ New recipe</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ recipeRows }}" as="r" hint-placeholder-count="4">
@@ -1735,7 +1740,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </sc-if>
                   <div style="flex:1"></div>
                   <span onClick="{{ r.run }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Run…</span>
-                  <span style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
+                  <span onClick="{{ r.edit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
                 </div>
               </sc-for>
             </div>
@@ -1748,8 +1753,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="font:500 13.5px var(--sans)">{{ h.name }}</span>
                   <span style="font:400 12px var(--sans);color:var(--ink-dim)">updated {{ h.updated }}</span>
                   <div style="flex:1"></div>
-                  <span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
-                  <span style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
+                  <span onClick="{{ h.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
                 </div>
               </sc-for>
             </div>
@@ -2207,6 +2211,93 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <span onClick="{{ closeNd }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ ndCreate }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add domain</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ New account dialog ══ -->
+  <sc-if value="{{ naOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeNa }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">New account</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeNa }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 12.5px var(--sans);color:var(--ink-dim)">Name</span><input value="{{ naName }}" onInput="{{ onNaName }}" placeholder="Account name" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 9px;outline:none"></div>
+          <sc-if value="{{ naHasMsg }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12px var(--sans);color:var(--ink-dim)">{{ naMsg }}</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeNa }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ createAccount }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Create account</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Billing address edit dialog ══ -->
+  <sc-if value="{{ billAddrOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeBillAddr }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:520px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper)">
+          <span style="font:600 15px var(--sans)">Billing address</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeBillAddr }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ billAddrFields }}" as="f" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12px var(--sans);color:var(--ink-dim)">{{ f.label }}</span><input value="{{ f.v }}" onInput="{{ f.on }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeBillAddr }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveBillAddr }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save address</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Recipe editor dialog ══ -->
+  <sc-if value="{{ recipeDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeRecipeDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:680px;max-width:calc(100vw - 40px);max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">{{ recipeDlgTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeRecipeDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:70px;font:500 12.5px var(--sans);color:var(--ink-dim)">Title</span><input value="{{ recipeTitle }}" onInput="{{ onRecipeTitle }}" placeholder="Recipe name" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 9px;outline:none"></div>
+          <textarea value="{{ recipeContent }}" onInput="{{ onRecipeContent }}" placeholder="# bash / wp-cli script" spellcheck="false" style="min-height:260px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px/1.6 var(--mono);padding:10px 12px;outline:none;resize:vertical"></textarea>
+          <div style="display:flex;align-items:center;gap:10px"><span onClick="{{ toggleRecipePublic }}" style="width:34px;height:20px;border-radius:99px;background:{{ recipePublicBg }};display:flex;align-items:center;padding:2px;justify-content:{{ recipePublicJust }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span><span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Public — usable by all users</span></div>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <sc-if value="{{ recipeDlgEditing }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ deleteRecipe }}" style="font:500 12.5px var(--sans);color:var(--bad);cursor:pointer">Delete</span>
+          </sc-if>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeRecipeDlg }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveRecipe }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save recipe</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Handbook process viewer dialog ══ -->
+  <sc-if value="{{ procDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeProcDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:720px;max-width:calc(100vw - 40px);height:80vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">{{ procDlgName }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeProcDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <iframe srcdoc="{{ procDlgBody }}" style="flex:1;width:100%;border:none;background:white"></iframe>
       </div>
     </div>
   </sc-if>

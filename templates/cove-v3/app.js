@@ -18,6 +18,7 @@ class Component extends DCLogic {
     nsAcc: 'Bloom & Branch Floral', nsDc: 'US Central (Iowa)', nsClone: 'None (fresh install)',
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
+    naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
     dnsEdit: 0, dnsEN: '', dnsEV: '', dnsETtl: '',
     zoneOpen: false, zoneText: '', nsvOpen: false, nsvText: '', nsCustom: null,
     ctOpen: false, contact: null, ctDraft: {},
@@ -34,6 +35,8 @@ class Component extends DCLogic {
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
     setTab: 'branding', brandName: 'Anchor Hosting', keyDraft: '', sshKeys: null,
+    recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
+    procDlgOpen: false, procDlgName: '', procDlgBody: '',
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -294,7 +297,12 @@ class Component extends DCLogic {
       accRows: filtered.map(a => ({ ...a,
         billLabel: a.due ? 'Invoice due' : 'Current',
         billFg: a.due ? 'var(--warn)' : 'var(--ink-dim)',
-        open: () => this.openAccount(a.id) }))
+        open: () => this.openAccount(a.id) })),
+      naOpen: s.naOpen, naName: s.naName, naMsg: s.naMsg, naHasMsg: !!s.naMsg,
+      openNewAccount: () => this.setState({ naOpen: true, naName: '', naMsg: '' }),
+      closeNa: () => this.setState({ naOpen: false }),
+      onNaName: e => this.setState({ naName: e.target.value, naMsg: '' }),
+      createAccount: () => this.createAccountReal()
     };
   }
 
@@ -312,7 +320,7 @@ class Component extends DCLogic {
       accTabs: tabs,
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
-      accShowTransfer: true, accShowTrusted: true,
+      accShowTransfer: true, accShowTrusted: true, accShowCancel: true,
       accUsers: this.ACC_USERS.map(u => ({ ...u,
         init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         lvlBg: u.level === 'Owner' ? 'var(--brand-soft)' : 'var(--panel-2)',
@@ -372,8 +380,10 @@ class Component extends DCLogic {
         isPrimary: s.primaryPm === i, canPrimary: s.primaryPm !== i,
         setPrimary: () => this.setState({ primaryPm: i }), remove: () => {} })),
       billShowAdd: true, billNotice: false, billNoticeText: '',
+      addPaymentMethod: () => {},
       addrL1: 'Sarah Whitfield · Bloom & Branch LLC', addrL2: '412 Larkspur Lane',
       addrL3: 'Lancaster, PA 17601 · United States', addrL4: 'sarah@bloomandbranch.com',
+      billAddrOpen: false, openBillAddr: () => {}, closeBillAddr: () => {}, billAddrFields: [], saveBillAddr: () => {},
       ...(this._hydrated ? this.realBillingVals(s) : {})
     };
   }
@@ -618,6 +628,10 @@ class Component extends DCLogic {
         { name: 'Incident response — malware', updated: 'Apr 22' },
         { name: 'Offboarding a customer', updated: 'Feb 14' }
       ].map(h => ({ ...h })),
+      recipeDlgOpen: false, recipeDlgEditing: false, recipeDlgTitle: 'New recipe', recipeTitle: '', recipeContent: '',
+      onRecipeTitle: () => {}, onRecipeContent: () => {}, recipePublicBg: 'var(--rule)', recipePublicJust: 'flex-start',
+      toggleRecipePublic: () => {}, newRecipe: () => {}, closeRecipeDlg: () => {}, saveRecipe: () => {}, deleteRecipe: () => {},
+      procDlgOpen: false, procDlgName: '', procDlgBody: '', closeProcDlg: () => {},
       ...(this._hydrated ? this.realSettingsVals(s) : {})
     };
   }
@@ -1001,7 +1015,7 @@ class Component extends DCLogic {
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
-      regShowRenew: true, mgShowDeploy: true,
+      regShowRenew: true, mgShowDeploy: true, regShowAuto: true,
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };
   }

@@ -23,6 +23,33 @@ Object.assign(Component.prototype, {
     if (this._hydrated) this.loadAccountDetail(id);
   },
 
+  // Refetch /accounts/ into this.ACCOUNTS (mirrors data.js hydrate mapping).
+  reloadAccounts() {
+    return this.api('/accounts/').then(accounts => {
+      this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: a.name,
+        users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
+        domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true,
+        due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));
+      this.setState({});
+    }).catch(() => {});
+  },
+
+  createAccountReal() {
+    const name = (this.state.naName || '').trim();
+    if (!name) { this.setState({ naMsg: 'Enter an account name.' }); return; }
+    if (!this._hydrated) { // design fallback
+      this.ACCOUNTS = [{ id: 'a' + Date.now(), name, users: 1, sites: 0, domains: 0, plan: '', owned: true, due: false }, ...this.ACCOUNTS];
+      this.setState({ naOpen: false, naName: '' });
+      return;
+    }
+    this.setState({ naMsg: 'Creating…' });
+    this.api('/accounts/', { method: 'POST', body: { name } }).then(res => {
+      if (res && res.code) { this.setState({ naMsg: res.message || 'Create failed.' }); return; }
+      this.setState({ naOpen: false, naName: '', naMsg: '' });
+      this.reloadAccounts();
+    }).catch(() => this.setState({ naMsg: 'Create failed.' }));
+  },
+
   loadAccountDetail(id) {
     const acc = this._account = { accountId: id, data: null, err: '', loading: true, activity: null };
     this.api('/accounts/' + id).then(res => {
@@ -72,7 +99,7 @@ Object.assign(Component.prototype, {
         (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
         + (acc.err ? ' · ' + acc.err : ''),
       accTabs: tabs,
-      accShowTransfer: false, accShowTrusted: false,
+      accShowTransfer: false, accShowTrusted: false, accShowCancel: false,
       accUsers: (d.users || []).map(u => { const label = this.ACC_LEVEL_LABELS[u.level] || u.level || 'Full access';
         return { n: u.name || u.email, e: u.email, level: label, last: '',
           init: (u.name || u.email).split(/[\s@]/).map(w => w[0]).join('').slice(0, 2).toUpperCase(),
