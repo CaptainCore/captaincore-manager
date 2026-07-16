@@ -1392,7 +1392,7 @@ class Component extends DCLogic {
     this.applyBrand();
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
-    if (window.CC_BOOT) this.setState({ jobs: [] });
+    if (window.CC_BOOT) { this.setState({ jobs: [] }); this.initRouter(); }
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
@@ -1413,6 +1413,7 @@ class Component extends DCLogic {
   componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
   componentDidUpdate() {
     this.applyBrand();
+    if (this._routerReady) this.syncUrl();
     if (this._consoleEl) this._consoleEl.scrollTop = this._consoleEl.scrollHeight;
     // Focus the command palette input the moment it opens (autofocus only
     // fires on first page load, not on dynamic mount).
