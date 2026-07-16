@@ -680,6 +680,7 @@ class Component extends DCLogic {
   }
 
   computeList(s, isOp) {
+    if (this._hydrated && s.route === 'sites' && !this._siteFilters && !this._siteFiltersLoading) setTimeout(() => this.loadSiteFilters(), 0);
     const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
     const fleet = isOp ? this.FLEET : this.FLEET.filter(x => x.owned);
     const nq = s.q.trim().toLowerCase();
@@ -694,12 +695,20 @@ class Component extends DCLogic {
     if (!inactive(s.fProv)) conds.push(x => x.provider === s.fProv);
     if (!inactive(s.fBackup)) conds.push(x => x.backup === s.fBackup);
     if (!inactive(s.fCore)) conds.push(x => x.core === s.fCore);
-    if (!inactive(s.fTheme)) conds.push(x => x.theme === s.fTheme);
-    if (!inactive(s.fPlugin)) conds.push(x => { const p = (x.plugins || {})[s.fPlugin];
-      if (!p) return false;
-      if (!inactive(s.fPlugVer) && p.v !== s.fPlugVer) return false;
-      if (!inactive(s.fPlugStatus)) { const eq = p.status === s.fPlugStatus; if (s.fPlugIs === 'IS' ? !eq : eq) return false; }
-      return true; });
+    if (this._hydrated) {
+      // Theme/plugin resolve server-side (see sites-filters.js). One combined
+      // cond over the matched site-id set; while loading, don't hide anything.
+      if (!inactive(s.fTheme) || !inactive(s.fPlugin)) {
+        conds.push(x => this._filterMatch instanceof Set ? this._filterMatch.has(String(x.id)) : true);
+      }
+    } else {
+      if (!inactive(s.fTheme)) conds.push(x => x.theme === s.fTheme);
+      if (!inactive(s.fPlugin)) conds.push(x => { const p = (x.plugins || {})[s.fPlugin];
+        if (!p) return false;
+        if (!inactive(s.fPlugVer) && p.v !== s.fPlugVer) return false;
+        if (!inactive(s.fPlugStatus)) { const eq = p.status === s.fPlugStatus; if (s.fPlugIs === 'IS' ? !eq : eq) return false; }
+        return true; });
+    }
     const selLabels = Object.keys(s.labelsSel).filter(k => s.labelsSel[k]);
     const passFacets = x => conds.length === 0 || (s.fOp === 'AND' ? conds.every(c => c(x)) : conds.some(c => c(x)));
     const filtered = fleet.filter(x => (!nq || x.name.includes(nq) || x.account.toLowerCase().includes(nq))
@@ -753,8 +762,12 @@ class Component extends DCLogic {
         mkFacet('fProv', 'Provider', s.fProv, facetOpts(cntBy(x => x.provider), s.fProv, 'fProv')),
         mkFacet('fBackup', 'Backup', s.fBackup, facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup')),
         mkFacet('fCore', 'Core', s.fCore, facetOpts(cntBy(x => x.core), s.fCore, 'fCore')),
-        mkFacet('fTheme', 'Theme', s.fTheme, facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme')),
-        mkFacet('fPlugin', 'Plugin', s.fPlugin, facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }))
+        mkFacet('fTheme', 'Theme', s.fTheme, this._hydrated
+          ? this.filterFacetOpts(this.THEME_OPTIONS, s.fTheme, 'fTheme')
+          : facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme')),
+        mkFacet('fPlugin', 'Plugin', s.fPlugin, this._hydrated
+          ? this.filterFacetOpts(this.PLUGIN_OPTIONS, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' })
+          : facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }))
       ],
       opChips: ['AND', 'OR'].map(label => ({ label,
         bg: s.fOp === label ? 'var(--brand-soft)' : 'var(--paper)',
@@ -792,7 +805,7 @@ class Component extends DCLogic {
             go: () => this.setState(st => ({ labelsSel: { ...st.labelsSel, [label]: !st.labelsSel[label] } })) };
         }),
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', labelsSel: {} }),
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       hasSel: selIds.length > 0, selCount: selIds.length,
       clearSel: () => this.setState({ sel: {} }),
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
@@ -1393,7 +1406,17 @@ class Component extends DCLogic {
         : j) })), 1800);
   }
   componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
-  componentDidUpdate() { this.applyBrand(); if (this._consoleEl) this._consoleEl.scrollTop = this._consoleEl.scrollHeight; }
+  componentDidUpdate() {
+    this.applyBrand();
+    if (this._consoleEl) this._consoleEl.scrollTop = this._consoleEl.scrollHeight;
+    // Focus the command palette input the moment it opens (autofocus only
+    // fires on first page load, not on dynamic mount).
+    if (this.state.paletteOpen && !this._palWasOpen) {
+      const el = document.querySelector('input[placeholder^="Search sites, domains, accounts"]');
+      if (el) el.focus();
+    }
+    this._palWasOpen = this.state.paletteOpen;
+  }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
   applyBrand() { document.documentElement.style.setProperty('--brand', (window.CC_BOOT && window.CC_BOOT.brandColor) || this.props.brandColor || '#3b82c4'); }
