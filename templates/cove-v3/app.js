@@ -31,7 +31,7 @@ class Component extends DCLogic {
     secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '',
     audits: null, audSite: 'bloomandbranch.com', audTypes: { Core: true, Plugins: true }, 
     repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
-    repEmail: 'sarah@bloomandbranch.com', schedules: null,
+    repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
     setTab: 'branding', brandName: 'Anchor Hosting', keyDraft: '', sshKeys: null,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
@@ -546,7 +546,10 @@ class Component extends DCLogic {
       repSend: () => this.runJob('report-send', target + ' → ' + this.state.repEmail),
       addSchedule: () => this.setState(st => ({ schedules: [...(st.schedules || this.SCHED_INIT), { id: 's' + Date.now(), target, interval: st.repInt, next: 'Aug 1', recipients: '1' }] })),
       schedRows: schedules.map(sr => ({ ...sr,
-        del: () => this.setState(st => ({ schedules: (st.schedules || this.SCHED_INIT).filter(x => x.id !== sr.id) })) }))
+        del: () => this.setState(st => ({ schedules: (st.schedules || this.SCHED_INIT).filter(x => x.id !== sr.id) })) })),
+      repSendMsg: '', repHasSendMsg: false, repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
+      closeRepPreview: () => {}, schedEmpty: false, repPreviewReady: false,
+      ...(this._hydrated ? this.realReportsVals(s) : {})
     };
   }
 
