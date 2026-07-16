@@ -51,6 +51,12 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
   `POST|PUT|DELETE /dns/{domain_id}/records[/{rid}]` — **not** v1's bulk endpoint, whose
   `{id}` is the Constellix `remote_id` (audited trap). Forwarding/Sending tabs lazy-load
   Mailgun routes / sending-domain records; registrar toggles hit `lock_`/`privacy_` routes.
+- **`accounts.js`** — Accounts/Users/Access. `openAccount()` loads `GET /accounts/{id}`
+  (tier-gated bundle: users w/ levels, pending invites, sites, domains, plan
+  limits+usage). Levels map `full-billing→Owner / full / sites-only / domains-only`;
+  ownership = `plan.billing_user_id`. Invites POST/DELETE under `/accounts/{id}/invites`;
+  member remove DELETE `/accounts/{id}/users/{uid}`. Activity lazy via
+  `/activity-logs?account_id=`. Trusted devices have NO REST surface — section hidden.
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -107,6 +113,16 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   environment picker (fleet-wide multi-select — the terminal no longer requires an
   open site); cookbook popup inserts recipes; multiline auto-growing input; console
   caret only blinks while streaming; input reliably clears after a run.
+- **Label facets (Sites list)** — fixed: counter only read each site's first label
+  (3 of 6 types were invisible); chips now colored from label metadata (v1 semantics).
+- **Accounts / Users / Access** (verified live on the Launch Kits account: 9 users,
+  plan usage 3/8 sites · 10.2/20 GB · 562k/1M visits) — account detail on real data:
+  users with level labels (Owner row protected), pending invites (send/copy-link/
+  revoke wired), sites + domains tabs from the bundle, Plan tab with real usage bars
+  and plan facts, Activity tab from account-scoped activity logs. List shows real
+  invoice-due status. Not wired: transfer ownership (route exists — needs picker UI),
+  admin "Access as", level editing, trusted devices (no REST surface), invite
+  send/revoke not live-fired (real emails).
 - **Domains / DNS / Email** (verified live: TXT add/save/delete cycle on the real
   austinginder.com Constellix zone; forwarding + sending real on wpfreighter.com) —
   domain detail on real data across all four tabs. DNS staged editor with per-record
@@ -122,20 +138,17 @@ Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
 `captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
 arrays in the matching `compute*()` to consult real data with mock fallback, test live.
 
-1. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
-   detail tabs, 4 access levels, invites, transfer ownership, trusted devices (backend
-   exists, zero UI), self-service profile (TFA/app-password/sessions). Spec §7.6.
-2. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
+1. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
    methods, invoices+PDF, plan editors, admin subscriptions. Spec §7.7. Gated by
    `modules.billing`.
-3. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
+2. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
    threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-4. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-5. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
+3. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
+4. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
    keys, cookbook, handbook. Spec §7.10.
-6. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
+5. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
    EventSource progress, 7-day B2 share links. Spec §7.11.
-7. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+6. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -198,3 +211,5 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `14059da` NEW: Stats tab on real Fathom data + top-pages/referrers routes
 - `6fdf9fe` NEW: terminal round — multi-target picker, cookbook, multiline input
 - `4aa3402` NEW: Domains/DNS/Email slice on real data
+- `7113104` FIX: label facets — count all labels, v1 colors
+- `622de8a` NEW: Accounts/Users/Access slice on real data
