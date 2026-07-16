@@ -1327,6 +1327,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </sc-if>
                 </div>
               </sc-for>
+              <sc-if value="{{ secEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px;font:400 12.5px var(--sans);color:var(--ink-dim);text-align:center">{{ secEmptyText }}</div>
+              </sc-if>
             </div>
           </sc-if>
 
@@ -1398,12 +1401,17 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </div>
                 </div>
               </sc-for>
-              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
-                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">9 sites have components without fresh audit hashes.</span>
-                <div style="flex:1"></div>
-                <button onClick="{{ queueStale }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Queue audits for 9 stale sites</button>
-                <button onClick="{{ steerQueue }}" style="border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer">Run update-before-audit steer queue</button>
-              </div>
+              <sc-if value="{{ covShowActions }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+                  <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">9 sites have components without fresh audit hashes.</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ queueStale }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Queue audits for 9 stale sites</button>
+                  <button onClick="{{ steerQueue }}" style="border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer">Run update-before-audit steer queue</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ covNote }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:12px 16px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ covNote }}</div>
+              </sc-if>
             </div>
           </sc-if>
         </div>
@@ -1449,7 +1457,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ a.findings }}</span>
                 <span style="font:500 12px var(--sans);background:{{ a.stBg }};border-radius:99px;padding:3px 10px">{{ a.status }}</span>
                 <sc-if value="{{ a.done }}" hint-placeholder-val="{{ false }}">
-                  <span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
+                  <span onClick="{{ a.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
                   <span onClick="{{ a.togglePub }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">{{ a.pubLabel }}</span>
                 </sc-if>
                 <sc-if value="{{ a.pub }}" hint-placeholder-val="{{ false }}">
@@ -1460,6 +1468,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 </sc-if>
               </div>
             </sc-for>
+            <sc-if value="{{ audEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:16px;font:400 12.5px var(--sans);color:var(--ink-dim);text-align:center">{{ audEmptyText }}</div>
+            </sc-if>
           </div>
         </div>
       </sc-if>
