@@ -31,6 +31,7 @@ Object.assign(Component.prototype, {
       bump();
     }).catch(() => bump());
     this.api('/sites/' + id + '/users').then(u => { detail.users = u || {}; bump(); }).catch(() => bump());
+    this.loadTimeline();
   },
 
   currentEnv(real, s) {

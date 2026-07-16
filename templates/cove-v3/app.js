@@ -967,7 +967,13 @@ class Component extends DCLogic {
       .map(([id, label]) => ({ label,
         fg: s.siteTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
         line: s.siteTab === id ? 'var(--brand)' : 'transparent',
-        go: () => { this.setState({ siteTab: id }); if (id === 'logs' && this._detail) this.loadLogs(); } }));
+        go: () => { this.setState({ siteTab: id });
+          if (!this._detail) return;
+          if (id === 'logs') this.loadLogs();
+          else if (id === 'versions') this.loadQuicksaves();
+          else if (id === 'backups') this.loadBackups();
+          else if (id === 'snapshots') this.loadSnapshots();
+          else if (id === 'timeline') this.loadTimeline(); } }));
     const addonsSrc = real ? this.realAddonSrc(real, s) : (s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest; return { ...a, upd,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
@@ -977,9 +983,10 @@ class Component extends DCLogic {
       doToggle: () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name),
       doUpdate: () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name) }; });
     const updCount = real ? 0 : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
-    const qsFiles = this.QS_FILES;
-    const curPath = qsFiles.some(f => f.path === s.qsFile) ? s.qsFile : qsFiles[0].path;
-    const curFile = qsFiles.find(f => f.path === curPath);
+    const qsFiles = real ? this.realQsFiles(real, s) : this.QS_FILES;
+    const curPath = qsFiles.some(f => f.path === s.qsFile) ? s.qsFile : (qsFiles[0] ? qsFiles[0].path : '');
+    const curFile = qsFiles.find(f => f.path === curPath) || { path: '', st: 'M', add: 0, del: 0, diff: [] };
+    if (!curFile.diff) curFile.diff = [['ctx', 'Loading diff…']];
     const mkLine = ([kind, text]) => ({ text,
       fg: kind === 'add' ? 'var(--ok)' : kind === 'del' ? 'var(--bad)' : 'var(--ink-dim)',
       bg: kind === 'add' ? 'var(--ok-soft)' : kind === 'del' ? 'var(--bad-soft)' : 'transparent' });
@@ -987,20 +994,23 @@ class Component extends DCLogic {
       ? { l: text, r: '', lbg: 'var(--bad-soft)', rbg: 'transparent', lfg: 'var(--bad)', rfg: 'var(--ink-dim)' }
       : kind === 'add' ? { l: '', r: text, lbg: 'transparent', rbg: 'var(--ok-soft)', lfg: 'var(--ink-dim)', rfg: 'var(--ok)' }
       : { l: text, r: text, lbg: 'transparent', rbg: 'transparent', lfg: 'var(--ink-dim)', rfg: 'var(--ink-dim)' });
-    const quicksaves = this.QUICKSAVES.map(qk => ({ ...qk,
+    const qsSrc = real ? this.realQuicksaves(real) : this.QUICKSAVES;
+    const quicksaves = qsSrc.map(qk => ({ ...qk,
+      hash: qk.hashShort || qk.hash,
       kindBg: qk.kind === 'Update' ? 'var(--warn-soft)' : qk.kind === 'Manual' ? 'var(--brand-soft)' : 'var(--panel-2)',
-      openD: () => this.setState({ qsDialog: qk.hash, qsView: 'components', qsFile: '' }),
-      doRollback: () => this.runJob('rollback', site.name + ' → ' + qk.hash) }));
-    const dlgQk = this.QUICKSAVES.find(q => q.hash === s.qsDialog);
+      openD: () => { this.setState({ qsDialog: qk.hash, qsView: 'components', qsFile: '' }); if (real && qk.hash) this.loadQuicksaveDetail(qk.hash); },
+      doRollback: () => real ? this.realRollbackAll(real, qk.hash) : this.runJob('rollback', site.name + ' → ' + qk.hash) }));
+    const dlgQk = qsSrc.find(q => q.hash === s.qsDialog);
     const stMap = { A: ['var(--ok-soft)', 'var(--ok)'], M: ['var(--warn-soft)', 'var(--ink)'], D: ['var(--bad-soft)', 'var(--bad)'] };
-    const dlgFiles = qsFiles.map(f => ({ ...f, addN: '+' + f.add, delN: '−' + f.del,
-      stBg: stMap[f.st][0], stFg: stMap[f.st][1],
-      pick: () => this.setState({ qsFile: f.path, qsView: 'diff' }) }));
+    const dlgFiles = qsFiles.map(f => { const stC = stMap[f.st] || ['var(--panel-2)', 'var(--ink-dim)'];
+      return { ...f, addN: f.add === '' ? '' : '+' + f.add, delN: f.del === '' ? '' : '−' + f.del,
+      stBg: stC[0], stFg: stC[1],
+      pick: () => { this.setState({ qsFile: f.path, qsView: 'diff' }); if (real) this.loadQsDiff(s.qsDialog, f.path); } }; });
     const mkComp = c => ({ ...c,
       rowBg: c.deleted ? 'var(--bad-soft)' : c.added ? 'var(--ok-soft)' : 'transparent',
       deco: c.deleted ? 'line-through' : 'none',
       nameFg: c.deleted ? 'var(--bad)' : 'var(--ink)',
-      verCell: c.deleted ? c.from : c.added ? c.to : c.updated ? c.from + ' → ' + c.to : (c.from || '—'),
+      verCell: c.deleted ? c.from : c.added ? c.to : c.updated ? ((c.from && c.from !== c.to) ? c.from + ' → ' + c.to : c.to) : (c.from || c.to || '—'),
       verFg: c.updated ? 'var(--ink)' : 'var(--ink-dim)',
       badge: c.added ? 'New' : c.deleted ? 'Deleted' : c.updated ? 'Updated' : '',
       badgeBg: c.added ? 'var(--ok-soft)' : c.deleted ? 'var(--bad-soft)' : 'var(--warn-soft)',
@@ -1008,15 +1018,18 @@ class Component extends DCLogic {
       canView: !!c.viewFile,
       viewChanges: () => this.setState({ qsFile: c.viewFile, qsView: 'diff' }),
       rollback: () => this.setState({ rbComp: c.name }) });
-    const dlgIdx = this.QUICKSAVES.findIndex(q => q.hash === s.qsDialog);
-    const prevQk = dlgIdx >= 0 ? this.QUICKSAVES[dlgIdx + 1] : null;
-    const backups = this.BACKUPS.map(b => ({ ...b,
-      openB: () => this.setState({ bkDialog: b.id, bkSel: {}, bkPreview: '' }),
-      doRestore: () => this.runJob('restore', b.id + ' on ' + site.name) }));
-    const bkDlg = this.BACKUPS.find(b => b.id === s.bkDialog);
+    const dlgIdx = qsSrc.findIndex(q => q.hash === s.qsDialog);
+    const prevQk = dlgIdx >= 0 ? qsSrc[dlgIdx + 1] : null;
+    const bkSrc = real ? (real.backups === null ? [{ id: '', idShort: '', when: 'Loading backups…', size: '', files: '' }] : (real.backups || [])) : this.BACKUPS;
+    const backups = bkSrc.map(b => ({ ...b,
+      id: b.idShort || b.id,
+      openB: () => { this.setState({ bkDialog: b.id, bkSel: {}, bkPreview: '' }); if (real && b.id) this.loadBackupTree(b.id); },
+      doRestore: () => real ? this.realBackupRestore(real, { ...s, bkDialog: b.id }) : this.runJob('restore', b.id + ' on ' + site.name) }));
+    const bkDlg = bkSrc.find(b => b.id === s.bkDialog);
+    const bkTreeSrc = real ? this.realBkTree(real, s) : this.BK_TREE;
     const flatAll = [];
     const flattenAll = nodes => nodes.forEach(n => { flatAll.push(n); if (n.children) flattenAll(n.children); });
-    flattenAll(this.BK_TREE);
+    flattenAll(bkTreeSrc);
     const bkRows = [];
     const walk = (nodes, depth) => nodes.forEach(n => {
       const open = !!s.bkDirs[n.p];
@@ -1033,10 +1046,10 @@ class Component extends DCLogic {
           if (n.dir) flatAll.filter(x => x.p !== n.p && x.p.startsWith(n.p)).forEach(x => { upd[x.p] = val; });
           this.setState(st => ({ bkSel: { ...st.bkSel, ...upd } })); },
         rowClick: () => { if (n.dir && !n.omitted) this.setState(st => ({ bkDirs: { ...st.bkDirs, [n.p]: !st.bkDirs[n.p] } }));
-          else if (n.prev) this.setState({ bkPreview: n.p }); } });
+          else if (n.prev) { this.setState({ bkPreview: n.p }); if (real) this.loadBackupPreview(n.p); } } });
       if (n.dir && open && n.children) walk(n.children, depth + 1);
     });
-    walk(this.BK_TREE, 0);
+    walk(bkTreeSrc, 0);
     const selKeys = Object.keys(s.bkSel).filter(k => s.bkSel[k]);
     const topSel = selKeys.filter(k => !selKeys.some(o => o !== k && o.endsWith('/') && k.startsWith(o)));
     let selCnt = 0, selKb = 0;
@@ -1068,11 +1081,13 @@ class Component extends DCLogic {
       tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
       credRows,
       statTiles: [
-        { k: 'Visits / wk', v: site.visits, delta: '+8%', deltaFg: 'var(--ok)', act: 'stats' },
-        { k: 'Backups', v: '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups' },
-        { k: 'Versions', v: '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions' },
-        { k: 'Timeline', v: '86', delta: 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline' }
-      ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => this.setState({ siteTab: t.act }) })),
+        { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats' },
+        { k: 'Backups', v: real ? (real.backups ? String(real.backups.length) : '—') : '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups' },
+        { k: 'Versions', v: real ? (real.qs ? String(real.qs.length) : '—') : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions' },
+        { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline' }
+      ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => { this.setState({ siteTab: t.act });
+        if (!real) return;
+        if (t.act === 'backups') this.loadBackups(); else if (t.act === 'versions') this.loadQuicksaves(); else if (t.act === 'timeline') this.loadTimeline(); } })),
       openStats: () => this.setState({ siteTab: 'stats' }),
       statG: s.statG, statR: s.statR,
       ddStatGOpen: s.ddOpen === 'statG',
@@ -1124,11 +1139,11 @@ class Component extends DCLogic {
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
       doUpdateAll: () => this.runJob('update-wp', site.name + ' · ' + updCount + ' components'),
-      quicksaves, newQuicksave: () => this.runJob('quicksave', site.name),
+      quicksaves, newQuicksave: () => real ? this.realNewQuicksave(real) : this.runJob('quicksave', site.name),
       qsDialogOpen: !!dlgQk,
-      dlgHash: dlgQk ? dlgQk.hash : '', dlgDesc: dlgQk ? dlgQk.desc : '', dlgWhen: dlgQk ? dlgQk.when : '',
+      dlgHash: dlgQk ? (dlgQk.hashShort || dlgQk.hash) : '', dlgDesc: dlgQk ? dlgQk.desc : '', dlgWhen: dlgQk ? dlgQk.when : '',
       dlgSummary: dlgQk ? dlgQk.summary : '',
-      dlgMoreFiles: dlgQk && dlgQk.more > 0 ? '… ' + dlgQk.more + ' more files — search or narrow by component to see the rest.' : '',
+      dlgMoreFiles: !real && dlgQk && dlgQk.more > 0 ? '… ' + dlgQk.more + ' more files — search or narrow by component to see the rest.' : '',
       closeQsDlg: () => this.setState({ qsDialog: '' }),
       dlgIsComp: s.qsView === 'components', dlgIsFiles: s.qsView === 'files', dlgIsDiff: s.qsView === 'diff',
       dlgNotDiff: s.qsView !== 'diff',
@@ -1138,69 +1153,83 @@ class Component extends DCLogic {
       dlgFilesLine: s.qsView === 'files' ? 'var(--brand)' : 'transparent',
       setDlgComp: () => this.setState({ qsView: 'components' }),
       setDlgFiles: () => this.setState({ qsView: 'files' }),
-      dlgThemes: this.QS_COMPONENTS.filter(c => c.kind === 'theme').map(mkComp),
-      dlgPlugins: this.QS_COMPONENTS.filter(c => c.kind === 'plugin').map(mkComp),
+      dlgThemes: (real ? this.realQsComponents(real, s, 'theme') : this.QS_COMPONENTS.filter(c => c.kind === 'theme')).map(mkComp),
+      dlgPlugins: (real ? this.realQsComponents(real, s, 'plugin') : this.QS_COMPONENTS.filter(c => c.kind === 'plugin')).map(mkComp),
       dlgFiles, dlgFilePath: curPath,
       dlgDiff: curFile.diff.map(mkLine), dlgSplit: splitRows,
       backToFiles: () => this.setState({ qsView: 'files' }),
-      dlgSandbox: () => this.runJob('sandbox', 'Playground preview of ' + (dlgQk ? dlgQk.hash : '')),
-      dlgRollback: () => this.runJob('rollback', site.name + ' → ' + (dlgQk ? dlgQk.hash : '')),
-      dlgRestoreFile: () => this.runJob('restore-file', curPath.split('/').pop() + ' from ' + (dlgQk ? dlgQk.hash : '')),
+      dlgSandbox: () => real ? this.realSandbox(real, s.qsDialog) : this.runJob('sandbox', 'Playground preview of ' + (dlgQk ? dlgQk.hash : '')),
+      dlgRollback: () => real ? this.realRollbackAll(real, s.qsDialog) : this.runJob('rollback', site.name + ' → ' + (dlgQk ? dlgQk.hash : '')),
+      dlgRestoreFile: () => real ? this.realRestoreFile(real, s.qsDialog, curPath) : this.runJob('restore-file', curPath.split('/').pop() + ' from ' + (dlgQk ? dlgQk.hash : '')),
       rbOpen: !!s.rbComp,
       rbTitle: 'Roll back ' + s.rbComp + '?',
       rbThisSub: dlgQk ? dlgQk.when + ' · ' + dlgQk.hash : '',
       rbPrevSub: prevQk ? prevQk.when + ' · ' + prevQk.hash : 'No earlier quicksave',
       closeRb: () => this.setState({ rbComp: '' }),
-      rbPickThis: () => { this.runJob('rollback-component', s.rbComp + ' → version in ' + (dlgQk ? dlgQk.hash : '')); this.setState({ rbComp: '' }); },
-      rbPickPrev: () => { if (!prevQk) return; this.runJob('rollback-component', s.rbComp + ' → version in ' + prevQk.hash); this.setState({ rbComp: '' }); },
+      rbPickThis: () => { if (real) { const c = this.realQsComponents(real, s, 'theme').concat(this.realQsComponents(real, s, 'plugin')).find(x => x.name === s.rbComp);
+          if (c) this.realRollbackComponent(real, s.qsDialog, c, 'this'); }
+        else this.runJob('rollback-component', s.rbComp + ' → version in ' + (dlgQk ? dlgQk.hash : ''));
+        this.setState({ rbComp: '' }); },
+      rbPickPrev: () => { if (!prevQk) return;
+        if (real) { const c = this.realQsComponents(real, s, 'theme').concat(this.realQsComponents(real, s, 'plugin')).find(x => x.name === s.rbComp);
+          if (c) this.realRollbackComponent(real, s.qsDialog, c, 'previous'); }
+        else this.runJob('rollback-component', s.rbComp + ' → version in ' + prevQk.hash);
+        this.setState({ rbComp: '' }); },
       qsUnified: s.diffMode === 'unified', qsSplit: s.diffMode === 'split',
       uniBg: s.diffMode === 'unified' ? 'var(--brand-soft)' : 'var(--paper)', uniFg: s.diffMode === 'unified' ? 'var(--brand-ink)' : 'var(--ink-dim)',
       splBg: s.diffMode === 'split' ? 'var(--brand-soft)' : 'var(--paper)', splFg: s.diffMode === 'split' ? 'var(--brand-ink)' : 'var(--ink-dim)',
       setUni: () => this.setState({ diffMode: 'unified' }), setSplit: () => this.setState({ diffMode: 'split' }),
-      backups, backupNow: () => this.runJob('backup', site.name),
+      backups, backupNow: () => real ? this.realBackupNow(real) : this.runJob('backup', site.name),
       bkRows,
-      bkDlgOpen: !!bkDlg, bkDlgId: bkDlg ? bkDlg.id : '', bkDlgWhen: bkDlg ? bkDlg.when : '',
+      bkDlgOpen: !!bkDlg, bkDlgId: bkDlg ? (bkDlg.idShort || bkDlg.id) : '', bkDlgWhen: bkDlg ? bkDlg.when : '',
       bkDlgMeta: bkDlg ? bkDlg.size + ' · ' + bkDlg.files : '',
       closeBkDlg: () => this.setState({ bkDialog: '', bkPreview: '', bkSel: {} }),
-      bkDlgRestore: () => this.runJob('restore', (bkDlg ? bkDlg.id : '') + ' on ' + site.name),
+      bkDlgRestore: () => real ? this.realBackupRestore(real, s) : this.runJob('restore', (bkDlg ? bkDlg.id : '') + ' on ' + site.name),
       bkHasSel: selCnt > 0,
       bkSelTitle: selCnt.toLocaleString() + ' items selected',
       bkSelSize: fmtKb(selKb),
-      bkDownload: () => { this.runJob('backup-download-notify', selCnt.toLocaleString() + ' items (' + fmtKb(selKb) + ') → austin@anchor.host'); this.setState({ bkSel: {} }); },
+      bkDownload: () => { if (real) { this.realBackupDownload(real, s, topSel, flatAll); return; }
+        this.runJob('backup-download-notify', selCnt.toLocaleString() + ' items (' + fmtKb(selKb) + ') → austin@anchor.host'); this.setState({ bkSel: {} }); },
       cancelSel: () => this.setState({ bkSel: {} }),
       bkShowPrev: !!s.bkPreview && selCnt === 0,
       bkShowPlaceholder: selCnt === 0 && !s.bkPreview,
       selectAll: () => { const upd = {}; flatAll.forEach(n => { if (!n.omitted) upd[n.p] = true; }); this.setState({ bkSel: upd }); },
       bkPrevPath: s.bkPreview,
-      bkPrevLines: (this.PREVIEWS[s.bkPreview] || this.PREVIEWS.default).map(text => ({ text })),
+      bkPrevLines: real ? this.realBkPreviewLines(real, s) : (this.PREVIEWS[s.bkPreview] || this.PREVIEWS.default).map(text => ({ text })),
       closePrev: () => this.setState({ bkPreview: '' }),
       snapFilter: s.snapFilter,
       ddSnapOpen: s.ddOpen === 'snap',
       ddToggleSnap: () => this.setState(st => ({ ddOpen: st.ddOpen === 'snap' ? '' : 'snap', ddQ: '' })),
       ddSnapOpts: this.ddOpts(['Everything', 'Database', 'Themes', 'Plugins', 'Uploads'], s.snapFilter, 'snapFilter'),
-      createSnap: () => this.runJob('snapshot', this.state.snapFilter + ' · ' + site.name),
-      snapshots: this.SNAPSHOTS.map(sn => { const expired = sn.expires === 'expired'; return { ...sn, expired, live: !expired,
+      createSnap: () => real ? this.realCreateSnapshot(real, s) : this.runJob('snapshot', this.state.snapFilter + ' · ' + site.name),
+      snapshots: (real ? this.realSnapshots(real) : this.SNAPSHOTS).map(sn => { const expired = sn.expires === 'expired'; return { ...sn, expired, live: !expired,
         expLabel: expired ? 'Link expired' : 'Link expires in ' + sn.expires,
         expFg: expired ? 'var(--ink-dim)' : 'var(--ok)',
         mark: s.copied === sn.id ? 'Copied ✓' : 'Copy link',
-        copyLink: () => { try { navigator.clipboard.writeText('https://' + site.name + '/snapshot/' + sn.id); } catch (e) {}
+        copyLink: () => { try { navigator.clipboard.writeText(sn._real ? sn._url : 'https://' + site.name + '/snapshot/' + sn.id); } catch (e) {}
           this.setState({ copied: sn.id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
-        regen: () => this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
-        doDl: () => this.runJob('snapshot-download', sn.name) }; }),
+        regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
+        doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       dUsers, logChips, logLines,
       logMeta: real ? (real.logsLoading ? 'Loading…' : logLines.length + ' lines') : logLines.length + ' lines · last 24h',
-      tlRows: (s.timeline || this.TIMELINE_INIT).map(t => ({ ...t,
+      tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         editing: s.tlEdit === t.uid, notEditing: s.tlEdit !== t.uid,
         startEdit: () => this.setState({ tlEdit: t.uid, tlEditText: t.text }),
-        doneEdit: () => this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).map(x => x.uid === st.tlEdit ? { ...x, text: st.tlEditText.trim() || x.text } : x), tlEdit: 0 })),
+        doneEdit: () => { if (real) { const v = this.state.tlEditText.trim(); if (v && v !== t.text) this.realTimelineEdit(real, t, v); this.setState({ tlEdit: 0 }); return; }
+          this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).map(x => x.uid === st.tlEdit ? { ...x, text: st.tlEditText.trim() || x.text } : x), tlEdit: 0 })); },
         cancelEdit: () => this.setState({ tlEdit: 0 }),
-        del: () => this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).filter(x => x.uid !== t.uid) })) })),
+        del: () => { if (real) { this.realTimelineDelete(real, t); return; }
+          this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).filter(x => x.uid !== t.uid) })); } })),
       tlDraft: s.tlDraft, onTlDraft: e => this.setState({ tlDraft: e.target.value }),
       tlEditText: s.tlEditText, onTlEditText: e => this.setState({ tlEditText: e.target.value }),
       addTl: () => { const v = this.state.tlDraft.trim(); if (!v) return;
+        if (real) { this.realTimelineAdd(real, v); this.setState({ tlDraft: '' }); return; }
         this.setState(st => ({ timeline: [{ uid: Date.now(), text: v, who: 'Austin Ginder', when: 'just now' }, ...(st.timeline || this.TIMELINE_INIT)], tlDraft: '' })); },
-      exportTl: () => this.runJob('timeline-export', site.name + ' → JSON')
+      exportTl: () => { if (real) {
+          const blob = new Blob([JSON.stringify({ site: { name: site.name, site_id: real.siteId }, entries: (real.timeline || []).map(t => t._raw || t) }, null, 2)], { type: 'application/json' });
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'timeline.json'; a.click(); URL.revokeObjectURL(a.href); return; }
+        this.runJob('timeline-export', site.name + ' → JSON') }
     };
   }
 
