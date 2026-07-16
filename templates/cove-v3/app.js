@@ -1051,6 +1051,19 @@ class Component extends DCLogic {
   computeDetail(s) {
     const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0];
     const real = this._detail && this._detail.siteId === s.siteId ? this._detail : null;
+    // Load the active tab's data whenever the site detail is shown — covers
+    // deep links to /account/sites/{id}/{tab}, not just tab clicks. Gated on
+    // envs being loaded (stats needs the env's tracker); each loader self-guards
+    // against re-fetching, so calling on render is cheap.
+    if (real && real.envs && s.route === 'site') setTimeout(() => {
+      const tab = this.state.siteTab;
+      if (tab === 'stats') this.loadStats();
+      else if (tab === 'logs') this.loadLogs();
+      else if (tab === 'versions') this.loadQuicksaves();
+      else if (tab === 'backups') this.loadBackups();
+      else if (tab === 'snapshots') this.loadSnapshots();
+      else if (tab === 'timeline') this.loadTimeline();
+    }, 0);
     const slug = site.name.split('.')[0];
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
     const segBg = l => s.env === l ? 'var(--brand-soft)' : 'var(--paper)';
