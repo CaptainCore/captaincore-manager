@@ -312,18 +312,17 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
           <sc-if value="{{ viewTable }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
-              <div style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 1fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
+              <div style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
                 <span onClick="{{ toggleAll }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ selAllBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ selAllMark }}</span>
-                <span>Site</span><span>Environments</span><span>Provider</span><span>Core</span><span>Theme</span><span>Visits / wk</span>
+                <span>Site</span><span>Environments</span><span>Provider</span><span>Core</span><span>Visits / wk</span>
               </div>
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="8">
-                <div onClick="{{ s.open }}" style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 1fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+                <div onClick="{{ s.open }}" style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
                   <span onClick="{{ s.toggle }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ s.checkBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ s.check }}</span>
                   <span style="min-width:0"><span style="display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ s.account }}</span></span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ s.envs }}</span>
                   <span style="color:var(--ink-dim)">{{ s.provider }}</span>
                   <span style="font:400 13px var(--mono);color:var(--ink-dim)">{{ s.core }}</span>
-                  <span style="font:400 12.5px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.theme }}</span>
                   <span style="font:400 13px var(--mono);color:var(--ink-dim)">{{ s.visits }}</span>
                 </div>
               </sc-for>
@@ -781,16 +780,14 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New domain</button>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
-            <div style="display:grid;grid-template-columns:2fr 1.3fr 1fr 0.7fr 0.9fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
-              <span>Domain</span><span>Registrar</span><span>Expires</span><span>DNS</span><span>Auto-renew</span>
+            <div style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
+              <span>Domain</span><span>Registrar</span><span>DNS</span>
             </div>
             <sc-for list="{{ domRows }}" as="d" hint-placeholder-count="6">
-              <div onClick="{{ d.open }}" style="display:grid;grid-template-columns:2fr 1.3fr 1fr 0.7fr 0.9fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+              <div onClick="{{ d.open }}" style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
                 <span style="min-width:0"><span style="display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.name }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ d.account }}</span></span>
                 <span style="color:var(--ink-dim)">{{ d.registrar }}</span>
-                <span style="font:400 13px var(--mono);color:{{ d.expFg }}">{{ d.expires }}</span>
                 <span style="font:500 12.5px var(--sans);color:{{ d.dnsFg }}">{{ d.dnsLabel }}</span>
-                <span style="font:500 12.5px var(--sans);color:{{ d.autoFg }}">{{ d.autoLabel }}</span>
               </div>
             </sc-for>
           </div>
