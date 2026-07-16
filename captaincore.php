@@ -1236,7 +1236,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		// Update pointer to new thumbnails for environment
 		$environment              = ( new CaptainCore\Environments )->get( $environment_id );
 		$details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
-		$details->screenshot_base = "{$data->created_at}_${git_commit_short}";
+		$details->screenshot_base = "{$data->created_at}_{$git_commit_short}";
 		( new CaptainCore\Environments )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment_id ] );
 
 		// Sync cache to ensure Listings page sees the new capture immediately
