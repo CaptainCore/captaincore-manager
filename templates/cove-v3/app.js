@@ -1466,6 +1466,7 @@ class Component extends DCLogic {
       consoleRef: (el) => { this._consoleEl = el; if (el) el.scrollTop = el.scrollHeight; },
       runningCount: jobs.filter(j => j.running).length,
       hasRunning: jobs.some(j => j.running),
+      dockIdle: !jobs.some(j => j.running),
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       termCmd: s.termCmd || '',
       onTermCmd: e => this.setState({ termCmd: e.target.value }),

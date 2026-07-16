@@ -1800,13 +1800,18 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
     </div>
   </sc-if>
   <sc-if value="{{ dockClosed }}" hint-placeholder-val="{{ true }}">
-    <div onClick="{{ openDock }}" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;gap:9px;height:38px;padding:0 14px 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;box-shadow:var(--shadow);cursor:pointer;z-index:60;max-width:min(480px,calc(100vw - 32px))" style-hover="border-color:var(--brand)">
-      <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);animation:ccpulse 1.6s ease infinite;flex:none"></span>
-      <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ openDock }}" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;gap:9px;height:38px;padding:0 14px 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;box-shadow:var(--shadow);cursor:pointer;z-index:60;max-width:min(480px,calc(100vw - 32px))" style-hover="border-color:var(--brand)">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);animation:ccpulse 1.6s ease infinite;flex:none"></span>
         <span style="font:600 12px var(--sans);flex:none">{{ runningCount }} running</span>
-      </sc-if>
-      <span style="font:400 12.5px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ liveTail }}</span>
-    </div>
+        <span style="font:400 12.5px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ liveTail }}</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ dockIdle }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ openDock }}" title="Open console" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:var(--paper);border:1px solid var(--rule);border-radius:50%;box-shadow:var(--shadow);cursor:pointer;z-index:60" style-hover="border-color:var(--brand)">
+        <span style="width:10px;height:10px;border-radius:50%;background:var(--brand);opacity:.45"></span>
+      </div>
+    </sc-if>
   </sc-if>
 
   <!-- ══ Quicksave dialog ══ -->
