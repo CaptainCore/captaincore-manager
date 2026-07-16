@@ -1055,7 +1055,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
             <div style="flex:1"></div>
             <sc-if value="{{ accShowTransfer }}" hint-placeholder-val="{{ true }}">
-              <button style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
+              <button onClick="{{ openTransfer }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
             </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ accMeta }}</div>
@@ -1561,7 +1561,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <span style="font:500 11.5px var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">{{ sr.interval }}</span>
                 <span style="font:400 12px var(--sans);color:var(--ink-dim)">next {{ sr.next }} · {{ sr.recipients }} recipients</span>
                 <div style="flex:1"></div>
-                <span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
+                <span onClick="{{ sr.edit }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
                 <span onClick="{{ sr.del }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
               </div>
             </sc-for>
@@ -2321,6 +2321,63 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Scheduled report edit dialog ══ -->
+  <sc-if value="{{ schedEditOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSchedEdit }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Scheduled report</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeSchedEdit }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 12.5px var(--sans);color:var(--ink-dim)">Interval</span>
+            <sc-for list="{{ schedIntChips }}" as="c" hint-placeholder-count="3">
+              <span onClick="{{ c.go }}" style="padding:5px 12px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12.5px var(--sans);cursor:pointer">{{ c.label }}</span>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 12.5px var(--sans);color:var(--ink-dim)">Recipient</span><input value="{{ schedEditEmail }}" onInput="{{ onSchedEmail }}" placeholder="recipient@example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeSchedEdit }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveSchedEdit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save schedule</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Transfer ownership dialog ══ -->
+  <sc-if value="{{ transferOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeTransfer }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:14vh">
+      <div onClick="{{ stopProp }}" style="width:480px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Transfer ownership</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeTransfer }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px">
+          <div style="font:400 12.5px/1.6 var(--sans);color:var(--ink-dim);margin-bottom:10px">The new owner becomes the billing owner. The current owner is demoted to Full access. Pick who takes over:</div>
+          <sc-for list="{{ transferCandidates }}" as="u" hint-placeholder-count="2">
+            <div onClick="{{ u.pick }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid {{ u.bd }};border-radius:9px;margin-bottom:7px;cursor:pointer;background:{{ u.bg }}" style-hover="border-color:var(--brand)">
+              <span style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);display:grid;place-items:center;font:600 10.5px var(--sans)">{{ u.init }}</span>
+              <span style="flex:1;min-width:0"><span style="display:block;font:500 13px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
+              <span style="font:600 12px var(--sans);color:var(--brand-ink)">{{ u.mark }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ transferEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="font:400 12.5px var(--sans);color:var(--ink-dim);padding:8px 0">No other members to transfer to. Invite someone first.</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeTransfer }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ confirmTransfer }}" style="border:none;background:{{ transferBtnBg }};color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer">Transfer</button>
         </div>
       </div>
     </div>
