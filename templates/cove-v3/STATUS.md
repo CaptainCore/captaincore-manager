@@ -33,6 +33,12 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 - **`site-detail.js`** — `openSite()` override loads `/sites/{id}/environments|details|
   users`; real overview credentials, env rows, addons, users, logs, env switcher, magic
   login, sync, push/pull. **Env names are LOWERCASE in URL paths.**
+- **`stats.js`** — site Stats tab (Fathom). `loadStats()` hits `/sites/{id}/stats`
+  (+ the new `/stats/top-pages` & `/stats/top-referrers` routes) with the tracker code
+  from the current env's `fathom_analytics[0]`. Chart series is zero-filled client-side
+  (Fathom omits empty buckets; labels must byte-match PHP `date('M d Y'/'M Y'/'Y')`).
+  Sharing chips POST `/stats/share`; private password auto-saves debounced. No Chart.js
+  needed — the design's bar chart renders the series directly.
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -75,6 +81,15 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   hid all 27); "all clear" row (excluded from the badge count) when nothing's open.
   Recent-activity feed real from `/activity-logs`. Security launcher tile shows the
   live open-threat count. Home jobs list = real session-dispatched jobs (see gaps).
+- **Stats tab** (verified on 1777americanainn.com, tracker DPRQEUGO) — KPI tiles,
+  zero-filled pageviews chart, top pages/referrers, grouping (Daily/Monthly/Yearly →
+  Fathom day/month/year; no week grouping upstream) + range presets, sharing chips,
+  empty state when no tracker. **Includes a backend change**: `captaincore.php` now
+  registers `GET /sites/{id}/stats/top-pages|top-referrers` (wires the previously
+  dead `Site::top_pages()/top_referrers()`) — functions only, no new class, so no
+  composer classmap regen needed on deploy.
+- **Idle dock pill** — collapsed dock is a compact circle with a muted dot when no
+  jobs run; the pulse pill with count + live tail only shows while jobs stream.
 
 ## Remaining work (rough priority; each is a "slice")
 
@@ -82,25 +97,23 @@ Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
 `captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
 arrays in the matching `compute*()` to consult real data with mock fallback, test live.
 
-1. **Stats tab** — Fathom analytics is entirely mock. Endpoints: `/sites/{id}/fathom`,
-   `/sites/{id}/stats[/share]`. Charts (Chart.js) not yet vendored for v3.
-2. **Domains / DNS / Email** — `computeDomains`/`computeDomain` are mock. DNS record
+1. **Domains / DNS / Email** — `computeDomains`/`computeDomain` are mock. DNS record
    editor, registrar (Hover/Spaceship), email forwarding (Mailgun routes, U+200B guard),
    Mailgun sending. Big surface — see spec §7.5.
-3. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
+2. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
    detail tabs, 4 access levels, invites, transfer ownership, trusted devices (backend
    exists, zero UI), self-service profile (TFA/app-password/sessions). Spec §7.6.
-4. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
+3. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
    methods, invoices+PDF, plan editors, admin subscriptions. Spec §7.7. Gated by
    `modules.billing`.
-5. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
+4. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
    threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-6. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-7. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
+5. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
+6. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
    keys, cookbook, handbook. Spec §7.10.
-8. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
+7. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
    EventSource progress, 7-day B2 share links. Spec §7.11.
-9. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+8. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -132,6 +145,11 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - **Customer-role attention is minimal.** The admin-gated signals 403 for customers,
   so they get real activity plus an "all clear"/site-count row. The design's customer
   mock (invoice due, report ready) belongs to the Billing and Reports slices.
+- **Stats tab leftovers.** The "Performance monitor" card is design-only (no v1
+  endpoint exists — needs a backend before it can be real). Multi-tracker sites
+  (v1 shows a tracker autocomplete when `fathom_analytics.length > 1`) always use
+  the first tracker in v3. `/sites/{id}/environments` can take ~8s on the local DB —
+  the Stats tab defers its first load until envs arrive (hook in `loadSiteDetail`).
 
 ### Known nits
 - Terminal input text doesn't visually clear after a run — the DC runtime binds
@@ -147,3 +165,5 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `914e10d` NEW: Version & Recovery slice on real data
 - `f7a8f2a` IMPROVE: activity dock — selectable job history, ⌘⏎, collapsed pill
 - `dbc7662` NEW: home screen on real data — attention + activity feeds
+- `bb320e9` IMPROVE: idle dock pill — compact dot-only circle
+- `14059da` NEW: Stats tab on real Fathom data + top-pages/referrers routes
