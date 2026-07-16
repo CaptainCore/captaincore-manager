@@ -1653,9 +1653,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
                 <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Theme colors</span>
                 <sc-for list="{{ brandSwatches }}" as="sw" hint-placeholder-count="5">
-                  <span title="{{ sw.k }}" style="width:26px;height:26px;border-radius:7px;background:{{ sw.c }};border:1px solid var(--rule);cursor:pointer"></span>
+                  <input type="color" value="{{ sw.c }}" onInput="{{ sw.on }}" title="{{ sw.k }}" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--rule);cursor:pointer;padding:0;background:none">
                 </sc-for>
-                <span style="font:400 12px var(--sans);color:var(--ink-dim)">via Tweaks or per-portal config</span>
+                <span style="font:400 12px var(--sans);color:var(--ink-dim)">click a swatch to recolor</span>
               </div>
               <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
                 <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">DNS copy labels</span>
@@ -1691,7 +1691,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="width:170px;font:500 12.5px var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
                   <span style="font:400 12.5px var(--mono)">{{ r.v }}</span>
                   <div style="flex:1"></div>
-                  <span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
+                  <sc-if value="{{ r.editable }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ openDefaults }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
+                  </sc-if>
                 </div>
               </sc-for>
             </div>
@@ -2298,6 +2300,28 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <span onClick="{{ closeProcDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <iframe srcdoc="{{ procDlgBody }}" style="flex:1;width:100%;border:none;background:white"></iframe>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Site defaults edit dialog ══ -->
+  <sc-if value="{{ defDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDefaults }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Site defaults</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeDefaults }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:100px;font:500 12.5px var(--sans);color:var(--ink-dim)">Default email</span><input value="{{ defEmail }}" onInput="{{ onDefEmail }}" placeholder="support@example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:100px;font:500 12.5px var(--sans);color:var(--ink-dim)">Timezone</span><input value="{{ defTimezone }}" onInput="{{ onDefTimezone }}" placeholder="America/New_York" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeDefaults }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
+        </div>
       </div>
     </div>
   </sc-if>

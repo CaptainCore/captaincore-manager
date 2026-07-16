@@ -48,9 +48,12 @@ Object.assign(Component.prototype, {
     const set = this._set;
     if (!set) return {};
     const reload = () => this.loadSettings(true);
-    const colors = (set.cfg && set.cfg.colors) || {};
-    const brandSwatches = [['primary', colors.primary], ['success', colors.success], ['warning', colors.warning], ['error', colors.error], ['accent', colors.accent]]
-      .filter(([, c]) => c).map(([k, c]) => ({ k, c }));
+    set.cfg.colors = set.cfg.colors || {};
+    const colors = set.cfg.colors;
+    const toHex = c => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#3b82c4';
+    const brandSwatches = ['primary', 'success', 'warning', 'error', 'accent']
+      .filter(k => colors[k]).map(k => ({ k, c: toHex(colors[k]),
+        on: e => { set.cfg.colors[k] = e.target.value; this.setState({}); } }));
     const provRows = set.providers.map(p => {
       const connected = (p.credentials || []).length > 0;
       const sub = (connected ? 'Connected' : 'Not connected') + ' · ' + (p.provider || '');
@@ -63,11 +66,11 @@ Object.assign(Component.prototype, {
     });
     const d = set.defaults || {};
     const defRows = [
-      ['Default email', d.email || '—'],
-      ['Timezone', d.timezone || '—'],
-      ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—'],
-      ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—']
-    ].map(([k, v]) => ({ k, v }));
+      ['Default email', d.email || '—', true],
+      ['Timezone', d.timezone || '—', true],
+      ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—', false],
+      ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—', false]
+    ].map(([k, v, editable]) => ({ k, v, editable }));
     const keyRows = set.keys.map(k => ({ name: k.title, fp: 'SHA256:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
       del: () => { if (!confirm('Delete SSH key "' + k.title + '"? This affects fleet site access.')) return;
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
@@ -97,8 +100,23 @@ Object.assign(Component.prototype, {
       deleteRecipe: () => this.deleteRecipeReal(),
       // handbook viewer
       procDlgOpen: s.procDlgOpen, procDlgName: s.procDlgName, procDlgBody: s.procDlgBody,
-      closeProcDlg: () => this.setState({ procDlgOpen: false })
+      closeProcDlg: () => this.setState({ procDlgOpen: false }),
+      // site defaults editor
+      defDlgOpen: s.defDlgOpen, defEmail: s.defEmail, defTimezone: s.defTimezone,
+      onDefEmail: e => this.setState({ defEmail: e.target.value }),
+      onDefTimezone: e => this.setState({ defTimezone: e.target.value }),
+      openDefaults: () => this.setState({ defDlgOpen: true, defEmail: d.email || '', defTimezone: d.timezone || '' }),
+      closeDefaults: () => this.setState({ defDlgOpen: false }),
+      saveDefaults: () => this.saveDefaultsReal()
     };
+  },
+
+  saveDefaultsReal() {
+    const set = this._set;
+    if (!set) return;
+    const body = { ...(set.defaults || {}), email: (this.state.defEmail || '').trim(), timezone: (this.state.defTimezone || '').trim() };
+    this.setState({ defDlgOpen: false });
+    this.api('/defaults/global', { method: 'PUT', body }).then(() => this.loadSettings(true)).catch(() => {});
   },
 
   openRecipe(r) {

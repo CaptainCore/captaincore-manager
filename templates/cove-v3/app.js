@@ -37,6 +37,7 @@ class Component extends DCLogic {
     setTab: 'branding', brandName: 'Anchor Hosting', keyDraft: '', sshKeys: null,
     recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
+    defDlgOpen: false, defEmail: '', defTimezone: '',
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -596,7 +597,7 @@ class Component extends DCLogic {
       setTabBrand: s.setTab === 'branding', setTabProv: s.setTab === 'providers', setTabDef: s.setTab === 'defaults',
       setTabKeys: s.setTab === 'keys', setTabCook: s.setTab === 'cookbook', setTabHand: s.setTab === 'handbook',
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
-      brandSwatches: [['primary', 'var(--brand)'], ['success', 'var(--ok)'], ['warning', 'var(--warn)'], ['error', 'var(--bad)'], ['ink', 'var(--ink)']].map(([k, c]) => ({ k, c })),
+      brandSwatches: [['primary', '#3b82c4'], ['success', '#22a06b'], ['warning', '#d9a406'], ['error', '#d94a3d'], ['accent', '#7c5cff']].map(([k, c]) => ({ k, c, on: () => {} })),
       brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => { this.setState({ copied: 'brand' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
       provRows: [
@@ -632,6 +633,8 @@ class Component extends DCLogic {
       onRecipeTitle: () => {}, onRecipeContent: () => {}, recipePublicBg: 'var(--rule)', recipePublicJust: 'flex-start',
       toggleRecipePublic: () => {}, newRecipe: () => {}, closeRecipeDlg: () => {}, saveRecipe: () => {}, deleteRecipe: () => {},
       procDlgOpen: false, procDlgName: '', procDlgBody: '', closeProcDlg: () => {},
+      defDlgOpen: false, defEmail: '', defTimezone: '', onDefEmail: () => {}, onDefTimezone: () => {},
+      openDefaults: () => {}, closeDefaults: () => {}, saveDefaults: () => {},
       ...(this._hydrated ? this.realSettingsVals(s) : {})
     };
   }
