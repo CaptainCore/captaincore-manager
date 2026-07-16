@@ -57,6 +57,9 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
   ownership = `plan.billing_user_id`. Invites POST/DELETE under `/accounts/{id}/invites`;
   member remove DELETE `/accounts/{id}/users/{uid}`. Activity lazy via
   `/activity-logs?account_id=`. Trusted devices have NO REST surface — section hidden.
+- **`billing.js`** — Billing (WooCommerce-backed). Lazy `GET /billing/` on first billing
+  render → invoices (+PDF blob download, pay-invoice w/ confirm), payment methods
+  (set-primary/remove; add needs Stripe elements — hidden), WC billing address.
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -123,6 +126,13 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   invoice-due status. Not wired: transfer ownership (route exists — needs picker UI),
   admin "Access as", level editing, trusted devices (no REST surface), invite
   send/revoke not live-fired (real emails).
+- **Billing** (verified live: real invoice w/ working PDF download, payment-methods
+  empty state, real WC billing address) — invoices with status chips + Pay-now
+  (confirm → default method), payment methods set-primary/remove, address tab.
+  Not wired: add card/ACH (needs Stripe elements — buttons hidden), address edit
+  (`PUT /billing/update` exists), invoice line-item detail, admin Subscriptions +
+  Pending-ACH views (no design markup yet), My-Plan request-changes. Billing module
+  gate (`CAPTAINCORE_CUSTOM_DOMAIN` hides billing in v1) not yet honored in v3.
 - **Domains / DNS / Email** (verified live: TXT add/save/delete cycle on the real
   austinginder.com Constellix zone; forwarding + sending real on wpfreighter.com) —
   domain detail on real data across all four tabs. DNS staged editor with per-record
@@ -138,17 +148,14 @@ Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
 `captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
 arrays in the matching `compute*()` to consult real data with mock fallback, test live.
 
-1. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
-   methods, invoices+PDF, plan editors, admin subscriptions. Spec §7.7. Gated by
-   `modules.billing`.
-2. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
+1. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
    threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-3. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-4. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
+2. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
+3. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
    keys, cookbook, handbook. Spec §7.10.
-5. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
+4. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
    EventSource progress, 7-day B2 share links. Spec §7.11.
-6. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+5. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -213,3 +220,4 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `4aa3402` NEW: Domains/DNS/Email slice on real data
 - `7113104` FIX: label facets — count all labels, v1 colors
 - `622de8a` NEW: Accounts/Users/Access slice on real data
+- `630a5ad` NEW: Billing slice on real data
