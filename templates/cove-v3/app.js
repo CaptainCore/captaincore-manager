@@ -366,10 +366,15 @@ class Component extends DCLogic {
           status: !iv.due ? 'Paid' : s.paid[iv.id] ? 'Paid · just now' : 'Due Jul 22',
           stBg: paid ? 'var(--ok-soft)' : 'var(--warn-soft)', stFg: 'var(--ink)',
           canPay: iv.due && !s.paid[iv.id],
+          pdf: () => {},
           pay: () => this.setState(st => ({ paid: { ...st.paid, [iv.id]: true } })) }; }),
       payMethods: this.PAY_METHODS.map((pm, i) => ({ ...pm,
         isPrimary: s.primaryPm === i, canPrimary: s.primaryPm !== i,
-        setPrimary: () => this.setState({ primaryPm: i }) }))
+        setPrimary: () => this.setState({ primaryPm: i }), remove: () => {} })),
+      billShowAdd: true, billNotice: false, billNoticeText: '',
+      addrL1: 'Sarah Whitfield · Bloom & Branch LLC', addrL2: '412 Larkspur Lane',
+      addrL3: 'Lancaster, PA 17601 · United States', addrL4: 'sarah@bloomandbranch.com',
+      ...(this._hydrated ? this.realBillingVals(s) : {})
     };
   }
 

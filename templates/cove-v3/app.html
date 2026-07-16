@@ -1210,6 +1210,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </sc-for>
           </div>
 
+          <sc-if value="{{ billNotice }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ billNoticeText }}</div>
+          </sc-if>
           <sc-if value="{{ billTabInv }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ invoices }}" as="iv" hint-placeholder-count="3">
@@ -1220,7 +1223,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <div style="flex:1"></div>
                   <span style="font:600 13.5px var(--mono)">{{ iv.amount }}</span>
                   <span style="font:500 12px var(--sans);background:{{ iv.stBg }};color:{{ iv.stFg }};border-radius:99px;padding:3px 10px">{{ iv.status }}</span>
-                  <span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
+                  <span onClick="{{ iv.pdf }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
                   <sc-if value="{{ iv.canPay }}" hint-placeholder-val="{{ false }}">
                     <button onClick="{{ iv.pay }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
                   </sc-if>
@@ -1230,10 +1233,12 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
 
           <sc-if value="{{ billTabPm }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;gap:10px;margin-top:16px">
-              <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add card</button>
-              <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add bank (ACH)</button>
-            </div>
+            <sc-if value="{{ billShowAdd }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add card</button>
+                <button style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add bank (ACH)</button>
+              </div>
+            </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ payMethods }}" as="pm" hint-placeholder-count="2">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule)">
@@ -1245,7 +1250,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <div style="flex:1"></div>
                   <sc-if value="{{ pm.canPrimary }}" hint-placeholder-val="{{ false }}">
                     <span onClick="{{ pm.setPrimary }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Set primary</span>
-                    <span style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                    <span onClick="{{ pm.remove }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
                   </sc-if>
                 </div>
               </sc-for>
@@ -1256,8 +1261,8 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden;max-width:520px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Billing address</h2><span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></div>
               <div style="padding:14px 16px">
-                <div style="font:500 13.5px var(--sans)">Sarah Whitfield · Bloom &amp; Branch LLC</div>
-                <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">412 Larkspur Lane<br>Lancaster, PA 17601 · United States<br>sarah@bloomandbranch.com</div>
+                <div style="font:500 13.5px var(--sans)">{{ addrL1 }}</div>
+                <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">{{ addrL2 }}<br>{{ addrL3 }}<br>{{ addrL4 }}</div>
               </div>
             </div>
           </sc-if>
