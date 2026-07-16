@@ -1773,7 +1773,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <div style="flex:1;display:flex;min-height:0">
         <div style="flex:none;width:210px;border-right:1px solid var(--rule);overflow-y:auto;background:var(--panel)">
           <sc-for list="{{ jobs }}" as="j" hint-placeholder-count="3">
-            <div style="padding:10px 12px;border-bottom:1px solid var(--rule)">
+            <div onClick="{{ j.pick }}" style="padding:10px 12px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ j.rowBg }}" style-hover="background:var(--panel-2)">
               <div style="display:flex;align-items:center;gap:7px">
                 <span style="width:6px;height:6px;border-radius:50%;background:{{ j.dot }};flex:none"></span>
                 <span style="font:600 12.5px var(--mono);color:{{ j.fg }}">{{ j.label }}</span>
@@ -1793,7 +1793,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="flex:none;display:flex;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid var(--rule)">
             <span style="font:500 13px var(--mono);color:var(--brand-ink);white-space:nowrap">{{ termTarget }}</span>
             <input value="{{ termCmd }}" onInput="{{ onTermCmd }}" placeholder="wp option get home" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 13px var(--mono)">
-            <span onClick="{{ termRun }}" style="margin-left:auto;font:500 11.5px var(--mono);color:{{ termRunFg }};cursor:pointer;white-space:nowrap">⌃⏎ run</span>
+            <span onClick="{{ termRun }}" style="margin-left:auto;font:500 11.5px var(--mono);color:{{ termRunFg }};cursor:pointer;white-space:nowrap">⌘⏎ run</span>
           </div>
         </div>
       </div>
@@ -1802,7 +1802,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
   <sc-if value="{{ dockClosed }}" hint-placeholder-val="{{ true }}">
     <div onClick="{{ openDock }}" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;gap:9px;height:38px;padding:0 14px 0 12px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;box-shadow:var(--shadow);cursor:pointer;z-index:60;max-width:min(480px,calc(100vw - 32px))" style-hover="border-color:var(--brand)">
       <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);animation:ccpulse 1.6s ease infinite;flex:none"></span>
-      <span style="font:600 12px var(--sans);flex:none">{{ runningCount }} running</span>
+      <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ true }}">
+        <span style="font:600 12px var(--sans);flex:none">{{ runningCount }} running</span>
+      </sc-if>
       <span style="font:400 12.5px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ liveTail }}</span>
     </div>
   </sc-if>
