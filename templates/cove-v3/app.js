@@ -482,7 +482,10 @@ class Component extends DCLogic {
       covBars: [['Core', 100], ['Plugins', 89], ['Themes', 81], ['Must-use / dropins', 64]].map(([k, pct]) => ({ k, pct,
         fill: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)' })),
       queueStale: () => this.runJob('audit-queue', '9 stale sites'),
-      steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); }
+      steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); },
+      secLoading: false, secEmpty: false, secEmptyText: '', ckEmptyCore: false, ckEmptyPlug: false,
+      covShowActions: true, covNote: '',
+      ...(this._hydrated ? this.realSecurityVals(s) : {})
     };
   }
 
@@ -510,8 +513,11 @@ class Component extends DCLogic {
         togglePub: () => this.setState(st => ({ audits: (st.audits || this.AUDITS_INIT).map(x => x.id === a.id ? { ...x, pub: !x.pub, status: x.pub ? 'Complete' : 'Published' } : x) })),
         copyLink: () => { try { navigator.clipboard.writeText('https://anchor.host/site-audits/' + a.id + '?key=…'); } catch (e) {}
           this.setState({ copied: 'aud' + a.id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
+        view: () => {},
         mark: s.copied === 'aud' + a.id ? 'Copied ✓' : 'Copy link',
-        cancel: () => this.setState(st => ({ audits: (st.audits || this.AUDITS_INIT).filter(x => x.id !== a.id) })) }))
+        cancel: () => this.setState(st => ({ audits: (st.audits || this.AUDITS_INIT).filter(x => x.id !== a.id) })) })),
+      audEmpty: false, audEmptyText: '',
+      ...(this._hydrated ? this.realAuditsVals(s) : {})
     };
   }
 
