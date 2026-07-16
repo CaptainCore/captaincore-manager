@@ -568,7 +568,10 @@ class Component extends DCLogic {
         mark: s.copied === ar.id ? 'Copied ✓' : 'Share link (7d)',
         share: () => { try { navigator.clipboard.writeText('https://f002.backblazeb2.com/anchor-archives/' + ar.name + '?auth=…'); } catch (e) {}
           this.setState({ copied: ar.id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
-        del: () => this.setState(st => ({ archList: (st.archList || this.ARCH_INIT).filter(x => x.id !== ar.id) })) }))
+        archCanDelete: true,
+        del: () => this.setState(st => ({ archList: (st.archList || this.ARCH_INIT).filter(x => x.id !== ar.id) })) })),
+      archEmpty: false, archEmptyText: '', archStoreMsg: '', archHasStoreMsg: false,
+      ...(this._hydrated ? this.realArchivesVals(s) : {})
     };
   }
 

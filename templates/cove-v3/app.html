@@ -1613,10 +1613,18 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ ar.size }}</span>
                 <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ ar.mod }}</span>
                 <span onClick="{{ ar.share }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="border-color:var(--brand)">{{ ar.mark }}</span>
-                <span onClick="{{ ar.del }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                <sc-if value="{{ ar.archCanDelete }}" hint-placeholder-val="{{ true }}">
+                  <span onClick="{{ ar.del }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                </sc-if>
               </div>
             </sc-for>
+            <sc-if value="{{ archEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:16px;font:400 12.5px var(--sans);color:var(--ink-dim);text-align:center">{{ archEmptyText }}</div>
+            </sc-if>
           </div>
+          <sc-if value="{{ archHasStoreMsg }}" hint-placeholder-val="{{ false }}">
+            <div style="font:500 12.5px var(--sans);color:var(--ink-dim);margin-top:10px">{{ archStoreMsg }}</div>
+          </sc-if>
           <p style="font:400 12px var(--sans);color:var(--ink-dim);margin-top:10px">Share links are valid for 7 days (Backblaze B2).</p>
         </div>
       </sc-if>
