@@ -182,8 +182,30 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   `cove-v3.php` exposes `tfaEnabled/appPassword/sessions` on CC_BOOT. Not fired live:
   profile save, TFA activate, session revoke (real side effects).
 
+- **UI gap-wiring round** (verified live) — Billing address **Edit** dialog
+  (`PUT /billing/update`); **+ Add payment method** → WooCommerce native
+  add-payment-method page (Stripe SCA) via `CC_BOOT.addPaymentUrl` (functional on
+  prod; the local WC my-account 302-redirects into the portal); **+ New account**
+  dialog (`POST /accounts/`); Cookbook **New/Edit recipe** editor
+  (`POST|PUT|DELETE /recipes`); Handbook **View** → process HTML in an iframe dialog;
+  the header **activity bell** now opens the dock (dot only while jobs run). Hid dead
+  no-backend controls on real data: domain **Auto-renew** toggle and account
+  **Cancel plan…** (neither has a v1 route).
+
 **All spec §7 area slices are now on real data.** Remaining work is cross-cutting depth
 (below) and the deferred per-slice items noted in each entry above.
+
+### Still-dead controls (need bigger UI or a missing backend)
+Found in the wire-up hunt; left unwired deliberately (each would be its own slice):
+- **Branding**: logo upload (drop-zone), color-swatch editor, DNS-copy-labels edit.
+- **Site defaults**: per-row Edit (would need a `PUT /defaults/global` dialog).
+- **Reports**: scheduled-report Edit (only Delete wired; PUT route exists).
+- **Site detail**: "Configure →" domains, "Open phpMyAdmin", "Delete site…", addon
+  "+ Add" dialog (upload/wp.org/Envato).
+- **Domains**: Mailgun "View all logs →" pager.
+- **Handbook**: process Edit (admin authoring).
+- Gated-off-on-real (mock-only): Transfer ownership, "Access as", provider Import,
+  Mailgun deploy-to-site, archive Delete — all lack a wired path or a v1 route.
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -255,3 +277,5 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
 - `9e52191` NEW: Settings slice on real data
 - `23e5938` NEW: Archives slice on real data
 - `495355f` NEW: Profile slice on real data
+- `19bd60c` IMPROVE: trim table columns (Sites Theme, Domains Expires/Auto-renew)
+- `f96279f` NEW: wire up UI gaps — billing edit, payment methods, new account, recipes
