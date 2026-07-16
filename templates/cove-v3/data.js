@@ -34,7 +34,7 @@ Object.assign(Component.prototype, {
           storage: this.fmtStorage(x.storage), envs, updates: 0, vuln: 0, owned: true, theme: '',
           backup: 'Direct',
           labels: (Array.isArray(x.labels) ? x.labels : []).map(l => typeof l === 'string' ? l : (l && (l.type || l.text)) || '').filter(Boolean),
-          unassigned: !x.account_id,
+          unassigned: !x.account_id || x.account_id == '0',
           plugins: {}, home_url: x.home_url, screenshot: x.screenshot,
           environmentsRaw: x.environments || [] };
       });
