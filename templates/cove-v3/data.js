@@ -18,6 +18,7 @@ Object.assign(Component.prototype, {
   fmtStorage(b) {
     const n = parseInt(b, 10) || 0;
     if (!n) return '\u2014';
+    if (n >= 1099511627776) return (n / 1099511627776).toFixed(1) + ' TB';
     return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : Math.round(n / 1048576) + ' MB';
   },
 
