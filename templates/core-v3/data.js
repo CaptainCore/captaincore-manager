@@ -1,5 +1,5 @@
 // CaptainCore v3 — real-data layer (mixin).
-// REST plumbing + fleet hydration. Loaded after app.js by templates/cove-v3.php.
+// REST plumbing + fleet hydration. Loaded after app.js by templates/core-v3.php.
 
 Object.assign(Component.prototype, {
 

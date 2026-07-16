@@ -1,9 +1,9 @@
 <?php
 /**
- * CaptainCore v3 ("Cove") — ground-up UI rebuild. Served behind ?ui=v3
+ * CaptainCore v3 — ground-up UI rebuild. Served behind ?ui=v3
  * (see CaptainCore\Router::load_template()).
  *
- * Source of truth lives in templates/cove-v3/:
+ * Source of truth lives in templates/core-v3/:
  *   app.html  — the DC template markup (visual design)
  *   app.js    — class Component extends DCLogic (application logic)
  *   data.js   — Component.prototype mixin: REST data layer / hydration
@@ -31,7 +31,7 @@ if ( ! is_user_logged_in() ) {
 $user       = ( new CaptainCore\User )->profile();
 $colors     = CaptainCore\Configurations::colors();
 $plugin_url = plugin_dir_url( __DIR__ );
-$v3_dir     = __DIR__ . '/cove-v3';
+$v3_dir     = __DIR__ . '/core-v3';
 $first_name = ! empty( $user->first_name ) ? $user->first_name : strtok( (string) $user->display_name, ' ' );
 
 $cc_boot = [
@@ -58,9 +58,11 @@ $cc_boot = [
         ? wc_get_endpoint_url( 'add-payment-method', '', wc_get_page_permalink( 'myaccount' ) ) : '',
     // Stripe publishable key — the SPA embeds Stripe Elements to add cards.
     'stripeKey'       => class_exists( 'WC_Gateway_Stripe' ) ? ( new WC_Gateway_Stripe )->publishable_key : '',
+    // Zip-upload endpoint for the Add plugin/theme dialog (admin-gated in upload.php).
+    'uploadUrl'       => $plugin_url . 'upload.php',
 ];
 
-$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>

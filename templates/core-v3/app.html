@@ -590,7 +590,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <sc-if value="{{ hasUpdates }}" hint-placeholder-val="{{ false }}">
                 <button onClick="{{ doUpdateAll }}" style="border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer">{{ updateAllLabel }}</button>
               </sc-if>
-              <button title="Upload / WordPress.org / Envato" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add</button>
+              <button onClick="{{ openAddAddon }}" title="Upload / WordPress.org / Envato" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ addons }}" as="a" hint-placeholder-count="6">
@@ -2750,6 +2750,131 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="flex:none;display:flex;gap:14px;padding:8px 16px;border-top:1px solid var(--rule);font:400 12px var(--sans);color:var(--ink-dim)">
           <span>↑↓ navigate</span><span>⏎ open</span><span>⌃` console</span>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Add plugin/theme dialog (Upload / WordPress.org / Envato) ══ -->
+  <sc-if value="{{ aaOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAa }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:860px;max-width:calc(100vw - 40px);max-height:86vh;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);flex:none">
+          <span style="font:600 15px var(--sans)">{{ aaTitle }}</span>
+          <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ aaEnvLabel }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeAa }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="display:flex;border-bottom:1px solid var(--rule);padding:0 18px;flex:none">
+          <sc-if value="{{ aaShowUpload }}" hint-placeholder-val="{{ true }}">
+            <span onClick="{{ setAaUpload }}" style="padding:10px 2px;margin-right:22px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaUpFg }};border-bottom:2px solid {{ aaUpLine }}" style-hover="color:var(--ink)">Upload</span>
+          </sc-if>
+          <span onClick="{{ setAaWporg }}" style="padding:10px 2px;margin-right:22px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaWpFg }};border-bottom:2px solid {{ aaWpLine }}" style-hover="color:var(--ink)">WordPress.org</span>
+          <span onClick="{{ setAaEnvato }}" style="padding:10px 2px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaEnFg }};border-bottom:2px solid {{ aaEnLine }}" style-hover="color:var(--ink)">Envato</span>
+        </div>
+        <sc-if value="{{ aaTabUpload }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:18px;overflow-y:auto">
+            <div ref="{{ aaDropRef }}" onClick="{{ aaPickFiles }}" style="border:2px dashed {{ aaDropBorder }};border-radius:12px;background:{{ aaDropBg }};padding:48px 20px;text-align:center;cursor:pointer">
+              <div style="font:600 14.5px var(--sans);pointer-events:none">Drop a .zip here to upload</div>
+              <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:6px;pointer-events:none">or click to choose a file</div>
+            </div>
+            <input type="file" accept=".zip" multiple ref="{{ aaFileRef }}" style="display:none">
+            <sc-if value="{{ aaHasUploads }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ aaUploads }}" as="u" hint-placeholder-count="1">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule)">
+                    <span style="flex:1;min-width:0;font:500 13px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.name }}</span>
+                    <span style="font:400 12px var(--mono);color:var(--ink-dim);flex:none">{{ u.sizeLabel }}</span>
+                    <span style="font:500 12px var(--sans);color:{{ u.fg }};flex:none">{{ u.statusLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ aaTabWporg }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--rule);flex:none">
+            <input value="{{ aaQ }}" onInput="{{ onAaQ }}" onKeyDown="{{ aaKeyQ }}" placeholder="Search WordPress.org" style="flex:1;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
+            <button onClick="{{ aaDoSearch }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Search</button>
+            <sc-if value="{{ aaHasPages }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;flex:none">
+                <span onClick="{{ aaPrev }}" style="cursor:pointer;font:600 15px var(--sans);color:{{ aaPrevFg }};padding:2px 6px">‹</span>
+                <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ aaPageLabel }}</span>
+                <span onClick="{{ aaNext }}" style="cursor:pointer;font:600 15px var(--sans);color:{{ aaNextFg }};padding:2px 6px">›</span>
+              </div>
+            </sc-if>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px 18px;min-height:220px">
+            <sc-if value="{{ aaLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 13px var(--sans);color:var(--ink-dim);padding:24px;text-align:center">Searching WordPress.org…</div>
+            </sc-if>
+            <sc-if value="{{ aaEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 13px var(--sans);color:var(--ink-dim);padding:24px;text-align:center">No results.</div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+              <sc-for list="{{ aaItems }}" as="i" hint-placeholder-count="6">
+                <div style="border:1px solid var(--rule);border-radius:10px;background:var(--paper);display:flex;flex-direction:column;overflow:hidden">
+                  <sc-if value="{{ i.isTheme }}" hint-placeholder-val="{{ false }}">
+                    <img src="{{ i.icon }}" style="width:100%;height:130px;object-fit:cover;border-bottom:1px solid var(--rule);background:var(--panel-2)">
+                    <div style="padding:10px 12px 0">
+                      <div title="{{ i.fullName }}" style="font:600 13px var(--sans);line-height:1.3">{{ i.title }}</div>
+                      <div style="font:400 11.5px var(--sans);color:var(--ink-dim);margin-top:3px">{{ i.version }}</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ i.notTheme }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;gap:10px;padding:12px 12px 0">
+                      <img src="{{ i.icon }}" style="width:48px;height:48px;border-radius:8px;flex:none;background:var(--panel-2);object-fit:cover">
+                      <div style="min-width:0">
+                        <div title="{{ i.fullName }}" style="font:600 13px var(--sans);line-height:1.3">{{ i.title }}</div>
+                        <div style="font:400 11.5px var(--sans);color:var(--ink-dim);margin-top:3px">{{ i.version }}</div>
+                      </div>
+                    </div>
+                    <div style="padding:8px 12px 0;font:400 12px/1.45 var(--sans);color:var(--ink-dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ i.desc }}</div>
+                  </sc-if>
+                  <div style="flex:1"></div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 12px;margin-top:8px;border-top:1px solid var(--rule)">
+                    <sc-if value="{{ i.installed }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ i.doUninstall }}" style="font:500 12px var(--sans);color:var(--bad);cursor:pointer;padding:5px 8px">Uninstall</span>
+                      <span style="font:500 12px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:5px 11px">Installed</span>
+                    </sc-if>
+                    <sc-if value="{{ i.notInstalled }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ aaTabEnvato }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--rule);flex:none">
+            <input value="{{ aaEQ }}" onInput="{{ onAaEQ }}" placeholder="Search Envato purchases" style="flex:1;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px 18px;min-height:220px">
+            <sc-if value="{{ aaEnvLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 13px var(--sans);color:var(--ink-dim);padding:24px;text-align:center">Loading Envato purchases…</div>
+            </sc-if>
+            <sc-if value="{{ aaEnvEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 13px var(--sans);color:var(--ink-dim);padding:24px;text-align:center">No Envato purchases found.</div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+              <sc-for list="{{ aaEnvItems }}" as="i" hint-placeholder-count="3">
+                <div style="border:1px solid var(--rule);border-radius:10px;background:var(--paper);display:flex;flex-direction:column;overflow:hidden">
+                  <div style="display:flex;gap:10px;padding:12px 12px 0">
+                    <img src="{{ i.icon }}" style="width:48px;height:48px;border-radius:8px;flex:none;background:var(--panel-2);object-fit:cover">
+                    <div style="min-width:0">
+                      <div title="{{ i.fullName }}" style="font:600 13px var(--sans);line-height:1.3">{{ i.title }}</div>
+                      <div style="font:400 11.5px var(--mono);color:var(--ink-dim);margin-top:3px">{{ i.idLabel }}</div>
+                    </div>
+                  </div>
+                  <div style="flex:1"></div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 12px;margin-top:8px;border-top:1px solid var(--rule)">
+                    <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>
