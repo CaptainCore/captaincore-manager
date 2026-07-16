@@ -1372,6 +1372,9 @@ class Component extends DCLogic {
     this.setState({ theme });
     this.applyTheme(theme);
     this.applyBrand();
+    // Real users (CC_BOOT injected) start with an empty job list — the design's
+    // sample jobs only exist for the DC-editor preview.
+    if (window.CC_BOOT) this.setState({ jobs: [] });
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
@@ -1522,7 +1525,9 @@ class Component extends DCLogic {
     const profileVals = this.computeProfile(s);
 
     let consoleLines;
-    if (this._hydrated) {
+    // Real users (CC_BOOT injected) get the live console immediately — the
+    // scripted mock only plays in the design/DC-editor preview (no CC_BOOT).
+    if (window.CC_BOOT || this._hydrated) {
       consoleLines = this.realConsoleLines();
     } else {
       const scriptLen = this.CONSOLE_SCRIPT.length;
