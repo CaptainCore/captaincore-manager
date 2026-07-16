@@ -23,8 +23,14 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
   `/accounts/`, `/domains/`) into FLEET/ACCOUNTS/DOMAINS. Sets `this._hydrated`.
 - **`jobs.js`** — the job engine. `startJob({label,target,command,dispatch,onFinish})`
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
-  sentinel → `onFinish`. The activity dock renders `activeJob()`; the dock footer is a
-  live terminal (⌘⏎, `/run/code` on the open site's env).
+  sentinel → `onFinish`. The activity dock renders `activeJob()`.
+- **`terminal.js`** — the dock-footer terminal (loads after jobs.js; owns `termRun`).
+  Multi-target @ picker (search + multi-select over `FLEET[].environmentsRaw`
+  `environment_id`s, falls back to the open site's current env), cookbook popup
+  (`GET /recipes` lazily, click inserts `content` into the input — never auto-runs),
+  auto-growing textarea (Enter = newline, ⌘⏎ = run; cleared via `this._termEl` ref
+  because the DC runtime binds value like defaultValue). Dispatch:
+  `POST /run/code { environments: [ids], code }` → one combined streamed job.
 - **`home.js`** — home-screen truth. `hydrateHome()` (fired from `componentDidMount`,
   parallel to `hydrate()`) pulls `/activity-logs?per_page=20` (both roles, self-scoped)
   plus `/security-threats` and `/update-queue` (operator only — a 403 in `api()` would
@@ -90,6 +96,11 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   composer classmap regen needed on deploy.
 - **Idle dock pill** — collapsed dock is a compact circle with a muted dot when no
   jobs run; the pulse pill with count + live tail only shows while jobs stream.
+- **Terminal round** (verified live: recipe insert + `wp option get home` streamed
+  from austinginder.com) — 780×520 dock; target chip above the input opens the @
+  environment picker (fleet-wide multi-select — the terminal no longer requires an
+  open site); cookbook popup inserts recipes; multiline auto-growing input; console
+  caret only blinks while streaming; input reliably clears after a run.
 
 ## Remaining work (rough priority; each is a "slice")
 
@@ -152,11 +163,11 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
   the Stats tab defers its first load until envs arrive (hook in `loadSiteDetail`).
 
 ### Known nits
-- Terminal input text doesn't visually clear after a run — the DC runtime binds
-  `value` like `defaultValue` (uncontrolled). Cosmetic; the command does dispatch and
-  the field is cleared in state.
 - `/sites` list records carry no theme/plugin/update data, so those Sites-list filters
   render empty until wired to `/filters/sites`.
+- Terminal: v1's extras not yet ported — save-input-as-recipe, schedule-command, and
+  fullscreen mode. Public recipes insert (v1 runs them immediately with a confirm).
+  Fleet envs without a cached `environment_id` (stale sync) don't appear in the @ picker.
 
 ## Recent commits
 - `89e4ed8` NEW: initial cove-v3 template behind ?ui=v3
@@ -167,3 +178,4 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `dbc7662` NEW: home screen on real data — attention + activity feeds
 - `bb320e9` IMPROVE: idle dock pill — compact dot-only circle
 - `14059da` NEW: Stats tab on real Fathom data + top-pages/referrers routes
+- `6fdf9fe` NEW: terminal round — multi-target picker, cookbook, multiline input
