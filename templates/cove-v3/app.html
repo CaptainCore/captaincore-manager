@@ -508,6 +508,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <span onClick="{{ copyStatLink }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">{{ statLinkMark }}</span>
               </sc-if>
             </div>
+            <sc-if value="{{ statsNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ statsNoticeText }}</div>
+            </sc-if>
             <div style="display:flex;align-items:stretch;margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ statTilesBig }}" as="t" hint-placeholder-count="4">
                 <div style="flex:1;padding:13px 16px;border-right:1px solid var(--rule)">
