@@ -25,6 +25,11 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
   sentinel → `onFinish`. The activity dock renders `activeJob()`; the dock footer is a
   live terminal (⌘⏎, `/run/code` on the open site's env).
+- **`home.js`** — home-screen truth. `hydrateHome()` (fired from `componentDidMount`,
+  parallel to `hydrate()`) pulls `/activity-logs?per_page=20` (both roles, self-scoped)
+  plus `/security-threats` and `/update-queue` (operator only — a 403 in `api()` would
+  bounce to login, so gate on `dcRole` before fetching). `realAttention()` builds the
+  needs-attention rows; unassigned sites are derived from `FLEET[].unassigned`.
 - **`site-detail.js`** — `openSite()` override loads `/sites/{id}/environments|details|
   users`; real overview credentials, env rows, addons, users, logs, env switcher, magic
   login, sync, push/pull. **Env names are LOWERCASE in URL paths.**
@@ -64,6 +69,12 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   Timeline (process logs CRUD + JSON export).
 - **Activity dock / terminal** — real streamed jobs, click any job row to view its
   output, collapsed pill shows dot-only when idle, ⌘⏎ to run, red dot on error.
+- **Home screen** — Needs-attention feed real (`/security-threats` count + severity +
+  affected sites; `/update-queue` pending count when built; unassigned-site count —
+  fixed to match v1's rule, `account_id` `""`/`"0"`, the string `"0"` was truthy and
+  hid all 27); "all clear" row (excluded from the badge count) when nothing's open.
+  Recent-activity feed real from `/activity-logs`. Security launcher tile shows the
+  live open-threat count. Home jobs list = real session-dispatched jobs (see gaps).
 
 ## Remaining work (rough priority; each is a "slice")
 
@@ -71,29 +82,25 @@ Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
 `captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
 arrays in the matching `compute*()` to consult real data with mock fallback, test live.
 
-1. **Home-screen truth** — the Needs-attention feed, Recent-activity feed, and the
-   home jobs list are still design mock. Wire attention to real signals (security
-   threats, update-queue, domain expirations, unassigned sites) and activity to
-   `/activity-logs`.
-2. **Stats tab** — Fathom analytics is entirely mock. Endpoints: `/sites/{id}/fathom`,
+1. **Stats tab** — Fathom analytics is entirely mock. Endpoints: `/sites/{id}/fathom`,
    `/sites/{id}/stats[/share]`. Charts (Chart.js) not yet vendored for v3.
-3. **Domains / DNS / Email** — `computeDomains`/`computeDomain` are mock. DNS record
+2. **Domains / DNS / Email** — `computeDomains`/`computeDomain` are mock. DNS record
    editor, registrar (Hover/Spaceship), email forwarding (Mailgun routes, U+200B guard),
    Mailgun sending. Big surface — see spec §7.5.
-4. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
+3. **Accounts / Users / Access** — `computeAccounts`/`computeAccount` mock. Account
    detail tabs, 4 access levels, invites, transfer ownership, trusted devices (backend
    exists, zero UI), self-service profile (TFA/app-password/sessions). Spec §7.6.
-5. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
+4. **Billing / Subscriptions** — `computeBilling` mock. Stripe/WooCommerce: payment
    methods, invoices+PDF, plan editors, admin subscriptions. Spec §7.7. Gated by
    `modules.billing`.
-6. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
+5. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
    threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-7. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-8. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
+6. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
+7. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
    keys, cookbook, handbook. Spec §7.10.
-9. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
+8. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
    EventSource progress, 7-day B2 share links. Spec §7.11.
-10. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+9. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -112,6 +119,20 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - **Permissions** — no central `can(action, ctx)` yet (spec §8.1). Role gating is via
   `dcRole` operator/customer only. Customer-role screens largely unexercised.
 
+### v1 API contract gaps (found wiring the home screen)
+- **Domain expirations aren't exposed.** `Domains::list()` projects only
+  `domain_id, remote_id, provider_id, name, status, price` — no expiry field anywhere
+  in the v1 REST surface (the v2 SPA references `domain.expiration_date` but it never
+  arrives). The design's "domain expires in N days" attention row needs a backend
+  change first.
+- **`GET /process-logs` is unpaginated** — returns the whole table (~12 MB locally).
+  Unusable for a home jobs backfill; the home jobs list stays session-only until the
+  endpoint grows `page`/`per_page` (or the home screen uses `GET /progress/` for live
+  fleet jobs — see Realtime depth).
+- **Customer-role attention is minimal.** The admin-gated signals 403 for customers,
+  so they get real activity plus an "all clear"/site-count row. The design's customer
+  mock (invoice due, report ready) belongs to the Billing and Reports slices.
+
 ### Known nits
 - Terminal input text doesn't visually clear after a run — the DC runtime binds
   `value` like `defaultValue` (uncontrolled). Cosmetic; the command does dispatch and
@@ -125,3 +146,4 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `941ff15` NEW: site detail on real data + live terminal streaming
 - `914e10d` NEW: Version & Recovery slice on real data
 - `f7a8f2a` IMPROVE: activity dock — selectable job history, ⌘⏎, collapsed pill
+- `dbc7662` NEW: home screen on real data — attention + activity feeds
