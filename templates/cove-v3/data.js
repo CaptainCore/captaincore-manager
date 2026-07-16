@@ -26,7 +26,11 @@ Object.assign(Component.prototype, {
     if (!boot || !boot.nonce) return;
     Promise.all([this.api('/sites/'), this.api('/accounts/'), this.api('/domains/')]).then(([sites, accounts, domains]) => {
       const accName = {}; (Array.isArray(accounts) ? accounts : []).forEach(a => { accName[a.account_id] = a.name; });
+      this.LABEL_META = {};
       this.FLEET = (Array.isArray(sites) ? sites : []).filter(x => !x.removed).map(x => {
+        (Array.isArray(x.labels) ? x.labels : []).forEach(l => {
+          if (l && typeof l === 'object' && l.type && l.color && !this.LABEL_META[l.type]) this.LABEL_META[l.type] = l.color;
+        });
         const envs = (x.environments || []).map(e => e.environment === 'Production' ? 'Prod' : e.environment).filter(Boolean).join(' \u00b7 ') || 'Prod';
         const provider = (x.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase());
         return { id: String(x.site_id), name: x.name, provider, account: accName[x.account_id] || '',

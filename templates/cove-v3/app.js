@@ -678,7 +678,8 @@ class Component extends DCLogic {
       toggle: () => this.setState(st => ({ ddOpen: st.ddOpen === id ? '' : id, ddQ: '' })),
       opts });
     const unassignedCnt = fleet.filter(x => x.unassigned).length;
-    const labelCnt = cntBy(x => (x.labels || [])[0]);
+    const labelCnt = {};
+    fleet.forEach(x => { [...new Set(x.labels || [])].forEach(l => { if (l) labelCnt[l] = (labelCnt[l] || 0) + 1; }); });
     const chip = (label, cur, key) => ({ label,
       bg: cur === label ? 'var(--brand-soft)' : 'var(--paper)',
       fg: cur === label ? 'var(--brand-ink)' : 'var(--ink-dim)',
@@ -726,11 +727,22 @@ class Component extends DCLogic {
         go: () => this.setState({ fPlugIs: label }) })),
       clearPlugin: () => this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any' }),
       hasLabels: Object.keys(labelCnt).length > 0,
-      labelChips: Object.keys(labelCnt).sort().map(label => ({ label, n: labelCnt[label],
-        bg: s.labelsSel[label] ? 'var(--warn-soft)' : 'var(--paper)',
-        fg: s.labelsSel[label] ? 'var(--ink)' : 'var(--ink-dim)',
-        bd: s.labelsSel[label] ? 'var(--warn)' : 'var(--rule)',
-        go: () => this.setState(st => ({ labelsSel: { ...st.labelsSel, [label]: !st.labelsSel[label] } })) })),
+      labelChips: Object.keys(labelCnt)
+        .sort((a, b) => labelCnt[b] - labelCnt[a] || a.localeCompare(b))
+        .map(label => {
+          const fallback = { down: 'red', 'domain-expired': 'red', 'dns-elsewhere': 'blue', moved: 'orange' };
+          const color = (this.LABEL_META && this.LABEL_META[label]) || fallback[label] || 'grey';
+          const [bg, fg, bd] = {
+            red: ['var(--bad-soft)', 'var(--bad)', 'var(--bad)'],
+            orange: ['var(--warn-soft)', 'var(--ink)', 'var(--warn)'],
+            amber: ['var(--warn-soft)', 'var(--ink)', 'var(--warn)'],
+            blue: ['var(--brand-soft)', 'var(--brand-ink)', 'var(--brand)'],
+            green: ['var(--ok-soft)', 'var(--ok)', 'var(--ok)']
+          }[color] || ['var(--panel-2)', 'var(--ink-dim)', 'var(--ink-dim)'];
+          const on = !!s.labelsSel[label];
+          return { label, n: labelCnt[label], bg, fg, bd: on ? bd : 'transparent',
+            go: () => this.setState(st => ({ labelsSel: { ...st.labelsSel, [label]: !st.labelsSel[label] } })) };
+        }),
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
       clearFilters: () => this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', labelsSel: {} }),
       hasSel: selIds.length > 0, selCount: selIds.length,
