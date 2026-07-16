@@ -269,6 +269,7 @@ Object.assign(Component.prototype, {
       exportZone: () => this.exportZoneReal(d.name),
       regRegistrar: provider ? (provider.status || 'Connected') : 'Not connected',
       regExpires: '—', regExpFg: 'var(--ink)', regWarn: false, regShowRenew: false,
+      regShowAuto: false,
       togAuto: { label: 'Auto-renew', bg: 'var(--rule)', just: 'flex-start', state: '—', flip: () => {} },
       togLock: regToggle('lock', 'Transfer lock', 'lock'),
       togPriv: regToggle('priv', 'WHOIS privacy', 'privacy'),

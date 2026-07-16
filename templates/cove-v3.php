@@ -53,6 +53,10 @@ $cc_boot = [
     'tfaEnabled'      => ! empty( $user->tfa_enabled ),
     'appPassword'     => isset( $user->application_password ) ? $user->application_password : null,
     'sessions'        => isset( $user->sessions ) ? $user->sessions : [],
+    // WooCommerce add-payment-method page (Stripe card/ACH capture lives there;
+    // the SPA links out rather than embedding Stripe Elements).
+    'addPaymentUrl'   => ( function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' ) )
+        ? wc_get_endpoint_url( 'add-payment-method', '', wc_get_page_permalink( 'myaccount' ) ) : '',
 ];
 
 $v3_scripts = [ 'app.js', 'data.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'version-recovery.js' ];

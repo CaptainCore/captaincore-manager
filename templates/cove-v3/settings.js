@@ -73,14 +73,63 @@ Object.assign(Component.prototype, {
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
     const recipeRows = set.recipes.map(r => ({ name: r.title, vis: r.public == 1 ? 'Public' : 'Private',
       visBg: r.public == 1 ? 'var(--ok-soft)' : 'var(--panel-2)', runs: '', hasRuns: false,
-      run: () => { this.insertRecipe(r); this.setState({ dockOpen: true }); } }));
-    const handRows = set.processes.map(h => ({ name: h.name, updated: (h.updated_at || '').slice(0, 10) }));
+      run: () => { this.insertRecipe(r); this.setState({ dockOpen: true }); },
+      edit: () => this.openRecipe(r) }));
+    const handRows = set.processes.map(h => ({ name: h.name, updated: (h.updated_at || '').slice(0, 10),
+      view: () => this.setState({ procDlgOpen: true, procDlgName: h.name,
+        procDlgBody: this.processBodyHtml(h) }) }));
     return {
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
       brandSwatches, brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => this.saveBranding(),
-      provRows, defRows, keyRows, recipeRows, handRows
+      provRows, defRows, keyRows, recipeRows, handRows,
+      // recipe editor
+      recipeDlgOpen: s.recipeDlgOpen, recipeDlgEditing: !!s.recipeEditId,
+      recipeDlgTitle: s.recipeEditId ? 'Edit recipe' : 'New recipe',
+      recipeTitle: s.recipeTitle, onRecipeTitle: e => this.setState({ recipeTitle: e.target.value }),
+      recipeContent: s.recipeContent, onRecipeContent: e => this.setState({ recipeContent: e.target.value }),
+      recipePublicBg: s.recipePublic ? 'var(--brand)' : 'var(--rule)',
+      recipePublicJust: s.recipePublic ? 'flex-end' : 'flex-start',
+      toggleRecipePublic: () => this.setState(st => ({ recipePublic: !st.recipePublic })),
+      newRecipe: () => this.setState({ recipeDlgOpen: true, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false }),
+      closeRecipeDlg: () => this.setState({ recipeDlgOpen: false }),
+      saveRecipe: () => this.saveRecipeReal(),
+      deleteRecipe: () => this.deleteRecipeReal(),
+      // handbook viewer
+      procDlgOpen: s.procDlgOpen, procDlgName: s.procDlgName, procDlgBody: s.procDlgBody,
+      closeProcDlg: () => this.setState({ procDlgOpen: false })
     };
+  },
+
+  openRecipe(r) {
+    this.setState({ recipeDlgOpen: true, recipeEditId: r.recipe_id, recipeTitle: r.title || '',
+      recipeContent: r.content || '', recipePublic: r.public == 1 });
+  },
+
+  saveRecipeReal() {
+    const title = (this.state.recipeTitle || '').trim();
+    if (!title) return;
+    const body = { title, content: this.state.recipeContent || '', public: this.state.recipePublic ? 1 : 0 };
+    const id = this.state.recipeEditId;
+    const req = id ? this.api('/recipes/' + id, { method: 'PUT', body }) : this.api('/recipes', { method: 'POST', body });
+    this.setState({ recipeDlgOpen: false });
+    req.then(() => this.loadSettings(true)).catch(() => {});
+  },
+
+  deleteRecipeReal() {
+    const id = this.state.recipeEditId;
+    if (!id || !confirm('Delete this recipe?')) return;
+    this.setState({ recipeDlgOpen: false });
+    this.api('/recipes/' + id, { method: 'DELETE' }).then(() => this.loadSettings(true)).catch(() => {});
+  },
+
+  // Wrap the process body in a minimal styled document for the iframe.
+  processBodyHtml(h) {
+    const body = h.description || h.content || h.body || '<p><em>No content.</em></p>';
+    const meta = [h.time_estimate && ('⏱ ' + h.time_estimate), h.repeat_interval && ('↻ ' + h.repeat_interval),
+      Array.isArray(h.roles) && h.roles.length && ('👤 ' + h.roles.join(', '))].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    return '<!doctype html><meta charset="utf-8"><style>body{font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1a2230;margin:20px;max-width:640px}h1,h2,h3{line-height:1.3}pre,code{font-family:ui-monospace,monospace;background:#f2f4f7;border-radius:6px}pre{padding:12px;overflow:auto}code{padding:1px 4px}.meta{color:#667085;font-size:12px;margin-bottom:16px}</style>'
+      + (meta ? '<div class="meta">' + meta + '</div>' : '') + body;
   }
 
 });

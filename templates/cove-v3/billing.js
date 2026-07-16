@@ -68,16 +68,33 @@ Object.assign(Component.prototype, {
             .then(() => this.loadBilling(true)).catch(() => {}); } };
     });
     const a = b.address || {};
+    const boot = window.CC_BOOT || {};
     const noticeText = !invoices.length && s.billTab === 'invoices' ? 'No invoices yet.'
       : !payMethods.length && s.billTab === 'methods' ? 'No payment methods on file.' : '';
+    const ADDR_FIELDS = [
+      ['first_name', 'First name'], ['last_name', 'Last name'], ['company', 'Company'],
+      ['address_1', 'Address 1'], ['address_2', 'Address 2'], ['city', 'City'],
+      ['state', 'State'], ['postcode', 'Postcode'], ['country', 'Country'],
+      ['email', 'Email'], ['phone', 'Phone']
+    ];
     return {
       invoices, payMethods,
-      billShowAdd: false,
+      billShowAdd: !!boot.addPaymentUrl,
+      addPaymentMethod: () => { if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl; },
       billNotice: !!noticeText, billNoticeText: noticeText,
       addrL1: [[a.first_name, a.last_name].filter(Boolean).join(' '), a.company].filter(Boolean).join(' · ') || '—',
       addrL2: [a.address_1, a.address_2].filter(Boolean).join(', '),
       addrL3: [[a.city, a.state].filter(Boolean).join(', '), a.postcode].filter(Boolean).join(' ') + (a.country ? ' · ' + a.country : ''),
-      addrL4: [a.email, a.phone].filter(Boolean).join(' · ')
+      addrL4: [a.email, a.phone].filter(Boolean).join(' · '),
+      billAddrOpen: !!s.billAddrOpen,
+      openBillAddr: () => this.setState({ billAddrOpen: true, billAddrDraft: { ...a } }),
+      closeBillAddr: () => this.setState({ billAddrOpen: false }),
+      billAddrFields: ADDR_FIELDS.map(([k, label]) => ({ label, v: (s.billAddrDraft || {})[k] || '',
+        on: e => this.setState(st => ({ billAddrDraft: { ...st.billAddrDraft, [k]: e.target.value } })) })),
+      saveBillAddr: () => {
+        this.api('/billing/update', { method: 'PUT', body: { address: this.state.billAddrDraft } })
+          .then(() => { this.setState({ billAddrOpen: false }); this.loadBilling(true); }).catch(() => {});
+      }
     };
   }
 
