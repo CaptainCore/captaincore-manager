@@ -53,7 +53,7 @@ Object.assign(Component.prototype, {
     this.setState({ termCmd: '' });
     if (this._termEl) { this._termEl.value = ''; this._termEl.style.height = 'auto'; }
     this.startJob({
-      label: 'run',
+      label: 'run', expand: true,
       target: (firstLine.length > 42 ? firstLine.slice(0, 42) + '…' : firstLine) + ' · ' + where,
       command: 'run',
       dispatch: () => this.api('/run/code', { method: 'POST',

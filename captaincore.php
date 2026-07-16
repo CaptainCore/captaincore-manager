@@ -5175,8 +5175,12 @@ function captaincore_site_snapshots_func( $request ) {
 function captaincore_filters_sites_func( WP_REST_Request $request ) {
     $filters       = $request->get_json_params();
     $sites_handler = new CaptainCore\Sites();
-    $results       = $sites_handler->fetch_sites_matching_filters( $filters ); 
+    $results       = $sites_handler->fetch_sites_matching_filters( $filters );
     return [ "results" => $results ];
+}
+
+function captaincore_site_filters_func( WP_REST_Request $request ) {
+    return ( new CaptainCore\Environments )->filters();
 }
 
 function captaincore_filter_versions_func( $request ) {
@@ -7699,6 +7703,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/filters/sites', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_filters_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-filters', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_filters_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]

@@ -11,12 +11,15 @@ Object.assign(Component.prototype, {
   // dispatch: () => Promise resolving to the token (string) or {token} object.
   // Omit dispatch for a "manual" job the caller resolves itself via finishJob.
   // onFinish: called after a clean "Finished." close.
-  startJob({ label, target, command, siteId, environment, dispatch, onFinish }) {
+  // `expand: true` opens the full terminal dock (developer terminal only).
+  // By default a job runs "mini": the collapsed activity pill shows its live
+  // tail without forcing customers into the full console.
+  startJob({ label, target, command, siteId, environment, dispatch, onFinish, expand }) {
     const id = 'job' + Date.now() + Math.floor(Math.random() * 1000);
     this._jobObjs = this._jobObjs || {};
     const job = { id, label, target, command, siteId, environment, onFinish, stream: [], ws: null, token: null };
     this._jobObjs[id] = job;
-    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: true, jobSel: id }));
+    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: expand ? true : st.dockOpen, jobSel: id }));
     if (!dispatch) return id;
     Promise.resolve().then(dispatch).then(res => {
       const token = typeof res === 'string' ? res : (res && res.token);
