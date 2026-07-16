@@ -45,7 +45,8 @@ Object.assign(Component.prototype, {
         account: '', registrar: d.provider_id ? 'Registrar' : '\u2014', dns: !!d.remote_id,
         expires: '\u2014', auto: null, owned: true }));
       this._hydrated = true;
-      this.setState({ tick: this.state.tick });
+      // Drop the design's sample jobs; only real dispatched jobs from here on.
+      this.setState(st => ({ tick: st.tick, jobs: st.jobs.filter(j => j.real) }));
     }).catch(err => {
       if (err && err.message === 'auth' && boot.loginUrl) { location.href = boot.loginUrl; return; }
       console.warn('CaptainCore v3 hydrate failed; using design sample data.', err);

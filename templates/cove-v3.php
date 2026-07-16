@@ -50,7 +50,7 @@ $cc_boot = [
     'socket'          => captaincore_fetch_socket_address() . '/ws',
 ];
 
-$v3_scripts = [ 'app.js', 'data.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'jobs.js', 'site-detail.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>

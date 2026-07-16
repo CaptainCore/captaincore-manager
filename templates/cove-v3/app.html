@@ -356,7 +356,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>
             <div style="display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
               <span onClick="{{ setEnvProd }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ pBg }};color:{{ pFg }}">Production</span>
-              <span onClick="{{ setEnvStag }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ sBg }};color:{{ sFg }};border-left:1px solid var(--rule)">Staging</span>
+              <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
+                <span onClick="{{ setEnvStag }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ sBg }};color:{{ sFg }};border-left:1px solid var(--rule)">Staging</span>
+              </sc-if>
             </div>
             <div style="flex:1"></div>
             <button onClick="{{ dSync }}" title="Sync site data" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
@@ -365,7 +367,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <button onClick="{{ dTerm }}" title="Open terminal (⌃`)" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17"></path></svg>
             </button>
-            <button style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
+            <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
           <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:18px">
@@ -1788,10 +1790,10 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </sc-for>
             <span style="display:inline-block;width:7px;height:14px;background:var(--brand);animation:ccblink 1.1s step-end infinite;vertical-align:text-bottom"></span>
           </div>
-          <div style="flex:none;display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--rule)">
-            <span style="font:500 13px var(--mono);color:var(--brand-ink)">@3 sites</span>
-            <span style="font:400 13px var(--mono);color:var(--ink-dim)">wp plugin update --all …</span>
-            <span style="margin-left:auto;font:500 11.5px var(--mono);color:var(--ink-dim)">⌃⏎ run</span>
+          <div style="flex:none;display:flex;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid var(--rule)">
+            <span style="font:500 13px var(--mono);color:var(--brand-ink);white-space:nowrap">{{ termTarget }}</span>
+            <input value="{{ termCmd }}" onInput="{{ onTermCmd }}" placeholder="wp option get home" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 13px var(--mono)">
+            <span onClick="{{ termRun }}" style="margin-left:auto;font:500 11.5px var(--mono);color:{{ termRunFg }};cursor:pointer;white-space:nowrap">⌃⏎ run</span>
           </div>
         </div>
       </div>
