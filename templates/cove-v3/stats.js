@@ -111,6 +111,16 @@ Object.assign(Component.prototype, {
     return out;
   },
 
+  // Placeholder while the site detail hydrates — avoids flashing the design's
+  // mock stats (9,120 visitors…) before the real Fathom data loads.
+  emptyStatVals() {
+    return {
+      statTilesBig: ['Visitors', 'Pageviews', 'Avg time on site', 'Bounce rate'].map(k => ({ k, v: '—', delta: '', deltaFg: 'var(--ink-dim)' })),
+      statBars: [], topPages: [], topRefs: [],
+      statsNotice: true, statsNoticeText: 'Loading analytics…'
+    };
+  },
+
   // Binding overrides computeDetail() spreads in when this._detail is live.
   realStatVals(s, site) {
     const st = this._stats || {};

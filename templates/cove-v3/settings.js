@@ -68,11 +68,11 @@ Object.assign(Component.prototype, {
     });
     const d = set.defaults || {};
     const defRows = [
-      ['Default email', d.email || '—', true],
-      ['Timezone', d.timezone || '—', true],
-      ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—', false],
-      ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—', false]
-    ].map(([k, v, editable]) => ({ k, v, editable }));
+      ['Default email', d.email || '—'],
+      ['Timezone', d.timezone || '—'],
+      ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—'],
+      ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—']
+    ].map(([k, v]) => ({ k, v, editable: true }));
     const keyRows = set.keys.map(k => ({ name: k.title, fp: 'SHA256:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
       del: () => { if (!confirm('Delete SSH key "' + k.title + '"? This affects fleet site access.')) return;
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
