@@ -949,6 +949,7 @@ class Component extends DCLogic {
 
   computeDetail(s) {
     const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0];
+    const real = this._detail && this._detail.siteId === s.siteId ? this._detail : null;
     const slug = site.name.split('.')[0];
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
     const segBg = l => s.env === l ? 'var(--brand-soft)' : 'var(--paper)';
@@ -956,26 +957,26 @@ class Component extends DCLogic {
     const mkCopy = ([k, v]) => ({ k, v, mark: s.copied === k ? 'Copied ✓' : 'Copy',
       copy: () => { try { navigator.clipboard.writeText(v); } catch (e) {}
         this.setState({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); } });
-    const credRows = [
+    const credRows = (real ? this.realCredPairs(real, s) : [
       ['Site URL', 'https://' + host], ['WP admin', 'https://' + host + '/wp-admin'],
       ['SFTP', slug + '@sftp.kinsta.com:22'], ['SFTP password', 'uY3!kW8#pQ2v'],
       ['Database', 'wp_' + slug.replace(/-/g, '_')], ['DB password', 'mR7$xT4@nL9c'],
       ['SSH', 'ssh ' + slug + '@35.223.94.108']
-    ].map(mkCopy);
+    ]).map(mkCopy);
     const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
       .map(([id, label]) => ({ label,
         fg: s.siteTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
         line: s.siteTab === id ? 'var(--brand)' : 'transparent',
-        go: () => this.setState({ siteTab: id }) }));
-    const addonsSrc = s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES;
+        go: () => { this.setState({ siteTab: id }); if (id === 'logs' && this._detail) this.loadLogs(); } }));
+    const addonsSrc = real ? this.realAddonSrc(real, s) : (s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest; return { ...a, upd,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
       dot: a.active ? 'var(--ok)' : 'var(--rule)',
       statusLabel: a.active ? 'Active' : 'Inactive',
       toggleLabel: a.active ? 'Deactivate' : 'Activate',
-      doToggle: () => this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name),
+      doToggle: () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name),
       doUpdate: () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name) }; });
-    const updCount = this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
+    const updCount = real ? 0 : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
     const qsFiles = this.QS_FILES;
     const curPath = qsFiles.some(f => f.path === s.qsFile) ? s.qsFile : qsFiles[0].path;
     const curFile = qsFiles.find(f => f.path === curPath);
@@ -1041,25 +1042,27 @@ class Component extends DCLogic {
     let selCnt = 0, selKb = 0;
     topSel.forEach(p => { const n = flatAll.find(x => x.p === p); if (n) { selCnt += n.cnt || 1; selKb += n.kb || 0; } });
     const fmtKb = kb => kb < 1024 ? Math.round(kb) + ' kB' : kb < 1048576 ? (kb / 1024).toFixed(1) + ' MB' : (kb / 1048576).toFixed(1) + ' GB';
-    const dUsers = this.WP_USERS.map(u => ({ ...u, e: u.e.replace('SITE', site.name),
+    const dUsers = real ? this.realUserRows(real, s) : this.WP_USERS.map(u => ({ ...u, e: u.e.replace('SITE', site.name),
       init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
       magic: () => this.runJob('magiclogin', u.e.replace('SITE', site.name)) }));
-    const logChips = ['error.log', 'access.log', 'debug.log'].map(f => ({ label: f,
+    const logChips = (real ? this.realLogFiles(real, s) : ['error.log', 'access.log', 'debug.log']).map(f => ({ label: f.split('/').pop(),
       bg: s.logFile === f ? 'var(--brand-soft)' : 'var(--paper)',
       fg: s.logFile === f ? 'var(--brand-ink)' : 'var(--ink-dim)',
       bd: s.logFile === f ? 'var(--brand)' : 'var(--rule)',
-      go: () => this.setState({ logFile: f }) }));
-    const logLines = (this.LOGS[s.logFile] || []).map(text => ({ text }));
+      go: () => real ? this.pickLogFile(f) : this.setState({ logFile: f }) }));
+    const logLines = real ? this.realLogLines(real, s) : (this.LOGS[s.logFile] || []).map(text => ({ text }));
     return {
       dName: site.name,
       dMeta: site.provider + ' · ' + site.account + ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
-      setEnvProd: () => this.setState({ env: 'Production' }), setEnvStag: () => this.setState({ env: 'Staging' }),
+      hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
+      setEnvProd: () => this.setEnv('Production'), setEnvStag: () => this.setEnv('Staging'),
       backToSites: () => this.setState({ route: 'sites' }),
-      dSync: () => this.runJob('sync-data', site.name),
+      dSync: () => real ? this.realSync(real, s) : this.runJob('sync-data', site.name),
       dTerm: () => this.setState({ dockOpen: true }),
-      pushEnv: () => this.runJob('deploy', 'staging → production on ' + site.name),
-      pullEnv: () => this.runJob('deploy', 'production → staging on ' + site.name),
+      dWpLogin: () => real ? this.realMagicLogin(real, s) : this.runJob('magiclogin', site.name),
+      pushEnv: () => real ? this.realPush(real, 'up') : this.runJob('deploy', 'staging → production on ' + site.name),
+      pullEnv: () => real ? this.realPush(real, 'down') : this.runJob('deploy', 'production → staging on ' + site.name),
       dTabs: tabs,
       tabOverview: s.siteTab === 'overview', tabStats: s.siteTab === 'stats', tabAddons: s.siteTab === 'addons', tabVersions: s.siteTab === 'versions',
       tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
@@ -1103,8 +1106,8 @@ class Component extends DCLogic {
       perfRows: [['TTFB (p75)', '142 ms'], ['Largest Contentful Paint (p75)', '1.8 s'], ['Checks · last 24h', '288 · all passing']].map(([k, v]) => ({ k, v })),
       visitBars: [35, 42, 38, 55, 48, 60, 52, 45, 66, 58, 72, 64, 80, 74].map((h, i) => ({ h,
         bg: i === 13 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' })),
-      envRows: [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']].map(([k, v]) => ({ k, v })),
-      dDomains: [site.name, 'www.' + site.name].map(name => ({ name })),
+      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
+      dDomains: (real && real.domains ? real.domains.map(d => (d && d.name) || String(d)) : [site.name, 'www.' + site.name]).map(name => ({ name })),
       sharedRows: (s.shared || this.SHARED_INIT).map(sh => ({ ...sh,
         sub: sh.pending ? 'invite sent — pending' : sh.people + (sh.people === 1 ? ' person' : ' people'),
         lvlBg: sh.owner ? 'var(--brand-soft)' : 'var(--panel-2)',
@@ -1185,7 +1188,7 @@ class Component extends DCLogic {
         regen: () => this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
         doDl: () => this.runJob('snapshot-download', sn.name) }; }),
       dUsers, logChips, logLines,
-      logMeta: logLines.length + ' lines · last 24h',
+      logMeta: real ? (real.logsLoading ? 'Loading…' : logLines.length + ' lines') : logLines.length + ' lines · last 24h',
       tlRows: (s.timeline || this.TIMELINE_INIT).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         editing: s.tlEdit === t.uid, notEditing: s.tlEdit !== t.uid,
@@ -1242,6 +1245,7 @@ class Component extends DCLogic {
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
+      else if (e.ctrlKey && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
       else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
@@ -1250,7 +1254,7 @@ class Component extends DCLogic {
     window.addEventListener('keydown', this.onKey);
     this.hydrate();
     this.timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1,
-      jobs: s.jobs.map(j => j.state === 'running'
+      jobs: s.jobs.map(j => j.state === 'running' && !j.real
         ? (j.pct >= 100 ? { ...j, state: 'done', right: 'just now', pct: 100 } : { ...j, pct: Math.min(100, j.pct + 3 + Math.random() * 7) })
         : j) })), 1800);
   }
@@ -1384,14 +1388,19 @@ class Component extends DCLogic {
     const settingsVals = this.computeSettings(s);
     const profileVals = this.computeProfile(s);
 
-    const scriptLen = this.CONSOLE_SCRIPT.length;
-    const total = s.tick + 8;
-    const consoleLines = [];
-    for (let i = Math.max(0, total - 30); i < total; i++) {
-      const [k, text] = this.CONSOLE_SCRIPT[i % scriptLen];
-      consoleLines.push({ text, fg: k === 'ok' ? 'var(--ok)' : k === 'dim' ? 'var(--ink-dim)' : 'var(--ink)' });
+    let consoleLines;
+    if (this._hydrated) {
+      consoleLines = this.realConsoleLines();
+    } else {
+      const scriptLen = this.CONSOLE_SCRIPT.length;
+      const total = s.tick + 8;
+      consoleLines = [];
+      for (let i = Math.max(0, total - 30); i < total; i++) {
+        const [k, text] = this.CONSOLE_SCRIPT[i % scriptLen];
+        consoleLines.push({ text, fg: k === 'ok' ? 'var(--ok)' : k === 'dim' ? 'var(--ink-dim)' : 'var(--ink)' });
+      }
     }
-    const liveTail = consoleLines[consoleLines.length - 1].text;
+    const liveTail = consoleLines.length ? consoleLines[consoleLines.length - 1].text : 'No jobs running';
 
     const palResults = this.filteredPal(s.palQuery).map((r, i) => ({ ...r,
       bg: i === s.palIdx ? 'var(--panel-2)' : 'transparent', run: () => this.runPal(r) }));
@@ -1425,6 +1434,11 @@ class Component extends DCLogic {
       consoleRef: (el) => { this._consoleEl = el; if (el) el.scrollTop = el.scrollHeight; },
       runningCount: jobs.filter(j => j.running).length,
       consoleLines, liveTail, consoleBg: 'var(--panel)',
+      termCmd: s.termCmd || '',
+      onTermCmd: e => this.setState({ termCmd: e.target.value }),
+      termRun: () => this.termRun(),
+      termTarget: (s.route === 'site' && this._detail && this._detail.site) ? '@' + this._detail.site.name : '@ open a site',
+      termRunFg: (s.termCmd || '').trim() ? 'var(--brand-ink)' : 'var(--ink-dim)',
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
       paletteOpen: s.paletteOpen, palQuery: s.palQuery, palResults,
       themeIcon: (s.theme === 'dark')
