@@ -58,10 +58,12 @@ Object.assign(Component.prototype, {
       const connected = (p.credentials || []).length > 0;
       const sub = (connected ? 'Connected' : 'Not connected') + ' · ' + (p.provider || '');
       return { name: p.name || p.provider, sub, dot: connected ? 'var(--ok)' : 'var(--ink-dim)',
-        action: 'Verify', canImport: false,
-        verify: () => { this.setState({ copied: 'prov' + p.provider_id });
-          this.api('/providers/' + p.provider_id + '/verify').then(() => reload()).catch(() => {});
-          clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
+        action: 'Verify', canImport: false, editable: true,
+        verify: () => { const tid = this.toast('Verifying ' + (p.name || p.provider) + '…', { kind: 'loading' });
+          this.api('/providers/' + p.provider_id + '/verify')
+            .then(() => { this.updateToast(tid, 'Verified', { kind: 'success' }); reload(); })
+            .catch(() => this.updateToast(tid, 'Verification failed', { kind: 'error' })); },
+        edit: () => this.openProviderReal(p),
         doImport: () => {} };
     });
     const d = set.defaults || {};
@@ -107,8 +109,72 @@ Object.assign(Component.prototype, {
       onDefTimezone: e => this.setState({ defTimezone: e.target.value }),
       openDefaults: () => this.setState({ defDlgOpen: true, defEmail: d.email || '', defTimezone: d.timezone || '' }),
       closeDefaults: () => this.setState({ defDlgOpen: false }),
-      saveDefaults: () => this.saveDefaultsReal()
+      saveDefaults: () => this.saveDefaultsReal(),
+      // provider add/edit
+      provShowAdd: true,
+      addProvider: () => this.setState({ provDlgOpen: true, provEditId: null, provName: '', provType: '', provCreds: [{ name: '', value: '' }] }),
+      ...this.providerDialogVals(s, reload)
     };
+  },
+
+  PROVIDER_TYPES: [
+    ['kinsta', 'Hosting - Kinsta'], ['wpengine', 'Hosting - WP Engine'], ['rocketdotnet', 'Hosting - Rocket.net'],
+    ['gridpane', 'Hosting - GridPane'], ['constellix', 'DNS - Constellix'], ['hoverdotcom', 'Domain - Hover.com'],
+    ['spaceship', 'Domain - Spaceship'], ['mailgun', 'Email - Mailgun'], ['forwardemail', 'Email - Forward Email'],
+    ['fathom', 'Analytics - Fathom'], ['intercom', 'Live chat - Intercom'], ['envato', 'Marketplace - Envato']
+  ],
+
+  openProviderReal(p) {
+    this.setState({ provDlgOpen: true, provEditId: p.provider_id, provName: p.name || '', provType: p.provider || '',
+      provCreds: (p.credentials || []).map(c => ({ name: c.name, value: c.value })).concat((p.credentials || []).length ? [] : [{ name: '', value: '' }]) });
+  },
+
+  providerDialogVals(s, reload) {
+    const typeLabel = (this.PROVIDER_TYPES.find(t => t[0] === s.provType) || [null, 'Select type…'])[1];
+    const setCred = (i, key, val) => this.setState(st => ({ provCreds: (st.provCreds || []).map((c, j) => j === i ? { ...c, [key]: val } : c) }));
+    return {
+      provDlgOpen: s.provDlgOpen, provDlgEditing: !!s.provEditId,
+      provDlgTitle: s.provEditId ? 'Edit provider' : 'Add provider',
+      provName: s.provName, onProvName: e => this.setState({ provName: e.target.value }),
+      provTypeLabel: typeLabel, provTypeOpen: s.ddOpen === 'provType',
+      toggleProvType: () => this.setState(st => ({ ddOpen: st.ddOpen === 'provType' ? '' : 'provType' })),
+      closeProvType: () => this.setState({ ddOpen: '' }),
+      provTypeOpts: this.PROVIDER_TYPES.map(([val, label]) => ({ label, mark: s.provType === val ? '✓' : '',
+        bg: s.provType === val ? 'var(--brand-soft)' : 'transparent',
+        pick: () => this.setState({ provType: val, ddOpen: '' }) })),
+      provCredRows: (s.provCreds || []).map((c, i) => ({ name: c.name, value: c.value,
+        onName: e => setCred(i, 'name', e.target.value), onValue: e => setCred(i, 'value', e.target.value),
+        remove: () => this.setState(st => ({ provCreds: (st.provCreds || []).filter((_, j) => j !== i) })) })),
+      addProvCred: () => this.setState(st => ({ provCreds: [...(st.provCreds || []), { name: '', value: '' }] })),
+      closeProvider: () => this.setState({ provDlgOpen: false }),
+      saveProvider: () => this.saveProviderReal(reload),
+      deleteProvider: () => this.deleteProviderReal(reload)
+    };
+  },
+
+  saveProviderReal(reload) {
+    const name = (this.state.provName || '').trim();
+    const provider = this.state.provType;
+    if (!name || !provider) { this.toast('Name and type are required', { kind: 'error' }); return; }
+    const credentials = (this.state.provCreds || []).filter(c => (c.name || '').trim()).map(c => ({ name: c.name.trim(), value: c.value }));
+    const body = { provider: { name, provider, credentials } };
+    const id = this.state.provEditId;
+    const tid = this.toast(id ? 'Saving provider…' : 'Adding provider…', { kind: 'loading' });
+    const req = id ? this.api('/providers/' + id, { method: 'PUT', body }) : this.api('/providers', { method: 'POST', body });
+    this.setState({ provDlgOpen: false });
+    req.then(res => { if (res && res.errors) { this.updateToast(tid, (res.errors[0] || 'Save failed'), { kind: 'error' }); return; }
+      this.updateToast(tid, 'Provider saved', { kind: 'success' }); this.loadSettings(true); })
+      .catch(() => this.updateToast(tid, 'Save failed', { kind: 'error' }));
+  },
+
+  deleteProviderReal(reload) {
+    const id = this.state.provEditId;
+    if (!id || !confirm('Delete this provider?')) return;
+    this.setState({ provDlgOpen: false });
+    const tid = this.toast('Deleting provider…', { kind: 'loading' });
+    this.api('/providers/' + id, { method: 'DELETE' })
+      .then(() => { this.updateToast(tid, 'Provider deleted', { kind: 'success' }); this.loadSettings(true); })
+      .catch(() => this.updateToast(tid, 'Delete failed', { kind: 'error' }));
   },
 
   saveDefaultsReal() {
