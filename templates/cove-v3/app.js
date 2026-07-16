@@ -607,14 +607,15 @@ class Component extends DCLogic {
         { name: 'Deploy SMTP via Mailgun', vis: 'Public', runs: '96' },
         { name: 'Clean transients + optimize DB', vis: 'Private', runs: '61' },
         { name: 'Set up Fathom analytics', vis: 'Public', runs: '38' }
-      ].map(r => ({ ...r, visBg: r.vis === 'Public' ? 'var(--ok-soft)' : 'var(--panel-2)',
+      ].map(r => ({ ...r, hasRuns: true, visBg: r.vis === 'Public' ? 'var(--ok-soft)' : 'var(--panel-2)',
         run: () => { this.runJob('recipe', r.name); this.setState({ dockOpen: true }); } })),
       handRows: [
         { name: 'New site onboarding', updated: 'Jun 12' },
         { name: 'Site migration checklist', updated: 'May 30' },
         { name: 'Incident response — malware', updated: 'Apr 22' },
         { name: 'Offboarding a customer', updated: 'Feb 14' }
-      ].map(h => ({ ...h }))
+      ].map(h => ({ ...h })),
+      ...(this._hydrated ? this.realSettingsVals(s) : {})
     };
   }
 
