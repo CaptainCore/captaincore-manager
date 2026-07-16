@@ -38,6 +38,8 @@ class Component extends DCLogic {
     recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
     defDlgOpen: false, defEmail: '', defTimezone: '',
+    schedEditOpen: false, schedEditId: null, schedEditInt: 'Monthly', schedEditEmail: '',
+    transferOpen: false, transferPick: null,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -322,6 +324,8 @@ class Component extends DCLogic {
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
       accShowTransfer: true, accShowTrusted: true, accShowCancel: true,
+      transferOpen: false, openTransfer: () => {}, closeTransfer: () => {}, transferEmpty: false,
+      transferBtnBg: 'var(--ink-dim)', transferCandidates: [], confirmTransfer: () => {},
       accUsers: this.ACC_USERS.map(u => ({ ...u,
         init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         lvlBg: u.level === 'Owner' ? 'var(--brand-soft)' : 'var(--panel-2)',
@@ -556,10 +560,11 @@ class Component extends DCLogic {
       repPreview: () => this.runJob('report-preview', target + ' · ' + this.state.repRange),
       repSend: () => this.runJob('report-send', target + ' → ' + this.state.repEmail),
       addSchedule: () => this.setState(st => ({ schedules: [...(st.schedules || this.SCHED_INIT), { id: 's' + Date.now(), target, interval: st.repInt, next: 'Aug 1', recipients: '1' }] })),
-      schedRows: schedules.map(sr => ({ ...sr,
+      schedRows: schedules.map(sr => ({ ...sr, edit: () => {},
         del: () => this.setState(st => ({ schedules: (st.schedules || this.SCHED_INIT).filter(x => x.id !== sr.id) })) })),
       repSendMsg: '', repHasSendMsg: false, repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
       closeRepPreview: () => {}, schedEmpty: false, repPreviewReady: false,
+      schedEditOpen: false, schedIntChips: [], schedEditEmail: '', onSchedEmail: () => {}, closeSchedEdit: () => {}, saveSchedEdit: () => {},
       ...(this._hydrated ? this.realReportsVals(s) : {})
     };
   }

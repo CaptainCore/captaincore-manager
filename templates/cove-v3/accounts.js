@@ -64,6 +64,37 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this._account === acc) { acc.loading = false; acc.err = 'Could not load account.'; this.setState({}); } });
   },
 
+  // Transfer ownership: pick a non-owner member → PUT their level to
+  // full-billing (server demotes the prior owner). Two-step confirm in the UI.
+  transferVals(s, d, reload) {
+    const acc = this._account;
+    const candidates = (d.users || []).filter(u => (u.level || '') !== 'full-billing');
+    const sel = s.transferPick;
+    return {
+      transferOpen: !!s.transferOpen,
+      openTransfer: () => this.setState({ transferOpen: true, transferPick: null }),
+      closeTransfer: () => this.setState({ transferOpen: false }),
+      transferEmpty: !candidates.length,
+      transferBtnBg: sel ? 'var(--brand)' : 'var(--ink-dim)',
+      transferCandidates: candidates.map(u => ({
+        n: u.name || u.email, e: u.email,
+        init: (u.name || u.email).split(/[\s@]/).map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+        mark: sel === u.user_id ? '✓ new owner' : '',
+        bd: sel === u.user_id ? 'var(--brand)' : 'var(--rule)',
+        bg: sel === u.user_id ? 'var(--brand-soft)' : 'var(--paper)',
+        pick: () => this.setState({ transferPick: u.user_id }) })),
+      confirmTransfer: () => {
+        const uid = this.state.transferPick;
+        if (!uid || !acc) return;
+        const u = candidates.find(x => x.user_id === uid);
+        if (!confirm('Make ' + (u ? (u.name || u.email) : 'this user') + ' the billing owner? You will be demoted to Full access.')) return;
+        this.setState({ transferOpen: false });
+        this.api('/accounts/' + acc.accountId + '/users/' + uid + '/level', { method: 'PUT', body: { level: 'full-billing' } })
+          .then(reload).catch(() => {});
+      }
+    };
+  },
+
   loadAccountActivity() {
     const acc = this._account;
     if (!acc || acc.activity) return;
@@ -99,7 +130,9 @@ Object.assign(Component.prototype, {
         (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
         + (acc.err ? ' · ' + acc.err : ''),
       accTabs: tabs,
-      accShowTransfer: false, accShowTrusted: false, accShowCancel: false,
+      accShowTransfer: (d.users || []).some(u => (u.level || '') !== 'full-billing') && (d.owner || d.level === 'full-billing'),
+      accShowTrusted: false, accShowCancel: false,
+      ...this.transferVals(s, d, reload),
       accUsers: (d.users || []).map(u => { const label = this.ACC_LEVEL_LABELS[u.level] || u.level || 'Full access';
         return { n: u.name || u.email, e: u.email, level: label, last: '',
           init: (u.name || u.email).split(/[\s@]/).map(w => w[0]).join('').slice(0, 2).toUpperCase(),

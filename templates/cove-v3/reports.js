@@ -88,8 +88,11 @@ Object.assign(Component.prototype, {
       interval: intLabel[r.interval] || r.interval,
       next: (r.next_run || '').slice(0, 10),
       recipients: r.recipient || '',
+      edit: () => this.setState({ schedEditOpen: true, schedEditId: r.scheduled_report_id,
+        schedEditInt: intLabel[r.interval] || 'Monthly', schedEditEmail: r.recipient || '' }),
       del: () => this.api('/scheduled-reports/' + r.scheduled_report_id, { method: 'DELETE' }).then(reload).catch(() => {})
     }));
+    const INT_LABELS = ['Monthly', 'Quarterly', 'Yearly'];
     return {
       repPreview: () => this.previewReport(),
       repSend: () => this.sendReport(),
@@ -104,6 +107,21 @@ Object.assign(Component.prototype, {
         if (!body || !recipient) { this.setState({ repSendMsg: 'Enter a recipient to schedule.' }); return; }
         this.api('/scheduled-reports', { method: 'POST',
           body: { ...body, interval: (this.state.repInt || 'Monthly').toLowerCase(), recipient } })
+          .then(reload).catch(() => {}); },
+      // schedule editor
+      schedEditOpen: !!s.schedEditOpen,
+      schedIntChips: INT_LABELS.map(label => ({ label,
+        bg: s.schedEditInt === label ? 'var(--brand-soft)' : 'var(--paper)',
+        fg: s.schedEditInt === label ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        bd: s.schedEditInt === label ? 'var(--brand)' : 'var(--rule)',
+        go: () => this.setState({ schedEditInt: label }) })),
+      schedEditEmail: s.schedEditEmail || '',
+      onSchedEmail: e => this.setState({ schedEditEmail: e.target.value }),
+      closeSchedEdit: () => this.setState({ schedEditOpen: false }),
+      saveSchedEdit: () => { const id = this.state.schedEditId;
+        this.setState({ schedEditOpen: false });
+        this.api('/scheduled-reports/' + id, { method: 'PUT',
+          body: { interval: (this.state.schedEditInt || 'Monthly').toLowerCase(), recipient: (this.state.schedEditEmail || '').trim() } })
           .then(reload).catch(() => {}); }
     };
   }
