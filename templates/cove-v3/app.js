@@ -41,6 +41,7 @@ class Component extends DCLogic {
     provDlgOpen: false, provEditId: null, provName: '', provType: '', provCreds: [],
     schedEditOpen: false, schedEditId: null, schedEditInt: 'Monthly', schedEditEmail: '',
     transferOpen: false, transferPick: null, toasts: [],
+    cardDlgOpen: false, cardErr: '', cardSaving: false,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -386,7 +387,7 @@ class Component extends DCLogic {
         isPrimary: s.primaryPm === i, canPrimary: s.primaryPm !== i,
         setPrimary: () => this.setState({ primaryPm: i }), remove: () => {} })),
       billShowAdd: true, billNotice: false, billNoticeText: '',
-      addPaymentMethod: () => {},
+      addPaymentMethod: () => {}, cardDlgOpen: false, cardErr: '', cardSaving: false, closeAddCard: () => {}, submitCard: () => {},
       addrL1: 'Sarah Whitfield · Bloom & Branch LLC', addrL2: '412 Larkspur Lane',
       addrL3: 'Lancaster, PA 17601 · United States', addrL4: 'sarah@bloomandbranch.com',
       billAddrOpen: false, openBillAddr: () => {}, closeBillAddr: () => {}, billAddrFields: [], saveBillAddr: () => {},

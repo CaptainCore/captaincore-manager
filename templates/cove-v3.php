@@ -53,10 +53,11 @@ $cc_boot = [
     'tfaEnabled'      => ! empty( $user->tfa_enabled ),
     'appPassword'     => isset( $user->application_password ) ? $user->application_password : null,
     'sessions'        => isset( $user->sessions ) ? $user->sessions : [],
-    // WooCommerce add-payment-method page (Stripe card/ACH capture lives there;
-    // the SPA links out rather than embedding Stripe Elements).
+    // WooCommerce add-payment-method page (fallback if Stripe Elements can't load).
     'addPaymentUrl'   => ( function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' ) )
         ? wc_get_endpoint_url( 'add-payment-method', '', wc_get_page_permalink( 'myaccount' ) ) : '',
+    // Stripe publishable key — the SPA embeds Stripe Elements to add cards.
+    'stripeKey'       => class_exists( 'WC_Gateway_Stripe' ) ? ( new WC_Gateway_Stripe )->publishable_key : '',
 ];
 
 $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
@@ -71,6 +72,9 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.j
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>window.CC_BOOT = <?php echo wp_json_encode( $cc_boot ); ?>;</script>
+<?php if ( ! empty( $cc_boot['stripeKey'] ) ) : ?>
+<script src="https://js.stripe.com/v3/"></script>
+<?php endif; ?>
 <script src="<?php echo $plugin_url; ?>public/js/v3/react.production.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/v3/react-dom.production.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/v3/support.js"></script>
