@@ -738,8 +738,11 @@ class Component extends DCLogic {
       labelChips: Object.keys(labelCnt)
         .sort((a, b) => labelCnt[b] - labelCnt[a] || a.localeCompare(b))
         .map(label => {
-          const fallback = { down: 'red', 'domain-expired': 'red', 'dns-elsewhere': 'blue', moved: 'orange' };
-          const color = (this.LABEL_META && this.LABEL_META[label]) || fallback[label] || 'grey';
+          const fallbackColor = { down: 'red', 'domain-expired': 'red', 'dns-elsewhere': 'blue', moved: 'orange' };
+          const fallbackIcon = { down: 'mdi-alert', 'domain-expired': 'mdi-calendar-remove', 'dns-elsewhere': 'mdi-dns', moved: 'mdi-swap-horizontal', note: 'mdi-tag', 'not-wordpress': 'mdi-cancel' };
+          const meta = (this.LABEL_META && this.LABEL_META[label]) || {};
+          const color = meta.color || fallbackColor[label] || 'grey';
+          const icon = this.LABEL_ICONS[meta.icon || fallbackIcon[label]] || this.LABEL_ICONS['mdi-tag'];
           const [bg, fg, bd] = {
             red: ['var(--bad-soft)', 'var(--bad)', 'var(--bad)'],
             orange: ['var(--warn-soft)', 'var(--ink)', 'var(--warn)'],
@@ -748,7 +751,7 @@ class Component extends DCLogic {
             green: ['var(--ok-soft)', 'var(--ok)', 'var(--ok)']
           }[color] || ['var(--panel-2)', 'var(--ink-dim)', 'var(--ink-dim)'];
           const on = !!s.labelsSel[label];
-          return { label, n: labelCnt[label], bg, fg, bd: on ? bd : 'transparent',
+          return { label, n: labelCnt[label], bg, fg, icon, bd: on ? bd : 'transparent',
             go: () => this.setState(st => ({ labelsSel: { ...st.labelsSel, [label]: !st.labelsSel[label] } })) };
         }),
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
@@ -1278,6 +1281,22 @@ class Component extends DCLogic {
     };
   }
 
+  // mdi label-icon names → feather-style 24x24 stroke paths (site labels come
+  // from monitor-check with an mdi icon name; fall back to the tag glyph).
+  LABEL_ICONS = {
+    'mdi-tag': 'M20.6 13.4 12 22l-9-9V4a1 1 0 011-1h8zM7.5 7.5h.01',
+    'mdi-alert': 'M12 3 2 20h20zM12 9v5M12 17.5h.01',
+    'mdi-cancel': 'M12 3a9 9 0 100 18 9 9 0 000-18zM5.6 5.6l12.8 12.8',
+    'mdi-swap-horizontal': 'M7 8h13l-3.5-3.5M17 16H4l3.5 3.5',
+    'mdi-dns': 'M4 5h16v5H4zM4 14h16v5H4zM7.5 7.5h.01M7.5 16.5h.01',
+    'mdi-calendar-remove': 'M4 5h16v16H4zM4 9h16M8 3v4M16 3v4M9.5 14.5l5 3M14.5 14.5l-5 3',
+    'mdi-clock-alert': 'M11 3a8 8 0 100 16 8 8 0 000-16zM11 7v4l2.5 2M20 8v4M20 16h.01',
+    'mdi-web': 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.7 2.7 2.7 15.3 0 18-2.7-2.7-2.7-15.3 0-18z',
+    'mdi-check': 'M4 12l5 5L20 6',
+    'mdi-star': 'M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.4l6-.8z',
+    'mdi-flag': 'M5 21V4h11l-1.5 4L16 12H5',
+    'mdi-lock': 'M6 11h12v9H6zM8 11V8a4 4 0 018 0v3'
+  };
   ICONS = {
     home: 'M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z',
     sites: 'M3 12l9 5 9-5M3 7l9 5 9-5-9-5-9 5z',
