@@ -195,17 +195,25 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
 **All spec §7 area slices are now on real data.** Remaining work is cross-cutting depth
 (below) and the deferred per-slice items noted in each entry above.
 
+### Gap-wiring round 2 (verified live)
+- **Settings › Branding**: theme-color swatches are now native color inputs bound to
+  `configurations.colors`; Save branding persists name + colors.
+- **Settings › Site defaults**: email/timezone rows have a working Edit dialog
+  (`PUT /defaults/global`).
+- **Reports**: scheduled-report Edit dialog (interval + recipient → `PUT
+  /scheduled-reports/{id}`).
+- **Accounts**: Transfer ownership member-picker dialog (`PUT .../users/{uid}/level`
+  `full-billing`, owner excluded, confirm) — shown when caller is owner/admin.
+
 ### Still-dead controls (need bigger UI or a missing backend)
-Found in the wire-up hunt; left unwired deliberately (each would be its own slice):
-- **Branding**: logo upload (drop-zone), color-swatch editor, DNS-copy-labels edit.
-- **Site defaults**: per-row Edit (would need a `PUT /defaults/global` dialog).
-- **Reports**: scheduled-report Edit (only Delete wired; PUT route exists).
+- **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Configure →" domains, "Open phpMyAdmin", "Delete site…", addon
   "+ Add" dialog (upload/wp.org/Envato).
-- **Domains**: Mailgun "View all logs →" pager.
-- **Handbook**: process Edit (admin authoring).
-- Gated-off-on-real (mock-only): Transfer ownership, "Access as", provider Import,
-  Mailgun deploy-to-site, archive Delete — all lack a wired path or a v1 route.
+- **Domains**: Mailgun "View all logs →" pager; Mailgun deploy-to-site (needs a
+  site/env/from-name picker — real SMTP write).
+- **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
+- Gated-off-on-real: "Access as" (User Switching plugin — no per-user REST route),
+  provider Import wizard, archive Delete (no v1 route).
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -279,3 +287,5 @@ Found in the wire-up hunt; left unwired deliberately (each would be its own slic
 - `495355f` NEW: Profile slice on real data
 - `19bd60c` IMPROVE: trim table columns (Sites Theme, Domains Expires/Auto-renew)
 - `f96279f` NEW: wire up UI gaps — billing edit, payment methods, new account, recipes
+- `26a66f4` NEW: Settings — editable brand colors + site-defaults dialog
+- `ecb2246` NEW: Reports schedule edit + account transfer ownership
