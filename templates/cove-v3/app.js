@@ -1282,6 +1282,7 @@ class Component extends DCLogic {
     };
     window.addEventListener('keydown', this.onKey);
     this.hydrate();
+    if (this.hydrateHome) this.hydrateHome();
     this.timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1,
       jobs: s.jobs.map(j => j.state === 'running' && !j.real
         ? (j.pct >= 100 ? { ...j, state: 'done', right: 'just now', pct: 100 } : { ...j, pct: Math.min(100, j.pct + 3 + Math.random() * 7) })
@@ -1347,7 +1348,7 @@ class Component extends DCLogic {
     const launcher = (isOp ? [
       { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : '128', icon: this.ICONS.sites, act: 'sites' },
       { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : '94', icon: this.ICONS.domains, act: 'domains' },
-      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: '2 open', icon: this.ICONS.security, act: 'security' },
+      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : '2 open', icon: this.ICONS.security, act: 'security' },
       { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: '$12.4k/mo', icon: this.ICONS.billing, act: 'billing' },
       { label: 'Terminal', desc: 'Run commands across the fleet', meta: '⌃`', icon: this.ICONS.terminal, act: 'dock' }
     ] : [
@@ -1358,7 +1359,7 @@ class Component extends DCLogic {
       { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts' }
     ]).map(l => ({ ...l, go: l.act === 'dock' ? () => this.setState({ dockOpen: true }) : this.go(l.act) }));
 
-    const attention = (isOp ? [
+    const attention = (this._hydrated ? this.realAttention(isOp) : isOp ? [
       { dot: 'var(--bad)', title: '2 plugin vulnerabilities across 5 sites', sub: 'gravityforms 2.9.1 (high) · woocommerce 9.8.2 (medium)', action: 'Review', act: 'security' },
       { dot: 'var(--warn)', title: '14 sites have updates pending', sub: 'Steer queue ready · last fleet update ran 6 days ago', action: 'Update', act: 'sites' },
       { dot: 'var(--warn)', title: 'harborlightyoga.com expires in 12 days', sub: 'Auto-renew is off at Hover', action: 'Renew', act: 'domains' },
@@ -1378,7 +1379,7 @@ class Component extends DCLogic {
       rowBg: s.jobSel === j.id ? 'var(--brand-soft)' : 'transparent',
       pick: () => this.setState({ jobSel: j.id }) }));
 
-    const activity = isOp ? [
+    const activity = this._activity ? this._activity : isOp ? [
       { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed' },
       { t: '18m', text: 'Austin deployed staging → production on petersonlaw.com' },
       { t: '1h', text: 'Mailgun sending verified for thewildflowerpantry.com' },
@@ -1456,7 +1457,7 @@ class Component extends DCLogic {
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
       showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'reports', 'archives', 'settings', 'profile'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
-      launcher, attention, attentionCount: attention.length,
+      launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
       ...listVals, ...detailVals, ...domainsVals, ...domainVals,
       ...accountsVals, ...accountVals, ...billingVals,
