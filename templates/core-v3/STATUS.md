@@ -1,4 +1,4 @@
-# Cove v3 — build status & remaining work
+# Core v3 — build status & remaining work
 
 Ground-up rebuild of the CaptainCore Manager `/account` UI, served behind `?ui=v3`
 (branch in `app/Router.php::load_template`). This is the **hand-maintained source of
@@ -10,7 +10,7 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 
 ## How it's wired
 
-- **`cove-v3.php`** — thin PHP shell. Redirects logged-out users to the v1 login,
+- **`core-v3.php`** — thin PHP shell. Redirects logged-out users to the v1 login,
   injects `window.CC_BOOT` (nonce, restRoot, role→dcRole, userFirstName, brandColor,
   path, loginUrl, socket, userEmail), then `readfile()`s the parts below into the DC
   runtime. `$v3_scripts` lists the JS modules concatenated into the one dc-script tag
@@ -39,6 +39,18 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 - **`site-detail.js`** — `openSite()` override loads `/sites/{id}/environments|details|
   users`; real overview credentials, env rows, addons, users, logs, env switcher, magic
   login, sync, push/pull. **Env names are LOWERCASE in URL paths.**
+- **`addons.js`** — the Addons-tab "+ Add" dialog (plugin or theme by `addonKind`).
+  Three sources, v1 parity: **Upload** (drag & drop .zip → `upload.php` w/ REST nonce →
+  install returned URL; admin-only, tab hidden for customers; the DC runtime has no
+  `onDrop` prop so drop/change listeners bind natively via `ref` callbacks),
+  **WordPress.org** (`GET /wp-plugins|/wp-themes` passthrough; search + pagination;
+  fetches carry a sequence guard — slow local REST let a dialog-open browse response
+  land AFTER a search response and clobber it), **Envato** (`GET
+  /providers/envato/plugins|themes` cached purchase list, client-side filter; install
+  resolves a signed URL via `.../{id}/download`). Installs dispatch `POST /run/code`
+  on the current env and chain `realSync` so the list refreshes; wp.org cards show
+  Installed/Uninstall when the slug is already in the env JSON. Titles run through
+  `aaCleanName` — Minn Admin's keyword-stuffing trimmer — full name in the tooltip.
 - **`stats.js`** — site Stats tab (Fathom). `loadStats()` hits `/sites/{id}/stats`
   (+ the new `/stats/top-pages` & `/stats/top-referrers` routes) with the tracker code
   from the current env's `fathom_analytics[0]`. Chart series is zero-filled client-side
@@ -101,7 +113,7 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
 ```
 - Live remote-command test site: **austinginder.com** (site_id 135, host austinginder.kinsta.cloud).
 - Go daemon runs locally on `:8000` behind Caddy → `wss://captaincore-api.localhost/ws`.
-- `node --check <file>.js` each module + `php -l cove-v3.php` before testing.
+- `node --check <file>.js` each module + `php -l core-v3.php` before testing.
 
 ## Done (verified live on austinginder.com)
 
@@ -190,7 +202,7 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
 - **Profile** (verified live: real name/email/sessions, TFA secret fetched, UA parsing) —
   `PUT /me/profile`; TFA `/me/tfa_*` (secret shown for manual entry — no QR lib vendored);
   app password `/me/application-password[/rotate]`; sessions `GET/DELETE /sessions`.
-  `cove-v3.php` exposes `tfaEnabled/appPassword/sessions` on CC_BOOT. Not fired live:
+  `core-v3.php` exposes `tfaEnabled/appPassword/sessions` on CC_BOOT. Not fired live:
   profile save, TFA activate, session revoke (real side effects).
 
 - **UI gap-wiring round** (verified live) — Billing address **Edit** dialog
@@ -237,8 +249,7 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
-- **Site detail**: "Configure →" domains, "Open phpMyAdmin", "Delete site…", addon
-  "+ Add" dialog (upload/wp.org/Envato).
+- **Site detail**: "Configure →" domains, "Open phpMyAdmin", "Delete site…".
 - **Domains**: Mailgun "View all logs →" pager; Mailgun deploy-to-site (needs a
   site/env/from-name picker — real SMTP write).
 - **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
@@ -251,7 +262,7 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   Bulk selection + `/sites/bulk-tools`. The 4 site-create flows (Request, Kinsta
   new/clone, Connect import wizard, Manual). "Select all in filter."
 - **Addons** — per-item "update available" badge + per-row Update (needs update-queue);
-  the Add dialog (Upload zip / wp.org search / Envato); whole-site update.
+  whole-site update. (Add dialog is DONE — see addons.js above.)
 - **Realtime depth** — the design has a single dock; v1 also has a **bulk-progress**
   dashboard (`GET /progress` poll), **archive SSE** (`/my-jobs/{token}/stream`), and a
   **fleet process monitor** (`running listen` WS). Not yet built. Also: WS **reconnect +
@@ -295,9 +306,28 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   fullscreen mode. Public recipes insert (v1 runs them immediately with a confirm).
   Fleet envs without a cached `environment_id` (stale sync) don't appear in the @ picker.
 
+### 2026-07-16 evening round
+- **Renamed `templates/cove-v3` → `templates/core-v3`** (and the shell to
+  `core-v3.php`; Router branch updated). "Cove" was a typo for "Core".
+- **Add plugin/theme dialog** (addons.js — see wiring above). Verified live on
+  austinginder.com: hello-dolly installed from wp.org search → job streamed →
+  chained sync → row appeared in the real addons list → dialog showed
+  Installed/Uninstall → uninstalled → row gone. Envato tab lists real purchases;
+  Envato install not live-fired (real signed download). `cove-v3.php` gained
+  `uploadUrl` on CC_BOOT.
+- **Mock-data flash removed globally.** All 34 design sample class fields
+  (FLEET, DOMAINS, THREATS, INVOICES, …) initialize EMPTY when `window.CC_BOOT`
+  exists (class-field ternary — samples remain for the DC editor preview); the
+  inline home mocks (launcher counts, attention, activity, pinned, statsLine,
+  palette, state.jobs seed) are gated the same way ('…'/'Loading fleet…' until
+  hydration). `computeDetail/computeAccount/computeDomain` grew empty-fleet stub
+  fallbacks (the `|| FLEET[0]` mock-fallback pattern now ends in a blank stub);
+  `PREVIEWS.default` needed a `|| []` (was the one render crash). Route sweep
+  (all 10 routes + cold site deep link) clean.
+
 ## Recent commits
-- `89e4ed8` NEW: initial cove-v3 template behind ?ui=v3
-- `d954536` IMPROVE: fork into maintainable source (templates/cove-v3/)
+- `89e4ed8` NEW: initial core-v3 template behind ?ui=v3
+- `d954536` IMPROVE: fork into maintainable source (templates/core-v3/)
 - `941ff15` NEW: site detail on real data + live terminal streaming
 - `914e10d` NEW: Version & Recovery slice on real data
 - `f7a8f2a` IMPROVE: activity dock — selectable job history, ⌘⏎, collapsed pill

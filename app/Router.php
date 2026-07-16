@@ -102,7 +102,7 @@ class Router {
             // Return path to your Vue app shell
             $ui = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
             if ( $ui === 'v3' ) {
-                $template_file = 'templates/cove-v3.php';
+                $template_file = 'templates/core-v3.php';
             } elseif ( $ui === 'v2' ) {
                 $template_file = 'templates/core-v2.php';
             } elseif ( $ui === 'tailwind' ) {

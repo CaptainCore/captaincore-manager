@@ -46,7 +46,8 @@ class Component extends DCLogic {
     verifyDlgOpen: false, verifyToken: null, verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
-    jobs: [
+    aaOpen: false, aaTab: 'upload', aaQ: '', aaEQ: '', aaDrag: false,
+    jobs: window.CC_BOOT ? [] : [
       { id: 1, label: 'update-wp', target: '3 sites · steer queue', state: 'running', pct: 64 },
       { id: 2, label: 'backup', target: 'cascadecoffeeroasters.com', state: 'running', pct: 31 },
       { id: 3, label: 'quicksave', target: 'bloomandbranch.com', state: 'done', right: '12m ago' },
@@ -54,7 +55,7 @@ class Component extends DCLogic {
     ]
   };
 
-  FLEET = [
+  FLEET = window.CC_BOOT ? [] : [
     { id: 'bloom', name: 'bloomandbranch.com', provider: 'Kinsta', account: 'Bloom & Branch Floral', core: '6.8.1', visits: '12,400', storage: '2.1 GB', envs: 'Prod · Staging', updates: 2, vuln: 1, owned: true, theme: 'kadence', backup: 'Direct', labels: [], plugins: { gravityforms: { v: '2.9.1', status: 'active' }, woocommerce: { v: '9.8.2', status: 'active' }, 'wordpress-seo': { v: '25.3', status: 'active' } } },
     { id: 'cascade', name: 'cascadecoffeeroasters.com', provider: 'Kinsta', account: 'Cascade Coffee', core: '6.8.0', visits: '8,900', storage: '4.6 GB', envs: 'Prod', updates: 2, vuln: 0, theme: 'kadence', backup: 'Direct', labels: [], plugins: { woocommerce: { v: '9.9.0', status: 'active' }, jetpack: { v: '14.2', status: 'inactive' } } },
     { id: 'peterson', name: 'petersonlaw.com', provider: 'WP Engine', account: 'Peterson Law', core: '6.8.1', visits: '3,100', storage: '1.2 GB', envs: 'Prod · Staging', updates: 5, vuln: 0, theme: 'astra', backup: 'Local', labels: [], plugins: { gravityforms: { v: '2.9.4', status: 'active' }, 'advanced-custom-fields': { v: '6.3.7', status: 'active' } } },
@@ -64,7 +65,7 @@ class Component extends DCLogic {
     { id: 'stonebridge', name: 'stonebridgedental.com', provider: 'GridPane', account: 'Stonebridge Dental', core: '6.7.2', visits: '940', storage: '620 MB', envs: 'Prod', updates: 7, vuln: 0, theme: 'twentytwentythree', backup: 'Off', labels: ['down'], unassigned: true, plugins: { 'query-monitor': { v: '3.19.0', status: 'inactive' } } },
     { id: 'lakeside', name: 'lakesideinn.com', provider: 'Kinsta', account: 'Lakeside Inn', core: '6.8.1', visits: '4,100', storage: '2.9 GB', envs: 'Prod · Staging', updates: 0, vuln: 0, owned: true, theme: 'kadence', backup: 'Direct', labels: ['moved'], plugins: { woocommerce: { v: '9.9.0', status: 'active' }, jetpack: { v: '14.2', status: 'active' } } }
   ];
-  PLUGINS = [
+  PLUGINS = window.CC_BOOT ? [] : [
     { name: 'Gravity Forms', slug: 'gravityforms', v: '2.9.1', latest: '2.9.4', active: true },
     { name: 'WooCommerce', slug: 'woocommerce', v: '9.8.2', latest: '9.9.0', active: true },
     { name: 'Yoast SEO', slug: 'wordpress-seo', v: '25.3', latest: '25.3', active: true },
@@ -72,17 +73,17 @@ class Component extends DCLogic {
     { name: 'WP Rocket', slug: 'wp-rocket', v: '3.18.1', latest: '3.18.1', active: true },
     { name: 'Query Monitor', slug: 'query-monitor', v: '3.19.0', latest: '3.19.0', active: false }
   ];
-  THEMES = [
+  THEMES = window.CC_BOOT ? [] : [
     { name: 'Kadence', slug: 'kadence', v: '1.2.14', latest: '1.2.15', active: true },
     { name: 'Twenty Twenty-Five', slug: 'twentytwentyfive', v: '1.2', latest: '1.2', active: false }
   ];
-  QUICKSAVES = [
+  QUICKSAVES = window.CC_BOOT ? [] : [
     { hash: '8f3c21a', kind: 'Update', desc: 'gravityforms 2.9.1 → 2.9.4', files: '129 files changed', when: 'Today · 9:14 AM', summary: '129 files changed · +59,118 −5,763 · WP 6.8.1 · 2 themes · 6 plugins', more: 122 },
     { hash: 'b2e90d4', kind: 'Scheduled', desc: 'Nightly quicksave — no changes', files: '0 files', when: 'Yesterday · 11:02 PM', summary: '0 files changed · WP 6.8.1 · 2 themes · 6 plugins', more: 0 },
     { hash: '77aa1fe', kind: 'Manual', desc: 'Before homepage redesign', files: '12 files changed', when: 'Jul 12 · 2:31 PM', summary: '12 files changed · +1,842 −960 · WP 6.8.1 · 2 themes · 6 plugins', more: 5 },
     { hash: 'c30d88b', kind: 'Update', desc: 'WordPress core 6.8.0 → 6.8.1', files: '41 files changed', when: 'Jul 10 · 3:00 AM', summary: '41 files changed · +12,406 −11,988 · WP 6.8.0 → 6.8.1', more: 34 }
   ];
-  QS_COMPONENTS = [
+  QS_COMPONENTS = window.CC_BOOT ? [] : [
     { kind: 'theme', name: 'Kadence', from: '1.2.14', to: '1.2.14', status: 'active' },
     { kind: 'theme', name: 'Twenty Twenty-Five', from: '1.2', to: '1.2', status: 'inactive' },
     { kind: 'plugin', name: 'CaptainCore Helm', from: '1.0.1', to: '', status: 'active', deleted: true },
@@ -92,7 +93,7 @@ class Component extends DCLogic {
     { kind: 'plugin', name: 'Yoast SEO', from: '25.3', to: '25.3', status: 'active' },
     { kind: 'plugin', name: 'advanced-cache.php', from: '', to: '', status: 'dropin' }
   ];
-  QS_FILES = [
+  QS_FILES = window.CC_BOOT ? [] : [
     { path: 'wp-content/plugins/gravityforms/gravityforms.php', st: 'M', add: 2, del: 2, diff: [
       ['ctx', '@@ -15,7 +15,7 @@'],
       ['ctx', '   * Plugin Name: Gravity Forms'],
@@ -149,13 +150,13 @@ class Component extends DCLogic {
       ['del', '-/* Version: 1.0.1 */']
     ] }
   ];
-  BACKUPS = [
+  BACKUPS = window.CC_BOOT ? [] : [
     { id: 'a81f03c2', when: 'Today · 3:00 AM', size: '2.1 GB', files: '18,442 files' },
     { id: '59be77d1', when: 'Yesterday · 3:00 AM', size: '2.1 GB', files: '18,438 files' },
     { id: '02c1f9ae', when: 'Jul 13 · 3:00 AM', size: '2.0 GB', files: '18,401 files' },
     { id: 'edd04b7c', when: 'Jul 12 · 3:00 AM', size: '2.0 GB', files: '18,394 files' }
   ];
-  BK_TREE = [
+  BK_TREE = window.CC_BOOT ? [] : [
     { p: 'wp-config.php', meta: '3.2 KB', file: true, prev: true, cnt: 1, kb: 3.2 },
     { p: 'mysql.sql', meta: '48 MB · database dump', file: true, cnt: 1, kb: 49152 },
     { p: 'wp-admin/', meta: '1,204 files · 38 MB', dir: true, cnt: 1204, kb: 38912, children: [
@@ -179,18 +180,18 @@ class Component extends DCLogic {
       { p: 'wp-content/cache/', meta: 'omitted — still restorable', omitted: true, dir: true }
     ] }
   ];
-  PREVIEWS = {
+  PREVIEWS = window.CC_BOOT ? {} : {
     'wp-config.php': ['<?php', "define( 'DB_NAME', 'wp_bloomandbranch' );", "define( 'DB_USER', 'bloom_db' );", "define( 'DB_PASSWORD', '************' );", "define( 'WP_DEBUG', false );", "define( 'WP_MEMORY_LIMIT', '256M' );", "$table_prefix = 'wp_';"],
     'wp-content/themes/kadence/style.css': ['/*', ' Theme Name: Kadence', ' Version: 1.2.14', '*/', ':root { --global-palette1: #2c3e50; }'],
     'wp-content/themes/kadence/functions.php': ['<?php', "define( 'KADENCE_VERSION', '1.2.14' );", "require_once get_template_directory() . '/inc/init.php';"],
     default: ['(binary file — no inline preview, use Download)']
   };
-  WP_USERS = [
+  WP_USERS = window.CC_BOOT ? [] : [
     { n: 'Sarah Whitfield', e: 'sarah@SITE', role: 'Administrator', last: '2h ago' },
     { n: 'Austin Ginder', e: 'austin@anchor.host', role: 'Administrator', last: '1d ago' },
     { n: 'Maya Chen', e: 'maya@SITE', role: 'Editor', last: '6d ago' }
   ];
-  LOGS = {
+  LOGS = window.CC_BOOT ? {} : {
     'error.log': [
       '[16-Jul-2026 09:14:22 UTC] PHP Warning:  Undefined array key "size" in /www/wp-content/plugins/woocommerce/includes/wc-cart-functions.php on line 118',
       '[16-Jul-2026 08:52:10 UTC] PHP Deprecated:  _load_textdomain_just_in_time called incorrectly for domain "kadence".',
@@ -211,12 +212,12 @@ class Component extends DCLogic {
     ]
   };
 
-  SNAPSHOTS = [
+  SNAPSHOTS = window.CC_BOOT ? [] : [
     { id: 'snap_4c8aa', name: 'db-only-checkout-bug', when: 'Today · 8:02 AM', size: '48 MB', filter: 'Database', expires: '23h left' },
     { id: 'snap_9f2e1', name: 'pre-redesign-full', when: 'Jul 12 · 2:12 PM', size: '2.4 GB', filter: 'Everything', expires: 'expired' },
     { id: 'snap_77b03', name: 'uploads-june', when: 'Jun 30 · 4:44 PM', size: '1.4 GB', filter: 'Uploads', expires: 'expired' }
   ];
-  DOMAINS = [
+  DOMAINS = window.CC_BOOT ? [] : [
     { id: 'bloomd', name: 'bloomandbranch.com', account: 'Bloom & Branch Floral', registrar: 'Hover', dns: true, expires: 'Mar 12, 2027', auto: true, owned: true },
     { id: 'harbord', name: 'harborlightyoga.com', account: 'Harbor Light Yoga', registrar: 'Hover', dns: true, expires: 'Jul 28, 2026', auto: false, warn: true, owned: true },
     { id: 'petersond', name: 'petersonlaw.com', account: 'Peterson Law', registrar: 'Spaceship', dns: true, expires: 'Nov 3, 2026', auto: true },
@@ -225,7 +226,7 @@ class Component extends DCLogic {
     { id: 'cascaded', name: 'cascadecoffeeroasters.com', account: 'Cascade Coffee', registrar: 'External (GoDaddy)', dns: false, expires: '—', auto: null },
     { id: 'lakesided', name: 'lakesideinn.com', account: 'Lakeside Inn', registrar: 'Hover', dns: true, expires: 'Jan 22, 2027', auto: true, owned: true }
   ];
-  DNS_RECS = [
+  DNS_RECS = window.CC_BOOT ? [] : [
     { uid: 1, type: 'A', name: '@', value: '35.223.94.108', ttl: '3600' },
     { uid: 2, type: 'CNAME', name: 'www', value: '@', ttl: '3600' },
     { uid: 3, type: 'MX', name: '@', value: '10 mxa.mailgun.org', ttl: '3600' },
@@ -234,24 +235,24 @@ class Component extends DCLogic {
     { uid: 6, type: 'TXT', name: 'krs._domainkey', value: 'k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GN…', ttl: '3600' },
     { uid: 7, type: 'CNAME', name: 'email', value: 'mailgun.org', ttl: '3600' }
   ];
-  FWDS = [
+  FWDS = window.CC_BOOT ? [] : [
     { uid: 1, alias: 'hello', dest: 'sarah.whitfield@gmail.com', status: 'Verified' },
     { uid: 2, alias: 'orders', dest: 'sarah.whitfield@gmail.com', status: 'Verified' },
     { uid: 3, alias: '*', dest: 'sarah.whitfield@gmail.com', status: 'Catch-all' }
   ];
-  MG_RECS = [
+  MG_RECS = window.CC_BOOT ? [] : [
     { type: 'TXT', host: 'mg', value: 'v=spf1 include:mailgun.org ~all', ok: true },
     { type: 'TXT', host: 'krs._domainkey.mg', value: 'k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GN…', ok: true },
     { type: 'CNAME', host: 'email.mg', value: 'mailgun.org', ok: false }
   ];
-  MG_EVENTS = [
+  MG_EVENTS = window.CC_BOOT ? [] : [
     { t: '9:18 AM', text: 'Delivered · Order receipt #4521 → customer@gmail.com' },
     { t: '8:47 AM', text: 'Delivered · Contact form → sarah@bloomandbranch.com' },
     { t: '7:02 AM', text: 'Opened · July newsletter (214 of 1,180 so far)' },
     { t: 'Yesterday', text: 'Bounced · promo@oldclient.net (mailbox full) — suppressed' }
   ];
 
-  ACCOUNTS = [
+  ACCOUNTS = window.CC_BOOT ? [] : [
     { id: 'bloomacc', name: 'Bloom & Branch Floral', users: 3, sites: 2, domains: 1, plan: 'Growth · $68/mo', due: true, owned: true },
     { id: 'petersonacc', name: 'Peterson Law', users: 3, sites: 1, domains: 1, plan: 'Standard · $45/mo' },
     { id: 'cascadeacc', name: 'Cascade Coffee', users: 1, sites: 1, domains: 1, plan: 'Growth · $68/mo' },
@@ -260,16 +261,16 @@ class Component extends DCLogic {
     { id: 'wildfloweracc', name: 'Wildflower Pantry', users: 1, sites: 1, domains: 1, plan: 'Starter · $25/mo', owned: true },
     { id: 'lakesideacc', name: 'Lakeside Inn', users: 1, sites: 1, domains: 1, plan: 'Growth · $68/mo', owned: true }
   ];
-  ACC_USERS = [
+  ACC_USERS = window.CC_BOOT ? [] : [
     { n: 'Sarah Whitfield', e: 'sarah@bloomandbranch.com', level: 'Owner', last: '2h ago' },
     { n: 'Kara Jimenez', e: 'kara@bloomandbranch.com', level: 'Full access', last: '3d ago' },
     { n: 'Devon Price', e: 'devon@studio-partner.com', level: 'Sites only', last: '2w ago' }
   ];
-  TRUSTED = [
+  TRUSTED = window.CC_BOOT ? [] : [
     { uid: 1, where: 'Lancaster, PA · Comcast', ua: 'macOS · Safari', added: 'via login + TFA', last: 'today' },
     { uid: 2, where: 'Philadelphia, PA · Verizon', ua: 'iOS · Safari', added: 'via invoice link', last: 'Jul 8' }
   ];
-  ACC_ACTIVITY = [
+  ACC_ACTIVITY = window.CC_BOOT ? [] : [
     { t: '2h', text: 'Quicksave created on bloomandbranch.com' },
     { t: '1d', text: 'Kara Jimenez logged in from a trusted location' },
     { t: '3d', text: 'Invoice #4482 issued — $68.00, due Jul 22' },
@@ -277,13 +278,13 @@ class Component extends DCLogic {
     { t: 'Jul 8', text: 'New location verified for Sarah Whitfield (Philadelphia, PA)' },
     { t: 'Jul 1', text: 'Plan renewed — Growth, $68.00 via Visa ··4242' }
   ];
-  INVOICES = [
+  INVOICES = window.CC_BOOT ? [] : [
     { id: '#4482', date: 'Jul 1, 2026', amount: '$68.00', items: 'Growth plan · July', due: true },
     { id: '#4391', date: 'Jun 1, 2026', amount: '$68.00', items: 'Growth plan · June' },
     { id: '#4302', date: 'May 1, 2026', amount: '$83.00', items: 'Growth plan + migration · May' },
     { id: '#4218', date: 'Apr 1, 2026', amount: '$68.00', items: 'Growth plan · April' }
   ];
-  PAY_METHODS = [
+  PAY_METHODS = window.CC_BOOT ? [] : [
     { label: 'Visa ··4242', sub: 'Expires 04/28' },
     { label: 'ACH ··6789', sub: 'Chase · verified via micro-deposits' }
   ];
@@ -314,7 +315,8 @@ class Component extends DCLogic {
   }
 
   computeAccount(s) {
-    const acc = this.ACCOUNTS.find(a => a.id === s.accountId) || this.ACCOUNTS[0];
+    const acc = this.ACCOUNTS.find(a => a.id === s.accountId) || this.ACCOUNTS[0]
+      || { id: '', name: '', users: 0, sites: 0, domains: 0, plan: '', owned: true, due: false };
     const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
       fg: s.accTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
       line: s.accTab === id ? 'var(--brand)' : 'transparent',
@@ -399,7 +401,7 @@ class Component extends DCLogic {
     };
   }
 
-  THREATS = [
+  THREATS = window.CC_BOOT ? [] : [
     { id: 't1', sev: 'High', name: 'Gravity Forms ≤ 2.9.3 — auth bypass', cve: 'CVE-2026-3181', patch: true, status: 'New',
       sites: ['bloomandbranch.com', 'harborlightyoga.com', 'petersonlaw.com', 'cascadecoffeeroasters.com', 'lakesideinn.com'],
       findings: 'Authentication bypass in the form-submission REST endpoint allows unauthenticated entry creation. Fixed upstream in 2.9.4.',
@@ -413,42 +415,42 @@ class Component extends DCLogic {
       findings: 'Debug output visible to logged-in subscriber-role users.',
       rec: 'Keep deactivated on production.' }
   ];
-  T_NOTES_INIT = { t1: [{ who: 'Austin', when: 'Jul 9', text: 'Vendor patch confirmed working on staging.' }] };
-  CORE_FAILS = [
+  T_NOTES_INIT = window.CC_BOOT ? {} : { t1: [{ who: 'Austin', when: 'Jul 9', text: 'Vendor patch confirmed working on staging.' }] };
+  CORE_FAILS = window.CC_BOOT ? [] : [
     { id: 'cf1', site: 'stonebridgedental.com', mod: 2, extra: 1,
       files: ['wp-includes/pluggable.php — modified', 'wp-admin/index.php — modified', 'wp-content/db-error.php — extra (not in 6.7.2 manifest)'] }
   ];
-  PLUG_FAILS = [
+  PLUG_FAILS = window.CC_BOOT ? [] : [
     { id: 'pf1', site: 'midwestmakersmarket.com', slug: 'wordpress-seo', chips: ['admin/class-admin.php ~', 'inc/options.php ~'],
       diff: [['ctx', '@@ admin/class-admin.php vs wordpress.org 25.3 @@'], ['del', '-        echo $notice;'], ['add', '+        echo base64_decode( $opt[\'x\'] ); // injected']] }
   ];
-  AUDITS_INIT = [
+  AUDITS_INIT = window.CC_BOOT ? [] : [
     { id: 'a1', site: 'bloomandbranch.com', env: 'Production', types: 'Full audit', status: 'Published', when: 'Jul 8', findings: '2 medium · 5 low', pub: true },
     { id: 'a2', site: 'petersonlaw.com', env: 'Production', types: 'Plugins + Themes', status: 'Complete', when: 'Jul 11', findings: '1 high · 3 low', pub: false },
     { id: 'a3', site: 'stonebridgedental.com', env: 'Production', types: 'Core checksums', status: 'Running', when: 'today', findings: '—', running: true }
   ];
-  SCHED_INIT = [
+  SCHED_INIT = window.CC_BOOT ? [] : [
     { id: 's1', target: 'Bloom & Branch Floral', interval: 'Monthly', next: 'Aug 1', recipients: '2' },
     { id: 's2', target: 'Peterson Law', interval: 'Quarterly', next: 'Oct 1', recipients: '1' }
   ];
-  ARCH_INIT = [
+  ARCH_INIT = window.CC_BOOT ? [] : [
     { id: 'ar1', name: 'oldclientsite-migration.zip', size: '1.8 GB', mod: 'Jul 2, 2026' },
     { id: 'ar2', name: 'legacy-multisite-export.zip', size: '6.2 GB', mod: 'May 18, 2026' },
     { id: 'ar3', name: 'photography-portfolio.zip', size: '940 MB', mod: 'Mar 30, 2026' }
   ];
-  KEYS_INIT = [{ id: 'k1', name: 'MacBook Pro', fp: 'SHA256:pR2wVd…3kQz', primary: true }];
-  TIMELINE_INIT = [
+  KEYS_INIT = window.CC_BOOT ? [] : [{ id: 'k1', name: 'MacBook Pro', fp: 'SHA256:pR2wVd…3kQz', primary: true }];
+  TIMELINE_INIT = window.CC_BOOT ? [] : [
     { uid: 1, text: 'Install Elementor Pro', who: 'Austin Ginder', when: 'Apr 9, 2026 · 4:32 PM' },
     { uid: 2, text: 'Security update: updated gravityforms to 2.9.31', who: 'Austin Ginder', when: 'Apr 5, 2026 · 8:24 AM' },
     { uid: 3, text: 'Restored website from restic snapshot', who: 'Austin Ginder', when: 'Mar 2, 2026 · 6:55 AM' },
     { uid: 4, text: 'Reset file permissions', who: 'Austin Ginder', when: 'Mar 1, 2026 · 12:38 AM' },
     { uid: 5, text: 'Updated A records for new Kinsta Cloudflare integration', who: 'Austin Ginder', when: 'Apr 6, 2021 · 2:50 PM' }
   ];
-  SHARED_INIT = [
+  SHARED_INIT = window.CC_BOOT ? [] : [
     { uid: 1, name: 'Bloom & Branch Floral', people: 3, level: 'Owner account', accId: 'bloomacc', owner: true },
     { uid: 2, name: 'Studio Partner LLC', people: 1, level: 'Sites only', accId: null }
   ];
-  SESS_INIT = [
+  SESS_INIT = window.CC_BOOT ? [] : [
     { id: 'se1', where: 'Lancaster, PA', ua: 'macOS · Safari', last: 'active now', current: true },
     { id: 'se2', where: 'Philadelphia, PA', ua: 'iOS · Safari', last: 'Jul 8' }
   ];
@@ -951,7 +953,8 @@ class Component extends DCLogic {
 
   computeDomain(s) {
     const domBase = s.domList || this.DOMAINS;
-    const d = domBase.find(x => x.id === s.domainId) || domBase[0];
+    const d = domBase.find(x => x.id === s.domainId) || domBase[0]
+      || { id: '', name: '', account: '', registrar: '', dns: false, expires: '—', auto: null, owned: true };
     const tabs = [['dns', 'DNS'], ['registrar', 'Registrar'], ['forwarding', 'Email forwarding'], ['sending', 'Sending']].map(([id, label]) => ({ label,
       fg: s.domTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
       line: s.domTab === id ? 'var(--brand)' : 'transparent',
@@ -1053,7 +1056,8 @@ class Component extends DCLogic {
   }
 
   computeDetail(s) {
-    const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0];
+    const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0]
+      || { id: '', name: '', provider: '', account: '', core: '', visits: '', storage: '', envs: '', updates: 0, vuln: 0, labels: [], plugins: {}, theme: '', backup: '' };
     const real = this._detail && this._detail.siteId === s.siteId ? this._detail : null;
     // Load the active tab's data whenever the site detail is shown — covers
     // deep links to /account/sites/{id}/{tab}, not just tab clicks. Gated on
@@ -1263,6 +1267,7 @@ class Component extends DCLogic {
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
       doUpdateAll: () => this.runJob('update-wp', site.name + ' · ' + updCount + ' components'),
+      ...this.computeAddAddon(real, s, site),
       quicksaves, newQuicksave: () => real ? this.realNewQuicksave(real) : this.runJob('quicksave', site.name),
       qsDialogOpen: !!dlgQk,
       dlgHash: dlgQk ? (dlgQk.hashShort || dlgQk.hash) : '', dlgDesc: dlgQk ? dlgQk.desc : '', dlgWhen: dlgQk ? dlgQk.when : '',
@@ -1319,7 +1324,7 @@ class Component extends DCLogic {
       bkShowPlaceholder: selCnt === 0 && !s.bkPreview,
       selectAll: () => { const upd = {}; flatAll.forEach(n => { if (!n.omitted) upd[n.p] = true; }); this.setState({ bkSel: upd }); },
       bkPrevPath: s.bkPreview,
-      bkPrevLines: real ? this.realBkPreviewLines(real, s) : (this.PREVIEWS[s.bkPreview] || this.PREVIEWS.default).map(text => ({ text })),
+      bkPrevLines: real ? this.realBkPreviewLines(real, s) : (this.PREVIEWS[s.bkPreview] || this.PREVIEWS.default || []).map(text => ({ text })),
       closePrev: () => this.setState({ bkPreview: '' }),
       snapFilter: s.snapFilter,
       ddSnapOpen: s.ddOpen === 'snap',
@@ -1460,7 +1465,7 @@ class Component extends DCLogic {
 
   filteredPal(q) {
     const role = (window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator';
-    const items = this._hydrated ? this.realPalItems(role) : [
+    const items = (this._hydrated || window.CC_BOOT) ? this.realPalItems(role) : [
       { label: 'bloomandbranch.com', sub: 'Kinsta · Production + Staging', kind: 'site', icon: this.ICONS.site, act: 'site', sid: 'bloom' },
       { label: 'harborlightyoga.com', sub: 'Kinsta · Production', kind: 'site', icon: this.ICONS.site, act: 'site', sid: 'harbor' },
       { label: 'petersonlaw.com', sub: 'WP Engine · Production + Staging', kind: 'site', icon: this.ICONS.site, act: 'site', sid: 'peterson' },
@@ -1499,21 +1504,24 @@ class Component extends DCLogic {
       : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
     const operate = [this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
 
+    // When booted (real app), never show design sample counts — '…' until
+    // hydration lands, then real numbers. Samples remain for the DC editor.
+    const booted = !!window.CC_BOOT;
     const launcher = (isOp ? [
-      { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : '128', icon: this.ICONS.sites, act: 'sites' },
-      { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : '94', icon: this.ICONS.domains, act: 'domains' },
-      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : '2 open', icon: this.ICONS.security, act: 'security' },
-      { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: '$12.4k/mo', icon: this.ICONS.billing, act: 'billing' },
+      { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '128'), icon: this.ICONS.sites, act: 'sites' },
+      { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains' },
+      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security' },
+      { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing' },
       { label: 'Terminal', desc: 'Run commands across the fleet', meta: '⌃`', icon: this.ICONS.terminal, act: 'dock' }
     ] : [
-      { label: 'My sites', desc: 'Backups, updates, stats', meta: this._hydrated ? String(this.FLEET.length) : '4', icon: this.ICONS.sites, act: 'sites' },
-      { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : '6', icon: this.ICONS.domains, act: 'domains' },
-      { label: 'Billing', desc: 'Invoices and payment methods', meta: '1 due', icon: this.ICONS.billing, act: 'billing' },
-      { label: 'Reports', desc: 'Monthly maintenance summaries', meta: 'June ready', icon: this.ICONS.reports, act: 'reports' },
+      { label: 'My sites', desc: 'Backups, updates, stats', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '4'), icon: this.ICONS.sites, act: 'sites' },
+      { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '6'), icon: this.ICONS.domains, act: 'domains' },
+      { label: 'Billing', desc: 'Invoices and payment methods', meta: booted ? '' : '1 due', icon: this.ICONS.billing, act: 'billing' },
+      { label: 'Reports', desc: 'Monthly maintenance summaries', meta: booted ? '' : 'June ready', icon: this.ICONS.reports, act: 'reports' },
       { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts' }
     ]).map(l => ({ ...l, go: l.act === 'dock' ? () => this.setState({ dockOpen: true }) : this.go(l.act) }));
 
-    const attention = (this._hydrated ? this.realAttention(isOp) : isOp ? [
+    const attention = (this._hydrated ? this.realAttention(isOp) : booted ? [] : isOp ? [
       { dot: 'var(--bad)', title: '2 plugin vulnerabilities across 5 sites', sub: 'gravityforms 2.9.1 (high) · woocommerce 9.8.2 (medium)', action: 'Review', act: 'security' },
       { dot: 'var(--warn)', title: '14 sites have updates pending', sub: 'Steer queue ready · last fleet update ran 6 days ago', action: 'Update', act: 'sites' },
       { dot: 'var(--warn)', title: 'harborlightyoga.com expires in 12 days', sub: 'Auto-renew is off at Hover', action: 'Renew', act: 'domains' },
@@ -1533,7 +1541,7 @@ class Component extends DCLogic {
       rowBg: s.jobSel === j.id ? 'var(--brand-soft)' : 'transparent',
       pick: () => this.setState({ jobSel: j.id }) }));
 
-    const activity = this._activity ? this._activity : isOp ? [
+    const activity = this._activity ? this._activity : booted ? [] : isOp ? [
       { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed' },
       { t: '18m', text: 'Austin deployed staging → production on petersonlaw.com' },
       { t: '1h', text: 'Mailgun sending verified for thewildflowerpantry.com' },
@@ -1548,7 +1556,7 @@ class Component extends DCLogic {
       { t: '4d', text: 'DNS record added on harborlightyoga.com (TXT · verification)' }
     ];
 
-    const pinned = (this._hydrated ? this.realPinned() : isOp ? [
+    const pinned = (this._hydrated ? this.realPinned() : booted ? [] : isOp ? [
       { id: 'bloom', name: 'bloomandbranch.com', sub: 'Kinsta · 6.8.1 · 12.4k visits/wk', health: 'Vulnerability', dot: 'var(--bad)' },
       { id: 'peterson', name: 'petersonlaw.com', sub: 'WP Engine · 6.8.1 · 3.1k visits/wk', health: 'Updates pending', dot: 'var(--warn)' },
       { id: 'cascade', name: 'cascadecoffeeroasters.com', sub: 'Kinsta · 6.8.0 · 8.9k visits/wk', health: 'Healthy', dot: 'var(--ok)' },
@@ -1598,7 +1606,7 @@ class Component extends DCLogic {
     return {
       userName, userInitials: userName.slice(0, 2).toUpperCase(),
       greeting: `Good ${dayPart}, ${userName}`,
-      statsLine: this._hydrated ? this.realStats(jobs.filter(j => j.running).length) : (isOp ? '128 sites · 94 domains · 2 jobs running · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
+      statsLine: this._hydrated ? this.realStats(jobs.filter(j => j.running).length) : booted ? 'Loading fleet…' : (isOp ? '128 sites · 94 domains · 2 jobs running · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
       nav: primary, navOperate: operate.map(n => n), navBottom: [this.navItem('settings', 'Settings')],
       showOperate: isOp && variant !== 'topnav',
       showRail: variant !== 'topnav', showTopNav: variant === 'topnav',
