@@ -39,7 +39,7 @@ class Component extends DCLogic {
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
     defDlgOpen: false, defEmail: '', defTimezone: '',
     schedEditOpen: false, schedEditId: null, schedEditInt: 'Monthly', schedEditEmail: '',
-    transferOpen: false, transferPick: null,
+    transferOpen: false, transferPick: null, toasts: [],
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
@@ -1604,6 +1604,7 @@ class Component extends DCLogic {
         ? 'M12 4V2m0 20v-2M4 12H2m20 0h-2M5.6 5.6 4.2 4.2m15.6 15.6-1.4-1.4m0-12.8 1.4-1.4M4.2 19.8l1.4-1.4M12 7a5 5 0 100 10 5 5 0 000-10z'
         : 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
       toggleTheme: () => { const t = this.state.theme === 'dark' ? 'light' : 'dark'; this.setState({ theme: t }); this.applyTheme(t); localStorage.setItem('captaincore-theme', t); },
+      toasts: this.toastVals(),
       goHome: this.go('home'), goSites: this.go('sites'),
       openDock: () => this.setState({ dockOpen: true }),
       closeDock: () => this.setState({ dockOpen: false }),
