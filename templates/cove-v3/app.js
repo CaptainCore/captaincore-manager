@@ -970,6 +970,7 @@ class Component extends DCLogic {
         go: () => { this.setState({ siteTab: id });
           if (!this._detail) return;
           if (id === 'logs') this.loadLogs();
+          else if (id === 'stats') this.loadStats();
           else if (id === 'versions') this.loadQuicksaves();
           else if (id === 'backups') this.loadBackups();
           else if (id === 'snapshots') this.loadSnapshots();
@@ -1087,15 +1088,17 @@ class Component extends DCLogic {
         { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline' }
       ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => { this.setState({ siteTab: t.act });
         if (!real) return;
-        if (t.act === 'backups') this.loadBackups(); else if (t.act === 'versions') this.loadQuicksaves(); else if (t.act === 'timeline') this.loadTimeline(); } })),
-      openStats: () => this.setState({ siteTab: 'stats' }),
+        if (t.act === 'backups') this.loadBackups(); else if (t.act === 'versions') this.loadQuicksaves(); else if (t.act === 'timeline') this.loadTimeline(); else if (t.act === 'stats') this.loadStats(); } })),
+      openStats: () => { this.setState({ siteTab: 'stats' }); if (real) this.loadStats(); },
       statG: s.statG, statR: s.statR,
       ddStatGOpen: s.ddOpen === 'statG',
       ddToggleStatG: () => this.setState(st => ({ ddOpen: st.ddOpen === 'statG' ? '' : 'statG', ddQ: '' })),
-      ddStatGOpts: this.ddOpts(['Daily', 'Weekly', 'Monthly'], s.statG, 'statG'),
+      ddStatGOpts: this.ddOpts(real ? ['Daily', 'Monthly', 'Yearly'] : ['Daily', 'Weekly', 'Monthly'], s.statG, 'statG')
+        .map(o => real ? { ...o, pick: () => { o.pick(); setTimeout(() => this.loadStats(), 0); } } : o),
       ddStatROpen: s.ddOpen === 'statR',
       ddToggleStatR: () => this.setState(st => ({ ddOpen: st.ddOpen === 'statR' ? '' : 'statR', ddQ: '' })),
-      ddStatROpts: this.ddOpts(['Last 7 days', 'Last 28 days', 'Last 90 days', 'This year'], s.statR, 'statR'),
+      ddStatROpts: this.ddOpts(['Last 7 days', 'Last 28 days', 'Last 90 days', 'This year'], s.statR, 'statR')
+        .map(o => real ? { ...o, pick: () => { o.pick(); setTimeout(() => this.loadStats(), 0); } } : o),
       shareChips: ['Off', 'Private', 'Public'].map(label => ({ label,
         bg: s.statShare === label ? 'var(--brand-soft)' : 'var(--paper)',
         fg: s.statShare === label ? 'var(--brand-ink)' : 'var(--ink-dim)',
@@ -1121,6 +1124,7 @@ class Component extends DCLogic {
       perfRows: [['TTFB (p75)', '142 ms'], ['Largest Contentful Paint (p75)', '1.8 s'], ['Checks · last 24h', '288 · all passing']].map(([k, v]) => ({ k, v })),
       visitBars: [35, 42, 38, 55, 48, 60, 52, 45, 66, 58, 72, 64, 80, 74].map((h, i) => ({ h,
         bg: i === 13 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' })),
+      ...(real ? this.realStatVals(s, site) : { statsNotice: false, statsNoticeText: '' }),
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
       dDomains: (real && real.domains ? real.domains.map(d => (d && d.name) || String(d)) : [site.name, 'www.' + site.name]).map(name => ({ name })),
       sharedRows: (s.shared || this.SHARED_INIT).map(sh => ({ ...sh,

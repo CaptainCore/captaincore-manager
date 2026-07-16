@@ -23,6 +23,7 @@ Object.assign(Component.prototype, {
       detail.envs = Array.isArray(envs) ? envs : [];
       const cur = detail.envs.some(e => e.environment === this.state.env);
       if (!cur && detail.envs[0]) this.setState({ env: detail.envs[0].environment });
+      if (this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
       bump();
     }).catch(() => { detail.envs = []; bump(); });
     this.api('/sites/' + id + '/details').then(d => {
@@ -44,6 +45,7 @@ Object.assign(Component.prototype, {
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
     this.setState({ env: name, logFile: '' });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
+    if (real && this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
   },
 
   // ── Overview ──────────────────────────────────────────────────

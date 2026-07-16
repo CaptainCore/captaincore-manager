@@ -1901,6 +1901,34 @@ function captaincore_sites_stats_func( WP_REST_Request $request ) {
 	return $response;
 }
 
+function captaincore_sites_stats_top_pages_func( WP_REST_Request $request ) {
+	$site_id = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$from_at     = $request->get_param( 'from_at' );
+	$to_at       = $request->get_param( 'to_at' );
+	$before      = ! empty( $from_at ) ? strtotime( $from_at ) : '';
+	$after       = ! empty( $to_at ) ? strtotime( $to_at ) : '';
+	$limit       = (int) ( $request->get_param( 'limit' ) ?: 10 );
+	$environment = $request->get_param( 'environment' );
+	return ( new CaptainCore\Site( $site_id ) )->top_pages( $environment, $before, $after, $limit );
+}
+
+function captaincore_sites_stats_top_referrers_func( WP_REST_Request $request ) {
+	$site_id = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$from_at     = $request->get_param( 'from_at' );
+	$to_at       = $request->get_param( 'to_at' );
+	$before      = ! empty( $from_at ) ? strtotime( $from_at ) : '';
+	$after       = ! empty( $to_at ) ? strtotime( $to_at ) : '';
+	$limit       = (int) ( $request->get_param( 'limit' ) ?: 10 );
+	$environment = $request->get_param( 'environment' );
+	return ( new CaptainCore\Site( $site_id ) )->top_referrers( $environment, $before, $after, $limit );
+}
+
 function captaincore_accounts_update_func( WP_REST_Request $request ) {
 	$account_id = $request['id'];
 	$user       = new CaptainCore\User;
@@ -8410,6 +8438,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_sites_stats_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/top-pages', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_stats_top_pages_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/top-referrers', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_stats_top_referrers_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
