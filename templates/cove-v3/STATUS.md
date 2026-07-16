@@ -60,6 +60,20 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 - **`billing.js`** — Billing (WooCommerce-backed). Lazy `GET /billing/` on first billing
   render → invoices (+PDF blob download, pay-invoice w/ confirm), payment methods
   (set-primary/remove; add needs Stripe elements — hidden), WC billing address.
+- **`security.js`** — Security (admin) + Site Audits. `GET /security-threats` (track/note/
+  resolve), `/security-coverage`, `/checksum-failures`, `/plugin-checksum-failures`;
+  `GET /site-audits` list + request/publish/cancel + report view (report_url or /html
+  nonce→blob).
+- **`reports.js`** — Reports. `POST /report[/account-report]/preview` renders the server
+  HTML in an iframe dialog; `/send`; `/default-recipient` prefill; scheduled-reports CRUD.
+- **`settings.js`** — Settings (admin). `GET /configurations/` (branding), `/providers`,
+  `/defaults/`, `/keys/`, `/recipes/` (Cookbook), `/processes/` (Handbook); save branding
+  via `PUT /configurations/global`; provider verify; key delete; recipe→terminal.
+- **`archives.js`** — Archives (admin). `GET /archive` rclone list filtered to .zip;
+  `POST /archive/share` 7-day B2 link; `POST /archive/store` + `/my-jobs/{token}` poll.
+- **`profile.js`** — Profile (self-service). `PUT /me/profile`; TFA via `/me/tfa_*`
+  (secret shown for manual entry); app password via `/me/application-password`; sessions
+  via `GET/DELETE /sessions`. Initial tfa/name/email from CC_BOOT (`User::profile()`).
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -141,21 +155,35 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   writes), auth-code fetch+copy; Email forwarding activate/list/add/delete + status
   badge; Mailgun sending records + verify + setup + live events. Domain create wired
   to `POST /domains`.
+- **Label chip icons** — each Sites-list label filter now shows its mdi icon (captured
+  during hydration) as an inline SVG, colored per label type.
+- **Security & Site Audits** (admin; verified live: 21 critical threats, coverage 90.4%,
+  real core-checksum failures, published anchor.host audits) — Vulnerabilities from
+  `/security-threats` (severity/patch chips, affected-site links, notes, track/note/
+  resolve, open-in-terminal preselects affected envs); Checksums from `/checksum-failures`
+  + `/plugin-checksum-failures`; Coverage from `/security-coverage` (fleet %, per-type
+  bars). Site Audits list + view (report_url or /html nonce→blob) + publish/cancel/
+  request. Not fired live: track/resolve/publish/request (real side effects).
+- **Reports** (verified live: real Maintenance-Report HTML for 1-act.com in the preview
+  iframe) — Site/Account preview via `/report[/account-report]/preview`; send; default
+  recipient prefill; scheduled-reports list/add/delete. Recipient is singular per contract.
+- **Settings** (admin; verified live: all 6 tabs real) — Branding name+swatches
+  (`/configurations/`, save via `PUT /configurations/global`), Providers (10 real,
+  Verify), Site defaults, SSH keys (real fingerprint, delete), Cookbook (32 recipes,
+  Run→terminal), Handbook (146 processes). Not built: provider wizard/import, defaults
+  edit, key add flow (private-key mismatch), branding logo upload.
+- **Archives** (admin; verified live: 5035 real .zip archives, 6.6 TB on B2) — rclone
+  list filtered to .zip, 7-day B2 share link (`/archive/share`), store-from-URL
+  (`/archive/store` + `/my-jobs/{token}` poll). No delete (no v1 route); SSE stream
+  noted but poll used instead.
+- **Profile** (verified live: real name/email/sessions, TFA secret fetched, UA parsing) —
+  `PUT /me/profile`; TFA `/me/tfa_*` (secret shown for manual entry — no QR lib vendored);
+  app password `/me/application-password[/rotate]`; sessions `GET/DELETE /sessions`.
+  `cove-v3.php` exposes `tfaEnabled/appPassword/sessions` on CC_BOOT. Not fired live:
+  profile save, TFA activate, session revoke (real side effects).
 
-## Remaining work (rough priority; each is a "slice")
-
-Pattern for every slice: audit the v1 REST contract (subagent over `core.php` +
-`captaincore.php` + `app/*.php`), write a `<area>.js` mixin, swap the design's mock
-arrays in the matching `compute*()` to consult real data with mock fallback, test live.
-
-1. **Security & Site Audits** — `computeSecurity`/`computeAudits` mock. 7 security tabs,
-   threat tracking, checksums, coverage, audit queue. Spec §7.8. Admin-gated.
-2. **Reports** — `computeReports` mock. Site/account preview/send/schedule. Spec §7.9.
-3. **Settings** — `computeSettings` mock. Branding, providers+wizard, defaults, SSH
-   keys, cookbook, handbook. Spec §7.10.
-4. **Archives (global)** — `computeArchives` mock. Rclone list, store-from-URL with
-   EventSource progress, 7-day B2 share links. Spec §7.11.
-5. **Profile** — `computeProfile` mock (TFA QR, app password, active sessions).
+**All spec §7 area slices are now on real data.** Remaining work is cross-cutting depth
+(below) and the deferred per-slice items noted in each entry above.
 
 ### Cross-cutting / smaller
 - **Sites list gaps** — theme/plugin filter facets and per-site update counts need
@@ -221,3 +249,9 @@ arrays in the matching `compute*()` to consult real data with mock fallback, tes
 - `7113104` FIX: label facets — count all labels, v1 colors
 - `622de8a` NEW: Accounts/Users/Access slice on real data
 - `630a5ad` NEW: Billing slice on real data
+- `8bdf506` IMPROVE: label chips — per-type SVG icons
+- `b92fe69` NEW: Security & Site Audits slice on real data
+- `df2f0d5` NEW: Reports slice on real data
+- `9e52191` NEW: Settings slice on real data
+- `23e5938` NEW: Archives slice on real data
+- `495355f` NEW: Profile slice on real data
