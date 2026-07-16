@@ -536,7 +536,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <div onMouseEnter="{{ b.enter }}" style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px 2px 0 0;transition:filter .1s" style-hover="filter:brightness(.9)"></div>
                 </sc-for>
                 <sc-if value="{{ chartTipShow }}" hint-placeholder-val="{{ false }}">
-                  <div style="position:absolute;bottom:calc(100% + 10px);left:{{ chartTipLeft }}px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5">
+                  <div style="position:absolute;top:{{ chartTipTop }}px;left:{{ chartTipLeft }}px;transform:translate(-50%,-100%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5">
                     <div style="font:600 12px var(--sans)">{{ chartTipDate }}</div>
                     <div style="font:400 11.5px var(--mono);opacity:.85;margin-top:2px">{{ chartTipViews }} views · {{ chartTipVisits }} visits</div>
                   </div>
@@ -1249,7 +1249,10 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <sc-if value="{{ billTabPm }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ billShowAdd }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;gap:10px;margin-top:16px">
-                <button onClick="{{ addPaymentMethod }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add payment method</button>
+                <button onClick="{{ addPaymentMethod }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add card</button>
+                <sc-if value="{{ billShowAch }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ addBankAch }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add bank (ACH)</button>
+                </sc-if>
               </div>
             </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
@@ -1260,7 +1263,13 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <sc-if value="{{ pm.isPrimary }}" hint-placeholder-val="{{ false }}">
                     <span style="font:500 11.5px var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">Primary</span>
                   </sc-if>
+                  <sc-if value="{{ pm.needsVerify }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:500 11.5px var(--sans);background:var(--warn-soft);color:var(--ink);border-radius:99px;padding:2px 9px">Pending verification</span>
+                  </sc-if>
                   <div style="flex:1"></div>
+                  <sc-if value="{{ pm.needsVerify }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ pm.verify }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Verify</span>
+                  </sc-if>
                   <sc-if value="{{ pm.canPrimary }}" hint-placeholder-val="{{ false }}">
                     <span onClick="{{ pm.setPrimary }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Set primary</span>
                     <span onClick="{{ pm.remove }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
@@ -2299,6 +2308,57 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="flex:1"></div>
           <span onClick="{{ closeAddCard }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add card</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Add bank (ACH) dialog ══ -->
+  <sc-if value="{{ achDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAddAch }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Add bank account</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeAddAch }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Account holder</span><input value="{{ achName }}" onInput="{{ onAchName }}" placeholder="Full name on the account" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none"></div>
+          <span style="font:400 11.5px/1.5 var(--sans);color:var(--ink-dim)">You'll be prompted to connect your bank securely (instant), or receive two micro-deposits to verify within 1–2 business days.</span>
+          <sc-if value="{{ achErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12px var(--sans);color:var(--bad)">{{ achErr }}</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeAddAch }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ submitAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Connect bank</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Verify bank (micro-deposits) dialog ══ -->
+  <sc-if value="{{ verifyDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeVerifyAch }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Verify bank account</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeVerifyAch }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:400 12px/1.5 var(--sans);color:var(--ink-dim)">Enter the two micro-deposit amounts (in cents) from your bank statement.</span>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 12.5px var(--sans);color:var(--ink-dim)">Amount 1</span><input value="{{ verifyA1 }}" onInput="{{ onVerifyA1 }}" placeholder="e.g. 32" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 12.5px var(--sans);color:var(--ink-dim)">Amount 2</span><input value="{{ verifyA2 }}" onInput="{{ onVerifyA2 }}" placeholder="e.g. 45" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <sc-if value="{{ verifyErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12px var(--sans);color:var(--bad)">{{ verifyErr }}</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeVerifyAch }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ submitVerifyAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Verify</button>
         </div>
       </div>
     </div>

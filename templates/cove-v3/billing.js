@@ -62,6 +62,69 @@ Object.assign(Component.prototype, {
     }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not process the card.' }); this.dismissToast(tid); });
   },
 
+  // ── Add bank account (ACH via Stripe Financial Connections) ──
+  // Mirrors core.php: setup-intent → collectBankAccountForSetup →
+  // (confirmUsBankAccountSetup if instant) → POST ach/payment-method.
+  openAddAch() {
+    const boot = window.CC_BOOT || {};
+    if (!boot.stripeKey || !window.Stripe) { this.toast('Bank payments unavailable', { kind: 'error' }); return; }
+    const a = (this._billing && this._billing.address) || {};
+    this.setState({ achDlgOpen: true, achErr: '', achSaving: false,
+      achName: [a.first_name, a.last_name].filter(Boolean).join(' ') });
+  },
+  closeAddAch() { this.setState({ achDlgOpen: false, achSaving: false, achErr: '' }); },
+
+  submitAch() {
+    const boot = window.CC_BOOT || {};
+    const name = (this.state.achName || '').trim();
+    if (!name) { this.setState({ achErr: 'Enter the account holder name.' }); return; }
+    if (this.state.achSaving) return;
+    this.setState({ achSaving: true, achErr: '' });
+    if (!this._stripe) this._stripe = window.Stripe(boot.stripeKey);
+    const stripe = this._stripe;
+    const email = ((this._billing && this._billing.address) || {}).email || boot.userEmail || '';
+    const tid = this.toast('Connecting bank…', { kind: 'loading' });
+    this.api('/billing/ach/setup-intent', { method: 'POST', body: {} }).then(setup => {
+      if (!setup || setup.error || !setup.client_secret) { this.setState({ achSaving: false, achErr: (setup && setup.error) || 'Could not start bank setup.' }); this.dismissToast(tid); return; }
+      const clientSecret = setup.client_secret, setupIntentId = setup.setup_intent_id;
+      stripe.collectBankAccountForSetup({
+        clientSecret,
+        params: { payment_method_type: 'us_bank_account', payment_method_data: { billing_details: { name, email } } },
+        expand: ['payment_method']
+      }).then(({ setupIntent, error }) => {
+        if (error) { this.setState({ achSaving: false, achErr: error.message }); this.dismissToast(tid); return; }
+        if (setupIntent.status === 'requires_payment_method') { this.setState({ achSaving: false }); this.dismissToast(tid); return; } // user cancelled
+        const finish = () => this.api('/billing/ach/payment-method', { method: 'POST', body: { setup_intent_id: setupIntentId } }).then(res => {
+          this.setState({ achSaving: false });
+          if (res && res.error) { this.setState({ achErr: res.error }); this.updateToast(tid, 'Bank not added', { kind: 'error' }); return; }
+          this.setState({ achDlgOpen: false });
+          this.updateToast(tid, res && res.verified ? 'Bank account added' : 'Bank added — verification pending', { kind: 'success' });
+          this.loadBilling(true);
+        }).catch(() => { this.setState({ achSaving: false, achErr: 'Could not save the bank account.' }); this.updateToast(tid, 'Could not save the bank account', { kind: 'error' }); });
+        if (setupIntent.status === 'requires_confirmation') {
+          stripe.confirmUsBankAccountSetup(clientSecret).then(({ error: cErr }) => {
+            if (cErr) { this.setState({ achSaving: false, achErr: cErr.message }); this.dismissToast(tid); return; }
+            finish();
+          });
+        } else finish();
+      });
+    }).catch(() => { this.setState({ achSaving: false, achErr: 'Could not start bank setup.' }); this.dismissToast(tid); });
+  },
+
+  openVerifyAch(token) { this.setState({ verifyDlgOpen: true, verifyToken: token, verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false }); },
+  closeVerifyAch() { this.setState({ verifyDlgOpen: false }); },
+  submitVerifyAch() {
+    const a1 = parseInt(this.state.verifyA1, 10), a2 = parseInt(this.state.verifyA2, 10);
+    if (!a1 || !a2 || a1 <= 0 || a2 <= 0) { this.setState({ verifyErr: 'Enter both amounts in cents.' }); return; }
+    const tid = this.toast('Verifying bank…', { kind: 'loading' });
+    this.api('/billing/ach/verify', { method: 'POST', body: { token_id: this.state.verifyToken, amounts: [a1, a2] } }).then(res => {
+      if (res && res.error) { this.setState({ verifyErr: res.error }); this.updateToast(tid, 'Verification failed', { kind: 'error' }); return; }
+      this.setState({ verifyDlgOpen: false });
+      this.updateToast(tid, (res && res.message) || 'Bank account verified', { kind: 'success' });
+      this.loadBilling(true);
+    }).catch(() => this.updateToast(tid, 'Verification failed', { kind: 'error' }));
+  },
+
   downloadInvoicePdf(orderId) {
     const boot = window.CC_BOOT || {};
     fetch(boot.restRoot + 'captaincore/v1/invoices/' + orderId + '/pdf', { headers: { 'X-WP-Nonce': boot.nonce } })
@@ -96,12 +159,14 @@ Object.assign(Component.prototype, {
     });
     const payMethods = (b.payment_methods || []).map(pm => {
       const m = pm.method || {};
+      const needsVerify = pm.type === 'ach' && !pm.verified;
       return {
         label: (m.brand || 'Card') + ' ··' + (m.last4 || '????'),
         sub: pm.type === 'ach'
-          ? [m.bank_name, m.account_type, pm.verified ? 'verified' : 'pending verification'].filter(Boolean).join(' · ')
+          ? [m.bank_name, m.account_type].filter(Boolean).join(' · ')
           : (pm.expires ? 'Expires ' + pm.expires : ''),
         isPrimary: !!pm.is_default, canPrimary: !pm.is_default,
+        needsVerify, verify: () => this.openVerifyAch(pm.token),
         setPrimary: () => this.api('/billing/payment-methods/' + pm.token + '/primary', { method: 'PUT' })
           .then(() => this.loadBilling(true)).catch(() => {}),
         remove: () => { if (!confirm('Remove ' + (m.brand || 'payment method') + ' ··' + (m.last4 || '') + '?')) return;
@@ -121,15 +186,24 @@ Object.assign(Component.prototype, {
     return {
       invoices, payMethods,
       billShowAdd: !!(boot.stripeKey || boot.addPaymentUrl),
+      billShowAch: !!(boot.stripeKey && window.Stripe),
       addPaymentMethod: () => {
         // Prefer in-SPA Stripe Elements; fall back to the WC page if the
         // library or key isn't available.
         if (boot.stripeKey && window.Stripe) { this.openAddCard(); return; }
         if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl;
       },
+      addBankAch: () => this.openAddAch(),
       cardDlgOpen: !!s.cardDlgOpen, cardErr: s.cardErr || '', cardSaving: !!s.cardSaving,
       closeAddCard: () => this.closeAddCard(),
       submitCard: () => this.submitCard(),
+      achDlgOpen: !!s.achDlgOpen, achName: s.achName || '', achErr: s.achErr || '',
+      onAchName: e => this.setState({ achName: e.target.value, achErr: '' }),
+      closeAddAch: () => this.closeAddAch(), submitAch: () => this.submitAch(),
+      verifyDlgOpen: !!s.verifyDlgOpen, verifyA1: s.verifyA1 || '', verifyA2: s.verifyA2 || '', verifyErr: s.verifyErr || '',
+      onVerifyA1: e => this.setState({ verifyA1: e.target.value, verifyErr: '' }),
+      onVerifyA2: e => this.setState({ verifyA2: e.target.value, verifyErr: '' }),
+      closeVerifyAch: () => this.closeVerifyAch(), submitVerifyAch: () => this.submitVerifyAch(),
       billNotice: !!noticeText, billNoticeText: noticeText,
       addrL1: [[a.first_name, a.last_name].filter(Boolean).join(' '), a.company].filter(Boolean).join(' · ') || '—',
       addrL2: [a.address_1, a.address_2].filter(Boolean).join(', '),

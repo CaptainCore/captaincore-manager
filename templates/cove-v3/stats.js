@@ -117,7 +117,7 @@ Object.assign(Component.prototype, {
     return {
       statTilesBig: ['Visitors', 'Pageviews', 'Avg time on site', 'Bounce rate'].map(k => ({ k, v: '—', delta: '', deltaFg: 'var(--ink-dim)' })),
       statBars: [], topPages: [], topRefs: [],
-      statsShowPerf: false, chartMove: () => {}, chartLeave: () => {}, chartTipShow: false, chartTipLeft: 0, chartTipDate: '', chartTipViews: '', chartTipVisits: '',
+      statsShowPerf: false, chartMove: () => {}, chartLeave: () => {}, chartTipShow: false, chartTipLeft: 0, chartTipTop: 0, chartTipDate: '', chartTipViews: '', chartTipVisits: '',
       statsNotice: true, statsNoticeText: 'Loading analytics…'
     };
   },
@@ -162,10 +162,11 @@ Object.assign(Component.prototype, {
         { k: 'Bounce rate', v: sum ? Math.round(parseFloat(sum.bounce_rate) || 0) + '%' : '—', delta: '', deltaFg: 'var(--ink-dim)' }
       ],
       statBars, statsShowPerf: false,
-      chartMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ chartHoverX: Math.round(e.clientX - r.left) }); },
+      chartMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ chartHoverX: Math.round(e.clientX - r.left), chartHoverY: Math.round(e.clientY - r.top) }); },
       chartLeave: () => this.setState({ chartHoverIdx: -1 }),
       chartTipShow: !!hovered,
       chartTipLeft: hovered ? (s.chartHoverX || 0) : 0,
+      chartTipTop: hovered ? ((s.chartHoverY || 0) - 14) : 0,
       chartTipDate: hovered ? hovered.date : '',
       chartTipViews: hovered ? hovered.views : '',
       chartTipVisits: hovered ? hovered.visits : '',
