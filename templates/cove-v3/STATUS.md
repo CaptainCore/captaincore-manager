@@ -74,6 +74,17 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 - **`profile.js`** — Profile (self-service). `PUT /me/profile`; TFA via `/me/tfa_*`
   (secret shown for manual entry); app password via `/me/application-password`; sessions
   via `GET/DELETE /sessions`. Initial tfa/name/email from CC_BOOT (`User::profile()`).
+- **`router.js`** — deep-linking. `initRouter()` (mount) parses `location` → state +
+  popstate listener; `syncUrl()` (in `componentDidUpdate`) pushState's the path when
+  route/detail-id/site-tab drift. Routes: `/account/<seg>[/<id>[/<tab>]]`. `?ui=v3`
+  preserved during the dev gate; URL re-applied after hydration so deep-linked details
+  fetch. **This is what makes v3 production-navigable.**
+- **`toast.js`** — `this.toast(text,{kind})` (loading/success/error/info) → dismissable
+  pills, bottom-center. `updateToast` flips a loading toast to a result. Background jobs
+  and magic login use it; `finishJob` resolves a job's dispatch toast.
+- **`sites-filters.js`** — theme/plugin Sites-list filters. `GET /site-filters`
+  (fleet-wide option list), pick → `POST /filters/sites` → intersect matched site-ids
+  with the fleet. Presence-only (version/status stay 'Any').
 - **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
 
 ### Vendored runtime (`../../public/js/v3/`)
@@ -192,8 +203,27 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   no-backend controls on real data: domain **Auto-renew** toggle and account
   **Cancel plan…** (neither has a v1 route).
 
-**All spec §7 area slices are now on real data.** Remaining work is cross-cutting depth
-(below) and the deferred per-slice items noted in each entry above.
+- **Production-readiness round** (verified live) —
+  - **Deep linking** (`router.js`): URL syncs with navigation, back/forward restores the
+    screen, and cold deep links (`/account/billing`, `/account/sites/3`,
+    `/account/settings`) render correctly. **Spec §8.2 deep-linking is done.**
+  - **Theme/plugin filters** now work (`GET /site-filters` + `POST /filters/sites`;
+    Kadence theme → 2926→32 sites).
+  - **Toast/snackbar feedback** for actions (magic login "Signing in…"; jobs get a
+    loading→result toast).
+  - **Mini-mode jobs**: Sync/addons/etc. show the collapsed activity pill, not the full
+    dock (only the terminal `run` expands it) — customers aren't dropped into the console.
+  - **Command palette autofocuses** on open.
+  - **Mock-flash fixes**: the terminal console/job list and the billing page no longer
+    flash design sample data before hydration.
+  - **Providers add/edit** (`POST|PUT|DELETE /providers`, key/value credential editor).
+  - **Site defaults** expanded to recipes multi-select + default-users editor.
+  - **Add payment method** via embedded **Stripe Elements** (createSource →
+    `POST /billing/payment-methods`) — verified add + remove of a test card.
+  - `fmtStorage` renders **TB** above 1 TB.
+
+**All spec §7 area slices are now on real data, and §8.2 deep-linking works.** Remaining
+work is cross-cutting depth (below) and the deferred per-slice items noted above.
 
 ### Gap-wiring round 2 (verified live)
 - **Settings › Branding**: theme-color swatches are now native color inputs bound to
