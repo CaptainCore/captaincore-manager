@@ -38,7 +38,8 @@ Object.assign(Component.prototype, {
   realBillingVals(s) {
     if (s.route === 'billing' && !this._billing && !this._billingLoading) setTimeout(() => this.loadBilling(), 0);
     const b = this._billing;
-    if (!b) return { billShowAdd: false, billNotice: true, billNoticeText: 'Loading billing…' };
+    if (!b) return { invoices: [], payMethods: [], billShowAdd: false, billNotice: true, billNoticeText: 'Loading billing…',
+      addrL1: '—', addrL2: '', addrL3: '', addrL4: '', billAddrOpen: false, openBillAddr: () => {}, closeBillAddr: () => {}, billAddrFields: [], saveBillAddr: () => {} };
     if (b.error) return { billShowAdd: false, billNotice: true, billNoticeText: b.error, invoices: [], payMethods: [] };
     const invoices = (b.invoices || []).map(iv => {
       const paid = /completed|processing|paid|refunded/i.test(iv.status || '');
