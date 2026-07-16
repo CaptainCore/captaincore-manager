@@ -19,6 +19,9 @@ Object.assign(Component.prototype, {
     this._jobObjs = this._jobObjs || {};
     const job = { id, label, target, command, siteId, environment, onFinish, stream: [], ws: null, token: null };
     this._jobObjs[id] = job;
+    // Non-terminal actions get a loading toast (immediate feedback); the
+    // developer terminal ('run') streams into the console instead.
+    if (!expand && this.toast) job._toastId = this.toast((this.JOB_VERBS[label] || label || 'Working') + '…', { kind: 'loading' });
     this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: expand ? true : st.dockOpen, jobSel: id }));
     if (!dispatch) return id;
     Promise.resolve().then(dispatch).then(res => {
@@ -77,8 +80,17 @@ Object.assign(Component.prototype, {
     this.setState(st => ({ jobs: st.jobs.map(j => j.id === id ? { ...j, ...(typeof patch === 'function' ? patch(j) : patch) } : j) }));
   },
 
+  JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave',
+    activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
+    'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback' },
+
   finishJob(job, state) {
     this.patchJob(job.id, { state, pct: 100, right: state === 'done' ? 'just now' : 'error' });
+    // Resolve the loading toast a background action created on dispatch.
+    if (job._toastId && this.updateToast) {
+      const verb = this.JOB_VERBS[job.label] || (job.label || 'Job');
+      this.updateToast(job._toastId, verb + (state === 'done' ? ' complete' : ' failed'), { kind: state === 'done' ? 'success' : 'error' });
+    }
   },
 
   // Console feed: the user-selected job, else the most recent running real

@@ -90,11 +90,15 @@ Object.assign(Component.prototype, {
   },
 
   realMagicLogin(real, s, user) {
+    const who = (user && (user.display_name || user.user_login)) ? ' as ' + (user.display_name || user.user_login) : '';
+    const tid = this.toast('Signing in' + who + '…', { kind: 'loading' });
     const path = '/sites/' + real.siteId + '/' + s.env.toLowerCase() + '/magiclogin' + (user && user.ID ? '/' + user.ID : '');
     this.api(path).then(url => {
-      if (typeof url === 'string' && url.indexOf('http') === 0) window.open(url.trim());
-      else console.warn('magiclogin unexpected response', url);
-    }).catch(err => console.warn('magiclogin failed', err));
+      if (typeof url === 'string' && url.indexOf('http') === 0) {
+        window.open(url.trim());
+        this.updateToast(tid, 'Opened WordPress admin', { kind: 'success' });
+      } else { console.warn('magiclogin unexpected response', url); this.updateToast(tid, 'Could not sign in', { kind: 'error' }); }
+    }).catch(err => { console.warn('magiclogin failed', err); this.updateToast(tid, 'Could not sign in', { kind: 'error' }); });
   },
 
   realPush(real, direction) {

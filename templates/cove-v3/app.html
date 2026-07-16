@@ -32,6 +32,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 @keyframes ccpulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes ccblink{0%,49%{opacity:1}50%,100%{opacity:0}}
 @keyframes ccfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ccspin{to{transform:rotate(360deg)}}
 </style>
 </helmet>
 <div style="height:100vh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -2584,4 +2585,20 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       </div>
     </div>
   </sc-if>
+
+  <!-- ══ Toasts ══ -->
+  <div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="1">
+      <div style="pointer-events:auto;display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--rule);border-radius:99px;box-shadow:var(--shadow);padding:9px 16px 9px 13px;animation:ccfade .18s ease;max-width:min(460px,calc(100vw - 32px))">
+        <sc-if value="{{ t.spinner }}" hint-placeholder-val="{{ true }}">
+          <span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--brand);animation:ccspin .7s linear infinite;flex:none"></span>
+        </sc-if>
+        <sc-if value="{{ t.notSpinner }}" hint-placeholder-val="{{ false }}">
+          <span style="width:8px;height:8px;border-radius:50%;background:{{ t.dot }};flex:none"></span>
+        </sc-if>
+        <span style="font:500 13px var(--sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.text }}</span>
+        <span onClick="{{ t.close }}" style="cursor:pointer;color:var(--ink-dim);font:600 13px var(--sans);flex:none;margin-left:2px" style-hover="color:var(--ink)">✕</span>
+      </div>
+    </sc-for>
+  </div>
 </div>
