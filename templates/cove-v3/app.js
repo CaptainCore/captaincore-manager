@@ -35,6 +35,7 @@ class Component extends DCLogic {
     archList: null, archUrl: '', archErr: false,
     setTab: 'branding', brandName: 'Anchor Hosting', keyDraft: '', sshKeys: null,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
+    tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     jobs: [
       { id: 1, label: 'update-wp', target: '3 sites · steer queue', state: 'running', pct: 64 },
       { id: 2, label: 'backup', target: 'cascadecoffeeroasters.com', state: 'running', pct: 31 },
@@ -1279,7 +1280,7 @@ class Component extends DCLogic {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false }); }
+      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }
@@ -1472,11 +1473,7 @@ class Component extends DCLogic {
       hasRunning: jobs.some(j => j.running),
       dockIdle: !jobs.some(j => j.running),
       consoleLines, liveTail, consoleBg: 'var(--panel)',
-      termCmd: s.termCmd || '',
-      onTermCmd: e => this.setState({ termCmd: e.target.value }),
-      termRun: () => this.termRun(),
-      termTarget: (s.route === 'site' && this._detail && this._detail.site) ? '@' + this._detail.site.name : '@ open a site',
-      termRunFg: (s.termCmd || '').trim() ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      ...this.computeTermVals(s),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
       paletteOpen: s.paletteOpen, palQuery: s.palQuery, palResults,
       themeIcon: (s.theme === 'dark')

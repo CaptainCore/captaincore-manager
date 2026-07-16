@@ -90,23 +90,7 @@ Object.assign(Component.prototype, {
     return pick ? this._jobObjs[pick.id] : null;
   },
 
-  // Terminal input (dock footer). Targets the open site's selected environment;
-  // any bash/wp-cli line is dispatched via POST /run/code (server base64s it
-  // into `run {site}-{env} --code=…`) and streams back through the socket.
-  termRun() {
-    const cmd = (this.state.termCmd || '').trim();
-    if (!cmd || !this._hydrated) return;
-    const real = this._detail;
-    if (!real || this.state.route !== 'site') return;
-    const e = this.currentEnv(real, this.state);
-    if (!e || !e.environment_id) return;
-    const name = (real.site && real.site.name) || '';
-    this.setState({ termCmd: '' });
-    this.startJob({
-      label: 'run', target: cmd + ' · ' + name, command: 'run', siteId: real.siteId,
-      dispatch: () => this.api('/run/code', { method: 'POST', body: { environments: [e.environment_id], code: cmd } })
-    });
-  },
+  // Terminal input lives in terminal.js (multi-target termRun override).
 
   realConsoleLines() {
     const job = this.activeJob();
