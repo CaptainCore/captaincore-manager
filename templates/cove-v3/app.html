@@ -1764,7 +1764,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
   <!-- ══ Activity dock ══ -->
   <sc-if value="{{ dockOpen }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;bottom:16px;{{ dockSide }}:16px;width:620px;max-width:calc(100vw - 32px);height:380px;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);z-index:60;display:flex;flex-direction:column;overflow:hidden;animation:ccfade .18s ease">
+    <div style="position:fixed;bottom:16px;{{ dockSide }}:16px;width:780px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 32px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);z-index:60;display:flex;flex-direction:column;overflow:hidden;animation:ccfade .18s ease">
       <div style="flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule)">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);animation:ccpulse 1.6s ease infinite"></span>
         <span style="font:600 14px var(--sans)">Activity</span>
@@ -1791,12 +1791,75 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <sc-for list="{{ consoleLines }}" as="ln" hint-placeholder-count="6">
               <div style="color:{{ ln.fg }};white-space:pre-wrap;word-break:break-word">{{ ln.text }}</div>
             </sc-for>
-            <span style="display:inline-block;width:7px;height:14px;background:var(--brand);animation:ccblink 1.1s step-end infinite;vertical-align:text-bottom"></span>
+            <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-block;width:7px;height:14px;background:var(--brand);animation:ccblink 1.1s step-end infinite;vertical-align:text-bottom"></span>
+            </sc-if>
           </div>
-          <div style="flex:none;display:flex;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid var(--rule)">
-            <span style="font:500 13px var(--mono);color:var(--brand-ink);white-space:nowrap">{{ termTarget }}</span>
-            <input value="{{ termCmd }}" onInput="{{ onTermCmd }}" placeholder="wp option get home" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 13px var(--mono)">
-            <span onClick="{{ termRun }}" style="margin-left:auto;font:500 11.5px var(--mono);color:{{ termRunFg }};cursor:pointer;white-space:nowrap">⌘⏎ run</span>
+          <div style="flex:none;border-top:1px solid var(--rule);position:relative">
+            <sc-if value="{{ tpOpen }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ tpClose }}" style="position:fixed;inset:0;z-index:64"></div>
+              <div style="position:absolute;bottom:calc(100% + 10px);left:10px;z-index:65;width:360px;background:var(--paper);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .12s ease">
+                <div style="padding:10px 10px 8px;border-bottom:1px solid var(--rule)">
+                  <input value="{{ tpQ }}" onInput="{{ onTpQ }}" placeholder="Search targets…" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px var(--mono);padding:0 10px;outline:none">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px">
+                    <span style="font:500 11.5px var(--sans);color:var(--ink-dim)">{{ tpCount }}</span>
+                    <sc-if value="{{ termTargetClearable }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ termTargetClear }}" style="font:500 11.5px var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="max-height:250px;overflow-y:auto;padding:4px">
+                  <sc-for list="{{ tpResults }}" as="t" hint-placeholder-count="6">
+                    <div onClick="{{ t.toggle }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;cursor:pointer;background:{{ t.bg }}" style-hover="background:var(--panel-2)">
+                      <span style="width:13px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ t.mark }}</span>
+                      <div style="min-width:0">
+                        <div style="font:500 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.label }}</div>
+                        <div style="font:400 11px var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.home_url }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cookOpen }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ cookClose }}" style="position:fixed;inset:0;z-index:64"></div>
+              <div style="position:absolute;bottom:calc(100% + 10px);right:10px;z-index:65;width:360px;background:var(--paper);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .12s ease">
+                <div style="padding:10px 10px 8px;border-bottom:1px solid var(--rule)">
+                  <input value="{{ cookQ }}" onInput="{{ onCookQ }}" placeholder="Search cookbook…" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px var(--mono);padding:0 10px;outline:none">
+                </div>
+                <div style="max-height:250px;overflow-y:auto;padding:4px">
+                  <sc-if value="{{ cookLoading }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:14px;font:400 12px var(--sans);color:var(--ink-dim);text-align:center">Loading recipes…</div>
+                  </sc-if>
+                  <sc-if value="{{ cookEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:14px;font:400 12px var(--sans);color:var(--ink-dim);text-align:center">No recipes yet — save them from the v1 Cookbook.</div>
+                  </sc-if>
+                  <sc-for list="{{ cookResults }}" as="r" hint-placeholder-count="6">
+                    <div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;cursor:pointer" style-hover="background:var(--panel-2)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"></path></svg>
+                      <div style="min-width:0">
+                        <div style="font:500 12.5px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</div>
+                        <div style="font:400 11px var(--sans);color:var(--ink-dim)">{{ r.sub }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 12px 0">
+              <span onClick="{{ tpToggle }}" title="Select target environments" style="display:inline-flex;align-items:center;gap:6px;font:500 12px var(--mono);color:{{ termTargetFg }};cursor:pointer;border:1px solid var(--rule);border-radius:99px;padding:3px 10px 3px 7px" style-hover="border-color:var(--brand)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
+                <span>{{ termTargetLabel }}</span>
+              </span>
+            </div>
+            <div style="display:flex;gap:9px;align-items:flex-start;padding:7px 12px 10px">
+              <span style="font:500 13px var(--mono);color:var(--brand-ink);padding-top:4px">$</span>
+              <textarea ref="{{ termRef }}" onInput="{{ onTermCmd }}" rows="1" placeholder="wp option get home" spellcheck="false" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 13px/1.5 var(--mono);resize:none;padding:4px 0;max-height:160px;overflow-y:auto"></textarea>
+              <span onClick="{{ cookToggle }}" title="Cookbook recipes" style="cursor:pointer;color:var(--ink-dim);width:28px;height:28px;display:grid;place-items:center;border-radius:7px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+              </span>
+              <span onClick="{{ termRun }}" style="font:500 11.5px var(--mono);color:{{ termRunFg }};background:{{ termRunBg }};cursor:pointer;white-space:nowrap;border:1px solid var(--rule);border-radius:7px;padding:5px 10px;flex:none" style-hover="border-color:var(--brand)">Run ⌘⏎</span>
+            </div>
           </div>
         </div>
       </div>
