@@ -2271,6 +2271,31 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
     </div>
   </sc-if>
 
+  <!-- ══ Add card dialog (Stripe Elements) ══ -->
+  <sc-if value="{{ cardDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAddCard }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Add card</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeAddCard }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <div id="cc-card-element" style="border:1px solid var(--rule);border-radius:8px;padding:12px;background:var(--paper);min-height:44px"></div>
+          <sc-if value="{{ cardErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12px var(--sans);color:var(--bad)">{{ cardErr }}</span>
+          </sc-if>
+          <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">Secured by Stripe. Test mode uses card 4242 4242 4242 4242.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeAddCard }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add card</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Recipe editor dialog ══ -->
   <sc-if value="{{ recipeDlgOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeRecipeDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">

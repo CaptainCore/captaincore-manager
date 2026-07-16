@@ -22,6 +22,46 @@ Object.assign(Component.prototype, {
     }).catch(() => { this._billingLoading = false; this._billing = { error: 'Could not load billing.' }; this.setState({}); });
   },
 
+  // ── Add card via Stripe Elements ─────────────────────────────
+  openAddCard() {
+    const boot = window.CC_BOOT || {};
+    if (!boot.stripeKey || !window.Stripe) { if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl; return; }
+    this.setState({ cardDlgOpen: true, cardErr: '', cardSaving: false });
+    // Mount after the dialog paints.
+    setTimeout(() => {
+      try {
+        if (!this._stripe) this._stripe = window.Stripe(boot.stripeKey);
+        const mount = document.getElementById('cc-card-element');
+        if (!mount) return;
+        if (this._cardEl) { try { this._cardEl.unmount(); } catch (e) {} }
+        this._cardElements = this._stripe.elements();
+        this._cardEl = this._cardElements.create('card', { hidePostalCode: false });
+        this._cardEl.mount(mount);
+        this._cardEl.on('change', ev => { if (ev.error) this.setState({ cardErr: ev.error.message }); else if (this.state.cardErr) this.setState({ cardErr: '' }); });
+      } catch (e) { this.setState({ cardErr: 'Could not load the card form.' }); }
+    }, 60);
+  },
+
+  closeAddCard() {
+    if (this._cardEl) { try { this._cardEl.unmount(); } catch (e) {} this._cardEl = null; }
+    this.setState({ cardDlgOpen: false, cardSaving: false, cardErr: '' });
+  },
+
+  submitCard() {
+    if (!this._stripe || !this._cardEl || this.state.cardSaving) return;
+    this.setState({ cardSaving: true, cardErr: '' });
+    const tid = this.toast('Adding card…', { kind: 'loading' });
+    this._stripe.createSource(this._cardEl, { type: 'card' }).then(result => {
+      if (result.error) { this.setState({ cardSaving: false, cardErr: result.error.message }); this.dismissToast(tid); return; }
+      this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } }).then(res => {
+        if (res && res.error) { this.setState({ cardSaving: false, cardErr: res.error }); this.updateToast(tid, 'Card declined', { kind: 'error' }); return; }
+        this.closeAddCard();
+        this.updateToast(tid, 'Card added', { kind: 'success' });
+        this.loadBilling(true);
+      }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not save the card.' }); this.updateToast(tid, 'Could not save the card', { kind: 'error' }); });
+    }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not process the card.' }); this.dismissToast(tid); });
+  },
+
   downloadInvoicePdf(orderId) {
     const boot = window.CC_BOOT || {};
     fetch(boot.restRoot + 'captaincore/v1/invoices/' + orderId + '/pdf', { headers: { 'X-WP-Nonce': boot.nonce } })
@@ -80,8 +120,16 @@ Object.assign(Component.prototype, {
     ];
     return {
       invoices, payMethods,
-      billShowAdd: !!boot.addPaymentUrl,
-      addPaymentMethod: () => { if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl; },
+      billShowAdd: !!(boot.stripeKey || boot.addPaymentUrl),
+      addPaymentMethod: () => {
+        // Prefer in-SPA Stripe Elements; fall back to the WC page if the
+        // library or key isn't available.
+        if (boot.stripeKey && window.Stripe) { this.openAddCard(); return; }
+        if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl;
+      },
+      cardDlgOpen: !!s.cardDlgOpen, cardErr: s.cardErr || '', cardSaving: !!s.cardSaving,
+      closeAddCard: () => this.closeAddCard(),
+      submitCard: () => this.submitCard(),
       billNotice: !!noticeText, billNoticeText: noticeText,
       addrL1: [[a.first_name, a.last_name].filter(Boolean).join(' '), a.company].filter(Boolean).join(' · ') || '—',
       addrL2: [a.address_1, a.address_2].filter(Boolean).join(', '),
