@@ -38,6 +38,7 @@ class Component extends DCLogic {
     recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
     defDlgOpen: false, defEmail: '', defTimezone: '',
+    provDlgOpen: false, provEditId: null, provName: '', provType: '', provCreds: [],
     schedEditOpen: false, schedEditId: null, schedEditInt: 'Monthly', schedEditEmail: '',
     transferOpen: false, transferPick: null, toasts: [],
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
@@ -640,6 +641,10 @@ class Component extends DCLogic {
       procDlgOpen: false, procDlgName: '', procDlgBody: '', closeProcDlg: () => {},
       defDlgOpen: false, defEmail: '', defTimezone: '', onDefEmail: () => {}, onDefTimezone: () => {},
       openDefaults: () => {}, closeDefaults: () => {}, saveDefaults: () => {},
+      provShowAdd: false, addProvider: () => {}, provDlgOpen: false, provDlgEditing: false, provDlgTitle: 'Add provider',
+      provName: '', onProvName: () => {}, provTypeLabel: 'Select type…', provTypeOpen: false, toggleProvType: () => {},
+      closeProvType: () => {}, provTypeOpts: [], provCredRows: [], addProvCred: () => {}, closeProvider: () => {},
+      saveProvider: () => {}, deleteProvider: () => {},
       ...(this._hydrated ? this.realSettingsVals(s) : {})
     };
   }

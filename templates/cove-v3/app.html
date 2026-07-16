@@ -1670,13 +1670,19 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
 
           <sc-if value="{{ setTabProv }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
+            <sc-if value="{{ provShowAdd }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;margin-top:16px"><div style="flex:1"></div><button onClick="{{ addProvider }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add provider</button></div>
+            </sc-if>
+            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ provRows }}" as="p" hint-placeholder-count="5">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule)">
                   <span style="font:500 13.5px var(--sans);width:130px">{{ p.name }}</span>
                   <span style="display:flex;align-items:center;gap:6px;font:400 12.5px var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }}"></span>{{ p.sub }}</span>
                   <div style="flex:1"></div>
                   <span onClick="{{ p.verify }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">{{ p.action }}</span>
+                  <sc-if value="{{ p.editable }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ p.edit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
+                  </sc-if>
                   <sc-if value="{{ p.canImport }}" hint-placeholder-val="{{ false }}">
                     <span onClick="{{ p.doImport }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Import sites…</span>
                   </sc-if>
@@ -2322,6 +2328,54 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Provider add/edit dialog ══ -->
+  <sc-if value="{{ provDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeProvider }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper);z-index:1">
+          <span style="font:600 15px var(--sans)">{{ provDlgTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeProvider }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:80px;font:500 12.5px var(--sans);color:var(--ink-dim)">Name</span><input value="{{ provName }}" onInput="{{ onProvName }}" placeholder="My Kinsta account" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:80px;font:500 12.5px var(--sans);color:var(--ink-dim)">Type</span>
+            <div style="position:relative;flex:1">
+              <div onClick="{{ toggleProvType }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);flex:1">{{ provTypeLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <sc-if value="{{ provTypeOpen }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ closeProvType }}" style="position:fixed;inset:0;z-index:39"></div>
+                <div style="position:absolute;top:36px;left:0;z-index:40;width:100%;max-height:240px;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <sc-for list="{{ provTypeOpts }}" as="o" hint-placeholder-count="6">
+                    <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 12.5px var(--sans)">{{ o.label }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--rule);padding-top:10px;margin-top:2px">
+            <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:8px">Credentials</div>
+            <sc-for list="{{ provCredRows }}" as="c" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+                <input value="{{ c.name }}" onInput="{{ c.onName }}" placeholder="key" style="width:150px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 9px;outline:none">
+                <input value="{{ c.value }}" onInput="{{ c.onValue }}" placeholder="value" style="flex:1;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 9px;outline:none">
+                <span onClick="{{ c.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 13px var(--sans)" style-hover="color:var(--bad)">✕</span>
+              </div>
+            </sc-for>
+            <span onClick="{{ addProvCred }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">+ Add credential</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);position:sticky;bottom:0;background:var(--paper)">
+          <sc-if value="{{ provDlgEditing }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ deleteProvider }}" style="font:500 12.5px var(--sans);color:var(--bad);cursor:pointer">Delete</span>
+          </sc-if>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeProvider }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveProvider }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save provider</button>
         </div>
       </div>
     </div>
