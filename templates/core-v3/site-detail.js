@@ -110,7 +110,8 @@ Object.assign(Component.prototype, {
     const target = direction === 'up' ? prod : stag;
     const name = (real.site && real.site.name) || '';
     // Push is a provider operation (202 + operation_id), not a token job —
-    // resolve the dock entry from the REST response instead of a socket.
+    // the dock entry is resolved by polling /provider-actions/check until the
+    // registered action leaves the active list (v1: checkProviderActions).
     const jobId = this.startJob({
       label: 'deploy', target: source.environment.toLowerCase() + ' → ' + target.environment.toLowerCase() + ' on ' + name,
       command: 'push', siteId: real.siteId
@@ -119,10 +120,133 @@ Object.assign(Component.prototype, {
     this.api('/sites/environments/push', { method: 'POST',
       body: { source_environment_id: source.environment_id, target_environment_id: target.environment_id } })
       .then(res => {
+        if (res && res.code) { job.stream.push('Error: ' + (res.message || res.code)); this.finishJob(job, 'error'); return; }
         job.stream.push((res && res.message) || 'Push requested.');
-        this.finishJob(job, 'done');
+        // provider-actions is admin-gated (role_check) — customers keep the
+        // fire-and-forget behavior.
+        if (res && res.operation_id && (window.CC_BOOT || {}).dcRole === 'operator') {
+          job.stream.push('Tracking provider operation ' + res.operation_id + '…');
+          this.trackProviderOp(job, res.operation_id, real.siteId);
+        } else {
+          this.finishJob(job, 'done');
+        }
       })
       .catch(err => { job.stream.push('Error: ' + (err && err.message || err)); this.finishJob(job, 'error'); });
+  },
+
+  // Poll /provider-actions/check every 10s until the action registered for
+  // operationId is no longer active (started/waiting). "waiting" actions get
+  // their follow-up step run via /provider-actions/{id}/run — that is what
+  // flips a finished operation to done (v1: runProviderActions).
+  trackProviderOp(job, operationId, siteId, attempts) {
+    attempts = attempts || 0;
+    if (attempts > 90) { // ~15 min safety cap
+      job.stream.push('Stopped tracking — the operation is taking unusually long. Check the provider dashboard.');
+      this.finishJob(job, 'done');
+      return;
+    }
+    setTimeout(() => {
+      this.api('/provider-actions/check').then(list => {
+        const actions = Array.isArray(list) ? list : [];
+        actions.forEach(a => {
+          if (a.status === 'waiting') this.api('/provider-actions/' + a.provider_action_id + '/run').catch(() => {});
+        });
+        const mine = actions.find(a => String(a.provider_key) === String(operationId));
+        if (!mine) {
+          job.stream.push('Provider reports the operation finished.');
+          this.finishJob(job, 'done');
+          // Environments changed on the target — refresh the open detail.
+          if (this._detail && this._detail.siteId === siteId) { this._detail = null; this.loadSiteDetail(siteId); }
+          return;
+        }
+        this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 10) + 6) }));
+        this.trackProviderOp(job, operationId, siteId, attempts + 1);
+      }).catch(() => {
+        // Poll failure (auth/network) — end gracefully rather than spin.
+        job.stream.push('Could not poll operation status; assuming it completes in the background.');
+        this.finishJob(job, 'done');
+      });
+    }, attempts === 0 ? 8000 : 10000);
+  },
+
+  // ── phpMyAdmin (Kinsta / Rocket.net only) ─────────────────────
+  realPhpMyAdmin(real, s) {
+    const tid = this.toast('Opening phpMyAdmin…', { kind: 'loading' });
+    this.api('/sites/' + real.siteId + '/' + s.env.toLowerCase() + '/phpmyadmin').then(url => {
+      if (typeof url === 'string' && url.indexOf('http') === 0) {
+        window.open(url.trim());
+        this.updateToast(tid, 'phpMyAdmin opened', { kind: 'success' });
+      } else {
+        this.updateToast(tid, 'phpMyAdmin not available', { kind: 'error' });
+      }
+    }).catch(() => this.updateToast(tid, 'phpMyAdmin not available', { kind: 'error' }));
+  },
+
+  // ── Share Access (v1 parity: invite-preview + invite) ─────────
+  openShareDialog() {
+    const real = this._detail;
+    if (!real) return;
+    this._sharePreview = null;
+    this.setState({ shareDlgOpen: true, shareEmail: (this.state.shareDraft || '').trim(), shareErr: '', shareSending: false, shareLoading: true });
+    this.api('/sites/' + real.siteId + '/invite-preview').then(p => {
+      if (!p || p.code) throw new Error((p && p.message) || 'preview failed');
+      this._sharePreview = p;
+      this.setState({ shareLoading: false });
+    }).catch(() => { this._sharePreview = null; this.setState({ shareLoading: false }); });
+  },
+
+  sendSiteInvite() {
+    const real = this._detail;
+    if (!real || this.state.shareSending) return;
+    const email = this.state.shareEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setState({ shareErr: 'Enter a valid email address.' }); return; }
+    this.setState({ shareSending: true, shareErr: '' });
+    this.api('/sites/' + real.siteId + '/invite', { method: 'POST', body: { email } }).then(res => {
+      if (res && res.code) { this.setState({ shareSending: false, shareErr: res.message || 'Error sending invite.' }); return; }
+      this.setState(st => ({ shareSending: false, shareDlgOpen: false, shareDraft: '',
+        shared: [...(st.shared || []), { uid: Date.now(), name: email, pending: true }] }));
+      this.toast((res && res.message) || 'Invitation sent', { kind: 'success' });
+    }).catch(() => this.setState({ shareSending: false, shareErr: 'Error sending invite.' }));
+  },
+
+  // Bindings for the Share Access dialog (spread into computeDetail's return).
+  computeShareDialog(real, s, site) {
+    const p = this._sharePreview;
+    const email = (s.shareEmail || '').trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const siteName = (real && real.site && real.site.name) || site.name;
+    let acctLead = '', acctSites = '', acctSitesList = '', acctDomains = '', simpleLine = '';
+    if (p && p.has_account_access) {
+      acctLead = 'Inviting ' + email + ' will grant them access to the account ' + (p.account_name || '') + '. This includes:';
+      const n = p.total_sites || 0;
+      acctSites = n + ' Website' + (n === 1 ? '' : 's') + ':';
+      acctSitesList = (p.sites_list || []).map(x => x.name).join(', ');
+      if (p.total_domains > 0) acctDomains = p.total_domains + ' Domain' + (p.total_domains === 1 ? '' : 's');
+    } else if (p) {
+      simpleLine = 'Inviting ' + email + ' will grant them access to ' + (p.site_name || siteName);
+      if (p.total_sites > 1) simpleLine += ' along with ' + (p.total_sites - 1) + ' other site' + (p.total_sites - 1 === 1 ? '' : 's');
+      if (p.total_domains > 0) simpleLine += ' and ' + p.total_domains + ' domain' + (p.total_domains === 1 ? '' : 's');
+      simpleLine += '.';
+    }
+    return {
+      shareDlgOpen: s.shareDlgOpen,
+      closeShareDlg: () => this.setState({ shareDlgOpen: false }),
+      shareDlgTitle: 'Invite a user to manage ' + siteName + '.',
+      shareEmail: s.shareEmail,
+      onShareEmail: e => this.setState({ shareEmail: e.target.value, shareErr: '' }),
+      shareKey: e => { if (e.key === 'Enter') this.sendSiteInvite(); },
+      shareLoadingB: s.shareLoading,
+      sharePreviewShow: !!(p && valid && !s.shareLoading),
+      shareIsAcct: !!(p && p.has_account_access), shareIsSimple: !!(p && !p.has_account_access),
+      shAcctLead: acctLead, shAcctSites: acctSites, shAcctSitesList: acctSitesList,
+      shAcctDomains: acctDomains, shHasAcctDomains: !!acctDomains,
+      shSimpleLine: simpleLine,
+      shareErr: s.shareErr, shareHasErr: !!s.shareErr,
+      shareSendLabel: s.shareSending ? 'Sending…' : 'Send invite',
+      shareCanSend: valid && !s.shareSending,
+      shareSendBg: valid && !s.shareSending ? 'var(--brand)' : 'var(--rule)',
+      shareSend: () => this.sendSiteInvite()
+    };
   },
 
   // ── Addons ────────────────────────────────────────────────────

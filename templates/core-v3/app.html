@@ -422,9 +422,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </sc-for>
                 </section>
                 <section style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Domains</h2><span style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Domains</h2><span onClick="{{ dGoDomains }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
                   <sc-for list="{{ dDomains }}" as="d" hint-placeholder-count="2">
-                    <div style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 13px var(--mono)">{{ d.name }}</div>
+                    <div onClick="{{ d.open }}" style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 13px var(--mono);cursor:pointer" style-hover="color:var(--brand-ink)">{{ d.name }}</div>
                   </sc-for>
                 </section>
                 <section style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
@@ -453,7 +453,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <h2 style="margin:0 0 2px;font:600 14px var(--sans)">Actions</h2>
                   <span onClick="{{ pushEnv }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Push staging → production</span>
                   <span onClick="{{ pullEnv }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Pull production → staging</span>
-                  <span style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Open phpMyAdmin</span>
+                  <sc-if value="{{ showPma }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ openPma }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Open phpMyAdmin</span>
+                  </sc-if>
                   <span style="font:500 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px">Delete site…</span>
                 </section>
               </div>
@@ -2875,6 +2877,49 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </div>
           </div>
         </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Share Access dialog ══ -->
+  <sc-if value="{{ shareDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeShareDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:14vh">
+      <div onClick="{{ stopProp }}" style="width:520px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Share Access</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeShareDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:400 13px var(--sans);color:var(--ink)">{{ shareDlgTitle }}</span>
+          <input value="{{ shareEmail }}" onInput="{{ onShareEmail }}" onKeyDown="{{ shareKey }}" placeholder="Email address" style="height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
+          <sc-if value="{{ shareLoadingB }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Loading share details…</span>
+          </sc-if>
+          <sc-if value="{{ sharePreviewShow }}" hint-placeholder-val="{{ false }}">
+            <div style="border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+              <sc-if value="{{ shareIsAcct }}" hint-placeholder-val="{{ true }}">
+                <span style="font:400 12.5px/1.5 var(--sans);color:var(--ink)">{{ shAcctLead }}</span>
+                <span style="font:600 12.5px var(--sans);color:var(--brand-ink)">{{ shAcctSites }}</span>
+                <span style="font:400 12px/1.5 var(--sans);color:var(--ink-dim)">{{ shAcctSitesList }}</span>
+                <sc-if value="{{ shHasAcctDomains }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:600 12.5px var(--sans);color:var(--brand-ink)">{{ shAcctDomains }}</span>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ shareIsSimple }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 12.5px/1.5 var(--sans);color:var(--ink)">{{ shSimpleLine }}</span>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ shareHasErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12.5px var(--sans);color:var(--bad)">{{ shareErr }}</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeShareDlg }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ shareSend }}" style="border:none;background:{{ shareSendBg }};color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ shareSendLabel }}</button>
+        </div>
       </div>
     </div>
   </sc-if>

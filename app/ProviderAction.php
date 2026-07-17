@@ -17,7 +17,7 @@ class ProviderAction {
             $provider = Providers::get( $provider_action->provider_id );
             $action   = json_decode( $provider_action->action );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
-            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" ) {
+            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" || $action->command == "push_environment" ) {
                 if ( $action->command == "new-site" && ! empty( $action->intial_response->message ) && $action->intial_response->message == "Too many requests, please try again later." && empty( $provider_action->provider_key )) {
                     $site        = $action;
                     $user        = ( new \CaptainCore\User )->profile();
@@ -162,6 +162,19 @@ class ProviderAction {
                 ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
                 return self::active();
             }
+        }
+
+        if ( $current_action->command == "push_environment" ) {
+            $action = [
+                'action'     => json_encode ( $current_action ),
+                'updated_at' => $time_now,
+                'status'     => "done",
+            ];
+            ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+            $site      = ! empty( $current_action->source_site_id ) ? ( new Sites )->get( $current_action->source_site_id ) : null;
+            $site_name = $site->name ?? '';
+            ActivityLog::log( 'deployed', 'environment', $current_action->source_site_id ?? null, $site_name, $current_action->message ?? "Pushed environment for {$site_name}", [], $site->customer_id ?? null );
+            return self::active();
         }
 
         if ( $current_action->command == "deploy-to-production" ) {

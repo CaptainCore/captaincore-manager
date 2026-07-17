@@ -82,7 +82,7 @@ Object.assign(Component.prototype, {
 
   JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave',
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
-    'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback' },
+    'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy' },
 
   finishJob(job, state) {
     this.patchJob(job.id, { state, pct: 100, right: state === 'done' ? 'just now' : 'error' });
