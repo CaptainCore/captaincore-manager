@@ -1189,7 +1189,8 @@ class Component extends DCLogic {
       fg: s.logFile === f ? 'var(--brand-ink)' : 'var(--ink-dim)',
       bd: s.logFile === f ? 'var(--brand)' : 'transparent',
       go: () => real ? this.pickLogFile(f) : this.setState({ logFile: f }) }));
-    const logLines = real ? this.realLogLines(real, s) : (this.LOGS[s.logFile] || []).map(text => ({ text }));
+    const logLines = (real ? this.realLogLines(real, s) : (this.LOGS[s.logFile] || []).map(text => ({ text })))
+      .map((l, i) => ({ ...l, segs: this.logSegments(l.text || ''), n: l.ph ? '' : String(i + 1) }));
     return {
       dName: site.name,
       dMeta: site.provider + ' · ' + site.account + ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,

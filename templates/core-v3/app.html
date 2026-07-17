@@ -778,7 +778,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               </div>
               <div style="flex:1;min-width:0;border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:14px 16px;max-height:520px;overflow-y:auto">
                 <sc-for list="{{ logLines }}" as="l" hint-placeholder-count="5">
-                  <div style="font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all">{{ l.text }}</div>
+                  <div style="display:flex;align-items:flex-start"><span style="flex:none;width:40px;text-align:right;padding-right:12px;color:var(--ink-dim);opacity:.5;user-select:none;font:400 12.5px/1.8 var(--mono)">{{ l.n }}</span><span style="flex:1;min-width:0;font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all"><sc-for list="{{ l.segs }}" as="g"><span style="color:{{ g.fg }};font-weight:{{ g.w }}">{{ g.t }}</span></sc-for></span></div>
                 </sc-for>
               </div>
             </div>
