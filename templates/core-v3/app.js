@@ -1362,6 +1362,11 @@ class Component extends DCLogic {
       logMeta: real ? (real.logsLoading ? 'Loading…' : logLines.length + ' lines') : logLines.length + ' lines · last 24h',
       tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+        // Raw-HTML escape hatch: the DC runtime has no innerHTML binding, so
+        // the row's ref injects the server-rendered markdown (or escaped text).
+        mdRef: (el) => { if (!el) return;
+          const want = t.html || String(t.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          if (el._md !== want) { el._md = want; el.innerHTML = want; } },
         editing: s.tlEdit === t.uid, notEditing: s.tlEdit !== t.uid,
         startEdit: () => this.setState({ tlEdit: t.uid, tlEditText: t.text }),
         doneEdit: () => { if (real) { const v = this.state.tlEditText.trim(); if (v && v !== t.text) this.realTimelineEdit(real, t, v); this.setState({ tlEdit: 0 }); return; }

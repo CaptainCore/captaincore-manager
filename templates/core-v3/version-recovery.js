@@ -393,6 +393,10 @@ Object.assign(Component.prototype, {
             || (r.description ? String(r.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '')
             || (r.name ? String(r.name) : '')
             || (Array.isArray(r.files) && r.files.length ? r.files.length + ' file change(s)' : ''),
+          // description arrives server-rendered (Parsedown markdown → HTML,
+          // same data v1 trusts with v-html); text above stays the raw
+          // markdown for the edit flow.
+          html: (r.description && String(r.description).trim()) || '',
           who: r.author || 'System',
           when: this.fmtEpoch(r.created_at),
           _raw: r

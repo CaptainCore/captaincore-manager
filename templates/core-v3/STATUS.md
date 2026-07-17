@@ -388,3 +388,8 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   dates, error/warn/notice severities, quoted strings, IPs, paths) rendered as
   nested sc-for spans; dim right-aligned line-number gutter (placeholder rows
   flagged `ph` and left unnumbered).
+- **Timeline markdown**: rows render the server-side Parsedown HTML
+  (`description`; same data v1 trusts with v-html) through a `ref`-injected
+  innerHTML span (`.cc-md` styles in the head) — the DC runtime has no raw-HTML
+  binding, so the ref is the escape hatch. `description_raw` stays the edit
+  source; rows without HTML fall back to escaped text.
