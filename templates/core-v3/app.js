@@ -47,6 +47,7 @@ class Component extends DCLogic {
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     aaOpen: false, aaTab: 'upload', aaQ: '', aaEQ: '', aaDrag: false,
+    shareDlgOpen: false, shareEmail: '', shareErr: '', shareSending: false, shareLoading: false,
     jobs: window.CC_BOOT ? [] : [
       { id: 1, label: 'update-wp', target: '3 sites · steer queue', state: 'running', pct: 64 },
       { id: 2, label: 'backup', target: 'cascadecoffeeroasters.com', state: 'running', pct: 31 },
@@ -1250,18 +1251,33 @@ class Component extends DCLogic {
         bg: i === 13 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' })),
       ...(real ? this.realStatVals(s, site) : (window.CC_BOOT ? this.emptyStatVals() : { statsNotice: false, statsNoticeText: '' })),
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
-      dDomains: (real && real.domains ? real.domains.map(d => (d && d.name) || String(d)) : [site.name, 'www.' + site.name]).map(name => ({ name })),
-      sharedRows: (s.shared || this.SHARED_INIT).map(sh => ({ ...sh,
-        sub: sh.pending ? 'invite sent — pending' : sh.people + (sh.people === 1 ? ' person' : ' people'),
+      dDomains: (real && real.domains
+        ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))
+        : [site.name, 'www.' + site.name].map(name => ({ name, did: '' })))
+        .map(d => ({ ...d, open: () => { if (d.did) this.openDomain(d.did); } })),
+      dGoDomains: () => this.setState({ route: 'domains' }),
+      sharedRows: (real && real.sharedWith
+        ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: a.name, accId: String(a.account_id),
+            owner: real.site && String(real.site.customer_id) === String(a.account_id),
+            level: real.site && String(real.site.customer_id) === String(a.account_id) ? 'Owner' : 'Shared' })),
+           ...(s.shared || [])]
+        : (s.shared || this.SHARED_INIT)).map(sh => ({ ...sh,
+        level: sh.level || (sh.pending ? 'Invited' : 'Shared'),
+        sub: sh.pending ? 'invite sent — pending' : (sh.people !== undefined ? sh.people + (sh.people === 1 ? ' person' : ' people') : 'account with access'),
         lvlBg: sh.owner ? 'var(--brand-soft)' : 'var(--panel-2)',
         lvlFg: sh.owner ? 'var(--brand-ink)' : 'var(--ink-dim)',
-        removable: !sh.owner,
+        removable: !sh.owner && !!sh.pending,
         open: () => { if (sh.accId) this.openAccount(sh.accId); },
-        remove: () => this.setState(st => ({ shared: (st.shared || this.SHARED_INIT).filter(x => x.uid !== sh.uid) })) })),
+        remove: () => this.setState(st => ({ shared: (st.shared || []).filter(x => x.uid !== sh.uid) })) })),
       shareDraft: s.shareDraft, onShareDraft: e => this.setState({ shareDraft: e.target.value }),
-      doShare: () => { const v = this.state.shareDraft.trim(); if (!v) return;
+      doShare: () => { if (real) { this.openShareDialog(); return; }
+        if (window.CC_BOOT) { this.toast('Site details still loading…', { kind: 'info' }); return; }
+        const v = this.state.shareDraft.trim(); if (!v) return;
         this.setState(st => ({ shared: [...(st.shared || this.SHARED_INIT), { uid: Date.now(), name: v, people: 0, level: 'Sites only', pending: true }], shareDraft: '' }));
         this.runJob('grant-access', v + ' → ' + site.name); },
+      ...this.computeShareDialog(real, s, site),
+      showPma: !!(real && real.site && ['kinsta', 'rocketdotnet'].includes(real.site.provider)) || (!real && !window.CC_BOOT),
+      openPma: () => { if (real) this.realPhpMyAdmin(real, s); },
       akpBg: s.addonKind === 'plugins' ? 'var(--brand-soft)' : 'var(--paper)', akpFg: s.addonKind === 'plugins' ? 'var(--brand-ink)' : 'var(--ink-dim)',
       aktBg: s.addonKind === 'themes' ? 'var(--brand-soft)' : 'var(--paper)', aktFg: s.addonKind === 'themes' ? 'var(--brand-ink)' : 'var(--ink-dim)',
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),

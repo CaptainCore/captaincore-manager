@@ -249,7 +249,7 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
-- **Site detail**: "Configure →" domains, "Open phpMyAdmin", "Delete site…".
+- **Site detail**: "Delete site…".
 - **Domains**: Mailgun "View all logs →" pager; Mailgun deploy-to-site (needs a
   site/env/from-name picker — real SMTP write).
 - **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
@@ -325,7 +325,30 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   `PREVIEWS.default` needed a `|| []` (was the one render crash). Route sweep
   (all 10 routes + cold site deep link) clean.
 
-## Recent commits
+### 2026-07-16 late round — site-detail gap fixes (verified live)
+- **Domains card**: "Configure →" routes to Domains; each listed domain opens its
+  domain detail (`/sites/{id}/details` domains carry `domain_id`).
+- **Shared with**: now real — rows from the detail bundle's `shared_with`
+  (Owner chip = `site.customer_id`); the Share button opens a v1-parity
+  **Share Access dialog** (`GET /sites/{id}/invite-preview` → account/sites/
+  domains preview box, `POST /sites/{id}/invite`). Fixes the old mock doShare
+  that faked a `grant-access` job in the dock. Gotcha found: the dialog's send
+  binding was first named `sendInvite`, which the Accounts slice also returns —
+  later spread in renderVals silently overrode it (no-op button). Renamed
+  `shareSend`. **Watch for binding-name collisions across compute slices.**
+- **Open phpMyAdmin**: `GET /sites/{id}/{env}/phpmyadmin` → signed URL popup
+  (Kinsta mysqleditor verified live on 2912). Shown only for kinsta/rocketdotnet.
+  Note: a site with empty `provider_site_id` in the local DB 400s (`not_kinsta_site`)
+  — data staleness, same in v1 (site 135 locally).
+- **Deploy tracking**: push/pull now stays a live dock job. Backend:
+  `app/ProviderAction.php` never handled `push_environment` actions (they sat
+  "started" forever, v1 included) — added it to `check()`'s Kinsta operations
+  poll and gave `run()` a completion handler (done + ActivityLog 'deployed').
+  Frontend: `trackProviderOp` polls `/provider-actions/check` every 10s
+  (operator-only — role_check gates it), runs "waiting" follow-ups
+  (v1 runProviderActions), finishes the job when the action leaves the active
+  list, then reloads the site detail. Verified live on 2912: pull
+  production→staging tracked ~3.5 min to "Deploy complete".
 - `89e4ed8` NEW: initial core-v3 template behind ?ui=v3
 - `d954536` IMPROVE: fork into maintainable source (templates/core-v3/)
 - `941ff15` NEW: site detail on real data + live terminal streaming
