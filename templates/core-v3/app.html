@@ -33,6 +33,14 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 @keyframes ccblink{0%,49%{opacity:1}50%,100%{opacity:0}}
 @keyframes ccfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes ccspin{to{transform:rotate(360deg)}}
+.cc-md p{margin:0 0 4px}.cc-md p:last-child{margin-bottom:0}
+.cc-md code{font:400 12px var(--mono);background:var(--panel-2);border-radius:4px;padding:1px 5px}
+.cc-md a{color:var(--brand-ink)}
+.cc-md ul,.cc-md ol{margin:4px 0;padding-left:18px}
+.cc-md pre{background:var(--panel-2);border-radius:8px;padding:8px 10px;overflow-x:auto;font:400 12px/1.6 var(--mono);margin:4px 0}
+.cc-md pre code{background:transparent;padding:0}
+.cc-md h1,.cc-md h2,.cc-md h3,.cc-md h4{font:600 14px var(--sans);margin:6px 0 4px}
+.cc-md blockquote{margin:4px 0;padding:2px 12px;border-left:3px solid var(--rule);color:var(--ink-dim)}
 </style>
 </helmet>
 <div style="height:100vh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -729,7 +737,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <div style="border-bottom:1px solid var(--rule)">
                   <sc-if value="{{ t.notEditing }}" hint-placeholder-val="{{ true }}">
                     <div style="display:flex;align-items:center;gap:12px;padding:11px 16px">
-                      <span style="flex:1;min-width:0;font:400 13.5px/1.5 var(--sans)">{{ t.text }}</span>
+                      <span ref="{{ t.mdRef }}" class="cc-md" style="flex:1;min-width:0;font:400 13.5px/1.5 var(--sans)"></span>
                       <span style="flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ t.who }}</span>
                       <span style="flex:none;font:400 12px var(--mono);color:var(--ink-dim)">{{ t.when }}</span>
                       <span onClick="{{ t.startEdit }}" style="flex:none;font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
