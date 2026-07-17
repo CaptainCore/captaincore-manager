@@ -729,7 +729,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 <div style="border-bottom:1px solid var(--rule)">
                   <sc-if value="{{ t.notEditing }}" hint-placeholder-val="{{ true }}">
                     <div style="display:flex;align-items:center;gap:12px;padding:11px 16px">
-                      <span style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);display:grid;place-items:center;font:600 10.5px var(--sans)">{{ t.init }}</span>
                       <span style="flex:1;min-width:0;font:400 13.5px/1.5 var(--sans)">{{ t.text }}</span>
                       <span style="flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ t.who }}</span>
                       <span style="flex:none;font:400 12px var(--mono);color:var(--ink-dim)">{{ t.when }}</span>
@@ -764,17 +763,24 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
 
           <sc-if value="{{ tabLogs }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
-              <sc-for list="{{ logChips }}" as="c" hint-placeholder-count="3">
-                <span onClick="{{ c.go }}" style="padding:5px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--mono);cursor:pointer">{{ c.label }}</span>
-              </sc-for>
+            <div style="display:flex;align-items:center;margin-top:16px">
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">Server log files for this environment.</span>
               <div style="flex:1"></div>
               <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ logMeta }}</span>
             </div>
-            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:14px 16px;max-height:420px;overflow-y:auto">
-              <sc-for list="{{ logLines }}" as="l" hint-placeholder-count="5">
-                <div style="font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all">{{ l.text }}</div>
-              </sc-for>
+            <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-start">
+              <div style="flex:none;width:232px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
+                <div style="max-height:520px;overflow-y:auto">
+                  <sc-for list="{{ logChips }}" as="c" hint-placeholder-count="6">
+                    <div onClick="{{ c.go }}" title="{{ c.label }}" style="padding:9px 12px;border-bottom:1px solid var(--rule);border-left:3px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--mono);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="color:var(--ink)">{{ c.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex:1;min-width:0;border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:14px 16px;max-height:520px;overflow-y:auto">
+                <sc-for list="{{ logLines }}" as="l" hint-placeholder-count="5">
+                  <div style="font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all">{{ l.text }}</div>
+                </sc-for>
+              </div>
             </div>
           </sc-if>
         </div>
