@@ -335,12 +335,46 @@ Object.assign(Component.prototype, {
     return bucket ? bucket.files : [];
   },
 
+  // Lightweight log-line highlighter — nginx/PHP-FPM/access-log flavored.
+  // Emits [{t, fg, w}] segments per line; no external libraries.
+  LOG_TOKEN_SRC: [
+    '(\\d{4}[\\/-]\\d{2}[\\/-]\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}(?:[.,]\\d+)?)',              // 1 timestamp
+    '(\\[\\d{2}\\/[A-Za-z]{3}\\/\\d{4}:\\d{2}:\\d{2}:\\d{2}[^\\]]*\\])',                  // 2 access-log timestamp
+    '(\\[(?:error|crit|alert|emerg)\\]|PHP (?:Fatal error|Parse error)|Uncaught (?:Error|Exception|TypeError)|Fatal error|Stack trace:)', // 3 error
+    '(\\[(?:warn|warning)\\]|PHP Warning|PHP Deprecated|Deprecated:)',                     // 4 warning
+    '(\\[(?:notice|info|debug)\\]|PHP Notice)',                                            // 5 notice
+    '("[^"]*")',                                                                           // 6 quoted string
+    '(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b|\\B::1\\b)',                         // 7 IP
+    '((?:\\/[\\w.@~-]+){2,})'                                                              // 8 path
+  ].join('|'),
+  LOG_TOKEN_STYLE: [null,
+    ['var(--brand-ink)', 400], ['var(--brand-ink)', 400],
+    ['var(--bad)', 600], ['var(--warn)', 600], ['var(--brand-ink)', 600],
+    ['var(--ok)', 400], ['var(--warn)', 400], ['var(--ink)', 400]],
+  logSegments(text) {
+    const re = this._logTokenRe = this._logTokenRe || new RegExp(this.LOG_TOKEN_SRC, 'g');
+    re.lastIndex = 0;
+    const segs = [];
+    let last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) segs.push({ t: text.slice(last, m.index), fg: 'inherit', w: 400 });
+      let g = 1;
+      while (m[g] === undefined) g++;
+      const st = this.LOG_TOKEN_STYLE[g];
+      segs.push({ t: m[0], fg: st[0], w: st[1] });
+      last = m.index + m[0].length;
+      if (m[0].length === 0) re.lastIndex++; // safety
+    }
+    if (last < text.length) segs.push({ t: text.slice(last), fg: 'inherit', w: 400 });
+    return segs.length ? segs : [{ t: text, fg: 'inherit', w: 400 }];
+  },
+
   realLogLines(real, s) {
     const bucket = real.logs[s.env.toLowerCase()];
-    if (!bucket) return [{ text: real.logsLoading ? 'Loading log list…' : 'Open this tab to load logs.' }];
+    if (!bucket) return [{ text: real.logsLoading ? 'Loading log list…' : 'Open this tab to load logs.', ph: true }];
     const content = bucket.content[s.logFile];
-    if (content === null) return [{ text: 'Loading ' + s.logFile + '…' }];
-    if (content === undefined) return [{ text: bucket.files.length ? 'Select a log file.' : 'No log files found.' }];
+    if (content === null) return [{ text: 'Loading ' + s.logFile + '…', ph: true }];
+    if (content === undefined) return [{ text: bucket.files.length ? 'Select a log file.' : 'No log files found.', ph: true }];
     return content.split('\n').slice(-1000).map(text => ({ text }));
   }
 

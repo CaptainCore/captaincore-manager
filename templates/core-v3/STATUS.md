@@ -383,3 +383,8 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   the initial `qsDialog: ''` / `bkDialog: ''` state. Dialog gates now require a
   non-empty selection (`s.qsDialog ? find(...) : null`). Pattern to keep:
   never let placeholder rows share the "closed" sentinel value.
+- **Logs highlighting + line numbers**: `logSegments()` in site-detail.js — a
+  dependency-free tokenizer (one alternation regex: timestamps, access-log
+  dates, error/warn/notice severities, quoted strings, IPs, paths) rendered as
+  nested sc-for spans; dim right-aligned line-number gutter (placeholder rows
+  flagged `ph` and left unnumbered).
