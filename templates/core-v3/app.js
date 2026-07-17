@@ -1124,7 +1124,9 @@ class Component extends DCLogic {
       kindBg: qk.kind === 'Update' ? 'var(--warn-soft)' : qk.kind === 'Manual' ? 'var(--brand-soft)' : 'var(--panel-2)',
       openD: () => { this.setState({ qsDialog: qk.hash, qsView: 'components', qsFile: '' }); if (real && qk.hash) this.loadQuicksaveDetail(qk.hash); },
       doRollback: () => real ? this.realRollbackAll(real, qk.hash) : this.runJob('rollback', site.name + ' → ' + qk.hash) }));
-    const dlgQk = qsSrc.find(q => q.hash === s.qsDialog);
+    // Guard on a non-empty selection: the loading-placeholder rows carry
+    // hash/id '' which would match the initial '' state and ghost the dialog.
+    const dlgQk = s.qsDialog ? qsSrc.find(q => q.hash === s.qsDialog) : null;
     const stMap = { A: ['var(--ok-soft)', 'var(--ok)'], M: ['var(--warn-soft)', 'var(--ink)'], D: ['var(--bad-soft)', 'var(--bad)'] };
     const dlgFiles = qsFiles.map(f => { const stC = stMap[f.st] || ['var(--panel-2)', 'var(--ink-dim)'];
       return { ...f, addN: f.add === '' ? '' : '+' + f.add, delN: f.del === '' ? '' : '−' + f.del,
@@ -1142,14 +1144,14 @@ class Component extends DCLogic {
       canView: !!c.viewFile,
       viewChanges: () => this.setState({ qsFile: c.viewFile, qsView: 'diff' }),
       rollback: () => this.setState({ rbComp: c.name }) });
-    const dlgIdx = qsSrc.findIndex(q => q.hash === s.qsDialog);
+    const dlgIdx = s.qsDialog ? qsSrc.findIndex(q => q.hash === s.qsDialog) : -1;
     const prevQk = dlgIdx >= 0 ? qsSrc[dlgIdx + 1] : null;
     const bkSrc = real ? (real.backups === null ? [{ id: '', idShort: '', when: 'Loading backups…', size: '', files: '' }] : (real.backups || [])) : this.BACKUPS;
     const backups = bkSrc.map(b => ({ ...b,
       id: b.idShort || b.id,
       openB: () => { this.setState({ bkDialog: b.id, bkSel: {}, bkPreview: '' }); if (real && b.id) this.loadBackupTree(b.id); },
       doRestore: () => real ? this.realBackupRestore(real, { ...s, bkDialog: b.id }) : this.runJob('restore', b.id + ' on ' + site.name) }));
-    const bkDlg = bkSrc.find(b => b.id === s.bkDialog);
+    const bkDlg = s.bkDialog ? bkSrc.find(b => b.id === s.bkDialog) : null;
     const bkTreeSrc = real ? this.realBkTree(real, s) : this.BK_TREE;
     const flatAll = [];
     const flattenAll = nodes => nodes.forEach(n => { flatAll.push(n); if (n.children) flattenAll(n.children); });
@@ -1183,9 +1185,9 @@ class Component extends DCLogic {
       init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
       magic: () => this.runJob('magiclogin', u.e.replace('SITE', site.name)) }));
     const logChips = (real ? this.realLogFiles(real, s) : ['error.log', 'access.log', 'debug.log']).map(f => ({ label: f.split('/').pop(),
-      bg: s.logFile === f ? 'var(--brand-soft)' : 'var(--paper)',
+      bg: s.logFile === f ? 'var(--brand-soft)' : 'transparent',
       fg: s.logFile === f ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      bd: s.logFile === f ? 'var(--brand)' : 'var(--rule)',
+      bd: s.logFile === f ? 'var(--brand)' : 'transparent',
       go: () => real ? this.pickLogFile(f) : this.setState({ logFile: f }) }));
     const logLines = real ? this.realLogLines(real, s) : (this.LOGS[s.logFile] || []).map(text => ({ text }));
     return {

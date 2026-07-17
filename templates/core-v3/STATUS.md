@@ -372,3 +372,14 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
 - `f96279f` NEW: wire up UI gaps — billing edit, payment methods, new account, recipes
 - `26a66f4` NEW: Settings — editable brand colors + site-defaults dialog
 - `ecb2246` NEW: Reports schedule edit + account transfer ownership
+
+### 2026-07-16 polish round
+- **Logs tab**: horizontal chip strip → vertical file list (232px left rail,
+  selected row gets brand accent + soft bg; full name in tooltip), log content
+  fills the right column.
+- **Timeline**: dropped the initials avatar per row (author name column stays).
+- **Ghost-dialog fix**: first click on Versions/Backups flashed the quicksave/
+  browse dialog — the loading-placeholder rows carry hash/id '' which matched
+  the initial `qsDialog: ''` / `bkDialog: ''` state. Dialog gates now require a
+  non-empty selection (`s.qsDialog ? find(...) : null`). Pattern to keep:
+  never let placeholder rows share the "closed" sentinel value.
