@@ -28,7 +28,15 @@ Object.assign(Component.prototype, {
     Promise.all([this.api('/sites/'), this.api('/accounts/'), this.api('/domains/')]).then(([sites, accounts, domains]) => {
       const accName = {}; (Array.isArray(accounts) ? accounts : []).forEach(a => { accName[a.account_id] = a.name; });
       this.LABEL_META = {};
+      // Raw fleet totals for the home "Fleet at a glance" card (the FLEET
+      // records store display-formatted strings, so accumulate here).
+      const totals = this._fleetTotals = { visits: 0, storage: 0, cores: {}, providers: {} };
       this.FLEET = (Array.isArray(sites) ? sites : []).filter(x => !x.removed).map(x => {
+        totals.visits += Number(x.visits) || 0;
+        totals.storage += parseInt(x.storage, 10) || 0;
+        if (x.core) totals.cores[x.core] = (totals.cores[x.core] || 0) + 1;
+        const provKey = (x.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase()) || 'Other';
+        totals.providers[provKey] = (totals.providers[provKey] || 0) + 1;
         (Array.isArray(x.labels) ? x.labels : []).forEach(l => {
           if (l && typeof l === 'object' && l.type && !this.LABEL_META[l.type]) {
             this.LABEL_META[l.type] = { color: l.color || 'grey', icon: l.icon || '' };
@@ -86,6 +94,27 @@ Object.assign(Component.prototype, {
 
   realStats(running) {
     return this.FLEET.length + ' sites \u00b7 ' + this.DOMAINS.length + ' domains \u00b7 ' + running + ' jobs running';
+  },
+
+  // Home "Fleet at a glance" rows \u2014 computed client-side from hydration totals.
+  realFleetGlance() {
+    const t = this._fleetTotals;
+    if (!t || !this.FLEET.length) return [];
+    // Dominant core version — "78% on 6.9.1" reads honestly; the newest
+    // version is usually a tiny early-adopter slice.
+    const mode = Object.entries(t.cores).sort((a, b) => b[1] - a[1])[0] || ['', 0];
+    const latest = mode[0];
+    const onLatest = latest ? Math.round(mode[1] / this.FLEET.length * 100) : 0;
+    const provs = Object.entries(t.providers).sort((a, b) => b[1] - a[1]);
+    const provLine = provs.slice(0, 2).map(([n, c]) => n + ' ' + c.toLocaleString()).join(' \u00b7 ')
+      + (provs.length > 2 ? ' \u00b7 +' + (provs.length - 2) + ' more' : '');
+    const visits = t.visits >= 1e6 ? (t.visits / 1e6).toFixed(1) + 'M' : t.visits >= 1e3 ? Math.round(t.visits / 1e3) + 'k' : String(t.visits);
+    return [
+      { k: 'WP core', v: onLatest + '% on ' + latest },
+      { k: 'Providers', v: provLine },
+      { k: 'Traffic', v: visits + ' visits/wk' },
+      { k: 'Storage', v: this.fmtStorage(t.storage) }
+    ];
   }
 
 });
