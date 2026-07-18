@@ -393,3 +393,13 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   innerHTML span (`.cc-md` styles in the head) — the DC runtime has no raw-HTML
   binding, so the ref is the escape hatch. `description_raw` stays the edit
   source; rows without HTML fall back to escaped text.
+- **Visual refresh (minimal round)**: new `--canvas` token — the page/app-shell
+  background is now a faintly brand-tinted gray (light `oklch(0.972 0.006 245)`,
+  dark `oklch(0.165 0.016 240)`) while cards stay `--paper`, giving real
+  figure/ground separation ("too white" fix). New `--acc-sites/domains/security/
+  billing/terminal/reports` accent tokens (dark variants brightened); home
+  launcher tiles color their icon chips per section via `l.acc` →
+  `chipBg/chipFg`. Mockup comparison page that drove the decision:
+  scratchpad `ui-mockups.html` (Current / Minimal / Full variants — hero band,
+  nautical illustrations, and table warmth from "Full" were deliberately NOT
+  applied; revisit later if wanted).
