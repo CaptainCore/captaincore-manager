@@ -403,3 +403,11 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   scratchpad `ui-mockups.html` (Current / Minimal / Full variants — hero band,
   nautical illustrations, and table warmth from "Full" were deliberately NOT
   applied; revisit later if wanted).
+- **Polish round (home)**: launcher grid minmax 210→200px so all five tiles fit
+  one row at the 1160px content width (no more orphaned Terminal tile);
+  skeleton shimmer (`.cc-skel` + `homeSkel` flag) replaces '…'/blank while
+  hydrating — greeting stats, tile metas, attention, activity, pinned all get
+  placeholder rows; new **Fleet at a glance** card fills the right column
+  (client-side from hydrate-time `_fleetTotals`: dominant-core share, provider
+  mix, total visits/wk, total storage — no new endpoint);
+  `font-variant-numeric:tabular-nums` on body. Hero band idea rejected.

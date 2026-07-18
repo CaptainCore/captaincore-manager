@@ -1547,7 +1547,11 @@ class Component extends DCLogic {
       // Per-section accent hue on the icon chip (falls back to brand blue).
       chipBg: l.acc ? 'color-mix(in srgb,var(--acc-' + l.acc + ') 13%,transparent)' : 'var(--brand-soft)',
       chipFg: l.acc ? 'var(--acc-' + l.acc + ')' : 'var(--brand-ink)',
+      // Shimmer instead of '…' while hydrating.
+      metaSkel: l.meta === '…', meta: l.meta === '…' ? '' : l.meta,
       go: l.act === 'dock' ? () => this.setState({ dockOpen: true }) : this.go(l.act) }));
+    // One flag drives the home skeleton placeholders (attention/activity/pinned).
+    const homeSkel = booted && !this._hydrated;
 
     const attention = (this._hydrated ? this.realAttention(isOp) : booted ? [] : isOp ? [
       { dot: 'var(--bad)', title: '2 plugin vulnerabilities across 5 sites', sub: 'gravityforms 2.9.1 (high) · woocommerce 9.8.2 (medium)', action: 'Review', act: 'security' },
@@ -1634,7 +1638,10 @@ class Component extends DCLogic {
     return {
       userName, userInitials: userName.slice(0, 2).toUpperCase(),
       greeting: `Good ${dayPart}, ${userName}`,
-      statsLine: this._hydrated ? this.realStats(jobs.filter(j => j.running).length) : booted ? 'Loading fleet…' : (isOp ? '128 sites · 94 domains · 2 jobs running · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
+      statsLine: this._hydrated ? this.realStats(jobs.filter(j => j.running).length) : booted ? '' : (isOp ? '128 sites · 94 domains · 2 jobs running · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
+      homeSkel, statsSkel: homeSkel,
+      fleetGlance: this._hydrated ? this.realFleetGlance() : [],
+      fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: [this.navItem('settings', 'Settings')],
       showOperate: isOp && variant !== 'topnav',
       showRail: variant !== 'topnav', showTopNav: variant === 'topnav',
