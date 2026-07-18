@@ -1532,18 +1532,22 @@ class Component extends DCLogic {
     // hydration lands, then real numbers. Samples remain for the DC editor.
     const booted = !!window.CC_BOOT;
     const launcher = (isOp ? [
-      { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '128'), icon: this.ICONS.sites, act: 'sites' },
-      { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains' },
-      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security' },
-      { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing' },
-      { label: 'Terminal', desc: 'Run commands across the fleet', meta: '⌃`', icon: this.ICONS.terminal, act: 'dock' }
+      { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '128'), icon: this.ICONS.sites, act: 'sites', acc: 'sites' },
+      { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
+      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
+      { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
+      { label: 'Terminal', desc: 'Run commands across the fleet', meta: '⌃`', icon: this.ICONS.terminal, act: 'dock', acc: 'terminal' }
     ] : [
-      { label: 'My sites', desc: 'Backups, updates, stats', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '4'), icon: this.ICONS.sites, act: 'sites' },
-      { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '6'), icon: this.ICONS.domains, act: 'domains' },
-      { label: 'Billing', desc: 'Invoices and payment methods', meta: booted ? '' : '1 due', icon: this.ICONS.billing, act: 'billing' },
-      { label: 'Reports', desc: 'Monthly maintenance summaries', meta: booted ? '' : 'June ready', icon: this.ICONS.reports, act: 'reports' },
-      { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts' }
-    ]).map(l => ({ ...l, go: l.act === 'dock' ? () => this.setState({ dockOpen: true }) : this.go(l.act) }));
+      { label: 'My sites', desc: 'Backups, updates, stats', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '4'), icon: this.ICONS.sites, act: 'sites', acc: 'sites' },
+      { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '6'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
+      { label: 'Billing', desc: 'Invoices and payment methods', meta: booted ? '' : '1 due', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
+      { label: 'Reports', desc: 'Monthly maintenance summaries', meta: booted ? '' : 'June ready', icon: this.ICONS.reports, act: 'reports', acc: 'reports' },
+      { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts', acc: 'terminal' }
+    ]).map(l => ({ ...l,
+      // Per-section accent hue on the icon chip (falls back to brand blue).
+      chipBg: l.acc ? 'color-mix(in srgb,var(--acc-' + l.acc + ') 13%,transparent)' : 'var(--brand-soft)',
+      chipFg: l.acc ? 'var(--acc-' + l.acc + ')' : 'var(--brand-ink)',
+      go: l.act === 'dock' ? () => this.setState({ dockOpen: true }) : this.go(l.act) }));
 
     const attention = (this._hydrated ? this.realAttention(isOp) : booted ? [] : isOp ? [
       { dot: 'var(--bad)', title: '2 plugin vulnerabilities across 5 sites', sub: 'gravityforms 2.9.1 (high) · woocommerce 9.8.2 (medium)', action: 'Review', act: 'security' },
