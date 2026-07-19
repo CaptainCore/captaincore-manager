@@ -749,7 +749,7 @@ class Component extends DCLogic {
         badge: label === 'Any' ? '' : (cntMap[label] || 0) + ' sites',
         mark: label === cur ? '✓' : '',
         bg: label === cur ? 'var(--brand-soft)' : 'transparent',
-        pick: () => this.setState({ [key]: label, ddOpen: '', ddQ: '', ...(extraReset || {}) }) }));
+        pick: () => this.setState({ [key]: label, ddOpen: '', ddQ: '', sitesPage: 1, ...(extraReset || {}) }) }));
     };
     const mkFacet = (id, base, cur, opts) => ({ id,
       label: inactive(cur) ? base : base + ' · ' + cur,
@@ -768,6 +768,12 @@ class Component extends DCLogic {
       bd: cur === label ? 'var(--brand)' : 'var(--rule)',
       go: () => this.setState({ [key]: label }) });
     const selIds = filtered.filter(x => s.sel[x.id]).map(x => x.id);
+    // Pagination — rendering thousands of rows makes every re-render (⌘K,
+    // theme toggle) janky. Slice to a page; clamp when filters shrink results.
+    const PAGE = 25;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
+    const pageNum = Math.min(Math.max(1, s.sitesPage || 1), totalPages);
+    const pageStart = (pageNum - 1) * PAGE;
     const SITE_COLS = [
       { label: 'Site', k: 'name', val: x => (x.name || '').toLowerCase() },
       { label: 'Environments', k: 'envs', val: x => (x.environmentsRaw && x.environmentsRaw.length) || String(x.envs || '').split('\u00b7').length },
@@ -775,7 +781,7 @@ class Component extends DCLogic {
       { label: 'Core', k: 'core', val: x => x.core || '' },
       { label: 'Visits / wk', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
     ];
-    const sorted = this.sortRows('sitesSort', SITE_COLS, filtered);
+    const sorted = this.sortRows('sitesSort', SITE_COLS, filtered).slice(pageStart, pageStart + PAGE);
     const thumbOf = (x, size) => {
       const ru = (window.CC_BOOT && window.CC_BOOT.remoteUploadUri) || '';
       if (!ru || !x.site) return '';
@@ -830,12 +836,20 @@ class Component extends DCLogic {
       sitesCount: filtered.length + ' sites · ' + envCount + ' environments',
       screenSub: s.route === 'sites' ? filtered.length + ' sites · ' + envCount + ' environments' : '',
       screenSubDisplay: s.route === 'sites' ? 'inline-block' : 'none',
-      q: s.q, onQ: (e) => this.setState({ q: e.target.value }),
+      q: s.q, onQ: (e) => this.setState({ q: e.target.value, sitesPage: 1 }),
+      sitesPageShow: totalPages > 1,
+      sitesPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' sites',
+      sitesPrevDisabled: pageNum <= 1,
+      sitesNextDisabled: pageNum >= totalPages,
+      sitesPrev: () => this.setState({ sitesPage: Math.max(1, pageNum - 1) }),
+      sitesNext: () => this.setState({ sitesPage: Math.min(totalPages, pageNum + 1) }),
+      sitesPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
+      sitesNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
       unassignedLabel: unassignedCnt + ' unassigned',
       unBg: s.fUnassigned ? 'var(--warn-soft)' : 'var(--paper)',
       unFg: s.fUnassigned ? 'var(--ink)' : 'var(--ink-dim)',
       unBd: s.fUnassigned ? 'var(--warn)' : 'var(--rule)',
-      unassignedToggle: () => this.setState(st => ({ fUnassigned: !st.fUnassigned })),
+      unassignedToggle: () => this.setState(st => ({ fUnassigned: !st.fUnassigned, sitesPage: 1 })),
       facets: [
         mkFacet('fProv', 'Provider', s.fProv, facetOpts(cntBy(x => x.provider), s.fProv, 'fProv')),
         mkFacet('fBackup', 'Backup', s.fBackup, facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup')),
@@ -982,10 +996,21 @@ class Component extends DCLogic {
       { label: 'DNS', k: 'dns', val: d => d.dns ? 1 : 0 }
     ];
     const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
+    // Pagination (same as Sites — thousands of rows janks every re-render).
+    const PAGE = 25;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
+    const pageNum = Math.min(Math.max(1, s.domPage || 1), totalPages);
+    const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
     return {
       domCount: filtered.length + ' domains',
+      domPageShow: totalPages > 1,
+      domPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' domains',
+      domPrev: () => this.setState({ domPage: Math.max(1, pageNum - 1) }),
+      domNext: () => this.setState({ domPage: Math.min(totalPages, pageNum + 1) }),
+      domPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
+      domNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
       ...(s.route === 'domains' ? { screenSub: filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
-      dq: s.dq, onDq: e => this.setState({ dq: e.target.value }),
+      dq: s.dq, onDq: e => this.setState({ dq: e.target.value, domPage: 1 }),
       openNewDomain: () => this.setState({ ndOpen: true }),
       closeNd: () => this.setState({ ndOpen: false }),
       ndOpen: s.ndOpen,
@@ -1017,7 +1042,7 @@ class Component extends DCLogic {
         this.setState(st => ({ domList: [{ id: 'd' + Date.now(), name: v, account: st.ndAcc, registrar: 'Hover', dns: st.ndZone, expires: 'Jul 2027', auto: true, owned: true }, ...(st.domList || this.DOMAINS)], ndOpen: false, ndName: '' }));
         this.runJob('domain-create', v + (this.state.ndZone ? ' + DNS zone' : '')); },
       domCols: this.mkSortCols('domSort', DOM_COLS),
-      domRows: filtered.map(d => ({ ...d,
+      domRows: pageRows.map(d => ({ ...d,
         dnsLabel: d.dns ? 'Active' : '—', dnsFg: d.dns ? 'var(--ok)' : 'var(--ink-dim)',
         expFg: d.warn ? 'var(--bad)' : 'var(--ink)',
         autoLabel: d.auto === null ? '—' : d.auto ? 'On' : 'Off',
