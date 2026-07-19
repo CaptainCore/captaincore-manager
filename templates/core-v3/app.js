@@ -1544,7 +1544,10 @@ class Component extends DCLogic {
   componentDidUpdate() {
     this.applyBrand();
     if (this._routerReady) this.syncUrl();
-    if (this._consoleEl) this._consoleEl.scrollTop = this._consoleEl.scrollHeight;
+    // Sticky-bottom like a real terminal: only follow output while the user
+    // is parked at the bottom; a manual scroll up releases the pin until they
+    // scroll back down (tracked by the consoleRef scroll listener).
+    if (this._consoleEl && this._consolePinned) this._consoleEl.scrollTop = this._consoleEl.scrollHeight;
     // Focus the command palette input the moment it opens (autofocus only
     // fires on first page load, not on dynamic mount).
     if (this.state.paletteOpen && !this._palWasOpen) {
@@ -1801,7 +1804,18 @@ class Component extends DCLogic {
       ...accountsVals, ...accountVals, ...billingVals,
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
       goProfile: this.go('profile'),
-      consoleRef: (el) => { this._consoleEl = el; if (el) el.scrollTop = el.scrollHeight; },
+      // Inline refs re-fire every render, so pin + listen only when the
+      // element actually changes (a fresh mount), never on re-renders.
+      consoleRef: (el) => {
+        if (el && el !== this._consoleEl) {
+          this._consolePinned = true;
+          el.scrollTop = el.scrollHeight;
+          el.addEventListener('scroll', () => {
+            this._consolePinned = el.scrollHeight - el.scrollTop - el.clientHeight < 12;
+          });
+        }
+        this._consoleEl = el;
+      },
       runningCount: jobs.filter(j => j.running).length,
       hasRunning: jobs.some(j => j.running),
       dockIdle: !jobs.some(j => j.running),
