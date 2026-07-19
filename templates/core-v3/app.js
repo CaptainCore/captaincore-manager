@@ -1780,6 +1780,7 @@ class Component extends DCLogic {
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
+      logoutUrl: (window.CC_BOOT && window.CC_BOOT.logoutUrl) || '#',
       showSwitchBack: !!(window.CC_BOOT && window.CC_BOOT.switchBackUrl),
       switchBackUrl: (window.CC_BOOT && window.CC_BOOT.switchBackUrl) || '#',
       switchBackLabel: (window.CC_BOOT && window.CC_BOOT.switchBackLabel) || 'Switch back',
@@ -1826,9 +1827,11 @@ class Component extends DCLogic {
       ...this.computeActivityPage(s),
       ...this.computeUsersPage(s),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
-      // The console prompt is a power tool — operators only. Customers see
-      // the same dock as a plain activity feed.
-      termShow: isOp,
+      // The console is available to everyone. The server scopes /run/code to
+      // sites the caller can access (captaincore_verify_permissions per env),
+      // so a customer can only ever run against their own sites — the target
+      // picker already only lists their FLEET.
+      termShow: true,
       paletteOpen: s.paletteOpen, palQuery: s.palQuery, palResults,
       themeIcon: (s.theme === 'dark')
         ? 'M12 4V2m0 20v-2M4 12H2m20 0h-2M5.6 5.6 4.2 4.2m15.6 15.6-1.4-1.4m0-12.8 1.4-1.4M4.2 19.8l1.4-1.4M12 7a5 5 0 100 10 5 5 0 000-10z'

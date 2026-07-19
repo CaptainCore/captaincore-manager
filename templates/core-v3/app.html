@@ -129,6 +129,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ showMinnAdmin }}" hint-placeholder-val="{{ false }}">
             <a href="{{ minnAdminUrl }}" target="_blank" rel="noopener" onClick="{{ stopProp }}" title="Minn Admin (opens in a new tab)" style="flex:none;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));color:#fff;display:grid;place-items:center;font:800 14px var(--sans);letter-spacing:-.5px;text-decoration:none;opacity:.85;transition:opacity .12s" style-hover="opacity:1">m</a>
           </sc-if>
+          <a href="{{ logoutUrl }}" onClick="{{ stopProp }}" title="Log out" style="flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>
+          </a>
         </div>
       </nav>
     </sc-if>
@@ -2136,7 +2139,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span style="display:inline-block;width:7px;height:14px;background:var(--brand);animation:ccblink 1.1s step-end infinite;vertical-align:text-bottom"></span>
             </sc-if>
           </div>
-          <!-- Developer terminal — operators only; customers get the activity feed without a console prompt -->
+          <!-- Terminal console — available to all; the server scopes /run/code to the caller's own sites -->
           <sc-if value="{{ termShow }}" hint-placeholder-val="{{ true }}">
           <div style="flex:none;border-top:1px solid var(--rule);position:relative">
             <sc-if value="{{ tpOpen }}" hint-placeholder-val="{{ false }}">
