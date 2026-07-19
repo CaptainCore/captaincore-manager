@@ -60,6 +60,13 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   redirect_to back into ?ui=v3. Dialog dropdowns must render IN-FLOW, not
   position:absolute — the dialog body scrolls, so absolute panels clip against
   it and collide with the footer (bit the account picker).
+- **Right-click context menus** (2026-07-19, Minn pattern): shared primitive in
+  app.js — `openCtxMenu(e, entries)` (viewport-clamped fixed menu + full-screen
+  click-catcher, state `ctxMenu`, closed by `go()` on route change) with entries
+  built FROM each row's own actions so menu and row can never drift (Minn rule).
+  Wired on Users, Sites (table + cards), Domains, Accounts, and home pinned-site
+  rows via `onContextMenu` (the DC runtime forwards React events fine). `ctxCopy`
+  = clipboard + toast. New list rows should add a `ctx` builder alongside `open`.
 - **Activity page** (`/activity` route, Operate nav group, 2026-07-19): full fleet
   event log from `GET /activity-logs?per_page=100` (self-scoped for customers),
   lazy-loaded on first visit via `computeActivityPage`/`loadActivityPage` in home.js.

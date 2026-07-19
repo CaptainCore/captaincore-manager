@@ -79,7 +79,12 @@ Object.assign(Component.prototype, {
       role: Array.isArray(u.roles) && u.roles.length ? u.roles[0] : '',
       switchUrl: u.switch_to_url || '#',
       switchDisplay: u.switch_to_url ? 'inline-flex' : 'none',
-      edit: () => this.openEditUser(u.user_id)
+      edit: () => this.openEditUser(u.user_id),
+      ctx: (e) => this.openCtxMenu(e, [
+        { label: 'Edit user', act: () => this.openEditUser(u.user_id) },
+        ...(u.switch_to_url ? [{ label: 'Access as ' + (u.name || u.username), act: () => { window.location.href = u.switch_to_url; } }] : []),
+        { label: 'Copy email', act: () => this.ctxCopy(u.email, 'email') }
+      ])
     }));
     const selected = s.udAccounts || [];
     const acq = (s.udAcq || '').toLowerCase();

@@ -4,7 +4,7 @@
 // this directory extend Component.prototype after this class definition.
 class Component extends DCLogic {
   state = {
-    route: 'home', theme: null, dockOpen: false, paletteOpen: false,
+    route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null,
     palQuery: '', palIdx: 0, tick: 0,
     view: 'table', q: '', fProv: 'Any', fHealth: 'All', sel: {},
     fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
@@ -306,7 +306,11 @@ class Component extends DCLogic {
       accRows: filtered.map(a => ({ ...a,
         billLabel: a.due ? 'Invoice due' : 'Current',
         billFg: a.due ? 'var(--warn)' : 'var(--ink-dim)',
-        open: () => this.openAccount(a.id) })),
+        open: () => this.openAccount(a.id),
+        ctx: (e) => this.openCtxMenu(e, [
+          { label: 'Open account', act: () => this.openAccount(a.id) },
+          { label: 'Copy account name', act: () => this.ctxCopy(a.name, 'account name') }
+        ]) })),
       naOpen: s.naOpen, naName: s.naName, naMsg: s.naMsg, naHasMsg: !!s.naMsg,
       openNewAccount: () => this.setState({ naOpen: true, naName: '', naMsg: '' }),
       closeNa: () => this.setState({ naOpen: false }),
@@ -761,6 +765,12 @@ class Component extends DCLogic {
       check: s.sel[x.id] ? '✓' : '', checkBg: s.sel[x.id] ? 'var(--brand)' : 'var(--paper)',
       toggle: (e) => { e.stopPropagation(); this.setState(st => ({ sel: { ...st.sel, [x.id]: !st.sel[x.id] } })); },
       open: () => this.openSite(x.id),
+      ctx: (e) => this.openCtxMenu(e, [
+        { label: 'Open site', act: () => this.openSite(x.id) },
+        { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
+        { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
+        { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
+      ]),
       openTerm: (e) => { e.stopPropagation(); this.setState({ dockOpen: true }); } }; });
     const envCount = filtered.reduce((n, x) => n + (x.envs.includes('Staging') ? 2 : 1), 0);
     const allSel = filtered.length > 0 && selIds.length === filtered.length;
@@ -950,7 +960,12 @@ class Component extends DCLogic {
         expFg: d.warn ? 'var(--bad)' : 'var(--ink)',
         autoLabel: d.auto === null ? '—' : d.auto ? 'On' : 'Off',
         autoFg: d.auto === false ? 'var(--warn)' : 'var(--ink-dim)',
-        open: () => this.openDomain(d.id) }))
+        open: () => this.openDomain(d.id),
+        ctx: (e) => this.openCtxMenu(e, [
+          { label: 'Open domain', act: () => this.openDomain(d.id) },
+          { label: 'Visit site ↗', act: () => window.open('https://' + d.name, '_blank') },
+          { label: 'Copy domain', act: () => this.ctxCopy(d.name, 'domain') }
+        ]) }))
     };
   }
 
@@ -1478,9 +1493,26 @@ class Component extends DCLogic {
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
+
+  // ── Context menus (Minn pattern) ── entries are built from each row's own
+  // actions so the menu can never drift from the row.
+  openCtxMenu(e, entries) {
+    e.preventDefault(); e.stopPropagation();
+    const w = 230, h = 10 + entries.length * 37;
+    this.setState({ ctxMenu: {
+      x: Math.max(8, Math.min(e.clientX, window.innerWidth - w - 12)),
+      y: Math.max(8, Math.min(e.clientY, window.innerHeight - h - 12)),
+      entries } });
+  }
+
+  closeCtxMenu() { if (this.state.ctxMenu) this.setState({ ctxMenu: null }); }
+
+  ctxCopy(text, label) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => this.toast('Copied ' + label + '.', { kind: 'success' })).catch(() => {});
+  }
   applyBrand() { document.documentElement.style.setProperty('--brand', (window.CC_BOOT && window.CC_BOOT.brandColor) || this.props.brandColor || '#3b82c4'); }
 
-  go(route) { return () => this.setState({ route, paletteOpen: false }); }
+  go(route) { return () => this.setState({ route, paletteOpen: false, ctxMenu: null }); }
 
   navItem(id, label, icon) {
     const active = this.state.route === id;
@@ -1603,7 +1635,12 @@ class Component extends DCLogic {
       { id: 'harbor', name: 'harborlightyoga.com', sub: '6.8.1 · backed up 6h ago', health: 'Updates pending', dot: 'var(--warn)' },
       { id: 'wildflower', name: 'thewildflowerpantry.com', sub: '6.8.1 · backed up 6h ago', health: 'Healthy', dot: 'var(--ok)' },
       { id: 'lakeside', name: 'lakesideinn.com', sub: '6.8.1 · backed up 6h ago', health: 'Healthy', dot: 'var(--ok)' }
-    ]).map(p => ({ ...p, mono: p.name.slice(0, 2).toUpperCase(), go: () => this.openSite(p.id) }));
+    ]).map(p => ({ ...p, mono: p.name.slice(0, 2).toUpperCase(), go: () => this.openSite(p.id),
+      ctx: (e) => this.openCtxMenu(e, [
+        { label: 'Open site', act: () => this.openSite(p.id) },
+        { label: 'Visit site ↗', act: () => window.open('https://' + p.name, '_blank') },
+        { label: 'Copy domain', act: () => this.ctxCopy(p.name, 'domain') }
+      ]) }));
 
     const listVals = this.computeList(s, isOp);
     const detailVals = this.computeDetail(s);
@@ -1695,6 +1732,14 @@ class Component extends DCLogic {
       toggleTheme: () => { const t = this.state.theme === 'dark' ? 'light' : 'dark'; this.setState({ theme: t }); this.applyTheme(t); localStorage.setItem('captaincore-theme', t); },
       toasts: this.toastVals(),
       goHome: this.go('home'), goSites: this.go('sites'), goActivity: this.go('activity'),
+      ctxOpen: !!s.ctxMenu,
+      ctxX: s.ctxMenu ? s.ctxMenu.x + 'px' : '0px',
+      ctxY: s.ctxMenu ? s.ctxMenu.y + 'px' : '0px',
+      ctxEntries: (s.ctxMenu ? s.ctxMenu.entries : []).map(en => ({
+        label: en.label, fg: en.danger ? 'var(--bad)' : 'var(--ink)',
+        run: () => { this.closeCtxMenu(); en.act(); } })),
+      ctxClose: () => this.closeCtxMenu(),
+      ctxCloseCtx: (e) => { e.preventDefault(); this.closeCtxMenu(); },
       openDock: () => this.setState({ dockOpen: true }),
       closeDock: () => this.setState({ dockOpen: false }),
       openPalette: () => this.setState({ paletteOpen: true, palQuery: '', palIdx: 0 }),
