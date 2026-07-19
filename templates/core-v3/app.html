@@ -818,7 +818,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ addons }}" as="a" hint-placeholder-count="6">
-                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                <div onContextMenu="{{ a.ctx }}" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
                   <span style="flex:none;width:8px;height:8px;border-radius:50%;background:{{ a.dot }}" title="{{ a.statusLabel }}"></span>
                   <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ a.name }}</span><span style="display:block;font:400 11.5px var(--mono);color:var(--ink-dim)">{{ a.slug }}</span></span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ a.v }}</span>
@@ -971,14 +971,20 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <sc-if value="{{ tabUsers }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;margin-top:16px">
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">WordPress users on this environment.</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ openNsu }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ New user</button>
+            </div>
+            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ dUsers }}" as="u" hint-placeholder-count="3">
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)">
+                <div onContextMenu="{{ u.ctx }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
                   <span style="flex:none;width:30px;height:30px;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);display:grid;place-items:center;font:600 11px var(--sans)">{{ u.init }}</span>
                   <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
                   <span style="font:500 12px var(--sans);background:var(--panel-2);border-radius:99px;padding:3px 10px;color:var(--ink-dim)">{{ u.role }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim);width:64px;text-align:right">{{ u.last }}</span>
                   <button onClick="{{ u.magic }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Magic login</button>
+                  <button onClick="{{ u.ctx }}" title="More actions" style="border:none;background:none;color:var(--ink-dim);font:600 14px var(--sans);width:28px;height:28px;border-radius:7px;cursor:pointer" style-hover="background:var(--paper);color:var(--ink)">⋯</button>
                 </div>
               </sc-for>
             </div>
@@ -2312,6 +2318,70 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
           </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ New site-user dialog ══ -->
+  <sc-if value="{{ nsuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeNsu }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:480px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">New user</span>
+          <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ nsuWhere }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeNsu }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">Username</span><input value="{{ nsuU }}" onInput="{{ onNsuU }}" placeholder="newuser" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">Email</span><input value="{{ nsuE }}" onInput="{{ onNsuE }}" placeholder="user@example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">First name</span><input value="{{ nsuF }}" onInput="{{ onNsuF }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">Last name</span><input value="{{ nsuL }}" onInput="{{ onNsuL }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">Role</span>
+            <sc-for list="{{ nsuRoles }}" as="r" hint-placeholder-count="5"><span onClick="{{ r.go }}" style="padding:4px 10px;border-radius:99px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.fg }};font:500 12px var(--sans);cursor:pointer">{{ r.label }}</span></sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:96px;font:500 12.5px var(--sans);color:var(--ink-dim)">Password</span><input value="{{ nsuP }}" onInput="{{ onNsuP }}" placeholder="Leave blank to auto-generate" data-1p-ignore data-lpignore="true" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
+          <div onClick="{{ nsuNotifyToggle }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:2px 0">
+            <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);background:var(--paper)">{{ nsuNotifyMark }}</span>
+            <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Email the new user their account details</span>
+          </div>
+          <sc-if value="{{ nsuHasMsg }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 12.5px var(--sans);color:var(--bad)">{{ nsuMsg }}</span>
+          </sc-if>
+        </div>
+        <div style="flex:none;display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeNsu }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>
+          <button onClick="{{ nsuCreate }}" style="border:none;background:var(--brand);color:#fff;font:600 13px var(--sans);padding:7px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Create user</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Delete site-user dialog (reassign required — v1 parity) ══ -->
+  <sc-if value="{{ dsuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDsu }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Delete user</span>
+          <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ dsuWhere }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeDsu }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:14px 18px">
+          <span style="font:400 13px/1.55 var(--sans)">To delete <strong>{{ dsuUsername }}</strong>, reassign their posts to another user first.</span>
+          <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto">
+            <sc-for list="{{ dsuUsers }}" as="ru" hint-placeholder-count="3">
+              <div onClick="{{ ru.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ ru.bg }}" style-hover="background:var(--panel-2)">
+                <span style="width:14px;font:600 12px var(--sans);color:var(--brand-ink);flex:none">{{ ru.mark }}</span>
+                <span style="min-width:0"><span style="display:block;font:500 13px var(--sans)">{{ ru.label }}</span><span style="display:block;font:400 11.5px var(--mono);color:var(--ink-dim)">{{ ru.sub }}</span></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:none;display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeDsu }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>
+          <button onClick="{{ dsuDelete }}" style="border:none;background:{{ dsuBtnBg }};color:{{ dsuBtnFg }};font:600 13px var(--sans);padding:7px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.05)">Delete {{ dsuUsername }}</button>
         </div>
       </div>
     </div>

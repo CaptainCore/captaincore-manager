@@ -297,9 +297,55 @@ Object.assign(Component.prototype, {
         role: Array.isArray(u.roles) ? u.roles.join(', ') : String(u.roles || ''),
         last: '',
         init: login.slice(0, 2).toUpperCase(),
+        ID: u.ID,
         magic: () => this.realMagicLogin(real, s, u)
       };
     });
+  },
+
+  reloadSiteUsers() {
+    const detail = this._detail;
+    if (!detail) return;
+    this.api('/sites/' + detail.siteId + '/users').then(u => {
+      if (this._detail === detail) { detail.users = u || {}; this.setState({ tick: this.state.tick }); }
+    }).catch(() => {});
+  },
+
+  // Shell-safe single-quoted CLI argument (v1 wrapped args in single quotes;
+  // we additionally strip quote/backslash characters instead of escaping).
+  termArg(v) { return String(v || '').replace(/['"\\]/g, ''); },
+
+  // v1 parity (core.php createSiteUser): wp user create over /run/code.
+  createSiteUser() {
+    const real = this._detail, s = this.state, d = s.nsu || {};
+    const env = this.currentEnv(real, s);
+    if (!real || !env) { this.setState({ nsuOpen: false }); return; }
+    if (!(d.username || '').trim() || !(d.email || '').trim()) { this.setState({ nsuMsg: 'Username and email are required.' }); return; }
+    let cli = "wp user create '" + this.termArg(d.username) + "' '" + this.termArg(d.email) + "' --role=" + (d.role || 'subscriber') + ' --skip-themes --skip-plugins';
+    if (d.password) cli += " --user_pass='" + this.termArg(d.password) + "'";
+    if (d.first) cli += " --first_name='" + this.termArg(d.first) + "'";
+    if (d.last) cli += " --last_name='" + this.termArg(d.last) + "'";
+    if (d.notify) cli += ' --send-email';
+    this.setState({ nsuOpen: false });
+    this.startJob({ label: 'create-user',
+      target: this.termArg(d.username) + ' on ' + ((real.site && real.site.name) || '') + ' · ' + env.environment,
+      dispatch: () => this.api('/run/code', { method: 'POST', body: { environments: [Number(env.environment_id) || env.environment_id], code: cli } }),
+      onFinish: () => this.reloadSiteUsers() });
+  },
+
+  // v1 parity (core.php deleteUser): reassign is REQUIRED — wp user delete
+  // --reassign=<ID> over /run/code (--yes: the daemon shell is non-interactive).
+  deleteSiteUser() {
+    const real = this._detail, s = this.state, d = s.dsu || {};
+    const env = this.currentEnv(real, s);
+    if (!real || !env || !d.reassign) return;
+    if (!confirm('Delete user ' + d.username + ' from ' + env.environment + '? Content will be reassigned to ' + (d.reassignLogin || 'the selected user') + '.')) return;
+    const cli = "wp user delete '" + this.termArg(d.username) + "' --reassign=" + (Number(d.reassign) || 0) + ' --yes --skip-themes --skip-plugins';
+    this.setState({ dsuOpen: false });
+    this.startJob({ label: 'delete-user',
+      target: this.termArg(d.username) + ' on ' + ((real.site && real.site.name) || '') + ' · ' + env.environment,
+      dispatch: () => this.api('/run/code', { method: 'POST', body: { environments: [Number(env.environment_id) || env.environment_id], code: cli } }),
+      onFinish: () => this.reloadSiteUsers() });
   },
 
   // ── Logs ──────────────────────────────────────────────────────

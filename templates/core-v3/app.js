@@ -1178,13 +1178,20 @@ class Component extends DCLogic {
           else if (id === 'snapshots') this.loadSnapshots();
           else if (id === 'timeline') this.loadTimeline(); } }));
     const addonsSrc = real ? this.realAddonSrc(real, s) : (s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
-    const addons = addonsSrc.map(a => { const upd = a.v !== a.latest; return { ...a, upd,
+    const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
+      const doToggle = () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name);
+      const doUpdate = () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name);
+      return { ...a, upd,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
       dot: a.active ? 'var(--ok)' : 'var(--rule)',
       statusLabel: a.active ? 'Active' : 'Inactive',
       toggleLabel: a.active ? 'Deactivate' : 'Activate',
-      doToggle: () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name),
-      doUpdate: () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name) }; });
+      doToggle, doUpdate,
+      ctx: (e) => this.openCtxMenu(e, [
+        ...(upd ? [{ label: 'Update to ' + a.latest, act: doUpdate }] : []),
+        { label: a.active ? 'Deactivate' : 'Activate', act: doToggle },
+        { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') }
+      ]) }; });
     const updCount = real ? 0 : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
     const qsFiles = real ? this.realQsFiles(real, s) : this.QS_FILES;
     const curPath = qsFiles.some(f => f.path === s.qsFile) ? s.qsFile : (qsFiles[0] ? qsFiles[0].path : '');
@@ -1260,9 +1267,29 @@ class Component extends DCLogic {
     let selCnt = 0, selKb = 0;
     topSel.forEach(p => { const n = flatAll.find(x => x.p === p); if (n) { selCnt += n.cnt || 1; selKb += n.kb || 0; } });
     const fmtKb = kb => kb < 1024 ? Math.round(kb) + ' kB' : kb < 1048576 ? (kb / 1024).toFixed(1) + ' MB' : (kb / 1048576).toFixed(1) + ' GB';
-    const dUsers = real ? this.realUserRows(real, s) : this.WP_USERS.map(u => ({ ...u, e: u.e.replace('SITE', site.name),
+    const dUsersBase = real ? this.realUserRows(real, s) : this.WP_USERS.map(u => ({ ...u, e: u.e.replace('SITE', site.name),
       init: u.n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
       magic: () => this.runJob('magiclogin', u.e.replace('SITE', site.name)) }));
+    // Row menu built FROM the row's own actions (rule: menus can never drift).
+    const dUsers = dUsersBase.map(u => { const openDel = () => this.setState({ dsuOpen: true, dsu: { username: u.n, reassign: null } });
+      return { ...u, del: openDel, ctx: (e) => this.openCtxMenu(e, [
+        { label: 'Magic login', act: u.magic },
+        { label: 'Copy email', act: () => this.ctxCopy(u.e, 'email') },
+        { label: 'Delete user…', act: openDel }
+      ]) }; });
+    // New-user + delete-user dialog state (v1 parity: delete requires reassign)
+    const nsu = s.nsu || {};
+    const nsuRole = nsu.role || 'subscriber';
+    const nsuRoles = ['administrator', 'editor', 'author', 'contributor', 'subscriber'].map(r => ({ label: r,
+      bd: nsuRole === r ? 'var(--brand)' : 'var(--rule)',
+      bg: nsuRole === r ? 'var(--brand-soft)' : 'var(--paper)',
+      fg: nsuRole === r ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      go: () => this.setState(st => ({ nsu: { ...st.nsu, role: r } })) }));
+    const dsu = s.dsu || {};
+    const dsuUsers = dUsersBase.filter(u => u.n !== dsu.username).map(u => ({ label: u.n, sub: u.e,
+      mark: dsu.reassign === u.ID ? '✓' : '',
+      bg: dsu.reassign === u.ID ? 'var(--brand-soft)' : 'transparent',
+      pick: () => this.setState(st => ({ dsu: { ...st.dsu, reassign: u.ID, reassignLogin: u.n } })) }));
     const logChips = (real ? this.realLogFiles(real, s) : ['error.log', 'access.log', 'debug.log']).map(f => ({ label: f.split('/').pop(),
       bg: s.logFile === f ? 'var(--brand-soft)' : 'transparent',
       fg: s.logFile === f ? 'var(--brand-ink)' : 'var(--ink-dim)',
@@ -1438,6 +1465,28 @@ class Component extends DCLogic {
         regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
         doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       dUsers, logChips, logLines,
+      nsuOpen: !!s.nsuOpen,
+      openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),
+      closeNsu: () => this.setState({ nsuOpen: false }),
+      nsuWhere: site.name + ' · ' + s.env,
+      nsuU: nsu.username || '', onNsuU: e => this.setState(st => ({ nsu: { ...st.nsu, username: e.target.value }, nsuMsg: '' })),
+      nsuE: nsu.email || '', onNsuE: e => this.setState(st => ({ nsu: { ...st.nsu, email: e.target.value }, nsuMsg: '' })),
+      nsuF: nsu.first || '', onNsuF: e => this.setState(st => ({ nsu: { ...st.nsu, first: e.target.value } })),
+      nsuL: nsu.last || '', onNsuL: e => this.setState(st => ({ nsu: { ...st.nsu, last: e.target.value } })),
+      nsuP: nsu.password || '', onNsuP: e => this.setState(st => ({ nsu: { ...st.nsu, password: e.target.value } })),
+      nsuRoles,
+      nsuNotifyMark: nsu.notify ? '✓' : '',
+      nsuNotifyToggle: () => this.setState(st => ({ nsu: { ...st.nsu, notify: !(st.nsu && st.nsu.notify) } })),
+      nsuMsg: s.nsuMsg || '', nsuHasMsg: !!s.nsuMsg,
+      nsuCreate: () => this.createSiteUser(),
+      dsuOpen: !!s.dsuOpen,
+      closeDsu: () => this.setState({ dsuOpen: false }),
+      dsuUsername: dsu.username || '', dsuWhere: site.name + ' · ' + s.env,
+      dsuUsers,
+      dsuCanDelete: !!dsu.reassign,
+      dsuBtnFg: dsu.reassign ? '#fff' : 'var(--ink-dim)',
+      dsuBtnBg: dsu.reassign ? 'var(--bad)' : 'var(--panel-2)',
+      dsuDelete: () => this.deleteSiteUser(),
       logMeta: real ? (real.logsLoading ? 'Loading…' : logLines.length + ' lines') : logLines.length + ' lines · last 24h',
       tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
