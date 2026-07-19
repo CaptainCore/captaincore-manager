@@ -113,12 +113,13 @@ Object.assign(Component.prototype, {
         e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
       },
       termRun: () => this.termRun(),
-      termRunFg: (s.termCmd || '').trim() ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      termRunBg: (s.termCmd || '').trim() ? 'var(--brand-soft)' : 'transparent',
+      termRunFg: (s.termCmd || '').trim() ? '#fff' : 'var(--ink-dim)',
+      termRunBg: (s.termCmd || '').trim() ? 'var(--brand)' : 'var(--panel-2)',
       termTargetLabel: targets.length === 0 ? 'Select target'
         : targets.length === 1 ? targets[0].label
         : targets.length + ' environments selected',
       termTargetFg: targets.length ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      termTargetBg: targets.length ? 'var(--brand-soft)' : 'var(--panel-2)',
       termTargetClearable: explicit,
       termTargetClear: () => this.setState({ termSel: [] }),
       tpOpen: s.tpOpen, tpQ: s.tpQ || '',
