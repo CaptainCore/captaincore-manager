@@ -92,8 +92,9 @@ Object.assign(Component.prototype, {
       ] : [])];
   },
 
-  realStats(running) {
-    return this.FLEET.length + ' sites \u00b7 ' + this.DOMAINS.length + ' domains \u00b7 ' + running + ' jobs running';
+  realStats() {
+    const p = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    return p(this.FLEET.length, 'site') + ' \u00b7 ' + p(this.DOMAINS.length, 'domain');
   },
 
   // Home "Fleet at a glance" rows \u2014 computed client-side from hydration totals.
