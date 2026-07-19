@@ -2115,6 +2115,36 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </sc-if>
               </div>
             </sc-for>
+            <sc-if value="{{ sessMoreShow }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ openSessModal }}" style="padding:11px 16px;font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="background:var(--panel-2)">{{ sessMoreLabel }} →</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══ All sessions modal ══ -->
+      <sc-if value="{{ sessModalOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeSessModal }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+          <div onClick="{{ stopProp }}" style="width:560px;max-width:100%;max-height:80vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+            <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+              <span style="font:600 15px var(--sans)">Active sessions</span>
+              <div style="flex:1"></div>
+              <span onClick="{{ killOthers }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Sign out all others</span>
+              <span onClick="{{ closeSessModal }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+            </div>
+            <div style="flex:1;overflow-y:auto">
+              <sc-for list="{{ sessAll }}" as="se" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--rule)">
+                  <span style="flex:1;min-width:0"><span style="display:block;font:500 13px var(--sans)">{{ se.where }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ se.ua }} · {{ se.last }}</span></span>
+                  <sc-if value="{{ se.current }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:500 11.5px var(--sans);background:var(--ok-soft);border-radius:99px;padding:2px 9px">This device</span>
+                  </sc-if>
+                  <sc-if value="{{ se.killable }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ se.kill }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Sign out</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
           </div>
         </div>
       </sc-if>

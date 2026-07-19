@@ -92,7 +92,8 @@ Object.assign(Component.prototype, {
   },
 
   sessionRows() {
-    return (this._prof.sessions || []).map(se => {
+    const list = (this._prof.sessions || []).slice().sort((a, b) => (b.is_current ? 1 : 0) - (a.is_current ? 1 : 0));
+    return list.map(se => {
       const where = se.is_local ? 'Local / private network'
         : [se.country_name || se.country, se.region].filter(Boolean).join(' · ') || se.ip || 'Unknown';
       return {
@@ -130,7 +131,19 @@ Object.assign(Component.prototype, {
       appPwMark: s.copied === 'apppw' ? 'Copied ✓' : 'Copy',
       copyAppPw: () => { try { navigator.clipboard.writeText(this.state.appPw); } catch (e) {}
         this.setState({ copied: 'apppw' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
-      sessRows: this.sessionRows(),
+      ...(function (self) {
+        const all = self.sessionRows();
+        const CAP = 5;
+        return {
+          sessRows: all.slice(0, CAP),
+          sessAll: all,
+          sessMoreShow: all.length > CAP,
+          sessMoreLabel: 'View all ' + all.length + ' sessions',
+          sessModalOpen: !!s.sessModalOpen,
+          openSessModal: () => self.setState({ sessModalOpen: true }),
+          closeSessModal: () => self.setState({ sessModalOpen: false })
+        };
+      })(this),
       killOthers: () => this.api('/sessions', { method: 'DELETE', body: { all_others: 1 } })
         .then(r => { if (r && r.sessions) { this._prof.sessions = r.sessions; this.setState({}); } }).catch(() => {})
     };
