@@ -47,6 +47,8 @@ $cc_boot = [
     'path'            => $config_path,
     'homeLink'        => home_url(),
     'loginUrl'        => home_url( $config_path . 'login' ),
+    // wp_logout_url() returns an HTML-escaped nonce URL; decode or the nonce breaks.
+    'logoutUrl'       => html_entity_decode( wp_logout_url( home_url( $config_path . 'login' ) ) ),
     'socket'          => captaincore_fetch_socket_address() . '/ws',
     // Profile state is server-rendered by User::profile() (same as v1) so the
     // Profile screen needs no extra fetch for its initial state.
