@@ -42,6 +42,7 @@ $cc_boot = [
     'userFirstName'   => $first_name,
     'userDisplayName' => $user->display_name,
     'userEmail'       => $user->email,
+    'userAvatar'      => get_avatar_url( $user->email, [ 'size' => 96 ] ),
     'brandColor'      => ! empty( $colors->primary ) ? $colors->primary : '#3b82c4',
     'name'            => $configurations->name,
     'path'            => $config_path,

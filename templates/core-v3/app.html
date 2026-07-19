@@ -121,7 +121,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </a>
         </sc-if>
         <div onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--rule);cursor:pointer;border-radius:9px" style-hover="background:var(--panel-2)">
-          <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 12px var(--sans);flex:none">{{ userInitials }}</span>
+          <sc-if value="{{ userHasAvatar }}" hint-placeholder-val="{{ true }}">
+            <img src="{{ userAvatar }}" alt="" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--panel-2)">
+          </sc-if>
+          <sc-if value="{{ userNoAvatar }}" hint-placeholder-val="{{ false }}">
+            <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 12px var(--sans);flex:none">{{ userInitials }}</span>
+          </sc-if>
           <span style="min-width:0;flex:1">
             <span style="display:block;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userName }}</span>
             <span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ userRole }}</span>
@@ -2017,7 +2022,20 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
       <sc-if value="{{ showProfile }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:760px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px">
+            <sc-if value="{{ userHasAvatar }}" hint-placeholder-val="{{ true }}">
+              <img src="{{ userAvatar }}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;background:var(--panel-2)">
+            </sc-if>
+            <sc-if value="{{ userNoAvatar }}" hint-placeholder-val="{{ false }}">
+              <span style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 20px var(--sans);flex:none">{{ userInitials }}</span>
+            </sc-if>
+            <div style="min-width:0;flex:1">
+              <div style="font:700 17px var(--sans);letter-spacing:-.01em">{{ userName }}</div>
+              <div style="font:400 13px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ profEmail }}</div>
+            </div>
+            <a href="https://gravatar.com/profile" target="_blank" rel="noopener" style="flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:7px 13px;border-radius:8px;text-decoration:none" style-hover="border-color:var(--brand)">Change photo on Gravatar ↗</a>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
               <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Display name</span>
               <input value="{{ profName }}" onInput="{{ onProfName }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 9px;outline:none">
