@@ -458,13 +458,20 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <sc-if value="{{ viewTable }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-              <div style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
+              <div style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
                 <span onClick="{{ toggleAll }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ selAllBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ selAllMark }}</span>
+                <span></span>
                 <span>Site</span><span>Environments</span><span>Provider</span><span>Core</span><span>Visits / wk</span>
               </div>
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="8">
-                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="display:grid;grid-template-columns:36px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
                   <span onClick="{{ s.toggle }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ s.checkBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ s.check }}</span>
+                  <span style="position:relative;width:48px;height:34px;border-radius:6px;background:var(--panel-2);overflow:hidden;display:grid;place-items:center;border:1px solid var(--rule)">
+                    <span style="font:600 10.5px var(--sans);color:var(--ink-dim)">{{ s.mono }}</span>
+                    <sc-if value="{{ s.hasThumb }}" hint-placeholder-val="{{ false }}">
+                      <img src="{{ s.thumb }}" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top">
+                    </sc-if>
+                  </span>
                   <span style="min-width:0"><span style="display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ s.account }}</span></span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ s.envs }}</span>
                   <span style="color:var(--ink-dim)">{{ s.provider }}</span>
@@ -478,6 +485,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:14px">
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="6">
                 <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px" style-hover="border-color:var(--brand);box-shadow:var(--shadow)">
+                  <div style="position:relative;height:130px;border-radius:9px;background:var(--panel-2);overflow:hidden;display:grid;place-items:center;border:1px solid var(--rule)">
+                    <span style="font:700 20px var(--sans);color:var(--ink-dim);letter-spacing:.5px">{{ s.mono }}</span>
+                    <sc-if value="{{ s.hasThumbLarge }}" hint-placeholder-val="{{ false }}">
+                      <img src="{{ s.thumbLarge }}" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top">
+                    </sc-if>
+                  </div>
                   <div style="display:flex;align-items:center;gap:8px">
                     <span style="font:600 14.5px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">{{ s.name }}</span>
                     <span style="width:8px;height:8px;border-radius:50%;background:{{ s.dot }};flex:none" title="{{ s.health }}"></span>
@@ -487,7 +500,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
                     <span style="font:500 11.5px var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px;color:var(--ink-dim)">{{ s.envs }}</span>
                     <div style="flex:1"></div>
-                    <span onClick="{{ s.openTerm }}" style="font:500 12px var(--sans);color:var(--brand-ink);padding:3px 8px;border:1px solid var(--rule);border-radius:6px" style-hover="border-color:var(--brand)">Terminal</span>
+                    <span onClick="{{ s.wpLogin }}" style="font:500 12px var(--sans);color:var(--brand-ink);padding:3px 8px;border:1px solid var(--rule);border-radius:7px" style-hover="border-color:var(--brand)">Login to WordPress</span>
                   </div>
                 </div>
               </sc-for>

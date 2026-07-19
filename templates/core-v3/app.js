@@ -758,7 +758,19 @@ class Component extends DCLogic {
       bd: cur === label ? 'var(--brand)' : 'var(--rule)',
       go: () => this.setState({ [key]: label }) });
     const selIds = filtered.filter(x => s.sel[x.id]).map(x => x.id);
+    const thumbOf = (x, size) => {
+      const ru = (window.CC_BOOT && window.CC_BOOT.remoteUploadUri) || '';
+      if (!ru || !x.site) return '';
+      const envsRaw = x.environmentsRaw || [];
+      const er = envsRaw.find(e => e.environment === 'Production' && e.screenshot_base) || envsRaw.find(e => e.screenshot_base);
+      if (!er) return '';
+      return ru + x.site + '_' + x.id + '/' + (er.environment || 'Production').toLowerCase() + '/screenshots/' + er.screenshot_base + '_thumb-' + size + '.jpg';
+    };
     const rows = filtered.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot,
+      mono: (x.name || '?').slice(0, 2).toUpperCase(),
+      thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
+      thumbLarge: thumbOf(x, 800), hasThumbLarge: !!thumbOf(x, 800),
+      wpLogin: (e) => { e.stopPropagation(); if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); },
       updLabel: x.updates ? x.updates + ' pending' : '—',
       updBg: x.updates ? 'var(--warn-soft)' : 'transparent',
       updFg: x.updates ? 'var(--ink)' : 'var(--ink-dim)',
