@@ -223,6 +223,14 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
 ### Vendored runtime (`../../public/js/v3/`)
 `support.js` (DC runtime), `react.production.min.js`, `react-dom.production.min.js`.
 
+**LOCAL PATCH in support.js** (`createPseudoSheet`, marked with a `LOCAL PATCH`
+comment): generated `style-hover`/`style-focus` rules get `!important` appended
+to every declaration. Without it a plain `.scpN:hover` class rule loses to the
+inline `style=""` that sets the same property, which left every
+`style-hover="border-color:var(--brand)"` in app.html silently dead (only
+properties absent from the inline style, like box-shadow, ever hovered).
+Re-apply the patch if support.js is ever re-vendored from upstream.
+
 ### Local test recipe
 ```bash
 P=/Users/austin/Cove/Sites/anchor.localhost/public
