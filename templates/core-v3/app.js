@@ -1523,6 +1523,9 @@ class Component extends DCLogic {
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
     if (window.CC_BOOT) { this.setState({ jobs: [] }); this.initRouter(); }
+    // Debug/test handle — lets DevTools and Playwright probes reach the
+    // component instance (e.g. seed fake jobs to exercise the dock).
+    window.CC = this;
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
@@ -1698,8 +1701,19 @@ class Component extends DCLogic {
       running: j.state === 'running',
       fg: j.state === 'running' ? 'var(--brand-ink)' : 'var(--ink-dim)',
       dot: j.state === 'running' ? 'var(--brand)' : j.state === 'error' ? 'var(--bad)' : 'var(--ok)',
-      rowBg: s.jobSel === j.id ? 'var(--brand-soft)' : 'transparent',
+      dotAnim: j.state === 'running' ? 'ccpulse 1.4s ease infinite' : 'none',
+      rowBg: s.jobSel === j.id ? 'var(--panel-2)' : 'transparent',
       pick: () => this.setState({ jobSel: j.id }) }));
+    // Dock job strip (Minn mockup): running rows first. The dock is
+    // bottom-anchored with height:auto, so every row grows it UPWARD; the
+    // strip caps at a few rows ("+ N more" expands) so a busy fleet can't
+    // swallow the console — but running jobs always stay visible.
+    const dockSorted = [...jobs.filter(j => j.running), ...jobs.filter(j => !j.running)];
+    const DOCK_JOB_CAP = 4;
+    const dockRunning = dockSorted.filter(j => j.running);
+    const dockJobs = (s.dockJobsAll || dockSorted.length <= DOCK_JOB_CAP) ? dockSorted
+      : dockRunning.length >= DOCK_JOB_CAP ? dockRunning
+      : dockSorted.slice(0, DOCK_JOB_CAP);
 
     const activity = this._activity ? this._activity : booted ? [] : isOp ? [
       { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed' },
@@ -1803,6 +1817,10 @@ class Component extends DCLogic {
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
+      dockJobs, dockJobsShow: dockSorted.length > 0,
+      dockMoreShow: s.dockJobsAll ? dockSorted.length > DOCK_JOB_CAP : dockSorted.length > dockJobs.length,
+      dockMoreLabel: s.dockJobsAll ? 'Show fewer' : '+ ' + (dockSorted.length - dockJobs.length) + ' more',
+      toggleDockJobs: () => this.setState(st => ({ dockJobsAll: !st.dockJobsAll })),
       ...listVals, ...detailVals, ...domainsVals, ...domainVals,
       ...accountsVals, ...accountVals, ...billingVals,
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
