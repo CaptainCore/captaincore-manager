@@ -1704,8 +1704,12 @@ class Component extends DCLogic {
       dotAnim: j.state === 'running' ? 'ccpulse 1.4s ease infinite' : 'none',
       rowBg: s.jobSel === j.id ? 'var(--panel-2)' : 'transparent',
       // Picking a terminal session also adopts its target set, so the next
-      // command runs against that session's environments.
-      pick: () => this.setState(j.session ? { jobSel: j.id, termSel: j.session.split(',') } : { jobSel: j.id }) }));
+      // command runs against that session's environments — and focuses the
+      // command input so typing works immediately.
+      pick: () => {
+        this.setState(j.session ? { jobSel: j.id, termSel: j.session.split(',') } : { jobSel: j.id });
+        if (this._termEl) this._termEl.focus({ preventScroll: true });
+      } }));
     // Dock job strip (Minn mockup): running rows first. The dock is
     // bottom-anchored with height:auto, so every row grows it UPWARD; the
     // strip caps at a few rows ("+ N more" expands) so a busy fleet can't
