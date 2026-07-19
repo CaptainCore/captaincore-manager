@@ -109,7 +109,12 @@ Object.assign(Component.prototype, {
 
   realConsoleLines() {
     const job = this.activeJob();
-    if (!job) return [{ text: '$ idle — run Sync or a command from a site to stream output here', fg: 'var(--ink-dim)' }];
+    if (!job) {
+      const isOp = ((window.CC_BOOT || {}).dcRole || 'operator') === 'operator';
+      return [{ text: isOp
+        ? '$ idle — run Sync or a command from a site to stream output here'
+        : 'Nothing running right now — actions you start will stream their progress here.', fg: 'var(--ink-dim)' }];
+    }
     const head = { text: '$ ' + (job.label || 'job') + (job.target ? ' · ' + job.target : ''), fg: 'var(--ink-dim)' };
     const lines = job.stream
       .flatMap(chunk => String(chunk).split('\n'))
