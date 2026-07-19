@@ -299,10 +299,19 @@ class Component extends DCLogic {
   computeAccounts(s, isOp) {
     const list = isOp ? this.ACCOUNTS : this.ACCOUNTS.filter(a => a.owned);
     const nq = s.aq.trim().toLowerCase();
-    const filtered = list.filter(a => !nq || a.name.toLowerCase().includes(nq));
+    const ACC_COLS = [
+      { label: 'Account', k: 'name', val: a => (a.name || '').toLowerCase() },
+      { label: 'Users', k: 'users', val: a => Number(a.users) || 0 },
+      { label: 'Sites', k: 'sites', val: a => Number(a.sites) || 0 },
+      { label: 'Domains', k: 'domains', val: a => Number(a.domains) || 0 },
+      { label: 'Plan', k: 'plan', val: a => a.plan || '' },
+      { label: 'Billing', k: 'due', val: a => a.due ? 0 : 1 }
+    ];
+    const filtered = this.sortRows('accSort', ACC_COLS, list.filter(a => !nq || a.name.toLowerCase().includes(nq)));
     return {
       accCount: filtered.length + ' accounts',
       aq: s.aq, onAq: e => this.setState({ aq: e.target.value }),
+      accCols: this.mkSortCols('accSort', ACC_COLS),
       accRows: filtered.map(a => ({ ...a,
         billLabel: a.due ? 'Invoice due' : 'Current',
         billFg: a.due ? 'var(--warn)' : 'var(--ink-dim)',
@@ -758,6 +767,14 @@ class Component extends DCLogic {
       bd: cur === label ? 'var(--brand)' : 'var(--rule)',
       go: () => this.setState({ [key]: label }) });
     const selIds = filtered.filter(x => s.sel[x.id]).map(x => x.id);
+    const SITE_COLS = [
+      { label: 'Site', k: 'name', val: x => (x.name || '').toLowerCase() },
+      { label: 'Environments', k: 'envs', val: x => (x.environmentsRaw && x.environmentsRaw.length) || String(x.envs || '').split('\u00b7').length },
+      { label: 'Provider', k: 'provider', val: x => x.provider || '' },
+      { label: 'Core', k: 'core', val: x => x.core || '' },
+      { label: 'Visits / wk', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
+    ];
+    const sorted = this.sortRows('sitesSort', SITE_COLS, filtered);
     const thumbOf = (x, size) => {
       const ru = (window.CC_BOOT && window.CC_BOOT.remoteUploadUri) || '';
       if (!ru || !x.site) return '';
@@ -766,7 +783,7 @@ class Component extends DCLogic {
       if (!er) return '';
       return ru + x.site + '_' + x.id + '/' + (er.environment || 'Production').toLowerCase() + '/screenshots/' + er.screenshot_base + '_thumb-' + size + '.jpg';
     };
-    const rows = filtered.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot,
+    const rows = sorted.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot,
       mono: (x.name || '?').slice(0, 2).toUpperCase(),
       thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
       thumbLarge: thumbOf(x, 800), hasThumbLarge: !!thumbOf(x, 800),
@@ -916,7 +933,8 @@ class Component extends DCLogic {
       lstBg: s.view === 'list' ? 'var(--panel-2)' : 'transparent', lstFg: s.view === 'list' ? 'var(--ink)' : 'var(--ink-dim)',
       setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
       setViewList: () => this.setState({ view: 'list' }),
-      listRows: rows
+      listRows: rows,
+      siteCols: this.mkSortCols('sitesSort', SITE_COLS)
     };
   }
 
@@ -957,7 +975,12 @@ class Component extends DCLogic {
     const base = s.domList || this.DOMAINS;
     const list = isOp ? base : base.filter(d => d.owned);
     const nq = s.dq.trim().toLowerCase();
-    const filtered = list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq));
+    const DOM_COLS = [
+      { label: 'Domain', k: 'name', val: d => (d.name || '').toLowerCase() },
+      { label: 'Registrar', k: 'registrar', val: d => d.registrar || '' },
+      { label: 'DNS', k: 'dns', val: d => d.dns ? 1 : 0 }
+    ];
+    const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
     return {
       domCount: filtered.length + ' domains',
       dq: s.dq, onDq: e => this.setState({ dq: e.target.value }),
@@ -991,6 +1014,7 @@ class Component extends DCLogic {
         }
         this.setState(st => ({ domList: [{ id: 'd' + Date.now(), name: v, account: st.ndAcc, registrar: 'Hover', dns: st.ndZone, expires: 'Jul 2027', auto: true, owned: true }, ...(st.domList || this.DOMAINS)], ndOpen: false, ndName: '' }));
         this.runJob('domain-create', v + (this.state.ndZone ? ' + DNS zone' : '')); },
+      domCols: this.mkSortCols('domSort', DOM_COLS),
       domRows: filtered.map(d => ({ ...d,
         dnsLabel: d.dns ? 'Active' : '—', dnsFg: d.dns ? 'var(--ok)' : 'var(--ink-dim)',
         expFg: d.warn ? 'var(--bad)' : 'var(--ink)',
@@ -1542,6 +1566,32 @@ class Component extends DCLogic {
   }
 
   closeCtxMenu() { if (this.state.ctxMenu) this.setState({ ctxMenu: null }); }
+
+  // ── Sortable table headers (Minn pattern) ── cols: [{label, k?, val?}].
+  // Emits header cells with direction arrows; clicking toggles asc/desc on the
+  // per-route sort state key. sortRows applies the matching state to a list.
+  mkSortCols(stateKey, cols) {
+    const cur = this.state[stateKey] || { k: '', d: 1 };
+    return cols.map(c => ({ label: c.label,
+      arrow: c.k && cur.k === c.k ? (cur.d === 1 ? ' ↑' : ' ↓') : '',
+      fg: c.k && cur.k === c.k ? 'var(--ink)' : 'var(--ink-dim)',
+      cursor: c.k ? 'pointer' : 'default',
+      go: c.k ? () => { const p = this.state[stateKey] || { k: '', d: 1 };
+        this.setState({ [stateKey]: { k: c.k, d: p.k === c.k ? -p.d : 1 } }); } : () => {} }));
+  }
+
+  sortRows(stateKey, cols, list) {
+    const cur = this.state[stateKey] || { k: '', d: 1 };
+    if (!cur.k) return list;
+    const col = cols.find(c => c.k === cur.k);
+    if (!col || !col.val) return list;
+    return list.slice().sort((a, b) => {
+      const va = col.val(a), vb = col.val(b);
+      const r = (typeof va === 'number' && typeof vb === 'number') ? va - vb
+        : String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' });
+      return r * cur.d;
+    });
+  }
 
   ctxCopy(text, label) {
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => this.toast('Copied ' + label + '.', { kind: 'success' })).catch(() => {});
