@@ -45,6 +45,14 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   plugin is/is-not chips): same pill container, active segment `--panel-2` + `--ink`.
   Sites filter facet chips are quiet (sentence case, `font:500 13px`, height 30) —
   no uppercase micro-labels in new chrome.
+- **Dock entry lives in the topbar** (terminal icon button, running dot; jobs chip
+  while running). The floating bottom-right pill/circle is GONE (`dockClosed`/
+  `dockIdle`/`liveTail` computed values are now unused). Dock opens with the quicker
+  `ccpop .12s` animation; close is unmount (instant).
+- **Home launcher tiles read as stat cards** (20px/700 meta values, 16px/700 labels),
+  home card titles are 16px/700, all paper cards are radius 13. Light sidebar surface
+  is pure white (`--panel:#ffffff` light) and the sidebar search field sits on
+  `--paper` (Minn's search-btn treatment, both themes).
 - **Buttons: radius 9 regular / 7 small** (primary + ghost normalized). **Focus rings
   are global CSS** in the helmet (`--ring` token, `box-shadow` on `:focus`); borderless
   composed inputs are excluded via `[style*="border-style: none"]` — NOTE the runtime
