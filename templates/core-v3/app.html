@@ -114,6 +114,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-for>
         </div>
+        <sc-if value="{{ showSwitchBack }}" hint-placeholder-val="{{ false }}">
+          <a href="{{ switchBackUrl }}" style="display:flex;align-items:center;gap:7px;padding:8px 10px;margin-bottom:8px;font:600 12px var(--sans);color:var(--warn);background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 28%,transparent);border-radius:9px;text-decoration:none" style-hover="border-color:var(--warn)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ switchBackLabel }}</span>
+          </a>
+        </sc-if>
         <div onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--rule);cursor:pointer;border-radius:9px" style-hover="background:var(--panel-2)">
           <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 12px var(--sans);flex:none">{{ userInitials }}</span>
           <span style="min-width:0">
@@ -3077,10 +3083,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <span style="display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--sans);color:var(--brand-ink);background:var(--brand-soft);border-radius:7px;padding:4px 9px">{{ c.name }}<span onClick="{{ c.remove }}" style="cursor:pointer;font:600 12px var(--sans)">✕</span></span>
               </sc-for>
             </div>
-            <div style="position:relative">
+            <div>
               <input value="{{ udAcq }}" onInput="{{ onUdAcq }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--sans);padding:0 11px;outline:none">
               <sc-if value="{{ udSuggestions.length }}" hint-placeholder-val="{{ false }}">
-                <div style="position:absolute;top:40px;left:0;right:0;z-index:75;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;max-height:180px;overflow-y:auto">
+                <!-- In-flow (not absolute): the dialog body scrolls, so an absolute
+                     panel clips against it and collides with the footer. -->
+                <div style="margin-top:6px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:4px;max-height:180px;overflow-y:auto">
                   <sc-for list="{{ udSuggestions }}" as="a" hint-placeholder-count="3">
                     <div onClick="{{ a.pick }}" style="padding:7px 10px;border-radius:7px;cursor:pointer;font:500 13px var(--sans)" style-hover="background:var(--panel-2)">{{ a.name }}</div>
                   </sc-for>
