@@ -93,6 +93,15 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   per-environment listing via rows' `envCards` (env badge, WP chip, home_url
   link, per-env visits/storage from environmentsRaw, per-env `_thumb-800`
   screenshot, Manage site + WP Login per env).
+- **Terminal is available to all roles** (2026-07-19): `termShow` is now `true`
+  (was `isOp`); customers get the dock console + @ target picker, not just an
+  activity feed. SAFE because the server scopes `/run/code`: the callback runs
+  `captaincore_verify_permissions($site_id)` PER environment and 403s if no
+  owned targets remain, and the client @ picker reads FLEET which `/sites/` has
+  already scoped to the caller. The topbar dock button + idle console line are
+  no longer role-split (terminal glyph / "$ idle …" for everyone). The
+  site-detail header terminal button (`dTerm`) now opens a working console for
+  customers too (was the original "terminal not loading the site" report).
 - **Intercom chat** (2026-07-19, v1 parity): core-v3.php boots the messenger for
   NON-admin sessions only, when `configurations->intercom_embed_id` is set —
   server-rendered `window.intercomSettings` (name/email/created_at + `user_hash`
