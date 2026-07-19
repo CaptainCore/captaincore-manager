@@ -581,13 +581,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
             <div style="flex:1"></div>
-            <button onClick="{{ dSync }}" title="Sync site data" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7A9 9 0 005.5 5.5L4 7m0-4v4h4m-4 6a9 9 0 0014.5 5.5L20 17m0 4v-4h-4"></path></svg>
-            </button>
-            <button onClick="{{ dTerm }}" title="Open terminal (⌃`)" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17"></path></svg>
-            </button>
-            <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button onClick="{{ dSync }}" title="Sync site data" style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7A9 9 0 005.5 5.5L4 7m0-4v4h4m-4 6a9 9 0 0014.5 5.5L20 17m0 4v-4h-4"></path></svg>
+              </button>
+              <button onClick="{{ dTerm }}" title="Open terminal (⌃`)" style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17"></path></svg>
+              </button>
+              <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);height:36px;padding:0 16px;display:inline-flex;align-items:center;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
+            </div>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
           <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
@@ -641,7 +643,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Domains</h2><span onClick="{{ dGoDomains }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
                   <sc-for list="{{ dDomains }}" as="d" hint-placeholder-count="2">
-                    <div onClick="{{ d.open }}" style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 13px var(--mono);cursor:pointer" style-hover="color:var(--brand-ink)">{{ d.name }}</div>
+                    <div onClick="{{ d.open }}" style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 13px var(--mono);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">{{ d.name }}</div>
                   </sc-for>
                 </section>
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
@@ -650,7 +652,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <span style="font:400 12px var(--sans);color:var(--ink-dim)">accounts with access</span>
                   </div>
                   <sc-for list="{{ sharedRows }}" as="sh" hint-placeholder-count="2">
-                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
                       <span onClick="{{ sh.open }}" style="flex:1;min-width:0;cursor:pointer">
                         <span style="display:block;font:500 13px var(--sans);color:var(--brand-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sh.name }}</span>
                         <span style="display:block;font:400 11.5px var(--sans);color:var(--ink-dim)">{{ sh.sub }}</span>
