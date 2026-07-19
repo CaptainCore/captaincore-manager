@@ -52,13 +52,25 @@ Object.assign(Component.prototype, {
     const firstLine = cmd.split('\n')[0];
     this.setState({ termCmd: '' });
     if (this._termEl) { this._termEl.value = ''; this._termEl.style.height = 'auto'; }
-    this.startJob({
-      label: 'run', expand: true,
-      target: (firstLine.length > 42 ? firstLine.slice(0, 42) + '…' : firstLine) + ' · ' + where,
+    // Session model: one activity row per target set. Same targets → append
+    // to that session; a different set (or a session mid-run) starts its own.
+    const sessionKey = targets.map(t => String(t.id)).sort().join(',');
+    const target = (firstLine.length > 42 ? firstLine.slice(0, 42) + '…' : firstLine) + ' · ' + where;
+    const dispatch = () => this.api('/run/code', { method: 'POST',
+      body: { environments: targets.map(t => Number(t.id) || t.id), code: cmd } });
+    const session = this.sessionJobFor(sessionKey);
+    if (session) { this.runInSession(session, { cmd, target, dispatch }); return; }
+    const id = this.startJob({
+      label: 'run', expand: true, session: sessionKey, where,
+      target,
       command: 'run',
-      dispatch: () => this.api('/run/code', { method: 'POST',
-        body: { environments: targets.map(t => Number(t.id) || t.id), code: cmd } })
+      dispatch
     });
+    // Echo the first command into the fresh session's scrollback (repeat runs
+    // get theirs from runInSession) — pushed synchronously, so it lands ahead
+    // of any socket output.
+    const job = this._jobObjs && this._jobObjs[id];
+    if (job) job.stream.push('$ ' + cmd);
   },
 
   loadRecipes() {

@@ -14,16 +14,24 @@ Object.assign(Component.prototype, {
   // `expand: true` opens the full terminal dock (developer terminal only).
   // By default a job runs "mini": the collapsed activity pill shows its live
   // tail without forcing customers into the full console.
-  startJob({ label, target, command, siteId, environment, dispatch, onFinish, expand }) {
+  // `session` (terminal runs): a key derived from the target set. Repeat runs
+  // against the same targets reuse the session's job row + stream (see
+  // sessionJobFor/runInSession); `where` is the human target-set label.
+  startJob({ label, target, command, siteId, environment, dispatch, onFinish, expand, session, where }) {
     const id = 'job' + Date.now() + Math.floor(Math.random() * 1000);
     this._jobObjs = this._jobObjs || {};
-    const job = { id, label, target, command, siteId, environment, onFinish, stream: [], ws: null, token: null };
+    const job = { id, label, target, command, siteId, environment, onFinish, sessionKey: session || null, where: where || '', stream: [], ws: null, token: null };
     this._jobObjs[id] = job;
     // Non-terminal actions get a loading toast (immediate feedback); the
     // developer terminal ('run') streams into the console instead.
     if (!expand && this.toast) job._toastId = this.toast((this.JOB_VERBS[label] || label || 'Working') + '…', { kind: 'loading' });
-    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true }, ...st.jobs], dockOpen: expand ? true : st.dockOpen, jobSel: id }));
-    if (!dispatch) return id;
+    this.setState(st => ({ jobs: [{ id, label, target, state: 'running', pct: 6, real: true, session: session || null }, ...st.jobs], dockOpen: expand ? true : st.dockOpen, jobSel: id }));
+    this.dispatchJob(job, dispatch);
+    return id;
+  },
+
+  dispatchJob(job, dispatch) {
+    if (!dispatch) return;
     Promise.resolve().then(dispatch).then(res => {
       const token = typeof res === 'string' ? res : (res && res.token);
       if (!token || typeof token !== 'string') {
@@ -35,7 +43,25 @@ Object.assign(Component.prototype, {
       job.stream.push('Error starting command: ' + (err && err.message || err));
       this.finishJob(job, 'error');
     });
-    return id;
+  },
+
+  // The reusable terminal session for a target set: most recent IDLE job with
+  // this key. A session mid-run is never reused (two sockets would interleave
+  // one stream) — the caller starts a fresh session row instead.
+  sessionJobFor(key) {
+    if (!this._jobObjs) return null;
+    const entry = (this.state.jobs || []).find(j => j.real && j.session === key && j.state !== 'running' && this._jobObjs[j.id]);
+    return entry ? this._jobObjs[entry.id] : null;
+  },
+
+  // Run another command inside an existing terminal session: echo it into the
+  // scrollback, flip the row back to running, dispatch a fresh daemon token
+  // streaming into the same job.
+  runInSession(job, { cmd, target, dispatch }) {
+    job.stream.push('$ ' + cmd);
+    this.patchJob(job.id, { state: 'running', pct: 6, target });
+    this.setState({ jobSel: job.id });
+    this.dispatchJob(job, dispatch);
   },
 
   attachJobSocket(job) {
@@ -112,13 +138,18 @@ Object.assign(Component.prototype, {
     if (!job) {
       return [{ text: '$ idle — run Sync or a command from a site to stream output here', fg: 'var(--ink-dim)' }];
     }
-    const head = { text: '$ ' + (job.label || 'job') + (job.target ? ' · ' + job.target : ''), fg: 'var(--ink-dim)' };
+    // Session jobs echo each command as a "$ …" line in the stream, so the
+    // head is just the session's target set; one-shot jobs keep the old head.
+    const head = job.sessionKey
+      ? { text: 'terminal · ' + (job.where || job.target || ''), fg: 'var(--ink-dim)' }
+      : { text: '$ ' + (job.label || 'job') + (job.target ? ' · ' + job.target : ''), fg: 'var(--ink-dim)' };
     const lines = job.stream
       .flatMap(chunk => String(chunk).split('\n'))
       .filter(l => l.trim() !== 'Finished.' && l.trim() !== '')
-      .slice(-30)
+      .slice(-200)
       .map(text => ({ text,
-        fg: /^(✓|Success|Done)/.test(text.trim()) ? 'var(--ok)'
+        fg: /^\$ /.test(text) ? 'var(--brand-ink)'
+          : /^(✓|Success|Done)/.test(text.trim()) ? 'var(--ok)'
           : /^(Error|Warning|✗)/i.test(text.trim()) ? 'var(--bad)' : 'var(--ink)' }));
     return [head, ...lines];
   }
