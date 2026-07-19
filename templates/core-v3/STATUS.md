@@ -105,7 +105,10 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
 - **Home launcher tiles read as stat cards** (20px/700 meta values, 16px/700 labels),
   home card titles are 16px/700, all paper cards are radius 13. Light sidebar surface
   is pure white (`--panel:#ffffff` light) and the sidebar search field sits on
-  `--paper` (Minn's search-btn treatment, both themes).
+  `--paper` (Minn's search-btn treatment, both themes). TRAP that shipped once:
+  making light `--panel` white made every `style-hover="background:var(--panel)"`
+  row hover INVISIBLE (white on white). Row hovers must use `--panel-2` (Minn's
+  `--hover` value in both themes) — swept 17 of them 2026-07-19; new rows follow.
 - **Buttons: radius 9 regular / 7 small** (primary + ghost normalized). **Focus rings
   are global CSS** in the helmet (`--ring` token, `box-shadow` on `:focus`); borderless
   composed inputs are excluded via `[style*="border-style: none"]` — NOTE the runtime

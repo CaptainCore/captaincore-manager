@@ -196,7 +196,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span style="font:500 12px var(--mono);background:var(--warn-soft);color:var(--ink);border-radius:99px;padding:2px 8px">{{ attentionCount }}</span>
                 </div>
                 <sc-for list="{{ attention }}" as="a" hint-placeholder-count="3">
-                  <div onClick="{{ a.go }}" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                  <div onClick="{{ a.go }}" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                     <span style="flex:none;margin-top:5px;width:8px;height:8px;border-radius:50%;background:{{ a.dot }}"></span>
                     <div style="min-width:0;flex:1">
                       <div style="font:500 14.5px var(--sans)">{{ a.title }}</div>
@@ -260,7 +260,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ goSites }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">All sites →</span>
                 </div>
                 <sc-for list="{{ pinned }}" as="s" hint-placeholder-count="4">
-                  <div onClick="{{ s.go }}" onContextMenu="{{ s.ctx }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                  <div onClick="{{ s.go }}" onContextMenu="{{ s.ctx }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                     <span style="flex:none;width:26px;height:26px;border-radius:7px;background:var(--panel-2);display:grid;place-items:center;font:600 11px var(--sans);color:var(--ink-dim)">{{ s.mono }}</span>
                     <div style="min-width:0;flex:1">
                       <div style="font:500 14px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</div>
@@ -465,7 +465,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <span>Site</span><span>Environments</span><span>Provider</span><span>Core</span><span>Visits / wk</span>
               </div>
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="8">
-                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel-2)">
                   <span onClick="{{ s.toggle }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ s.checkBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ s.check }}</span>
                   <span style="position:relative;width:48px;height:34px;border-radius:6px;background:var(--panel-2);overflow:hidden;display:grid;place-items:center;border:1px solid var(--rule)">
                     <span style="font:600 10.5px var(--sans);color:var(--ink-dim)">{{ s.mono }}</span>
@@ -519,7 +519,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="6">
                 <section onContextMenu="{{ s.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                  <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                  <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                     <span style="font:700 15px var(--sans)">{{ s.name }}</span>
                     <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ s.account }}</span>
                     <div style="flex:1"></div>
@@ -1007,7 +1007,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span>Domain</span><span>Registrar</span><span>DNS</span>
             </div>
             <sc-for list="{{ domRows }}" as="d" hint-placeholder-count="6">
-              <div onClick="{{ d.open }}" onContextMenu="{{ d.ctx }}" style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+              <div onClick="{{ d.open }}" onContextMenu="{{ d.ctx }}" style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel-2)">
                 <span style="min-width:0"><span style="display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.name }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ d.account }}</span></span>
                 <span style="color:var(--ink-dim)">{{ d.registrar }}</span>
                 <span style="font:500 12.5px var(--sans);color:{{ d.dnsFg }}">{{ d.dnsLabel }}</span>
@@ -1049,7 +1049,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ dnsRows }}" as="r" hint-placeholder-count="7">
                 <div style="border-bottom:1px solid var(--rule)">
                   <sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
-                    <div onClick="{{ r.startEdit }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer" style-hover="background:var(--panel)">
+                    <div onClick="{{ r.startEdit }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer" style-hover="background:var(--panel-2)">
                       <span style="flex:none;width:58px;text-align:center;font:600 11px var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
                       <span style="flex:none;width:150px;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
                       <span style="flex:1;min-width:0;font:400 12.5px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.value }}</span>
@@ -1255,7 +1255,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span>Account</span><span>Users</span><span>Sites</span><span>Domains</span><span>Plan</span><span>Billing</span>
             </div>
             <sc-for list="{{ accRows }}" as="a" hint-placeholder-count="6">
-              <div onClick="{{ a.open }}" onContextMenu="{{ a.ctx }}" style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel)">
+              <div onClick="{{ a.open }}" onContextMenu="{{ a.ctx }}" style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel-2)">
                 <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
                 <span style="font:400 13px var(--mono);color:var(--ink-dim)">{{ a.users }}</span>
                 <span style="font:400 13px var(--mono);color:var(--ink-dim)">{{ a.sites }}</span>
@@ -1356,7 +1356,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ accTabSites }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accSites }}" as="s" hint-placeholder-count="2">
-                <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="flex:1;font:500 13.5px var(--sans)">{{ s.name }}</span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ s.envs }}</span>
                   <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ s.provider }}</span>
@@ -1369,7 +1369,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ accTabDomains }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accDomains }}" as="d" hint-placeholder-count="1">
-                <div onClick="{{ d.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                <div onClick="{{ d.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="flex:1;font:500 13.5px var(--sans)">{{ d.name }}</span>
                   <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ d.registrar }}</span>
                   <span style="font:400 12.5px var(--mono);color:{{ d.expFg }}">{{ d.expires }}</span>
@@ -1513,7 +1513,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ threats }}" as="t" hint-placeholder-count="3">
                 <div style="border-bottom:1px solid var(--rule)">
-                  <div onClick="{{ t.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel)">
+                  <div onClick="{{ t.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:600 11px var(--sans);letter-spacing:.04em;background:{{ t.sevBg }};color:{{ t.sevFg }};border-radius:99px;padding:3px 10px;text-transform:uppercase">{{ t.sev }}</span>
                     <span style="font:500 13.5px var(--sans)">{{ t.name }}</span>
                     <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ t.cve }}</span>
@@ -1567,7 +1567,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Core checksum failures</h2></div>
               <sc-for list="{{ coreFails }}" as="c" hint-placeholder-count="1">
                 <div style="border-bottom:1px solid var(--rule)">
-                  <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel)">
+                  <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:500 13.5px var(--sans)">{{ c.site }}</span>
                     <span style="font:500 11.5px var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 9px">{{ c.mod }} modified</span>
                     <span style="font:500 11.5px var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ c.extra }} extra</span>
@@ -1587,7 +1587,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Plugin checksum failures</h2></div>
               <sc-for list="{{ plugFails }}" as="c" hint-placeholder-count="1">
                 <div style="border-bottom:1px solid var(--rule)">
-                  <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel)">
+                  <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:500 13.5px var(--sans)">{{ c.site }}</span>
                     <span style="font:500 12px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ c.slug }}</span>
                     <sc-for list="{{ c.chips }}" as="ch" hint-placeholder-count="2">
@@ -2271,7 +2271,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <sc-if value="{{ dlgIsFiles }}" hint-placeholder-val="{{ false }}">
             <sc-for list="{{ dlgFiles }}" as="f" hint-placeholder-count="7">
-              <div onClick="{{ f.pick }}" style="display:flex;align-items:center;gap:11px;padding:8px 18px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+              <div onClick="{{ f.pick }}" style="display:flex;align-items:center;gap:11px;padding:8px 18px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                 <span style="flex:none;width:22px;text-align:center;font:600 11px var(--mono);background:{{ f.stBg }};color:{{ f.stFg }};border-radius:5px;padding:2px 0">{{ f.st }}</span>
                 <span style="flex:1;min-width:0;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span>
                 <span style="font:500 11.5px var(--mono);color:var(--ok)">{{ f.addN }}</span>
@@ -2367,7 +2367,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
               <sc-for list="{{ nsRemote }}" as="rm" hint-placeholder-count="3">
-                <div onClick="{{ rm.toggle }}" style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+                <div onClick="{{ rm.toggle }}" style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="width:15px;height:15px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ rm.checkBg }};color:white;font:600 9px var(--sans);flex:none">{{ rm.check }}</span>
                   <span style="flex:1;font:400 12.5px var(--mono)">{{ rm.name }}</span>
                   <span style="font:400 11.5px var(--mono);color:var(--ink-dim)">{{ rm.size }}</span>
@@ -2857,7 +2857,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="flex:1;display:flex;min-height:0">
           <div style="flex:none;width:340px;border-right:1px solid var(--rule);overflow-y:auto">
             <sc-for list="{{ bkRows }}" as="f" hint-placeholder-count="8">
-              <div onClick="{{ f.rowClick }}" style="display:flex;align-items:center;gap:8px;padding:6px 14px 6px {{ f.pad }};cursor:pointer" style-hover="background:var(--panel)">
+              <div onClick="{{ f.rowClick }}" style="display:flex;align-items:center;gap:8px;padding:6px 14px 6px {{ f.pad }};cursor:pointer" style-hover="background:var(--panel-2)">
                 <span style="width:12px;color:var(--ink-dim);font:400 11px var(--sans);flex:none">{{ f.arrow }}</span>
                 <span onClick="{{ f.toggleSel }}" style="width:15px;height:15px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ f.checkBg }};color:white;font:600 9px var(--sans);cursor:pointer;flex:none">{{ f.check }}</span>
                 <span style="font:400 12.5px var(--mono);color:{{ f.fg }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
@@ -2910,11 +2910,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="flex:1"></div>
           <span onClick="{{ closeRb }}" style="cursor:pointer;color:var(--ink-dim);width:24px;height:24px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <div onClick="{{ rbPickThis }}" style="padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
+        <div onClick="{{ rbPickThis }}" style="padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
           <div style="font:500 13.5px var(--sans)">This version</div>
           <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:2px">{{ rbThisSub }}</div>
         </div>
-        <div onClick="{{ rbPickPrev }}" style="padding:12px 16px;cursor:pointer" style-hover="background:var(--panel)">
+        <div onClick="{{ rbPickPrev }}" style="padding:12px 16px;cursor:pointer" style-hover="background:var(--panel-2)">
           <div style="font:500 13.5px var(--sans)">Previous version</div>
           <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:2px">{{ rbPrevSub }}</div>
         </div>
