@@ -70,9 +70,17 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.j
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo esc_html( $configurations->name ); ?></title>
 <?php captaincore_header_content_extracted(); ?>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Bundled variable fonts (Minn Admin design language) — no external font requests. */
+@font-face {
+  font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('<?php echo $plugin_url; ?>public/fonts/hanken-grotesk.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono'; font-style: normal; font-weight: 100 800; font-display: swap;
+  src: url('<?php echo $plugin_url; ?>public/fonts/jetbrains-mono.woff2') format('woff2');
+}
+</style>
 <script>window.CC_BOOT = <?php echo wp_json_encode( $cc_boot ); ?>;</script>
 <?php if ( ! empty( $cc_boot['stripeKey'] ) ) : ?>
 <script src="https://js.stripe.com/v3/"></script>
