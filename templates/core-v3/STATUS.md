@@ -34,6 +34,12 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   consumes them; remove them if they get in the way.
 - **Dock is bottom-right always** (`dockSide: 'right'`) so it never overlaps the
   sidebar user card.
+- **Tabs are Minn segmented pills** (container: paper bg + rule border + radius 10 +
+  padding 3; active tab: `--panel-2` bg + `--ink`). Tab builders emit `fg`/`bg` now,
+  NOT `fg`/`line` — new tab groups must follow (accTab/billTab/secTab/setTab/domTab/
+  siteTab in app.js, accTab in accounts.js, dlg*/aa* dialog tabs). Site-overview KPI
+  strip is Minn stat cards (separate cards, 24px/800 values) and the sidebar shows
+  live Sites/Domains counts via `navItem`'s `count`/`countDisplay` (hydration-gated).
 
 ## How it's wired
 

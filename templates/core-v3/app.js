@@ -319,8 +319,8 @@ class Component extends DCLogic {
     const acc = this.ACCOUNTS.find(a => a.id === s.accountId) || this.ACCOUNTS[0]
       || { id: '', name: '', users: 0, sites: 0, domains: 0, plan: '', owned: true, due: false };
     const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
-      fg: s.accTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.accTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ accTab: id }) }));
     const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
     return {
@@ -375,8 +375,8 @@ class Component extends DCLogic {
 
   computeBilling(s) {
     const tabs = [['invoices', 'Invoices'], ['methods', 'Payment methods'], ['address', 'Billing address']].map(([id, label]) => ({ label,
-      fg: s.billTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.billTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.billTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.billTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ billTab: id }) }));
     return {
       billTabs: tabs,
@@ -458,8 +458,8 @@ class Component extends DCLogic {
 
   computeSecurity(s) {
     const tabs = [['vulns', 'Vulnerabilities'], ['checksums', 'Checksums'], ['coverage', 'Coverage']].map(([id, label]) => ({ label,
-      fg: s.secTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.secTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.secTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.secTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ secTab: id }) }));
     const sevStyle = { High: ['var(--bad-soft)', 'var(--bad)'], Medium: ['var(--warn-soft)', 'var(--ink)'], Low: ['var(--panel-2)', 'var(--ink-dim)'] };
     const stBg = { New: 'var(--bad-soft)', Investigating: 'var(--warn-soft)', Resolved: 'var(--ok-soft)' };
@@ -602,8 +602,8 @@ class Component extends DCLogic {
 
   computeSettings(s) {
     const tabs = [['branding', 'Branding'], ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']].map(([id, label]) => ({ label,
-      fg: s.setTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.setTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.setTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.setTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ setTab: id }) }));
     const keys = s.sshKeys || this.KEYS_INIT;
     return {
@@ -957,8 +957,8 @@ class Component extends DCLogic {
     const d = domBase.find(x => x.id === s.domainId) || domBase[0]
       || { id: '', name: '', account: '', registrar: '', dns: false, expires: '—', auto: null, owned: true };
     const tabs = [['dns', 'DNS'], ['registrar', 'Registrar'], ['forwarding', 'Email forwarding'], ['sending', 'Sending']].map(([id, label]) => ({ label,
-      fg: s.domTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.domTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.domTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.domTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ domTab: id }) }));
     const typeBg = { A: 'var(--brand-soft)', AAAA: 'var(--brand-soft)', MX: 'var(--warn-soft)', TXT: 'var(--ok-soft)', SPF: 'var(--ok-soft)' };
     const dnsRows = (s.dnsRecs || []).map(r => ({ ...r, bg: typeBg[r.type] || 'var(--panel-2)',
@@ -1088,8 +1088,8 @@ class Component extends DCLogic {
     ]).map(mkCopy);
     const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
       .map(([id, label]) => ({ label,
-        fg: s.siteTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-        line: s.siteTab === id ? 'var(--brand)' : 'transparent',
+        fg: s.siteTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: s.siteTab === id ? 'var(--panel-2)' : 'transparent',
         go: () => { this.setState({ siteTab: id });
           if (!this._detail) return;
           if (id === 'logs') this.loadLogs();
@@ -1295,10 +1295,10 @@ class Component extends DCLogic {
       closeQsDlg: () => this.setState({ qsDialog: '' }),
       dlgIsComp: s.qsView === 'components', dlgIsFiles: s.qsView === 'files', dlgIsDiff: s.qsView === 'diff',
       dlgNotDiff: s.qsView !== 'diff',
-      dlgCompFg: s.qsView === 'components' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      dlgCompLine: s.qsView === 'components' ? 'var(--brand)' : 'transparent',
-      dlgFilesFg: s.qsView === 'files' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      dlgFilesLine: s.qsView === 'files' ? 'var(--brand)' : 'transparent',
+      dlgCompFg: s.qsView === 'components' ? 'var(--ink)' : 'var(--ink-dim)',
+      dlgCompBg: s.qsView === 'components' ? 'var(--panel-2)' : 'transparent',
+      dlgFilesFg: s.qsView === 'files' ? 'var(--ink)' : 'var(--ink-dim)',
+      dlgFilesBg: s.qsView === 'files' ? 'var(--panel-2)' : 'transparent',
       setDlgComp: () => this.setState({ qsView: 'components' }),
       setDlgFiles: () => this.setState({ qsView: 'files' }),
       dlgThemes: (real ? this.realQsComponents(real, s, 'theme') : this.QS_COMPONENTS.filter(c => c.kind === 'theme')).map(mkComp),
@@ -1481,9 +1481,11 @@ class Component extends DCLogic {
 
   navItem(id, label, icon) {
     const active = this.state.route === id;
+    const count = this._hydrated ? (id === 'sites' ? this.FLEET.length : id === 'domains' ? this.DOMAINS.length : 0) : 0;
     return { id, label, icon: this.ICONS[icon || id],
       fg: active ? 'var(--brand-ink)' : 'var(--ink-dim)',
       bg: active ? 'var(--brand-soft)' : 'transparent',
+      count: count ? count.toLocaleString() : '', countDisplay: count ? 'inline-block' : 'none',
       go: this.go(id) };
   }
 
