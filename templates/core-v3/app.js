@@ -1647,8 +1647,8 @@ class Component extends DCLogic {
       homeSkel, statsSkel: homeSkel,
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
-      nav: primary, navOperate: operate.map(n => n), navBottom: [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      nav: primary, navOperate: operate.map(n => n), navBottom: isOp ? [this.navItem('users', 'Users', 'accounts'), this.navItem('settings', 'Settings')] : [this.navItem('settings', 'Settings')],
+      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       dockBtnTitle: isOp ? 'Terminal · ⌃`' : 'Activity',
       dockBtnIcon: isOp ? 'M4 17l6-6-6-6M12 19h8' : 'M22 12h-4l-3 9L9 3l-3 9H2',
@@ -1665,7 +1665,7 @@ class Component extends DCLogic {
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile'].includes(s.route),
+      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
@@ -1680,6 +1680,7 @@ class Component extends DCLogic {
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       ...this.computeTermVals(s),
       ...this.computeActivityPage(s),
+      ...this.computeUsersPage(s),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
       // The console prompt is a power tool — operators only. Customers see
       // the same dock as a plain activity feed.

@@ -45,6 +45,15 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   plugin is/is-not chips): same pill container, active segment `--panel-2` + `--ink`.
   Sites filter facet chips are quiet (sentence case, `font:500 13px`, height 30) —
   no uppercase micro-labels in new chrome.
+- **Users page** (`/users` route, Manage nav group, operator-only, 2026-07-19): v1
+  parity for fleet user management in users.js — list + client-side filter over
+  `GET /users/`, Add dialog (`POST /users`: first/last/email/username + account
+  picker; server creates a subscriber with generated password + welcome email),
+  Edit dialog (`GET/PUT /users/{id}`; PUT re-assigns `account_ids`, username is
+  immutable so the field hides in edit mode), per-row "Access as" link when
+  User Switching provides `switch_to_url`. Server-side validation errors from
+  the routes render in the dialog. Nav entry is gated on isOp; the routes are
+  admin-gated server-side regardless.
 - **Activity page** (`/activity` route, Operate nav group, 2026-07-19): full fleet
   event log from `GET /activity-logs?per_page=100` (self-scoped for customers),
   lazy-loaded on first visit via `computeActivityPage`/`loadActivityPage` in home.js.
