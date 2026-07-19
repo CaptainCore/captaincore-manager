@@ -45,6 +45,11 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   plugin is/is-not chips): same pill container, active segment `--panel-2` + `--ink`.
   Sites filter facet chips are quiet (sentence case, `font:500 13px`, height 30) —
   no uppercase micro-labels in new chrome.
+- **Buttons: radius 9 regular / 7 small** (primary + ghost normalized). **Focus rings
+  are global CSS** in the helmet (`--ring` token, `box-shadow` on `:focus`); borderless
+  composed inputs are excluded via `[style*="border-style: none"]` — NOTE the runtime
+  serializes `border:none` to longhand `border-style: none`, so both attribute forms
+  are in the selector. New borderless inputs must keep `border:none` inline to opt out.
 
 ## How it's wired
 
