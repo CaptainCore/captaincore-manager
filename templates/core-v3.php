@@ -62,6 +62,18 @@ $cc_boot = [
     'uploadUrl'       => $plugin_url . 'upload.php',
 ];
 
+// Switched-session escape (User Switching): surface the back-link in the shell —
+// the plugin's own link lives in the admin bar this SPA never renders. NOTE:
+// switch_back_url() returns an HTML-escaped nonce URL; decode or the nonce breaks.
+if ( class_exists( 'user_switching' ) ) {
+    $old_user = user_switching::get_old_user();
+    if ( $old_user ) {
+        $switch_back = user_switching::switch_back_url( $old_user );
+        $cc_boot['switchBackUrl']   = html_entity_decode( add_query_arg( 'redirect_to', urlencode( home_url( $config_path . '?ui=v3' ) ), $switch_back ) );
+        $cc_boot['switchBackLabel'] = 'Switch back to ' . $old_user->display_name;
+    }
+}
+
 $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
 ?><!DOCTYPE html>
 <html>

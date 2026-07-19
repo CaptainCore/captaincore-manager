@@ -53,7 +53,13 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   immutable so the field hides in edit mode), per-row "Access as" link when
   User Switching provides `switch_to_url`. Server-side validation errors from
   the routes render in the dialog. Nav entry is gated on isOp; the routes are
-  admin-gated server-side regardless.
+  admin-gated server-side regardless. Switched sessions get a Minn-style amber
+  "Switch back to <admin>" pill above the sidebar user card — core-v3.php puts
+  the User Switching back-link in CC_BOOT (switch_back_url() output is
+  HTML-ESCAPED; it is entity-decoded there or the nonce breaks) with a
+  redirect_to back into ?ui=v3. Dialog dropdowns must render IN-FLOW, not
+  position:absolute — the dialog body scrolls, so absolute panels clip against
+  it and collide with the footer (bit the account picker).
 - **Activity page** (`/activity` route, Operate nav group, 2026-07-19): full fleet
   event log from `GET /activity-logs?per_page=100` (self-scoped for customers),
   lazy-loaded on first visit via `computeActivityPage`/`loadActivityPage` in home.js.
