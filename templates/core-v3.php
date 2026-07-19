@@ -62,7 +62,7 @@ $cc_boot = [
     'uploadUrl'       => $plugin_url . 'upload.php',
 ];
 
-$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'version-recovery.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>
