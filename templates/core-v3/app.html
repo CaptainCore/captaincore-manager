@@ -13,6 +13,7 @@
   --ok-soft:rgba(70,184,129,0.13);
   --warn-soft:rgba(224,164,88,0.16);
   --bad-soft:rgba(228,107,107,0.12);
+  --ring:color-mix(in srgb,var(--brand) 30%,transparent);
   --shadow:0 12px 40px rgba(30,30,50,0.14);
   --shadow-sm:0 3px 14px rgba(30,30,50,0.08);
   --sans:"Hanken Grotesk",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
@@ -46,6 +47,9 @@ html,body{margin:0;padding:0;background:var(--canvas)}
 body{font-family:var(--sans);color:var(--ink);font-variant-numeric:tabular-nums}
 a{color:var(--brand-ink);text-decoration:none}
 a:hover{color:var(--brand-ink);text-decoration:underline}
+/* Focus affordance (Minn): bordered fields get a brand ring; borderless
+   composed fields (palette, search wrappers) keep their container styling. */
+input:not([style*="border:none"]):not([style*="border-style: none"]):focus,textarea:not([style*="border:none"]):not([style*="border-style: none"]):focus,select:focus{border-color:var(--brand) !important;box-shadow:0 0 0 3px var(--ring)}
 *{box-sizing:border-box}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--rule);border-radius:8px;border:2px solid transparent;background-clip:padding-box}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-corner{background:transparent}
 @keyframes ccpulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -290,7 +294,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
               <span onClick="{{ setViewCards }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ crdBg }};color:{{ crdFg }}">Cards</span>
             </div>
-            <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New site</button>
+            <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New site</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px">
             <span onClick="{{ unassignedToggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid {{ unBd }};border-radius:99px;background:{{ unBg }};color:{{ unFg }};font:500 13px var(--sans);cursor:pointer;white-space:nowrap">⚠ {{ unassignedLabel }}</span>
@@ -442,7 +446,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <button onClick="{{ dTerm }}" title="Open terminal (⌃`)" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17"></path></svg>
             </button>
-            <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
+            <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
           <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
@@ -680,7 +684,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </sc-if>
                   <div style="flex:none;display:flex;gap:8px;margin-left:8px">
                     <sc-if value="{{ a.upd }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ a.doUpdate }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Update</button>
+                      <button onClick="{{ a.doUpdate }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Update</button>
                     </sc-if>
                     <button onClick="{{ a.doToggle }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">{{ a.toggleLabel }}</button>
                   </div>
@@ -693,7 +697,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Git-commit history — quicksaves and update events on one timeline.</span>
               <div style="flex:1"></div>
-              <button onClick="{{ newQuicksave }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New quicksave</button>
+              <button onClick="{{ newQuicksave }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New quicksave</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ quicksaves }}" as="qk" hint-placeholder-count="4">
@@ -718,7 +722,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Restic · daily at 3:00 AM UTC · direct to Backblaze B2 · point-in-time restore to any date</span>
               <div style="flex:1"></div>
-              <button onClick="{{ backupNow }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Back up now</button>
+              <button onClick="{{ backupNow }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Back up now</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ backups }}" as="b" hint-placeholder-count="4">
@@ -762,7 +766,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </div>
                 </sc-if>
               </div>
-              <button onClick="{{ createSnap }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Create snapshot</button>
+              <button onClick="{{ createSnap }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Create snapshot</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ snapshots }}" as="sn" hint-placeholder-count="3">
@@ -811,7 +815,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <sc-if value="{{ t.editing }}" hint-placeholder-val="{{ false }}">
                     <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--panel)">
                       <input value="{{ tlEditText }}" onInput="{{ onTlEditText }}" style="flex:1;height:32px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
-                      <button onClick="{{ t.doneEdit }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
+                      <button onClick="{{ t.doneEdit }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
                       <span onClick="{{ t.cancelEdit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
                     </div>
                   </sc-if>
@@ -828,7 +832,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
                   <span style="font:500 12px var(--sans);background:var(--panel-2);border-radius:99px;padding:3px 10px;color:var(--ink-dim)">{{ u.role }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim);width:64px;text-align:right">{{ u.last }}</span>
-                  <button onClick="{{ u.magic }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--brand)">Magic login</button>
+                  <button onClick="{{ u.magic }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Magic login</button>
                 </div>
               </sc-for>
             </div>
@@ -867,7 +871,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ dq }}" onInput="{{ onDq }}" placeholder="Filter domains…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New domain</button>
+            <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New domain</button>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
@@ -908,7 +912,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
                 <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ dnsNoticeText }}</span>
                 <sc-if value="{{ dnsShowActivate }}" hint-placeholder-val="{{ false }}">
-                  <button onClick="{{ activateZone }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate DNS zone</button>
+                  <button onClick="{{ activateZone }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate DNS zone</button>
                 </sc-if>
               </div>
             </sc-if>
@@ -930,7 +934,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                       <input value="{{ dnsEN }}" onInput="{{ onDnsEN }}" style="width:150px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none">
                       <input value="{{ dnsEV }}" onInput="{{ onDnsEV }}" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none">
                       <input value="{{ dnsETtl }}" onInput="{{ onDnsETtl }}" style="width:64px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none">
-                      <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
+                      <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
                       <span onClick="{{ dnsEditCancel }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
                     </div>
                   </sc-if>
@@ -984,7 +988,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Expires</span>
                   <span style="font:400 13px var(--mono);color:{{ regExpFg }}">{{ regExpires }}</span>
                   <sc-if value="{{ regWarn }}" hint-placeholder-val="{{ false }}">
-                    <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
+                    <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
                   </sc-if>
                 </div>
                 <sc-if value="{{ regShowAuto }}" hint-placeholder-val="{{ true }}">
@@ -1036,7 +1040,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <sc-if value="{{ fwdInactive }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
                 <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Email forwarding is not active on this domain.</span>
-                <button onClick="{{ activateFwd }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate forwarding</button>
+                <button onClick="{{ activateFwd }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate forwarding</button>
               </div>
             </sc-if>
             <sc-if value="{{ fwdNotice }}" hint-placeholder-val="{{ false }}">
@@ -1067,13 +1071,13 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Transactional sending via <span style="font:500 12.5px var(--mono);color:var(--ink)">{{ mgHost }}</span> · {{ mgSupp }}</span>
               <div style="flex:1"></div>
               <sc-if value="{{ mgShowDeploy }}" hint-placeholder-val="{{ true }}">
-                <button onClick="{{ mgDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to site (SMTP)</button>
+                <button onClick="{{ mgDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to site (SMTP)</button>
               </sc-if>
             </div>
             <sc-if value="{{ mgInactive }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
                 <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Mailgun sending is not set up for this domain.</span>
-                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up mg.{{ domName }}</button>
+                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up mg.{{ domName }}</button>
               </div>
             </sc-if>
             <sc-if value="{{ mgNotice }}" hint-placeholder-val="{{ false }}">
@@ -1115,7 +1119,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ aq }}" onInput="{{ onAq }}" placeholder="Filter accounts…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New account</button>
+            <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New account</button>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
@@ -1142,7 +1146,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
             <div style="flex:1"></div>
             <sc-if value="{{ accShowTransfer }}" hint-placeholder-val="{{ true }}">
-              <button onClick="{{ openTransfer }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
+              <button onClick="{{ openTransfer }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
             </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ accMeta }}</div>
@@ -1316,7 +1320,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   <span style="font:500 12px var(--sans);background:{{ iv.stBg }};color:{{ iv.stFg }};border-radius:99px;padding:3px 10px">{{ iv.status }}</span>
                   <span onClick="{{ iv.pdf }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
                   <sc-if value="{{ iv.canPay }}" hint-placeholder-val="{{ false }}">
-                    <button onClick="{{ iv.pay }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
+                    <button onClick="{{ iv.pay }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
                   </sc-if>
                 </div>
               </sc-for>
@@ -1540,7 +1544,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span onClick="{{ c.go }}" style="padding:5px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">{{ c.label }}</span>
             </sc-for>
             <div style="flex:1"></div>
-            <button onClick="{{ requestAudit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Request audit</button>
+            <button onClick="{{ requestAudit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Request audit</button>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
             <sc-for list="{{ audRows }}" as="a" hint-placeholder-count="3">
@@ -1617,7 +1621,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </div>
             <input value="{{ repEmail }}" onInput="{{ onRepEmail }}" placeholder="recipient@example.com" style="flex:1;min-width:180px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none">
             <button onClick="{{ repPreview }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Preview</button>
-            <button onClick="{{ repSend }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Send report</button>
+            <button onClick="{{ repSend }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Send report</button>
           </div>
           <sc-if value="{{ repHasSendMsg }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:10px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ repSendMsg }}</div>
@@ -1690,7 +1694,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:12px;background:var(--panel)">
             <input value="{{ archUrl }}" onInput="{{ onArchUrl }}" placeholder="https://…/migration.zip — store an archive from a URL" style="flex:1;height:34px;border:1px solid {{ archBd }};border-radius:8px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 10px;outline:none">
-            <button onClick="{{ storeArch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Store archive</button>
+            <button onClick="{{ storeArch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Store archive</button>
           </div>
           <sc-if value="{{ archErr }}" hint-placeholder-val="{{ false }}">
             <div style="font:500 12.5px var(--sans);color:var(--bad);margin-top:8px">URL must point to a .zip file.</div>
@@ -2114,7 +2118,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span onClick="{{ setUni }}" style="padding:3px 10px;border-radius:7px;cursor:pointer;font:500 11.5px var(--sans);background:{{ uniBg }};color:{{ uniFg }}">Unified</span>
               <span onClick="{{ setSplit }}" style="padding:3px 10px;border-radius:7px;cursor:pointer;font:500 11.5px var(--sans);background:{{ splBg }};color:{{ splFg }}">Side-by-side</span>
             </div>
-            <button onClick="{{ dlgRestoreFile }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12px var(--sans);padding:5px 12px;border-radius:6px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Restore this file</button>
+            <button onClick="{{ dlgRestoreFile }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12px var(--sans);padding:5px 12px;border-radius:7px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Restore this file</button>
           </div>
         </sc-if>
         <div style="flex:1;overflow-y:auto;min-height:0">
@@ -2271,7 +2275,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeNs }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ nsCreate }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ nsCta }}</button>
+          <button onClick="{{ nsCreate }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ nsCta }}</button>
         </div>
       </div>
     </div>
@@ -2312,7 +2316,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeNd }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ ndCreate }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add domain</button>
+          <button onClick="{{ ndCreate }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Add domain</button>
         </div>
       </div>
     </div>
@@ -2336,7 +2340,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeNa }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ createAccount }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Create account</button>
+          <button onClick="{{ createAccount }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Create account</button>
         </div>
       </div>
     </div>
@@ -2359,7 +2363,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeBillAddr }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveBillAddr }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save address</button>
+          <button onClick="{{ saveBillAddr }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save address</button>
         </div>
       </div>
     </div>
@@ -2384,7 +2388,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeAddCard }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add card</button>
+          <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Add card</button>
         </div>
       </div>
     </div>
@@ -2409,7 +2413,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeAddAch }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ submitAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Connect bank</button>
+          <button onClick="{{ submitAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Connect bank</button>
         </div>
       </div>
     </div>
@@ -2435,7 +2439,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeVerifyAch }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ submitVerifyAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Verify</button>
+          <button onClick="{{ submitVerifyAch }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Verify</button>
         </div>
       </div>
     </div>
@@ -2461,7 +2465,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
           <div style="flex:1"></div>
           <span onClick="{{ closeRecipeDlg }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveRecipe }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save recipe</button>
+          <button onClick="{{ saveRecipe }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save recipe</button>
         </div>
       </div>
     </div>
@@ -2518,7 +2522,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);position:sticky;bottom:0;background:var(--paper)">
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
+          <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
         </div>
       </div>
     </div>
@@ -2566,7 +2570,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           </sc-if>
           <div style="flex:1"></div>
           <span onClick="{{ closeProvider }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveProvider }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save provider</button>
+          <button onClick="{{ saveProvider }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save provider</button>
         </div>
       </div>
     </div>
@@ -2592,7 +2596,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeSchedEdit }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveSchedEdit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save schedule</button>
+          <button onClick="{{ saveSchedEdit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save schedule</button>
         </div>
       </div>
     </div>
@@ -2686,7 +2690,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeNsv }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveNsv }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save nameservers</button>
+          <button onClick="{{ saveNsv }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save nameservers</button>
         </div>
       </div>
     </div>
@@ -2713,7 +2717,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeCt }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ saveCt }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save contacts</button>
+          <button onClick="{{ saveCt }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save contacts</button>
         </div>
       </div>
     </div>
@@ -2752,7 +2756,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px">
                 <div style="font:600 22px var(--sans)">{{ bkSelTitle }}</div>
                 <div style="font:400 13px var(--mono);color:var(--ink-dim)">{{ bkSelSize }}</div>
-                <button onClick="{{ bkDownload }}" style="margin-top:14px;border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:9px 18px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Download</button>
+                <button onClick="{{ bkDownload }}" style="margin-top:14px;border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Download</button>
                 <span onClick="{{ cancelSel }}" style="margin-top:6px;font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Cancel selection</span>
                 <span style="margin-top:12px;font:400 11.5px var(--sans);color:var(--ink-dim)">Packaged in the background and delivered by email.</span>
               </div>
@@ -2914,7 +2918,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                       <span style="font:500 12px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:5px 11px">Installed</span>
                     </sc-if>
                     <sc-if value="{{ i.notInstalled }}" hint-placeholder-val="{{ true }}">
-                      <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
+                      <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
                     </sc-if>
                   </div>
                 </div>
@@ -2945,7 +2949,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </div>
                   <div style="flex:1"></div>
                   <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 12px;margin-top:8px;border-top:1px solid var(--rule)">
-                    <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:6px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
+                    <button onClick="{{ i.doInstall }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Install</button>
                   </div>
                 </div>
               </sc-for>
