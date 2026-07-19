@@ -62,6 +62,13 @@ $cc_boot = [
     'uploadUrl'       => $plugin_url . 'upload.php',
 ];
 
+// Intercom chat support — customers only, v1 parity. Identity verification rides
+// user_hash (HMAC of email with the server-side secret; the key itself must never
+// reach the client). Admins never load the widget.
+$intercom_embed_id = isset( $configurations->intercom_embed_id ) ? (string) $configurations->intercom_embed_id : '';
+$load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== ''
+	&& ! empty( $user->email ) && ! empty( $user->login ) && ! empty( $user->registered );
+
 // Switched-session escape (User Switching): surface the back-link in the shell —
 // the plugin's own link lives in the admin bar this SPA never renders. NOTE:
 // switch_back_url() returns an HTML-escaped nonce URL; decode or the nonce breaks.
@@ -108,5 +115,17 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.
 <script type="text/x-dc" data-dc-script data-props="{&quot;shellVariant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;rail&quot;,&quot;options&quot;:[&quot;rail&quot;,&quot;slim&quot;,&quot;topnav&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;operator&quot;,&quot;options&quot;:[&quot;operator&quot;,&quot;customer&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;brandColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#3b82c4&quot;,&quot;options&quot;:[&quot;#3b82c4&quot;,&quot;#2c3e50&quot;,&quot;#0e9f6e&quot;,&quot;#7c5cff&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;}}">
 <?php foreach ( $v3_scripts as $v3_script ) { readfile( $v3_dir . '/' . $v3_script ); echo "\n"; } ?>
 </script>
+<?php if ( $load_intercom ) : ?>
+<script>
+window.intercomSettings = {
+	app_id: <?php echo wp_json_encode( $intercom_embed_id ); ?>,
+	name: <?php echo wp_json_encode( $user->display_name ); ?>,
+	email: <?php echo wp_json_encode( $user->email ); ?>,
+	created_at: <?php echo wp_json_encode( $user->registered ); ?>,
+	user_hash: <?php echo wp_json_encode( $user->hash ); ?>
+};
+(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?php echo esc_js( $intercom_embed_id ); ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+</script>
+<?php endif; ?>
 </body>
 </html>

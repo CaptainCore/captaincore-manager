@@ -60,6 +60,12 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   redirect_to back into ?ui=v3. Dialog dropdowns must render IN-FLOW, not
   position:absolute — the dialog body scrolls, so absolute panels clip against
   it and collide with the footer (bit the account picker).
+- **Intercom chat** (2026-07-19, v1 parity): core-v3.php boots the messenger for
+  NON-admin sessions only, when `configurations->intercom_embed_id` is set —
+  server-rendered `window.intercomSettings` (name/email/created_at + `user_hash`
+  HMAC from User->profile()) + the standard async loader at the end of body.
+  The `intercom_secret_key` stays server-side (same rule as the configurations
+  REST route). Admin pages ship zero Intercom bytes.
 - **Right-click context menus** (2026-07-19, Minn pattern): shared primitive in
   app.js — `openCtxMenu(e, entries)` (viewport-clamped fixed menu + full-screen
   click-catcher, state `ctxMenu`, closed by `go()` on route change) with entries
