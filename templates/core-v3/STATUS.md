@@ -70,6 +70,15 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   `magicLogin(siteId, envLower, user)` in site-detail.js — realMagicLogin
   delegates to it; production env from the list, runJob sample fallback in
   design mode). The card Terminal chip is gone (terminal = topbar/⌃`/palette).
+- **Environment pills + List view** (2026-07-19): `openSite(id, env)` takes an
+  optional environment (BOTH copies — app.js AND the site-detail.js OVERRIDE;
+  the mixin replaces the class method, so signature changes must land in both).
+  Table and card env labels are now per-env pills via rows' `envChips`
+  (stopPropagation + openSite at that env; falls back to parsing `envs` string
+  in design mode). Third Sites view "List" (`view: 'list'`) mirrors v1's
+  per-environment listing via rows' `envCards` (env badge, WP chip, home_url
+  link, per-env visits/storage from environmentsRaw, per-env `_thumb-800`
+  screenshot, Manage site + WP Login per env).
 - **Intercom chat** (2026-07-19, v1 parity): core-v3.php boots the messenger for
   NON-admin sessions only, when `configurations->intercom_embed_id` is set —
   server-rendered `window.intercomSettings` (name/email/created_at + `user_hash`

@@ -9,8 +9,8 @@
 
 Object.assign(Component.prototype, {
 
-  openSite(id) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '' });
+  openSite(id, env) {
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '' });
     if (this._hydrated) this.loadSiteDetail(id);
   },
 

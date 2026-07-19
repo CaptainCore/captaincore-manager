@@ -693,8 +693,8 @@ class Component extends DCLogic {
   runJob(label, target) {
     this.setState(st => ({ jobs: [{ id: Date.now(), label, target, state: 'running', pct: 4 }, ...st.jobs] }));
   }
-  openSite(id) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: 'Production', qsOpen: '', bkOpen: '', paletteOpen: false });
+  openSite(id, env) {
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false });
   }
 
   computeList(s, isOp) {
@@ -770,6 +770,28 @@ class Component extends DCLogic {
       mono: (x.name || '?').slice(0, 2).toUpperCase(),
       thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
       thumbLarge: thumbOf(x, 800), hasThumbLarge: !!thumbOf(x, 800),
+      envChips: ((x.environmentsRaw && x.environmentsRaw.length)
+        ? x.environmentsRaw.map(e => e.environment)
+        : String(x.envs || 'Prod').split(' \u00b7 ').map(l => l === 'Prod' ? 'Production' : l)
+      ).map(en => ({
+        label: en === 'Production' ? 'Prod' : en,
+        go: (ev) => { ev.stopPropagation(); this.openSite(x.id, en); } })),
+      envCards: ((x.environmentsRaw && x.environmentsRaw.length) ? x.environmentsRaw : [{ environment: 'Production', core: x.core, home_url: x.home_url, visits: x.visits, storage: '', screenshot_base: '' }]).map(e => {
+        const en = e.environment || 'Production';
+        const ru = (window.CC_BOOT && window.CC_BOOT.remoteUploadUri) || '';
+        const shot = (ru && x.site && e.screenshot_base) ? ru + x.site + '_' + x.id + '/' + en.toLowerCase() + '/screenshots/' + e.screenshot_base + '_thumb-800.jpg' : '';
+        return {
+          env: en.toUpperCase(),
+          envBg: en === 'Production' ? 'var(--ok-soft)' : 'var(--panel-2)',
+          envFg: en === 'Production' ? 'var(--ok)' : 'var(--ink-dim)',
+          core: e.core || x.core || '', url: e.home_url || '',
+          visits: e.visits ? Number(e.visits).toLocaleString() : '\u2014',
+          storage: e.storage ? this.fmtStorage(e.storage) : '\u2014',
+          shot, hasShot: !!shot,
+          visit: (ev) => { ev.stopPropagation(); if (e.home_url) window.open(e.home_url, '_blank'); },
+          manage: (ev) => { ev.stopPropagation(); this.openSite(x.id, en); },
+          login: (ev) => { ev.stopPropagation(); if (this._hydrated) this.magicLogin(x.id, en.toLowerCase()); else this.runJob('magiclogin', x.name); } };
+      }),
       wpLogin: (e) => { e.stopPropagation(); if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); },
       updLabel: x.updates ? x.updates + ' pending' : '—',
       updBg: x.updates ? 'var(--warn-soft)' : 'transparent',
@@ -888,10 +910,12 @@ class Component extends DCLogic {
         else if (st.nsPath === 'import') { if (!sel.length) return; this.runJob('provider-import', sel.length + ' sites from ' + st.nsProv); }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, dockOpen: true }); },
-      viewTable: s.view === 'table', viewCards: s.view === 'cards',
+      viewTable: s.view === 'table', viewCards: s.view === 'cards', viewList: s.view === 'list',
       tblBg: s.view === 'table' ? 'var(--panel-2)' : 'transparent', tblFg: s.view === 'table' ? 'var(--ink)' : 'var(--ink-dim)',
       crdBg: s.view === 'cards' ? 'var(--panel-2)' : 'transparent', crdFg: s.view === 'cards' ? 'var(--ink)' : 'var(--ink-dim)',
+      lstBg: s.view === 'list' ? 'var(--panel-2)' : 'transparent', lstFg: s.view === 'list' ? 'var(--ink)' : 'var(--ink-dim)',
       setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
+      setViewList: () => this.setState({ view: 'list' }),
       listRows: rows
     };
   }
