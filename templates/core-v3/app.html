@@ -574,6 +574,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-for>
             </div>
           </sc-if>
+          <sc-if value="{{ sitesPageShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ sitesPageLabel }}</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ sitesPrev }}" style="border:1px solid var(--rule);background:{{ sitesPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
+              <button onClick="{{ sitesNext }}" style="border:1px solid var(--rule);background:{{ sitesNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 
@@ -1042,6 +1050,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
             </sc-for>
           </div>
+          <sc-if value="{{ domPageShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ domPageLabel }}</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ domPrev }}" style="border:1px solid var(--rule);background:{{ domPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
+              <button onClick="{{ domNext }}" style="border:1px solid var(--rule);background:{{ domNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 

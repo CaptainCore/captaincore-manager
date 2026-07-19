@@ -29,10 +29,10 @@ Object.assign(Component.prototype, {
       : (options || []).slice(0, 60);
     const anyRow = { label: 'Any', name: 'Any', mark: cur === 'Any' || !cur ? '✓' : '', badge: '',
       bg: (cur === 'Any' || !cur) ? 'var(--brand-soft)' : 'transparent',
-      pick: () => { this.setState({ [key]: 'Any', ddOpen: '', ddQ: '', ...(extraReset || {}) }); this.applyServerFilter(); } };
+      pick: () => { this.setState({ [key]: 'Any', ddOpen: '', ddQ: '', sitesPage: 1, ...(extraReset || {}) }); this.applyServerFilter(); } };
     return [anyRow, ...matched.map(o => ({ label: o.title || o.name, name: o.name, badge: '',
       mark: cur === o.name ? '✓' : '', bg: cur === o.name ? 'var(--brand-soft)' : 'transparent',
-      pick: () => { this.setState({ [key]: o.name, ddOpen: '', ddQ: '', ...(extraReset || {}) }); this.applyServerFilter(); } }))];
+      pick: () => { this.setState({ [key]: o.name, ddOpen: '', ddQ: '', sitesPage: 1, ...(extraReset || {}) }); this.applyServerFilter(); } }))];
   },
 
   // Look up the full option object for a selected name (for the POST body).
