@@ -205,7 +205,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--rule)">
                   <h2 style="margin:0;font:700 16px var(--sans);letter-spacing:-.2px">Recent activity</h2>
-                  <a href="#" style="font:500 12.5px var(--sans)">View all</a>
+                  <span onClick="{{ goActivity }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">View all →</span>
                 </div>
                 <sc-for list="{{ activity }}" as="ev" hint-placeholder-count="5">
                   <div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:baseline">
@@ -282,6 +282,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
           </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showActivity }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:920px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
+          <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule)">
+              <h2 style="margin:0;font:700 16px var(--sans);letter-spacing:-.2px">Fleet activity</h2>
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ actCount }}</span>
+            </div>
+            <sc-for list="{{ actRows }}" as="ev" hint-placeholder-count="10">
+              <div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:baseline">
+                <span style="flex:none;width:44px;font:500 12px var(--mono);color:var(--ink-dim);text-align:right">{{ ev.t }}</span>
+                <span style="font:400 14px/1.55 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ actLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:14px;padding:13px 18px;border-bottom:1px solid var(--rule)"><span class="cc-skel" style="width:36px;height:12px;margin-left:8px"></span><span class="cc-skel" style="width:420px;height:12px"></span></div>
+              <div style="display:flex;gap:14px;padding:13px 18px;border-bottom:1px solid var(--rule)"><span class="cc-skel" style="width:36px;height:12px;margin-left:8px"></span><span class="cc-skel" style="width:360px;height:12px"></span></div>
+              <div style="display:flex;gap:14px;padding:13px 18px"><span class="cc-skel" style="width:36px;height:12px;margin-left:8px"></span><span class="cc-skel" style="width:390px;height:12px"></span></div>
+            </sc-if>
+            <sc-if value="{{ actEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:40px;text-align:center;font:400 14px var(--sans);color:var(--ink-dim)">No recent activity</div>
+            </sc-if>
+          </section>
         </div>
       </sc-if>
 

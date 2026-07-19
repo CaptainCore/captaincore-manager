@@ -1416,6 +1416,7 @@ class Component extends DCLogic {
     archives: 'M3 7h18v4H3zM5 11v9a1 1 0 001 1h12a1 1 0 001-1v-9M10 15h4',
     settings: 'M4 7h9M17 7h3M13 4v6M4 17h3M11 17h9M7 14v6',
     terminal: 'M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17',
+    activity: 'M22 12h-4l-3 9L9 3l-3 9H2',
     search: 'M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2',
     support: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 14v.01M9.5 9a2.5 2.5 0 115 0c0 1.5-2.5 2-2.5 3.5',
     site: 'M4 5h16v14H4zM4 9h16M7 7h.01',
@@ -1530,7 +1531,7 @@ class Component extends DCLogic {
     const primary = isOp
       ? [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing')]
       : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
-    const operate = [this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
+    const operate = [this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
 
     // When booted (real app), never show design sample counts — '…' until
     // hydration lands, then real numbers. Samples remain for the DC editor.
@@ -1540,7 +1541,7 @@ class Component extends DCLogic {
       { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
       { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
       { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
-      { label: 'Terminal', desc: 'Run commands across the fleet', meta: '⌃`', icon: this.ICONS.terminal, act: 'dock', acc: 'terminal' }
+      { label: 'Activity', desc: 'Fleet-wide event log', meta: this._activity ? String(this._activity.filter(a => a.t && !/\dd$/.test(a.t)).length) + ' today' : (booted ? '…' : '14 today'), icon: this.ICONS.activity, act: 'activity', acc: 'terminal' }
     ] : [
       { label: 'My sites', desc: 'Backups, updates, stats', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '4'), icon: this.ICONS.sites, act: 'sites', acc: 'sites' },
       { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '6'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
@@ -1647,7 +1648,7 @@ class Component extends DCLogic {
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', reports: 'Reports', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       dockBtnTitle: isOp ? 'Terminal · ⌃`' : 'Activity',
       dockBtnIcon: isOp ? 'M4 17l6-6-6-6M12 19h8' : 'M22 12h-4l-3 9L9 3l-3 9H2',
@@ -1664,7 +1665,7 @@ class Component extends DCLogic {
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'reports', 'archives', 'settings', 'profile'].includes(s.route),
+      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
@@ -1678,6 +1679,7 @@ class Component extends DCLogic {
       dockIdle: !jobs.some(j => j.running),
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       ...this.computeTermVals(s),
+      ...this.computeActivityPage(s),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
       // The console prompt is a power tool — operators only. Customers see
       // the same dock as a plain activity feed.
@@ -1688,7 +1690,7 @@ class Component extends DCLogic {
         : 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
       toggleTheme: () => { const t = this.state.theme === 'dark' ? 'light' : 'dark'; this.setState({ theme: t }); this.applyTheme(t); localStorage.setItem('captaincore-theme', t); },
       toasts: this.toastVals(),
-      goHome: this.go('home'), goSites: this.go('sites'),
+      goHome: this.go('home'), goSites: this.go('sites'), goActivity: this.go('activity'),
       openDock: () => this.setState({ dockOpen: true }),
       closeDock: () => this.setState({ dockOpen: false }),
       openPalette: () => this.setState({ paletteOpen: true, palQuery: '', palIdx: 0 }),

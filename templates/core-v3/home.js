@@ -86,3 +86,35 @@ Object.assign(Component.prototype, {
   }
 
 });
+
+// ── Activity page ── full fleet event log (same endpoint as the home feed,
+// larger page; self-scoped for customers by the API itself).
+Object.assign(Component.prototype, {
+
+  loadActivityPage() {
+    if (this._actFullLoading) return;
+    this._actFullLoading = true;
+    this.api('/activity-logs?per_page=100').then(res => {
+      const items = (res && Array.isArray(res.items)) ? res.items : [];
+      this._actFull = items.map(x => ({
+        t: this.relTime(x.created_at),
+        text: x.description || [x.action, x.entity_type, x.entity_name].filter(Boolean).join(' ')
+      }));
+      this.setState({});
+    }).catch(err => { console.warn('CaptainCore v3 activity page failed.', err); this._actFull = []; this.setState({}); });
+  },
+
+  computeActivityPage(s) {
+    const active = s.route === 'activity';
+    if (active && window.CC_BOOT && !this._actFull) setTimeout(() => this.loadActivityPage(), 0);
+    const rows = this._actFull || (window.CC_BOOT ? [] : (this._sampleActivity || []));
+    return {
+      showActivity: active,
+      actRows: rows,
+      actCount: rows.length ? rows.length + ' events' : '',
+      actLoading: active && !!window.CC_BOOT && !this._actFull,
+      actEmpty: active && !!this._actFull && rows.length === 0
+    };
+  }
+
+});
