@@ -65,6 +65,13 @@ $cc_boot = [
     'remoteUploadUri' => isset( $configurations->remote_upload_uri ) ? $configurations->remote_upload_uri : '',
 ];
 
+// Minn Admin escape — administrators only, and only while the Minn Admin
+// plugin is active on this site (the mirror of Minn's own wp-admin icon in
+// its user card).
+if ( $user->role === 'administrator' && defined( 'MINN_ADMIN_VERSION' ) ) {
+    $cc_boot['minnAdminUrl'] = home_url( '/minn-admin/' );
+}
+
 // Intercom chat support — customers only, v1 parity. Identity verification rides
 // user_hash (HMAC of email with the server-side secret; the key itself must never
 // reach the client). Admins never load the widget.
