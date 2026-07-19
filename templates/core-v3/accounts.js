@@ -121,8 +121,8 @@ Object.assign(Component.prototype, {
     const usage = plan.usage || {};
     const limits = plan.limits || {};
     const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
-      fg: s.accTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      line: s.accTab === id ? 'var(--brand)' : 'transparent',
+      fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
     return {
       accName: a.name || (acc.loading ? 'Loading…' : 'Account'),

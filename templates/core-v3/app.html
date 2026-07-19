@@ -87,6 +87,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
               <span style="white-space:nowrap">{{ n.label }}</span>
+              <span style="margin-left:auto;font:500 12px var(--sans);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);padding:0 7px;border-radius:20px;line-height:18px;display:{{ n.countDisplay }}">{{ n.count }}</span>
             </div>
           </sc-for>
           <sc-if value="{{ showOperate }}" hint-placeholder-val="{{ false }}">
@@ -95,6 +96,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
                 <span style="white-space:nowrap">{{ n.label }}</span>
+                <span style="margin-left:auto;font:500 12px var(--sans);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);padding:0 7px;border-radius:20px;line-height:18px;display:{{ n.countDisplay }}">{{ n.count }}</span>
               </div>
             </sc-for>
           </sc-if>
@@ -103,6 +105,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
               <span style="white-space:nowrap">{{ n.label }}</span>
+              <span style="margin-left:auto;font:500 12px var(--sans);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);padding:0 7px;border-radius:20px;line-height:18px;display:{{ n.countDisplay }}">{{ n.count }}</span>
             </div>
           </sc-for>
         </div>
@@ -442,33 +445,31 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:18px">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="6">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
           <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
-            <div style="display:flex;align-items:stretch;margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-top:16px">
               <sc-for list="{{ statTiles }}" as="t" hint-placeholder-count="4">
-                <div onClick="{{ t.go }}" title="{{ t.tip }}" style="flex:1;padding:11px 16px;border-right:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
-                  <div style="display:flex;align-items:center;gap:6px;font:500 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.75"><path d="{{ t.icon }}"></path></svg>
+                <div onClick="{{ t.go }}" title="{{ t.tip }}" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s" style-hover="border-color:var(--brand)">
+                  <div style="display:flex;align-items:center;gap:7px;font:500 13.5px var(--sans);color:var(--ink-dim)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="{{ t.icon }}"></path></svg>
                     <span>{{ t.k }}</span>
                   </div>
-                  <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
-                    <span style="font:600 17px var(--sans)">{{ t.v }}</span>
-                    <span style="font:500 11.5px var(--sans);color:{{ t.deltaFg }}">{{ t.delta }}</span>
-                  </div>
+                  <div style="font:800 24px/1.1 var(--sans);letter-spacing:-.8px;margin-top:8px">{{ t.v }}</div>
+                  <div style="font:600 12.5px var(--sans);margin-top:5px;color:{{ t.deltaFg }}">{{ t.delta }}</div>
                 </div>
               </sc-for>
-              <div onClick="{{ openStats }}" title="Open full stats" style="flex:1.3;display:flex;align-items:center;gap:14px;padding:11px 16px;cursor:pointer" style-hover="background:var(--panel)">
-                <div style="flex:1;display:flex;align-items:flex-end;gap:3px;height:38px">
+              <div onClick="{{ openStats }}" title="Open full stats" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:10px" style-hover="border-color:var(--brand)">
+                <div style="font:500 13.5px var(--sans);color:var(--ink-dim)">Visits · 14d</div>
+                <div style="flex:1;display:flex;align-items:flex-end;gap:3px;min-height:38px">
                   <sc-for list="{{ visitBars }}" as="b" hint-placeholder-count="14">
-                    <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px 2px 0 0"></div>
+                    <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:3px 3px 2px 2px;min-height:3px"></div>
                   </sc-for>
                 </div>
-                <span style="font:400 10.5px var(--sans);color:var(--ink-dim);white-space:nowrap">visits · 14d</span>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px;align-items:start">
@@ -890,9 +891,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ domName }}</h1>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ domStatus }}</div>
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:18px">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ domTabs }}" as="t" hint-placeholder-count="4">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
@@ -1145,9 +1146,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ accMeta }}</div>
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:18px">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ accTabs }}" as="t" hint-placeholder-count="5">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
@@ -1294,9 +1295,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showBilling }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px">
             <sc-for list="{{ billTabs }}" as="t" hint-placeholder-count="3">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
@@ -1369,9 +1370,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showSecurity }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px">
             <sc-for list="{{ secTabs }}" as="t" hint-placeholder-count="3">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
@@ -1723,9 +1724,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px;flex-wrap:wrap">
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px;flex-wrap:wrap">
             <sc-for list="{{ setTabs }}" as="t" hint-placeholder-count="6">
-              <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:22px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
 
@@ -2099,9 +2100,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <span onClick="{{ dlgRollback }}" style="font:500 12px var(--sans);color:var(--bad);cursor:pointer">Roll back site to {{ dlgHash }}</span>
         </div>
         <sc-if value="{{ dlgNotDiff }}" hint-placeholder-val="{{ true }}">
-          <div style="flex:none;display:flex;padding:0 18px;border-bottom:1px solid var(--rule)">
-            <span onClick="{{ setDlgComp }}" style="padding:10px 2px;margin-right:22px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgCompFg }};border-bottom:2px solid {{ dlgCompLine }}" style-hover="color:var(--ink)">Components</span>
-            <span onClick="{{ setDlgFiles }}" style="padding:10px 2px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgFilesFg }};border-bottom:2px solid {{ dlgFilesLine }}" style-hover="color:var(--ink)">Changed files</span>
+          <div style="flex:none;display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:3px;margin:12px 18px 0;align-self:flex-start">
+            <span onClick="{{ setDlgComp }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgCompFg }};background:{{ dlgCompBg }}" style-hover="color:var(--ink)">Components</span>
+            <span onClick="{{ setDlgFiles }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgFilesFg }};background:{{ dlgFilesBg }}" style-hover="color:var(--ink)">Changed files</span>
           </div>
         </sc-if>
         <sc-if value="{{ dlgIsDiff }}" hint-placeholder-val="{{ false }}">
@@ -2840,12 +2841,12 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="flex:1"></div>
           <span onClick="{{ closeAa }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <div style="display:flex;border-bottom:1px solid var(--rule);padding:0 18px;flex:none">
+        <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:3px;margin:12px 18px 0;align-self:flex-start;flex:none">
           <sc-if value="{{ aaShowUpload }}" hint-placeholder-val="{{ true }}">
-            <span onClick="{{ setAaUpload }}" style="padding:10px 2px;margin-right:22px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaUpFg }};border-bottom:2px solid {{ aaUpLine }}" style-hover="color:var(--ink)">Upload</span>
+            <span onClick="{{ setAaUpload }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaUpFg }};background:{{ aaUpBg }}" style-hover="color:var(--ink)">Upload</span>
           </sc-if>
-          <span onClick="{{ setAaWporg }}" style="padding:10px 2px;margin-right:22px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaWpFg }};border-bottom:2px solid {{ aaWpLine }}" style-hover="color:var(--ink)">WordPress.org</span>
-          <span onClick="{{ setAaEnvato }}" style="padding:10px 2px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaEnFg }};border-bottom:2px solid {{ aaEnLine }}" style-hover="color:var(--ink)">Envato</span>
+          <span onClick="{{ setAaWporg }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaWpFg }};background:{{ aaWpBg }}" style-hover="color:var(--ink)">WordPress.org</span>
+          <span onClick="{{ setAaEnvato }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaEnFg }};background:{{ aaEnBg }}" style-hover="color:var(--ink)">Envato</span>
         </div>
         <sc-if value="{{ aaTabUpload }}" hint-placeholder-val="{{ true }}">
           <div style="padding:18px;overflow-y:auto">
