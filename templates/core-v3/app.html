@@ -122,10 +122,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </sc-if>
         <div onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--rule);cursor:pointer;border-radius:9px" style-hover="background:var(--panel-2)">
           <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 12px var(--sans);flex:none">{{ userInitials }}</span>
-          <span style="min-width:0">
+          <span style="min-width:0;flex:1">
             <span style="display:block;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userName }}</span>
             <span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ userRole }}</span>
           </span>
+          <sc-if value="{{ showMinnAdmin }}" hint-placeholder-val="{{ false }}">
+            <a href="{{ minnAdminUrl }}" target="_blank" rel="noopener" onClick="{{ stopProp }}" title="Minn Admin (opens in a new tab)" style="flex:none;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));color:#fff;display:grid;place-items:center;font:800 14px var(--sans);letter-spacing:-.5px;text-decoration:none;opacity:.85;transition:opacity .12s" style-hover="opacity:1">m</a>
+          </sc-if>
         </div>
       </nav>
     </sc-if>
