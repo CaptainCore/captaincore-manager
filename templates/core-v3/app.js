@@ -825,6 +825,7 @@ class Component extends DCLogic {
       open: () => this.openSite(x.id),
       ctx: (e) => this.openCtxMenu(e, [
         { label: 'Open site', act: () => this.openSite(x.id) },
+        { label: this.pinnedIds().indexOf(String(x.id)) === -1 ? 'Pin to top' : 'Unpin', act: () => this.togglePin(x.id) },
         { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
         { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
         { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
@@ -832,7 +833,16 @@ class Component extends DCLogic {
       openTerm: (e) => { e.stopPropagation(); this.setState({ dockOpen: true }); } }; });
     const envCount = filtered.reduce((n, x) => n + (x.envs.includes('Staging') ? 2 : 1), 0);
     const allSel = filtered.length > 0 && selIds.length === filtered.length;
+    // Pinned strip — client-side (localStorage) quick access above the list.
+    const pinIds = this.pinnedIds();
+    const byId = {}; fleet.forEach(x => { byId[String(x.id)] = x; });
+    const pinnedStrip = pinIds.map(id => byId[id]).filter(Boolean).map(x => { const [health, dot] = healthOf(x);
+      return { id: x.id, name: x.name, dot,
+        open: () => this.openSite(x.id),
+        unpin: (e) => { e.stopPropagation(); this.togglePin(x.id); } }; });
     return {
+      pinnedShow: pinnedStrip.length > 0,
+      pinnedStrip,
       sitesCount: filtered.length + ' sites · ' + envCount + ' environments',
       screenSub: s.route === 'sites' ? filtered.length + ' sites · ' + envCount + ' environments' : '',
       screenSubDisplay: s.route === 'sites' ? 'inline-block' : 'none',
@@ -1651,6 +1661,24 @@ class Component extends DCLogic {
       try { localStorage.setItem('cc-nav-hidden', v ? '1' : '0'); } catch (e) {}
       return { navHidden: v };
     });
+  }
+
+  pinnedIds() {
+    if (!this._pinnedIds) {
+      try { this._pinnedIds = JSON.parse(localStorage.getItem('cc-pinned-sites') || '[]'); } catch (e) { this._pinnedIds = []; }
+      if (!Array.isArray(this._pinnedIds)) this._pinnedIds = [];
+    }
+    return this._pinnedIds;
+  }
+
+  togglePin(id) {
+    id = String(id);
+    const ids = this.pinnedIds().slice();
+    const i = ids.indexOf(id);
+    if (i === -1) ids.unshift(id); else ids.splice(i, 1);
+    this._pinnedIds = ids;
+    try { localStorage.setItem('cc-pinned-sites', JSON.stringify(ids)); } catch (e) {}
+    this.setState({});
   }
 
   // ── Context menus (Minn pattern) ── entries are built from each row's own

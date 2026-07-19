@@ -475,6 +475,18 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span onClick="{{ clearSel }}" style="font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer">Clear</span>
             </div>
           </sc-if>
+          <sc-if value="{{ pinnedShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;margin-top:14px;overflow-x:auto;padding-bottom:2px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>
+              <sc-for list="{{ pinnedStrip }}" as="p" hint-placeholder-count="3">
+                <span onClick="{{ p.open }}" style="display:inline-flex;align-items:center;gap:7px;flex:none;border:1px solid var(--rule);background:var(--paper);border-radius:99px;padding:5px 8px 5px 11px;cursor:pointer;font:500 12.5px var(--sans)" style-hover="border-color:var(--brand)">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }};flex:none"></span>
+                  <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</span>
+                  <span onClick="{{ p.unpin }}" title="Unpin" style="color:var(--ink-dim);width:16px;height:16px;display:grid;place-items:center;border-radius:4px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+                </span>
+              </sc-for>
+            </div>
+          </sc-if>
           <sc-if value="{{ viewTable }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <div style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
