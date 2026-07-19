@@ -129,15 +129,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     <!-- ══ Topbar ══ -->
     <header style="flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--rule);background:var(--canvas)">
       <span style="font:700 16px var(--sans);letter-spacing:-.01em">{{ screenTitle }}</span>
+      <span style="font:400 13px var(--sans);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);padding:3px 10px;border-radius:20px;white-space:nowrap;display:{{ screenSubDisplay }}">{{ screenSub }}</span>
       <div style="flex:1"></div>
+      <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New site</button>
+      </sc-if>
       <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
         <div onClick="{{ openDock }}" style="display:flex;align-items:center;gap:7px;font:600 13px var(--sans);color:var(--warn);background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:9px;padding:6px 12px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--warn)">
         <span style="width:7px;height:7px;border-radius:50%;background:var(--warn);animation:ccpulse 1.4s ease infinite"></span>
         <span>{{ runningLabel }}</span>
         </div>
       </sc-if>
-      <div onClick="{{ openDock }}" title="Terminal · ⌃`" style="position:relative;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6M12 19h8"></path></svg>
+      <div onClick="{{ openDock }}" title="{{ dockBtnTitle }}" style="position:relative;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ dockBtnIcon }}"></path></svg>
         <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
           <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--canvas)"></span>
         </sc-if>
@@ -283,16 +287,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
       <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ sitesCount }}</span>
-            <div style="flex:1"></div>
-            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
-              <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
-              <span onClick="{{ setViewCards }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ crdBg }};color:{{ crdFg }}">Cards</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
+              <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Filter sites…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New site</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px">
             <span onClick="{{ unassignedToggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid {{ unBd }};border-radius:99px;background:{{ unBg }};color:{{ unFg }};font:500 13px var(--sans);cursor:pointer;white-space:nowrap">⚠ {{ unassignedLabel }}</span>
             <sc-for list="{{ facets }}" as="fc" hint-placeholder-count="5">
               <div style="position:relative">
@@ -322,14 +321,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
               </sc-for>
             </div>
-            <div style="flex:1"></div>
-            <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);width:210px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-              <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Search…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
-            </div>
             <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
               <span onClick="{{ clearFilters }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
             </sc-if>
+            <div style="flex:1"></div>
+            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;flex:none">
+              <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
+              <span onClick="{{ setViewCards }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ crdBg }};color:{{ crdFg }}">Cards</span>
+            </div>
           </div>
           <sc-if value="{{ plugRowShow }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">

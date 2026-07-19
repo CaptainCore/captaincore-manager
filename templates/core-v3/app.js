@@ -766,6 +766,8 @@ class Component extends DCLogic {
     const allSel = filtered.length > 0 && selIds.length === filtered.length;
     return {
       sitesCount: filtered.length + ' sites · ' + envCount + ' environments',
+      screenSub: s.route === 'sites' ? filtered.length + ' sites · ' + envCount + ' environments' : '',
+      screenSubDisplay: s.route === 'sites' ? 'inline-block' : 'none',
       q: s.q, onQ: (e) => this.setState({ q: e.target.value }),
       unassignedLabel: unassignedCnt + ' unassigned',
       unBg: s.fUnassigned ? 'var(--warn-soft)' : 'var(--paper)',
@@ -1640,13 +1642,15 @@ class Component extends DCLogic {
     return {
       userName, userInitials: userName.slice(0, 2).toUpperCase(),
       greeting: `Good ${dayPart}, ${userName}`,
-      statsLine: this._hydrated ? this.realStats(jobs.filter(j => j.running).length) : booted ? '' : (isOp ? '128 sites · 94 domains · 2 jobs running · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
+      statsLine: this._hydrated ? this.realStats() : booted ? '' : (isOp ? '128 sites · 94 domains · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
       homeSkel, statsSkel: homeSkel,
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: [this.navItem('settings', 'Settings')],
       screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', reports: 'Reports', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
+      dockBtnTitle: isOp ? 'Terminal · ⌃`' : 'Activity',
+      dockBtnIcon: isOp ? 'M4 17l6-6-6-6M12 19h8' : 'M22 12h-4l-3 9L9 3l-3 9H2',
       runningLabel: (c => c === 1 ? '1 job running' : c + ' jobs running')(jobs.filter(j => j.running).length),
       showOperate: isOp && variant !== 'topnav',
       showRail: variant !== 'topnav', showTopNav: variant === 'topnav',

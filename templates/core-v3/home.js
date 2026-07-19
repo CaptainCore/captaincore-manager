@@ -78,7 +78,7 @@ Object.assign(Component.prototype, {
       }
     }
     if (!rows.length) {
-      rows.push({ clear: true, dot: 'var(--ok)', title: 'All clear — nothing needs attention',
+      rows.push({ clear: true, dot: 'var(--ok)', title: 'All clear, nothing needs attention',
         sub: this.FLEET.length + ' site' + (this.FLEET.length === 1 ? '' : 's') + ' under management',
         action: 'View sites', act: 'sites' });
     }
