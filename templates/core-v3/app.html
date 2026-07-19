@@ -286,18 +286,18 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ sitesCount }}</span>
             <div style="flex:1"></div>
-            <div style="display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
-              <span onClick="{{ setViewTable }}" style="padding:6px 12px;cursor:pointer;font:500 13px var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
-              <span onClick="{{ setViewCards }}" style="padding:6px 12px;cursor:pointer;font:500 13px var(--sans);background:{{ crdBg }};color:{{ crdFg }};border-left:1px solid var(--rule)">Cards</span>
+            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+              <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
+              <span onClick="{{ setViewCards }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ crdBg }};color:{{ crdFg }}">Cards</span>
             </div>
             <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New site</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px">
-            <span onClick="{{ unassignedToggle }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid {{ unBd }};border-radius:99px;background:{{ unBg }};color:{{ unFg }};font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap">⚠ {{ unassignedLabel }}</span>
+            <span onClick="{{ unassignedToggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid {{ unBd }};border-radius:99px;background:{{ unBg }};color:{{ unFg }};font:500 13px var(--sans);cursor:pointer;white-space:nowrap">⚠ {{ unassignedLabel }}</span>
             <sc-for list="{{ facets }}" as="fc" hint-placeholder-count="5">
               <div style="position:relative">
-                <div onClick="{{ fc.toggle }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 12px;border:1px solid {{ fc.bd }};border-radius:99px;background:{{ fc.bg }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">
-                  <span style="font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:{{ fc.fg }}">{{ fc.label }}</span>
+                <div onClick="{{ fc.toggle }}" style="display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;border:1px solid {{ fc.bd }};border-radius:99px;background:{{ fc.bg }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">
+                  <span style="font:500 13px var(--sans);color:{{ fc.fg }}">{{ fc.label }}</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
                 </div>
                 <sc-if value="{{ fc.open }}" hint-placeholder-val="{{ false }}">
@@ -317,9 +317,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                 </sc-if>
               </div>
             </sc-for>
-            <div style="display:flex;border:1px solid var(--rule);border-radius:99px;overflow:hidden">
+            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:3px">
               <sc-for list="{{ opChips }}" as="c" hint-placeholder-count="2">
-                <span onClick="{{ c.go }}" style="padding:6px 11px;cursor:pointer;font:600 11px var(--sans);letter-spacing:.05em;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
+                <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
               </sc-for>
             </div>
             <div style="flex:1"></div>
@@ -356,9 +356,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                   </sc-if>
                 </div>
               </sc-for>
-              <div style="display:flex;border:1px solid var(--rule);border-radius:99px;overflow:hidden">
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:3px">
                 <sc-for list="{{ isChips }}" as="c" hint-placeholder-count="2">
-                  <span onClick="{{ c.go }}" style="padding:5px 10px;cursor:pointer;font:600 10.5px var(--sans);letter-spacing:.05em;background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
+                  <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
                 </sc-for>
               </div>
               <span onClick="{{ clearPlugin }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">✕ Remove plugin filter</span>
@@ -429,10 +429,10 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
           <span onClick="{{ backToSites }}" style="font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Sites</span>
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>
-            <div style="display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
-              <span onClick="{{ setEnvProd }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ pBg }};color:{{ pFg }}">Production</span>
+            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+              <span onClick="{{ setEnvProd }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ pBg }};color:{{ pFg }}">Production</span>
               <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
-                <span onClick="{{ setEnvStag }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ sBg }};color:{{ sFg }};border-left:1px solid var(--rule)">Staging</span>
+                <span onClick="{{ setEnvStag }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ sBg }};color:{{ sFg }}">Staging</span>
               </sc-if>
             </div>
             <div style="flex:1"></div>
@@ -656,9 +656,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
           <sc-if value="{{ tabAddons }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
-              <div style="display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
-                <span onClick="{{ setAddP }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ akpBg }};color:{{ akpFg }}">Plugins</span>
-                <span onClick="{{ setAddT }}" style="padding:5px 12px;cursor:pointer;font:500 12.5px var(--sans);background:{{ aktBg }};color:{{ aktFg }};border-left:1px solid var(--rule)">Themes</span>
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                <span onClick="{{ setAddP }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ akpBg }};color:{{ akpFg }}">Plugins</span>
+                <span onClick="{{ setAddT }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ aktBg }};color:{{ aktFg }}">Themes</span>
               </div>
               <div style="flex:1"></div>
               <sc-if value="{{ hasUpdates }}" hint-placeholder-val="{{ false }}">
@@ -2110,9 +2110,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <span onClick="{{ backToFiles }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer;flex:none" style-hover="color:var(--brand-ink)">← Changed files</span>
             <span style="font:500 12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ dlgFilePath }}</span>
             <div style="flex:1"></div>
-            <div style="display:flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden;flex:none">
-              <span onClick="{{ setUni }}" style="padding:3px 10px;cursor:pointer;font:500 11.5px var(--sans);background:{{ uniBg }};color:{{ uniFg }}">Unified</span>
-              <span onClick="{{ setSplit }}" style="padding:3px 10px;cursor:pointer;font:500 11.5px var(--sans);background:{{ splBg }};color:{{ splFg }};border-left:1px solid var(--rule)">Side-by-side</span>
+            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;flex:none">
+              <span onClick="{{ setUni }}" style="padding:3px 10px;border-radius:7px;cursor:pointer;font:500 11.5px var(--sans);background:{{ uniBg }};color:{{ uniFg }}">Unified</span>
+              <span onClick="{{ setSplit }}" style="padding:3px 10px;border-radius:7px;cursor:pointer;font:500 11.5px var(--sans);background:{{ splBg }};color:{{ splFg }}">Side-by-side</span>
             </div>
             <button onClick="{{ dlgRestoreFile }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12px var(--sans);padding:5px 12px;border-radius:6px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Restore this file</button>
           </div>
