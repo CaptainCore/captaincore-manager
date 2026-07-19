@@ -161,20 +161,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <!-- Launcher -->
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:22px">
             <sc-for list="{{ launcher }}" as="l" hint-placeholder-count="5">
-              <div onClick="{{ l.go }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;transition:border-color .12s, box-shadow .12s" style-hover="border-color:var(--brand);box-shadow:var(--shadow)">
-                <div style="display:flex;align-items:center;justify-content:space-between">
-                  <span style="width:34px;height:34px;border-radius:9px;background:{{ l.chipBg }};color:{{ l.chipFg }};display:grid;place-items:center">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ l.icon }}"></path></svg>
-                  </span>
-                  <sc-if value="{{ l.metaSkel }}" hint-placeholder-val="{{ false }}">
-                    <span class="cc-skel" style="width:44px;height:13px"></span>
-                  </sc-if>
-                  <span style="font:700 20px var(--sans);letter-spacing:-.5px;color:var(--ink)">{{ l.meta }}</span>
+              <div onClick="{{ l.go }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px 17px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;transition:border-color .12s, box-shadow .12s" style-hover="border-color:var(--brand);box-shadow:var(--shadow)">
+                <div style="min-width:0">
+                  <div style="font:500 13.5px var(--sans);color:var(--ink-dim)">{{ l.label }}</div>
+                  <div style="font:800 26px/1.1 var(--sans);letter-spacing:-.8px;margin-top:8px;min-height:29px;color:var(--ink)"><sc-if value="{{ l.metaSkel }}" hint-placeholder-val="{{ false }}"><span class="cc-skel" style="display:inline-block;width:64px;height:22px;vertical-align:middle"></span></sc-if>{{ l.meta }}</div>
+                  <div style="font:500 12.5px/1.45 var(--sans);color:var(--ink-dim);margin-top:6px">{{ l.desc }}</div>
                 </div>
-                <div>
-                  <div style="font:700 16px var(--sans);letter-spacing:-.2px">{{ l.label }}</div>
-                  <div style="font:400 13px/1.45 var(--sans);color:var(--ink-dim);margin-top:2px">{{ l.desc }}</div>
-                </div>
+                <span style="flex:none;width:34px;height:34px;border-radius:9px;background:{{ l.chipBg }};color:{{ l.chipFg }};display:grid;place-items:center">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ l.icon }}"></path></svg>
+                </span>
               </div>
             </sc-for>
           </div>
