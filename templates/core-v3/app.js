@@ -784,8 +784,8 @@ class Component extends DCLogic {
           : facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }))
       ],
       opChips: ['AND', 'OR'].map(label => ({ label,
-        bg: s.fOp === label ? 'var(--brand-soft)' : 'var(--paper)',
-        fg: s.fOp === label ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        bg: s.fOp === label ? 'var(--panel-2)' : 'transparent',
+        fg: s.fOp === label ? 'var(--ink)' : 'var(--ink-dim)',
         go: () => this.setState({ fOp: label }) })),
       plugRowShow: !inactive(s.fPlugin),
       plugRowLabel: s.fPlugin,
@@ -794,8 +794,8 @@ class Component extends DCLogic {
         mkFacet('fPlugStatus', 'Status', s.fPlugStatus, facetOpts(statCnt, s.fPlugStatus, 'fPlugStatus'))
       ],
       isChips: ['IS', 'IS NOT'].map(label => ({ label,
-        bg: s.fPlugIs === label ? 'var(--brand-soft)' : 'var(--paper)',
-        fg: s.fPlugIs === label ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        bg: s.fPlugIs === label ? 'var(--panel-2)' : 'transparent',
+        fg: s.fPlugIs === label ? 'var(--ink)' : 'var(--ink-dim)',
         go: () => this.setState({ fPlugIs: label }) })),
       clearPlugin: () => this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any' }),
       hasLabels: Object.keys(labelCnt).length > 0,
@@ -865,8 +865,8 @@ class Component extends DCLogic {
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, dockOpen: true }); },
       viewTable: s.view === 'table', viewCards: s.view === 'cards',
-      tblBg: s.view === 'table' ? 'var(--brand-soft)' : 'var(--paper)', tblFg: s.view === 'table' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      crdBg: s.view === 'cards' ? 'var(--brand-soft)' : 'var(--paper)', crdFg: s.view === 'cards' ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      tblBg: s.view === 'table' ? 'var(--panel-2)' : 'transparent', tblFg: s.view === 'table' ? 'var(--ink)' : 'var(--ink-dim)',
+      crdBg: s.view === 'cards' ? 'var(--panel-2)' : 'transparent', crdFg: s.view === 'cards' ? 'var(--ink)' : 'var(--ink-dim)',
       setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
       listRows: rows
     };
@@ -1075,8 +1075,8 @@ class Component extends DCLogic {
     }, 0);
     const slug = site.name.split('.')[0];
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
-    const segBg = l => s.env === l ? 'var(--brand-soft)' : 'var(--paper)';
-    const segFg = l => s.env === l ? 'var(--brand-ink)' : 'var(--ink-dim)';
+    const segBg = l => s.env === l ? 'var(--panel-2)' : 'transparent';
+    const segFg = l => s.env === l ? 'var(--ink)' : 'var(--ink-dim)';
     const mkCopy = ([k, v]) => ({ k, v, mark: s.copied === k ? 'Copied ✓' : 'Copy',
       copy: () => { try { navigator.clipboard.writeText(v); } catch (e) {}
         this.setState({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); } });
@@ -1281,8 +1281,8 @@ class Component extends DCLogic {
       ...this.computeShareDialog(real, s, site),
       showPma: !!(real && real.site && ['kinsta', 'rocketdotnet'].includes(real.site.provider)) || (!real && !window.CC_BOOT),
       openPma: () => { if (real) this.realPhpMyAdmin(real, s); },
-      akpBg: s.addonKind === 'plugins' ? 'var(--brand-soft)' : 'var(--paper)', akpFg: s.addonKind === 'plugins' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      aktBg: s.addonKind === 'themes' ? 'var(--brand-soft)' : 'var(--paper)', aktFg: s.addonKind === 'themes' ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      akpBg: s.addonKind === 'plugins' ? 'var(--panel-2)' : 'transparent', akpFg: s.addonKind === 'plugins' ? 'var(--ink)' : 'var(--ink-dim)',
+      aktBg: s.addonKind === 'themes' ? 'var(--panel-2)' : 'transparent', aktFg: s.addonKind === 'themes' ? 'var(--ink)' : 'var(--ink-dim)',
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
       doUpdateAll: () => this.runJob('update-wp', site.name + ' · ' + updCount + ' components'),
@@ -1324,8 +1324,8 @@ class Component extends DCLogic {
         else this.runJob('rollback-component', s.rbComp + ' → version in ' + prevQk.hash);
         this.setState({ rbComp: '' }); },
       qsUnified: s.diffMode === 'unified', qsSplit: s.diffMode === 'split',
-      uniBg: s.diffMode === 'unified' ? 'var(--brand-soft)' : 'var(--paper)', uniFg: s.diffMode === 'unified' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      splBg: s.diffMode === 'split' ? 'var(--brand-soft)' : 'var(--paper)', splFg: s.diffMode === 'split' ? 'var(--brand-ink)' : 'var(--ink-dim)',
+      uniBg: s.diffMode === 'unified' ? 'var(--panel-2)' : 'transparent', uniFg: s.diffMode === 'unified' ? 'var(--ink)' : 'var(--ink-dim)',
+      splBg: s.diffMode === 'split' ? 'var(--panel-2)' : 'transparent', splFg: s.diffMode === 'split' ? 'var(--ink)' : 'var(--ink-dim)',
       setUni: () => this.setState({ diffMode: 'unified' }), setSplit: () => this.setState({ diffMode: 'split' }),
       backups, backupNow: () => real ? this.realBackupNow(real) : this.runJob('backup', site.name),
       bkRows,

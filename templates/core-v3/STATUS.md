@@ -40,6 +40,11 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   siteTab in app.js, accTab in accounts.js, dlg*/aa* dialog tabs). Site-overview KPI
   strip is Minn stat cards (separate cards, 24px/800 values) and the sidebar shows
   live Sites/Domains counts via `navItem`'s `count`/`countDisplay` (hydration-gated).
+- **Segmented controls share the pill language** (Sites Table/Cards, env
+  Production/Staging, Addons Plugins/Themes, diff Unified/Side-by-side, AND/OR +
+  plugin is/is-not chips): same pill container, active segment `--panel-2` + `--ink`.
+  Sites filter facet chips are quiet (sentence case, `font:500 13px`, height 30) —
+  no uppercase micro-labels in new chrome.
 
 ## How it's wired
 
