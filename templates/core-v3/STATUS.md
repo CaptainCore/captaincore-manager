@@ -70,6 +70,13 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   `magicLogin(siteId, envLower, user)` in site-detail.js — realMagicLogin
   delegates to it; production env from the list, runJob sample fallback in
   design mode). The card Terminal chip is gone (terminal = topbar/⌃`/palette).
+- **Sortable table columns** (2026-07-19, Minn pattern): shared `mkSortCols(
+  stateKey, cols)` + `sortRows(stateKey, cols, list)` in app.js; per-route sort
+  state (`sitesSort`/`domSort`/`accSort`), header cells render via sc-for with
+  direction arrows (click toggles asc/desc; numeric-aware localeCompare).
+  Sites (name/env count/provider/core/visits), Domains (name/registrar/dns),
+  Accounts (name/users/sites/domains/plan/billing-due). NOTE for tests: header
+  rows are CSS-uppercased — assert against "REGISTRAR ↑", not "Registrar ↑".
 - **Environment pills + List view** (2026-07-19): `openSite(id, env)` takes an
   optional environment (BOTH copies — app.js AND the site-detail.js OVERRIDE;
   the mixin replaces the class method, so signature changes must land in both).
