@@ -310,6 +310,7 @@ class Component extends DCLogic {
     const filtered = this.sortRows('accSort', ACC_COLS, list.filter(a => !nq || a.name.toLowerCase().includes(nq)));
     return {
       accCount: filtered.length + ' accounts',
+      ...(s.route === 'accounts' ? { screenSub: filtered.length + ' accounts', screenSubDisplay: 'inline-block' } : {}),
       aq: s.aq, onAq: e => this.setState({ aq: e.target.value }),
       accCols: this.mkSortCols('accSort', ACC_COLS),
       accRows: filtered.map(a => ({ ...a,
@@ -983,6 +984,7 @@ class Component extends DCLogic {
     const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
     return {
       domCount: filtered.length + ' domains',
+      ...(s.route === 'domains' ? { screenSub: filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
       dq: s.dq, onDq: e => this.setState({ dq: e.target.value }),
       openNewDomain: () => this.setState({ ndOpen: true }),
       closeNd: () => this.setState({ ndOpen: false }),
