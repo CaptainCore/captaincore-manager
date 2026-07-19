@@ -1321,6 +1321,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
             </sc-for>
           </div>
+          <sc-if value="{{ accPageShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ accPageLabel }}</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ accPrev }}" style="border:1px solid var(--rule);background:{{ accPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
+              <button onClick="{{ accNext }}" style="border:1px solid var(--rule);background:{{ accNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 

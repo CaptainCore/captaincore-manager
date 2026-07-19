@@ -308,12 +308,23 @@ class Component extends DCLogic {
       { label: 'Billing', k: 'due', val: a => a.due ? 0 : 1 }
     ];
     const filtered = this.sortRows('accSort', ACC_COLS, list.filter(a => !nq || a.name.toLowerCase().includes(nq)));
+    // Pagination (same as Sites/Domains).
+    const PAGE = 25;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
+    const pageNum = Math.min(Math.max(1, s.accPage || 1), totalPages);
+    const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
     return {
       accCount: filtered.length + ' accounts',
       ...(s.route === 'accounts' ? { screenSub: filtered.length + ' accounts', screenSubDisplay: 'inline-block' } : {}),
-      aq: s.aq, onAq: e => this.setState({ aq: e.target.value }),
+      accPageShow: totalPages > 1,
+      accPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' accounts',
+      accPrev: () => this.setState({ accPage: Math.max(1, pageNum - 1) }),
+      accNext: () => this.setState({ accPage: Math.min(totalPages, pageNum + 1) }),
+      accPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
+      accNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
+      aq: s.aq, onAq: e => this.setState({ aq: e.target.value, accPage: 1 }),
       accCols: this.mkSortCols('accSort', ACC_COLS),
-      accRows: filtered.map(a => ({ ...a,
+      accRows: pageRows.map(a => ({ ...a,
         billLabel: a.due ? 'Invoice due' : 'Current',
         billFg: a.due ? 'var(--warn)' : 'var(--ink-dim)',
         open: () => this.openAccount(a.id),
