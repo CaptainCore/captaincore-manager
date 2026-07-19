@@ -107,6 +107,7 @@ Object.assign(Component.prototype, {
   },
 
   JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave',
+    'create-user': 'Create user', 'delete-user': 'Delete user',
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
     'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy' },
 
