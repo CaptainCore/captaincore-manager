@@ -836,6 +836,7 @@ class Component extends DCLogic {
       open: () => this.openSite(x.id),
       ctx: (e) => this.openCtxMenu(e, [
         { label: 'Open site', act: () => this.openSite(x.id) },
+        { label: 'Login to WordPress ↗', act: () => { if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); } },
         { label: this.pinnedIds().indexOf(String(x.id)) === -1 ? 'Pin to top' : 'Unpin', act: () => this.togglePin(x.id) },
         { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
         { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
