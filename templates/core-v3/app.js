@@ -1526,9 +1526,11 @@ class Component extends DCLogic {
     // Debug/test handle — lets DevTools and Playwright probes reach the
     // component instance (e.g. seed fake jobs to exercise the dock).
     window.CC = this;
+    try { if (localStorage.getItem('cc-nav-hidden') === '1') this.setState({ navHidden: true }); } catch (e) {}
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
       else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
@@ -1561,6 +1563,14 @@ class Component extends DCLogic {
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
+
+  toggleNav() {
+    this.setState(st => {
+      const v = !st.navHidden;
+      try { localStorage.setItem('cc-nav-hidden', v ? '1' : '0'); } catch (e) {}
+      return { navHidden: v };
+    });
+  }
 
   // ── Context menus (Minn pattern) ── entries are built from each row's own
   // actions so the menu can never drift from the row.
@@ -1639,7 +1649,8 @@ class Component extends DCLogic {
     return (needle ? items.filter(i => (i.label + ' ' + i.sub + ' ' + i.kind).toLowerCase().includes(needle)) : items).slice(0, 8);
   }
   runPal(r) {
-    if (r.act === 'dock') this.setState({ dockOpen: true, paletteOpen: false });
+    if (r.act === 'navtoggle') { this.toggleNav(); this.setState({ paletteOpen: false }); }
+    else if (r.act === 'dock') this.setState({ dockOpen: true, paletteOpen: false });
     else if (r.act === 'site') this.openSite(r.sid);
     else if (r.act === 'domain') this.openDomain(r.did);
     else this.setState({ route: r.act, paletteOpen: false });
@@ -1808,7 +1819,8 @@ class Component extends DCLogic {
       dockBtnIcon: 'M4 17l6-6-6-6M12 19h8',
       runningLabel: (c => c === 1 ? '1 job running' : c + ' jobs running')(jobs.filter(j => j.running).length),
       showOperate: isOp && variant !== 'topnav',
-      showRail: variant !== 'topnav', showTopNav: variant === 'topnav',
+      showRail: variant !== 'topnav' && !s.navHidden, showTopNav: variant === 'topnav',
+      toggleNav: () => this.toggleNav(),
       railWidth: variant === 'slim' ? '56px' : '208px',
       labelDisplay: variant === 'slim' ? 'none' : 'inline',
       railJustify: variant === 'slim' ? 'center' : 'flex-start',
