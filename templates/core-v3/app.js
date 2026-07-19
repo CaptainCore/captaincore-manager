@@ -1609,6 +1609,13 @@ class Component extends DCLogic {
       if (el) el.focus();
     }
     this._palWasOpen = this.state.paletteOpen;
+    // Any dropdown/facet keyed on ddOpen has a search input that mounts with it
+    // (autofocus only fires on first page load) — focus it the moment it opens.
+    if (this.state.ddOpen && this.state.ddOpen !== this._ddWasOpen) {
+      const el = document.querySelector('input[placeholder="Filter…"], input[placeholder="Filter types…"], input[placeholder^="Search"]');
+      if (el) el.focus();
+    }
+    this._ddWasOpen = this.state.ddOpen;
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
