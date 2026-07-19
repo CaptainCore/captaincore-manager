@@ -8,6 +8,33 @@ project `aa0b3f96-96ce-4fd8-bdc2-e5cfb72f64b1`) is now a visual reference only.
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Design language: Minn Admin (2026-07-19)
+
+The UI was restyled to the Minn Admin design system (Austin's ask, mockup first at
+`anchor.localhost/core-v3-minn-mockup.html`). What changed and the rules that follow:
+
+- **Tokens, not markup.** The `:root` / `[data-theme="dark"]` blocks in `app.html`'s
+  helmet now carry Minn's palette (from `minn-admin/assets/css/app.css`), keeping the
+  ORIGINAL token names (`--paper`/`--panel`/`--panel-2`/`--rule`/`--ink`/`--ink-dim`/
+  `--canvas` + `--ok`/`--warn`/`--bad` softs). All 1,500+ inline styles and every
+  `app.js`-computed color ride those tokens, so restyling stays a token edit. `--brand`
+  is still injected by `applyBrand()` from `CC_BOOT.brandColor`.
+- **Fonts are bundled** (Hanken Grotesk + JetBrains Mono variable woff2 in
+  `public/fonts/`, @font-face in `core-v3.php`). No Google Fonts requests; do not
+  reintroduce external font links.
+- **Shell = Minn sidebar + slim topbar.** 240px sidebar: logo tile, ⌘K search button,
+  grouped nav (Workspace / Operate / Manage labels), user card pinned bottom
+  (`goProfile`, shows `userName` + `userRole`). Topbar: `screenTitle` (route-mapped in
+  the shell section of `app.js`) + jobs chip (`runningLabel`, amber, opens dock) +
+  activity bell + theme toggle. Static section `<h1>`s were removed (the topbar carries
+  the title); detail screens keep their name `<h1>`s.
+- **Shell variants retired.** `shellVariant` slim/topnav are no longer wired in the
+  markup (sidebar is fixed-width; the old top header is gone). `railWidth`/
+  `labelDisplay`/`railJustify`/`showTopNav` still compute in `app.js` but nothing
+  consumes them; remove them if they get in the way.
+- **Dock is bottom-right always** (`dockSide: 'right'`) so it never overlaps the
+  sidebar user card.
+
 ## How it's wired
 
 - **`core-v3.php`** — thin PHP shell. Redirects logged-out users to the v1 login,
