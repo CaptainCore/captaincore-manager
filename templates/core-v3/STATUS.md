@@ -45,6 +45,12 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   plugin is/is-not chips): same pill container, active segment `--panel-2` + `--ink`.
   Sites filter facet chips are quiet (sentence case, `font:500 13px`, height 30) —
   no uppercase micro-labels in new chrome.
+- **Activity page** (`/activity` route, Operate nav group, 2026-07-19): full fleet
+  event log from `GET /activity-logs?per_page=100` (self-scoped for customers),
+  lazy-loaded on first visit via `computeActivityPage`/`loadActivityPage` in home.js.
+  The home launcher's Terminal card became the Activity card ("N today" derived from
+  the home feed's relTime suffixes); Recent activity's "View all →" routes here. The
+  terminal keeps three entry points: topbar icon, ⌃`, and the palette.
 - **Dock entry lives in the topbar** (terminal icon button, running dot; jobs chip
   while running). The floating bottom-right pill/circle is GONE (`dockClosed`/
   `dockIdle`/`liveTail` computed values are now unused). Dock opens with the quicker
