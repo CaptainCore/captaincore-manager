@@ -66,72 +66,78 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 </helmet>
 <div style="height:100vh;display:flex;flex-direction:column;background:var(--canvas);color:var(--ink);font-family:var(--sans);overflow:hidden">
 
-  <!-- ══ Top bar ══ -->
-  <header style="flex:none;height:54px;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--rule);background:var(--paper)">
-    <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 6px;border-radius:8px" style-hover="background:var(--panel-2)">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14m0 0c-4.5 0-8-3-8.5-7L2 13m10 8c4.5 0 8-3 8.5-7l1.5-1M7 10h10"></path></svg>
-      <span style="font:600 17px var(--sans);letter-spacing:-.01em">Anchor Hosting</span>
-    </div>
-    <sc-if value="{{ showTopNav }}" hint-placeholder-val="{{ false }}">
-      <nav style="display:flex;align-items:center;gap:2px">
-        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
-          <div onClick="{{ n.go }}" style="padding:6px 11px;border-radius:8px;cursor:pointer;font:500 14px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">{{ n.label }}</div>
-        </sc-for>
-      </nav>
-    </sc-if>
-    <div style="flex:1"></div>
-    <div onClick="{{ openPalette }}" style="display:flex;align-items:center;gap:8px;width:300px;max-width:32vw;height:32px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);cursor:pointer;color:var(--ink-dim)" style-hover="border-color:var(--brand);color:var(--ink)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-      <span style="font:400 13.5px var(--sans)">Search or run a command…</span>
-      <span style="margin-left:auto;font:500 11.5px var(--mono);border:1px solid var(--rule);border-radius:5px;padding:2px 5px;background:var(--paper)">⌘K</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <div onClick="{{ openDock }}" title="Activity" style="position:relative;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6m4 9.5a2 2 0 004 0"></path></svg>
-        <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
-          <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--paper)"></span>
-        </sc-if>
-      </div>
-      <div onClick="{{ toggleTheme }}" title="Toggle theme" style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
-      </div>
-      <div onClick="{{ goProfile }}" title="Profile" style="display:flex;align-items:center;gap:8px;padding:3px 8px 3px 3px;border-radius:99px;cursor:pointer" style-hover="background:var(--panel-2)">
-        <span style="width:26px;height:26px;border-radius:50%;background:var(--brand);color:white;display:grid;place-items:center;font:600 12px var(--sans)">{{ userInitials }}</span>
-        <span style="font:500 13.5px var(--sans);color:var(--ink-dim)">{{ userName }}</span>
-      </div>
-    </div>
-  </header>
-
   <div style="flex:1;display:flex;min-height:0">
-    <!-- ══ Left rail ══ -->
+    <!-- ══ Sidebar (Minn shell: logo · search · grouped nav · user card) ══ -->
     <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
-      <nav style="flex:none;width:{{ railWidth }};border-right:1px solid var(--rule);background:var(--panel);display:flex;flex-direction:column;padding:12px 8px 68px;gap:2px;overflow-y:auto">
-        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
-          <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }};justify-content:{{ railJustify }}" style-hover="background:var(--panel-2)">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
-            <span style="display:{{ labelDisplay }};white-space:nowrap">{{ n.label }}</span>
-          </div>
-        </sc-for>
-        <sc-if value="{{ showOperate }}" hint-placeholder-val="{{ false }}">
-          <div style="margin:14px 10px 4px;font:600 11px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);display:{{ labelDisplay }}">Operate</div>
-          <sc-for list="{{ navOperate }}" as="n" hint-placeholder-count="3">
-            <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }};justify-content:{{ railJustify }}" style-hover="background:var(--panel-2)">
+      <nav style="flex:none;width:240px;border-right:1px solid var(--rule);background:var(--panel);display:flex;flex-direction:column;padding:14px 12px;gap:2px;min-height:0">
+        <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px 16px;cursor:pointer">
+          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));display:grid;place-items:center;flex:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14m0 0c-4.5 0-8-3-8.5-7L2 13m10 8c4.5 0 8-3 8.5-7l1.5-1M7 10h10"></path></svg>
+          </span>
+          <span style="font:700 17px var(--sans);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Anchor Hosting</span>
+        </div>
+        <div onClick="{{ openPalette }}" style="display:flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--rule);color:var(--ink-dim);padding:8px 10px;border-radius:9px;cursor:pointer;font:400 14px var(--sans);margin-bottom:10px" style-hover="border-color:var(--brand);color:var(--ink)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
+          <span>Search fleet…</span>
+          <span style="margin-left:auto;font:500 11.5px var(--mono);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;background:var(--paper)">⌘K</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
+          <div style="font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);padding:8px 10px 4px">Workspace</div>
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+            <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
-              <span style="display:{{ labelDisplay }};white-space:nowrap">{{ n.label }}</span>
+              <span style="white-space:nowrap">{{ n.label }}</span>
             </div>
           </sc-for>
-        </sc-if>
-        <div style="flex:1"></div>
-        <sc-for list="{{ navBottom }}" as="n" hint-placeholder-count="1">
-          <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }};justify-content:{{ railJustify }}" style-hover="background:var(--panel-2)">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
-            <span style="display:{{ labelDisplay }};white-space:nowrap">{{ n.label }}</span>
-          </div>
-        </sc-for>
+          <sc-if value="{{ showOperate }}" hint-placeholder-val="{{ false }}">
+            <div style="font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);padding:14px 10px 4px">Operate</div>
+            <sc-for list="{{ navOperate }}" as="n" hint-placeholder-count="3">
+              <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
+                <span style="white-space:nowrap">{{ n.label }}</span>
+              </div>
+            </sc-for>
+          </sc-if>
+          <div style="font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);padding:14px 10px 4px">Manage</div>
+          <sc-for list="{{ navBottom }}" as="n" hint-placeholder-count="1">
+            <div onClick="{{ n.go }}" title="{{ n.label }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;font:500 14.5px var(--sans);color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:var(--panel-2)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.icon }}"></path></svg>
+              <span style="white-space:nowrap">{{ n.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--rule);cursor:pointer;border-radius:9px" style-hover="background:var(--panel-2)">
+          <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#d073c0,#e0a458);color:#fff;display:grid;place-items:center;font:700 12px var(--sans);flex:none">{{ userInitials }}</span>
+          <span style="min-width:0">
+            <span style="display:block;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userName }}</span>
+            <span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ userRole }}</span>
+          </span>
+        </div>
       </nav>
     </sc-if>
 
     <!-- ══ Main ══ -->
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+    <!-- ══ Topbar ══ -->
+    <header style="flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--rule);background:var(--canvas)">
+      <span style="font:700 16px var(--sans);letter-spacing:-.01em">{{ screenTitle }}</span>
+      <div style="flex:1"></div>
+      <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ openDock }}" style="display:flex;align-items:center;gap:7px;font:600 13px var(--sans);color:var(--warn);background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:9px;padding:6px 12px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--warn)">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--warn);animation:ccpulse 1.4s ease infinite"></span>
+        <span>{{ runningLabel }}</span>
+        </div>
+      </sc-if>
+      <div onClick="{{ openDock }}" title="Activity" style="position:relative;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6m4 9.5a2 2 0 004 0"></path></svg>
+        <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
+          <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--canvas)"></span>
+        </sc-if>
+      </div>
+      <div onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+      </div>
+    </header>
     <main style="flex:1;overflow-y:auto;min-width:0">
 
       <sc-if value="{{ showHome }}" hint-placeholder-val="{{ true }}">
@@ -275,7 +281,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Sites</h1>
             <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ sitesCount }}</span>
             <div style="flex:1"></div>
             <div style="display:flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
@@ -855,7 +860,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <sc-if value="{{ showDomains }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Domains</h1>
             <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ domCount }}</span>
             <div style="flex:1"></div>
             <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);width:230px">
@@ -1104,7 +1108,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <sc-if value="{{ showAccounts }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Accounts</h1>
             <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ accCount }}</span>
             <div style="flex:1"></div>
             <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);width:230px">
@@ -1291,7 +1294,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showBilling }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Billing</h1>
           <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px">
             <sc-for list="{{ billTabs }}" as="t" hint-placeholder-count="3">
               <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
@@ -1367,7 +1369,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showSecurity }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Security</h1>
           <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px">
             <sc-for list="{{ secTabs }}" as="t" hint-placeholder-count="3">
               <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:24px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
@@ -1513,7 +1514,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showAudits }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Site Audits</h1>
           <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:12px;background:var(--panel);flex-wrap:wrap">
             <div style="position:relative">
               <div onClick="{{ ddToggleAud }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer;min-width:200px" style-hover="border-color:var(--brand)">
@@ -1571,7 +1571,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showReports }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Reports</h1>
           <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:12px;background:var(--panel);flex-wrap:wrap">
             <sc-for list="{{ repModeChips }}" as="c" hint-placeholder-count="2">
               <span onClick="{{ c.go }}" style="padding:5px 12px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12.5px var(--sans);cursor:pointer">{{ c.label }}</span>
@@ -1686,7 +1685,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       <sc-if value="{{ showArchives }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:baseline;gap:12px">
-            <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Archives</h1>
             <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ archTotal }}</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 16px;border:1px solid var(--rule);border-radius:12px;background:var(--panel)">
@@ -1725,7 +1723,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Settings</h1>
           <div style="display:flex;border-bottom:1px solid var(--rule);margin-top:16px;flex-wrap:wrap">
             <sc-for list="{{ setTabs }}" as="t" hint-placeholder-count="6">
               <span onClick="{{ t.go }}" style="padding:9px 2px;margin-right:22px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};border-bottom:2px solid {{ t.line }}" style-hover="color:var(--ink)">{{ t.label }}</span>
@@ -1863,7 +1860,6 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
 
       <sc-if value="{{ showProfile }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:760px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <h1 style="margin:0;font:600 26px var(--sans);letter-spacing:-.02em">Profile</h1>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
               <span style="width:130px;font:500 12.5px var(--sans);color:var(--ink-dim)">Display name</span>
@@ -1959,6 +1955,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         </div>
       </sc-if>
     </main>
+    </div>
   </div>
 
   <!-- ══ Activity dock ══ -->
