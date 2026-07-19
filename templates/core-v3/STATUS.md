@@ -70,6 +70,13 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   `magicLogin(siteId, envLower, user)` in site-detail.js — realMagicLogin
   delegates to it; production env from the list, runJob sample fallback in
   design mode). The card Terminal chip is gone (terminal = topbar/⌃`/palette).
+- **Standard list-page header** (2026-07-19): every list route follows the Sites
+  pattern — count pill beside the topbar title (route-gated `screenSub` via
+  conditional spreads in each compute; later spreads override listVals'
+  default), primary action in the topbar (sc-if per route: New site / New
+  domain / New account / Add user), search field LEADS the page toolbar
+  (250px, height 36, radius 9). No in-page count lines or in-page primary
+  buttons on list pages. Applies to Sites, Domains, Accounts, Users, Activity.
 - **Sortable table columns** (2026-07-19, Minn pattern): shared `mkSortCols(
   stateKey, cols)` + `sortRows(stateKey, cols, list)` in app.js; per-route sort
   state (`sitesSort`/`domSort`/`accSort`), header cells render via sc-for with

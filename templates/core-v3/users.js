@@ -95,10 +95,12 @@ Object.assign(Component.prototype, {
       const a = this.ACCOUNTS.find(x => x.id === id);
       return { id, name: a ? a.name : ('#' + id), remove: () => this.setState(st => ({ udAccounts: (st.udAccounts || []).filter(x => x !== id) })) };
     });
+    const usersCount = filtered.length ? (filtered.length === all.length ? all.length + ' users' : filtered.length + ' of ' + all.length + ' users') : '';
     return {
       showUsers: active,
       usersRows: rows,
-      usersCount: filtered.length ? (filtered.length === all.length ? all.length + ' users' : filtered.length + ' of ' + all.length + ' users') : '',
+      usersCount,
+      ...(active && usersCount ? { screenSub: usersCount, screenSubDisplay: 'inline-block' } : {}),
       usersLoading: active && !!window.CC_BOOT && !this._users,
       usersEmpty: !!this._users && filtered.length === 0,
       uq: s.uq || '', onUq: e => this.setState({ uq: e.target.value }),

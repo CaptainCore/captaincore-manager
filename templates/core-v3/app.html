@@ -140,6 +140,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ showUsers }}" hint-placeholder-val="{{ false }}">
         <button onClick="{{ openNewUser }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ Add user</button>
       </sc-if>
+      <sc-if value="{{ showDomains }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New domain</button>
+      </sc-if>
+      <sc-if value="{{ showAccounts }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New account</button>
+      </sc-if>
       <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
         <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New site</button>
       </sc-if>
@@ -299,7 +305,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--rule)">
               <h2 style="margin:0;font:700 16px var(--sans);letter-spacing:-.2px">Fleet activity</h2>
-              <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ actCount }}</span>
             </div>
             <sc-for list="{{ actRows }}" as="ev" hint-placeholder-count="10">
               <div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:baseline">
@@ -327,7 +332,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <input value="{{ uq }}" onInput="{{ onUq }}" placeholder="Filter users…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
             <div style="flex:1"></div>
-            <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ usersCount }}</span>
           </div>
           <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:40px 1.3fr 1.2fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">
@@ -996,13 +1000,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ showDomains }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ domCount }}</span>
-            <div style="flex:1"></div>
-            <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);width:230px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
+            <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ dq }}" onInput="{{ onDq }}" placeholder="Filter domains…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New domain</button>
+            <div style="flex:1"></div>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:2fr 1.3fr 0.7fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
@@ -1246,13 +1248,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ showAccounts }}" hint-placeholder-val="{{ false }}">
         <div style="max-width:1240px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <span style="font:400 14px var(--sans);color:var(--ink-dim)">{{ accCount }}</span>
-            <div style="flex:1"></div>
-            <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);width:230px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
+            <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ aq }}" onInput="{{ onAq }}" placeholder="Filter accounts…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">+ New account</button>
+            <div style="flex:1"></div>
           </div>
           <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">

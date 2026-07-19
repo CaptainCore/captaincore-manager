@@ -112,6 +112,7 @@ Object.assign(Component.prototype, {
       showActivity: active,
       actRows: rows,
       actCount: rows.length ? rows.length + ' events' : '',
+      ...(active && rows.length ? { screenSub: rows.length + ' events', screenSubDisplay: 'inline-block' } : {}),
       actLoading: active && !!window.CC_BOOT && !this._actFull,
       actEmpty: active && !!this._actFull && rows.length === 0
     };
