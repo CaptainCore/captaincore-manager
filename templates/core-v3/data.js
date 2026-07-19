@@ -44,7 +44,7 @@ Object.assign(Component.prototype, {
         });
         const envs = (x.environments || []).map(e => e.environment === 'Production' ? 'Prod' : e.environment).filter(Boolean).join(' \u00b7 ') || 'Prod';
         const provider = (x.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase());
-        return { id: String(x.site_id), name: x.name, provider, account: accName[x.account_id] || '',
+        return { id: String(x.site_id), name: x.name, site: x.site || '', provider, account: accName[x.account_id] || '',
           core: x.core || '', visits: x.visits ? Number(x.visits).toLocaleString() : '\u2014',
           storage: this.fmtStorage(x.storage), envs, updates: 0, vuln: 0, owned: true, theme: '',
           backup: 'Direct',

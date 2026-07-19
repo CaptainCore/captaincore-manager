@@ -60,6 +60,16 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   redirect_to back into ?ui=v3. Dialog dropdowns must render IN-FLOW, not
   position:absolute — the dialog body scrolls, so absolute panels clip against
   it and collide with the footer (bit the account picker).
+- **Site thumbnails** (2026-07-19, v1 parity): screenshots ride the public B2
+  bucket — `CC_BOOT.remoteUploadUri + {site}_{site_id}/{env}/screenshots/
+  {screenshot_base}_thumb-{100|800}.jpg` (thumbOf in computeList prefers the
+  Production env's base, falls back to any env with one; data.js keeps `site`
+  slug on FLEET records). Table rows carry a 48px thumb column, cards a 130px
+  hero image; both fall back to a two-letter monogram placeholder when no
+  screenshot exists. Card action is "Login to WordPress" now (shared
+  `magicLogin(siteId, envLower, user)` in site-detail.js — realMagicLogin
+  delegates to it; production env from the list, runJob sample fallback in
+  design mode). The card Terminal chip is gone (terminal = topbar/⌃`/palette).
 - **Intercom chat** (2026-07-19, v1 parity): core-v3.php boots the messenger for
   NON-admin sessions only, when `configurations->intercom_embed_id` is set —
   server-rendered `window.intercomSettings` (name/email/created_at + `user_hash`

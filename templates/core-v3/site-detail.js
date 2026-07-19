@@ -89,10 +89,12 @@ Object.assign(Component.prototype, {
     });
   },
 
-  realMagicLogin(real, s, user) {
+  realMagicLogin(real, s, user) { return this.magicLogin(real.siteId, s.env.toLowerCase(), user); },
+
+  magicLogin(siteId, envLower, user) {
     const who = (user && (user.display_name || user.user_login)) ? ' as ' + (user.display_name || user.user_login) : '';
     const tid = this.toast('Signing in' + who + '…', { kind: 'loading' });
-    const path = '/sites/' + real.siteId + '/' + s.env.toLowerCase() + '/magiclogin' + (user && user.ID ? '/' + user.ID : '');
+    const path = '/sites/' + siteId + '/' + envLower + '/magiclogin' + (user && user.ID ? '/' + user.ID : '');
     this.api(path).then(url => {
       if (typeof url === 'string' && url.indexOf('http') === 0) {
         window.open(url.trim());

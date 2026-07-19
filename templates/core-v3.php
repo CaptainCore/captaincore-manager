@@ -60,6 +60,9 @@ $cc_boot = [
     'stripeKey'       => class_exists( 'WC_Gateway_Stripe' ) ? ( new WC_Gateway_Stripe )->publishable_key : '',
     // Zip-upload endpoint for the Add plugin/theme dialog (admin-gated in upload.php).
     'uploadUrl'       => $plugin_url . 'upload.php',
+    // Public screenshot bucket base (v1 parity) — thumbnails are
+    // {uri}{site}_{site_id}/{env}/screenshots/{screenshot_base}_thumb-{size}.jpg
+    'remoteUploadUri' => isset( $configurations->remote_upload_uri ) ? $configurations->remote_upload_uri : '',
 ];
 
 // Intercom chat support — customers only, v1 parity. Identity verification rides
