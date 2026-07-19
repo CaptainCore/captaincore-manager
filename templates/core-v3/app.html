@@ -180,7 +180,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <!-- Launcher -->
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:22px">
             <sc-for list="{{ launcher }}" as="l" hint-placeholder-count="5">
-              <div onClick="{{ l.go }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px 17px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;transition:border-color .12s, box-shadow .12s" style-hover="border-color:var(--brand);box-shadow:var(--shadow)">
+              <div onClick="{{ l.go }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px 17px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;transition:border-color .12s" style-hover="border-color:var(--brand)">
                 <div style="min-width:0">
                   <div style="font:500 13.5px var(--sans);color:var(--ink-dim)">{{ l.label }}</div>
                   <div style="font:800 26px/1.1 var(--sans);letter-spacing:-.8px;margin-top:8px;min-height:29px;color:var(--ink)"><sc-if value="{{ l.metaSkel }}" hint-placeholder-val="{{ false }}"><span class="cc-skel" style="display:inline-block;width:64px;height:22px;vertical-align:middle"></span></sc-if>{{ l.meta }}</div>
@@ -495,7 +495,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ viewCards }}" hint-placeholder-val="{{ false }}">
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:14px">
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="6">
-                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px" style-hover="border-color:var(--brand);box-shadow:var(--shadow)">
+                <div onClick="{{ s.open }}" onContextMenu="{{ s.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;transition:border-color .12s" style-hover="border-color:var(--brand)">
                   <div style="position:relative;height:130px;border-radius:9px;background:var(--panel-2);overflow:hidden;display:grid;place-items:center;border:1px solid var(--rule)">
                     <span style="font:700 20px var(--sans);color:var(--ink-dim);letter-spacing:.5px">{{ s.mono }}</span>
                     <sc-if value="{{ s.hasThumbLarge }}" hint-placeholder-val="{{ false }}">

@@ -1439,7 +1439,13 @@
       }
       const cls = "scp" + (n++).toString(36);
       const sel = pseudo === "before" || pseudo === "after" ? "." + cls + "::" + pseudo : "." + cls + ":" + pseudo;
-      el.sheet.insertRule(sel + "{" + css + "}", el.sheet.cssRules.length);
+      // LOCAL PATCH (not in dc-runtime upstream): force !important so style-hover
+      // declarations beat the inline style="" the templates set the same
+      // properties in (a plain class:hover rule loses to inline style, which
+      // left every border-color hover in app.html silently dead). Re-apply if
+      // this file is ever re-vendored.
+      const cssImportant = css.split(";").map((d) => d.trim()).filter(Boolean).map((d) => /!important$/i.test(d) ? d : d + " !important").join(";");
+      el.sheet.insertRule(sel + "{" + cssImportant + "}", el.sheet.cssRules.length);
       cache.set(k, cls);
       return cls;
     };
