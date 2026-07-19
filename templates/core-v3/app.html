@@ -443,7 +443,10 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
             <div style="display:flex;align-items:stretch;margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ statTiles }}" as="t" hint-placeholder-count="4">
                 <div onClick="{{ t.go }}" title="{{ t.tip }}" style="flex:1;padding:11px 16px;border-right:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel)">
-                  <div style="font:500 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div>
+                  <div style="display:flex;align-items:center;gap:6px;font:500 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.75"><path d="{{ t.icon }}"></path></svg>
+                    <span>{{ t.k }}</span>
+                  </div>
                   <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
                     <span style="font:600 17px var(--sans)">{{ t.v }}</span>
                     <span style="font:500 11.5px var(--sans);color:{{ t.deltaFg }}">{{ t.delta }}</span>
@@ -508,14 +511,14 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
                     <button onClick="{{ doShare }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Share</button>
                   </div>
                 </section>
-                <section style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+                <section style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
                   <h2 style="margin:0 0 2px;font:600 14px var(--sans)">Actions</h2>
-                  <span onClick="{{ pushEnv }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Push staging → production</span>
-                  <span onClick="{{ pullEnv }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Pull production → staging</span>
+                  <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
+                  <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <sc-if value="{{ showPma }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ openPma }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer">Open phpMyAdmin</span>
+                    <span onClick="{{ openPma }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 9c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3Z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg>Open phpMyAdmin</span>
                   </sc-if>
-                  <span style="font:500 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px">Delete site…</span>
+                  <span style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"></path></svg>Delete site…</span>
                 </section>
               </div>
             </div>
@@ -1962,7 +1965,9 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
         <span style="font:600 14px var(--sans)">Activity</span>
         <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ runningCount }} running</span>
         <div style="flex:1"></div>
-        <span style="font:500 11.5px var(--mono);color:var(--ink-dim);border:1px solid var(--rule);border-radius:5px;padding:2px 6px">⌃`</span>
+        <sc-if value="{{ termShow }}" hint-placeholder-val="{{ true }}">
+          <span style="font:500 11.5px var(--mono);color:var(--ink-dim);border:1px solid var(--rule);border-radius:5px;padding:2px 6px">⌃`</span>
+        </sc-if>
         <span onClick="{{ closeDock }}" style="cursor:pointer;color:var(--ink-dim);width:24px;height:24px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
       </div>
       <div style="flex:1;display:flex;min-height:0">
@@ -1987,6 +1992,8 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span style="display:inline-block;width:7px;height:14px;background:var(--brand);animation:ccblink 1.1s step-end infinite;vertical-align:text-bottom"></span>
             </sc-if>
           </div>
+          <!-- Developer terminal — operators only; customers get the activity feed without a console prompt -->
+          <sc-if value="{{ termShow }}" hint-placeholder-val="{{ true }}">
           <div style="flex:none;border-top:1px solid var(--rule);position:relative">
             <sc-if value="{{ tpOpen }}" hint-placeholder-val="{{ false }}">
               <div onClick="{{ tpClose }}" style="position:fixed;inset:0;z-index:64"></div>
@@ -2053,6 +2060,7 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
               <span onClick="{{ termRun }}" style="font:500 11.5px var(--mono);color:{{ termRunFg }};background:{{ termRunBg }};cursor:pointer;white-space:nowrap;border:1px solid var(--rule);border-radius:7px;padding:5px 10px;flex:none" style-hover="border-color:var(--brand)">Run ⌘⏎</span>
             </div>
           </div>
+          </sc-if>
         </div>
       </div>
     </div>
@@ -2066,8 +2074,8 @@ a:hover{color:var(--brand-ink);text-decoration:underline}
       </div>
     </sc-if>
     <sc-if value="{{ dockIdle }}" hint-placeholder-val="{{ false }}">
-      <div onClick="{{ openDock }}" title="Open console" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:var(--paper);border:1px solid var(--rule);border-radius:50%;box-shadow:var(--shadow);cursor:pointer;z-index:60" style-hover="border-color:var(--brand)">
-        <span style="width:10px;height:10px;border-radius:50%;background:var(--brand);opacity:.45"></span>
+      <div onClick="{{ openDock }}" title="Activity" style="position:fixed;bottom:16px;{{ dockSide }}:16px;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:var(--paper);border:1px solid var(--rule);border-radius:50%;box-shadow:var(--shadow);cursor:pointer;z-index:60;color:var(--ink-dim)" style-hover="border-color:var(--brand);color:var(--brand-ink)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
       </div>
     </sc-if>
   </sc-if>

@@ -411,3 +411,10 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   (client-side from hydrate-time `_fleetTotals`: dominant-core share, provider
   mix, total visits/wk, total storage — no new endpoint);
   `font-variant-numeric:tabular-nums` on body. Hero band idea rejected.
+- **Iconography + customer-safe dock**: site-overview KPI tiles (visits/backups/
+  versions/timeline) and the Actions card (push/pull/phpMyAdmin/delete) gained
+  inline stroke SVGs matching the nav icon style; the idle corner pill is now an
+  "Activity" button with a pulse icon (was an ambiguous dot). The dock's console
+  prompt/target picker/cookbook/⌃` hint are wrapped in `termShow` (operator
+  only) — customers get the same dock as a plain activity feed with friendly
+  idle copy, so background jobs stay visible without a scary terminal.

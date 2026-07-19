@@ -1208,10 +1208,10 @@ class Component extends DCLogic {
       tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
       credRows,
       statTiles: [
-        { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats' },
-        { k: 'Backups', v: real ? (real.backups ? String(real.backups.length) : '—') : '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups' },
-        { k: 'Versions', v: real ? (real.qs ? String(real.qs.length) : '—') : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions' },
-        { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline' }
+        { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
+        { k: 'Backups', v: real ? (real.backups ? String(real.backups.length) : '—') : '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups', icon: 'M21 8v13H3V8 M1 3h22v5H1 M10 12h4' },
+        { k: 'Versions', v: real ? (real.qs ? String(real.qs.length) : '—') : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions', icon: 'M6 3v12 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a9 9 0 0 1-9 9' },
+        { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3' }
       ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => { this.setState({ siteTab: t.act });
         if (!real) return;
         if (t.act === 'backups') this.loadBackups(); else if (t.act === 'versions') this.loadQuicksaves(); else if (t.act === 'timeline') this.loadTimeline(); else if (t.act === 'stats') this.loadStats(); } })),
@@ -1669,6 +1669,9 @@ class Component extends DCLogic {
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       ...this.computeTermVals(s),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
+      // The console prompt is a power tool — operators only. Customers see
+      // the same dock as a plain activity feed.
+      termShow: isOp,
       paletteOpen: s.paletteOpen, palQuery: s.palQuery, palResults,
       themeIcon: (s.theme === 'dark')
         ? 'M12 4V2m0 20v-2M4 12H2m20 0h-2M5.6 5.6 4.2 4.2m15.6 15.6-1.4-1.4m0-12.8 1.4-1.4M4.2 19.8l1.4-1.4M12 7a5 5 0 100 10 5 5 0 000-10z'
