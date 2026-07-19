@@ -1825,10 +1825,13 @@ class Component extends DCLogic {
       ...accountsVals, ...accountVals, ...billingVals,
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
       goProfile: this.go('profile'),
-      // Inline refs re-fire every render, so pin + listen only when the
-      // element actually changes (a fresh mount), never on re-renders.
+      // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
+      // fresh mount" must compare against a slot the null call never clears
+      // (_consoleKnown) — comparing against _consoleEl made every re-render
+      // look like a mount and re-pinned the user to the bottom mid-scroll.
       consoleRef: (el) => {
-        if (el && el !== this._consoleEl) {
+        if (el && el !== this._consoleKnown) {
+          this._consoleKnown = el;
           this._consolePinned = true;
           el.scrollTop = el.scrollHeight;
           el.addEventListener('scroll', () => {
