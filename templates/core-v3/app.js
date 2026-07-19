@@ -1850,6 +1850,9 @@ class Component extends DCLogic {
 
     return {
       userName, userInitials: userName.slice(0, 2).toUpperCase(),
+      userAvatar: (window.CC_BOOT && window.CC_BOOT.userAvatar) || '',
+      userHasAvatar: !!(window.CC_BOOT && window.CC_BOOT.userAvatar),
+      userNoAvatar: !(window.CC_BOOT && window.CC_BOOT.userAvatar),
       greeting: `Good ${dayPart}, ${userName}`,
       statsLine: this._hydrated ? this.realStats() : booted ? '' : (isOp ? '128 sites · 94 domains · fleet coverage 87%' : '4 sites · 6 domains · everything backed up'),
       homeSkel, statsSkel: homeSkel,
