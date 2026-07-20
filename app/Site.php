@@ -1238,7 +1238,7 @@ class Site {
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
             $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
-            $environment->captures    = count ( self::captures( $environment_name ) );
+            $environment->captures    = Captures::count_where( [ "site_id" => $this->site_id, "environment_id" => $environment->environment_id ] );
             $environment->screenshots = [];
             
             // Extract screenshot_base from the ENVIRONMENT details, not the site details
@@ -1664,19 +1664,60 @@ class Site {
     }
 
     public function process_logs() {
-        $Parsedown       = new \Parsedown();
-        $process_log     = new ProcessLogs();
-        $process_logs    = [];
-        $results         = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $this->site_id ] );
+        global $wpdb;
+        $Parsedown    = new \Parsedown();
+        $process_logs = [];
+        $results      = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $this->site_id ] );
+        if ( empty( $results ) ) {
+            return [];
+        }
+
+        // Batch the per-log lookups (log row + file rows were 2 queries per log).
+        $log_ids = array_map( function( $result ) { return (int) $result->process_log_id; }, $results );
+        $ids_in  = implode( ",", array_unique( $log_ids ) );
+
+        $logs_by_id = [];
+        foreach ( $wpdb->get_results( "SELECT * FROM {$wpdb->base_prefix}captaincore_process_logs WHERE process_log_id IN ($ids_in)" ) as $log ) {
+            $logs_by_id[ (int) $log->process_log_id ] = $log;
+        }
+
+        $files_by_log = [];
+        foreach ( $wpdb->get_results( "SELECT * FROM {$wpdb->base_prefix}captaincore_process_log_file WHERE process_log_id IN ($ids_in) ORDER BY created_at DESC" ) as $row ) {
+            $hunks = ! empty( $row->hunks ) ? json_decode( $row->hunks ) : [];
+            if ( ! is_array( $hunks ) ) {
+                $hunks = [];
+            }
+            $files_by_log[ (int) $row->process_log_id ][] = (object) [
+                'process_log_file_id' => (int) $row->process_log_file_id,
+                'process_log_id'      => (int) $row->process_log_id,
+                'site_id'             => $row->site_id !== null ? (int) $row->site_id : null,
+                'file_path'           => $row->file_path,
+                'change_type'         => $row->change_type,
+                'hunks'               => $hunks,
+                'lines_added'         => (int) $row->lines_added,
+                'lines_removed'       => (int) $row->lines_removed,
+                'created_at'          => $row->created_at,
+            ];
+        }
+
+        // Prime the user cache so the author lookups below don't query per log.
+        $user_ids = array_values( array_unique( array_map( function( $log ) { return (int) $log->user_id; }, $logs_by_id ) ) );
+        if ( ! empty( $user_ids ) && function_exists( 'cache_users' ) ) {
+            cache_users( $user_ids );
+        }
+
         foreach ( $results as $result ) {
-            $item                  = $process_log->get( $result->process_log_id );
+            $item = isset( $logs_by_id[ (int) $result->process_log_id ] ) ? clone $logs_by_id[ (int) $result->process_log_id ] : null;
+            if ( ! $item ) {
+                continue;
+            }
             $item->created_at      = strtotime( $item->created_at );
             $item->name            = $result->name;
             $item->description_raw = $item->description;
             $item->description     = $Parsedown->text( $item->description );
             $item->author          = get_the_author_meta( 'display_name', $item->user_id );
             $item->author_avatar   = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp";
-            $item->files           = ( new ProcessLog( $item->process_log_id ) )->files();
+            $item->files           = $files_by_log[ (int) $item->process_log_id ] ?? [];
             $process_logs[]        = $item;
         }
         return $process_logs;
