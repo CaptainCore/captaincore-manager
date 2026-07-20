@@ -15,6 +15,72 @@ Object.assign(Component.prototype, {
     return d.toLocaleString(undefined, opts);
   },
 
+  // ── Visual captures (Captures tab) ────────────────────────────
+  // GET /site/{id}/{env}/captures → [{capture_id, created_at_friendly,
+  // git_commit, pages:[{name,image,image_url}]}] newest first. Cached per
+  // environment on this._detail.caps; the render effect self-guards reloads.
+  loadCaptures() {
+    const real = this._detail;
+    if (!real) return;
+    real.caps = real.caps || {};
+    const env = this.state.env;
+    if (real.caps[env] !== undefined) return;
+    real.caps[env] = null; // loading
+    this.api('/site/' + real.siteId + '/' + env.toLowerCase() + '/captures')
+      .then(rows => { if (this._detail === real) { real.caps[env] = Array.isArray(rows) ? rows : []; this.setState({ tick: this.state.tick }); } })
+      .catch(() => { if (this._detail === real) { real.caps[env] = []; this.setState({ tick: this.state.tick }); } });
+  },
+
+  // Props for the Captures tab + the Overview teaser (spread into computeDetail).
+  computeCaptures(real, s) {
+    const capsRaw = real && real.caps ? real.caps[s.env] : undefined;
+    const loading = !!real && (capsRaw === undefined || capsRaw === null);
+    const caps = Array.isArray(capsRaw) ? capsRaw : [];
+    const limit = s.capLimit || 60;
+    const selId = s.capSel && caps.some(c => String(c.capture_id) === String(s.capSel))
+      ? String(s.capSel) : (caps[0] ? String(caps[0].capture_id) : '');
+    const sel = caps.find(c => String(c.capture_id) === selId) || null;
+    const curEnv = real ? this.currentEnv(real, s) : null;
+    const teaserN = curEnv && Number(curEnv.captures) ? Number(curEnv.captures) : 0;
+    return {
+      capRows: caps.slice(0, limit).map(c => {
+        const n = Array.isArray(c.pages) ? c.pages.length : 0;
+        return {
+          when: c.created_at_friendly || c.created_at,
+          hash: String(c.git_commit || '').slice(0, 7),
+          pagesN: n + (n === 1 ? ' page' : ' pages'),
+          bg: String(c.capture_id) === selId ? 'var(--brand-soft)' : 'transparent',
+          fg: String(c.capture_id) === selId ? 'var(--brand-ink)' : 'var(--ink)',
+          pick: () => this.setState({ capSel: String(c.capture_id) })
+        };
+      }),
+      capMoreShow: caps.length > limit,
+      capMoreLabel: 'Show older (' + (caps.length - limit).toLocaleString() + ' more)',
+      capMore: () => this.setState({ capLimit: limit + 200 }),
+      capCount: caps.length ? caps.length.toLocaleString() + ' captures' : '',
+      capLoading: loading,
+      capEmpty: !loading && caps.length === 0,
+      capHasSel: !!sel,
+      capSelWhen: sel ? (sel.created_at_friendly || '') : '',
+      capSelHash: sel && sel.git_commit ? String(sel.git_commit).slice(0, 7) : '',
+      capPages: sel ? (Array.isArray(sel.pages) ? sel.pages : []).map(p => ({
+        name: p.name || '/',
+        url: p.image_url || '',
+        open: () => { if (p.image_url) window.open(p.image_url, '_blank'); },
+        // Older captures can be pruned from remote storage — swap the broken
+        // image for a quiet note instead of the browser's broken-image icon.
+        err: (e) => { const el = e.target; if (el._swapped) return; el._swapped = true; el.style.display = 'none';
+          const d = document.createElement('div');
+          d.textContent = 'Image no longer available in storage';
+          d.style.cssText = 'padding:26px;text-align:center;font:400 12.5px var(--sans);color:var(--ink-dim)';
+          el.parentNode.appendChild(d); }
+      })) : [],
+      capTeaserShow: teaserN > 0,
+      capTeaserLabel: teaserN.toLocaleString() + (teaserN === 1 ? ' capture' : ' captures'),
+      goCaptures: () => { this.setState({ siteTab: 'captures' }); if (this._detail) this.loadCaptures(); }
+    };
+  },
+
   // ── Quicksaves (Versions tab) ─────────────────────────────────
   loadQuicksaves() {
     const real = this._detail;

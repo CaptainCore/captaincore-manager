@@ -19,7 +19,7 @@ Object.assign(Component.prototype, {
 
   // state.route → the path segment(s) after the base.
   ROUTE_SEG: { home: '', sites: 'sites', site: 'sites', domains: 'domains', domain: 'domains',
-    accounts: 'accounts', account: 'accounts', billing: 'billing', security: 'security',
+    accounts: 'accounts', account: 'accounts', billing: 'billing', invoice: 'billing', security: 'security',
     audits: 'site-audits', reports: 'reports', archives: 'archives', settings: 'settings', profile: 'profile' },
   SEG_ROUTE: { '': 'home', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
     security: 'security', 'site-audits': 'audits', reports: 'reports', archives: 'archives',
@@ -34,6 +34,7 @@ Object.assign(Component.prototype, {
     if (s.route === 'site' && s.siteId) { path += '/' + s.siteId; if (s.siteTab && s.siteTab !== 'overview') path += '/' + s.siteTab; }
     else if (s.route === 'domain' && s.domainId) { path += '/' + s.domainId; }
     else if (s.route === 'account' && s.accountId) { path += '/' + s.accountId; }
+    else if (s.route === 'invoice' && s.invoiceId) { path += '/' + s.invoiceId; }
     return path;
   },
 
@@ -52,6 +53,8 @@ Object.assign(Component.prototype, {
       this.openDomain(parts[1]);
     } else if (head === 'accounts' && parts[1]) {
       this.openAccount(parts[1]);
+    } else if (head === 'billing' && parts[1]) {
+      this.openInvoice(parts[1]);
     } else {
       const route = this.SEG_ROUTE[head] || 'home';
       this.setState({ route });

@@ -65,7 +65,7 @@ Object.assign(Component.prototype, {
       this.setState(st => ({ tick: st.tick, jobs: st.jobs.filter(j => j.real) }));
       // Re-apply the URL so a deep-linked detail (e.g. /account/sites/135) that
       // couldn't fetch pre-hydration now loads its bundle.
-      if (this._routerReady && ['site', 'domain', 'account'].includes(this.state.route)) this.applyUrl();
+      if (this._routerReady && ['site', 'domain', 'account', 'invoice'].includes(this.state.route)) this.applyUrl();
     }).catch(err => {
       if (err && err.message === 'auth' && boot.loginUrl) { location.href = boot.loginUrl; return; }
       console.warn('CaptainCore v3 hydrate failed; using design sample data.', err);

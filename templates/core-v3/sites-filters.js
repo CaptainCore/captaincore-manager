@@ -2,9 +2,10 @@
 // The /sites list carries no theme/plugin data, so these facets resolve
 // server-side: GET /site-filters gives the fleet-wide option list
 // [{name,title,search,type:'themes'|'plugins'}]; picking one POSTs
-// /filters/sites { themes:[…], plugins:[…], logic } → { results:[{site_id}] }
-// and we intersect that set with the displayed FLEET. Presence-only for now
-// (version/status sub-filters stay client-side/'Any').
+// /filters/sites { themes:[…], plugins:[…], versions:[…], statuses:[…],
+// logic, status_mode } → { results:[{site_id}] } and we intersect that set
+// with the displayed FLEET. Picking a plugin also loads its version/status
+// sub-filter options from GET /filters/<name>/versions|statuses.
 
 Object.assign(Component.prototype, {
 
@@ -40,18 +41,52 @@ Object.assign(Component.prototype, {
     return (options || []).find(o => o.name === name) || { name, title: name, search: name };
   },
 
+  // Version/status options for the selected plugin, fetched fleet-wide.
+  loadPluginSubfilters(name) {
+    const token = this._subToken = (this._subToken || 0) + 1;
+    this.PLUGVER_OPTIONS = [];
+    this.PLUGSTATUS_OPTIONS = [];
+    const enc = encodeURIComponent(name);
+    Promise.all([this.api('/filters/' + enc + '/versions/'), this.api('/filters/' + enc + '/statuses/')]).then(([vers, stats]) => {
+      if (token !== this._subToken) return;
+      const vRow = (Array.isArray(vers) ? vers : []).find(x => x && x.name === name);
+      const sRow = (Array.isArray(stats) ? stats : []).find(x => x && x.name === name);
+      this.PLUGVER_OPTIONS = (vRow && vRow.versions) || [];
+      this.PLUGSTATUS_OPTIONS = (sRow && sRow.statuses) || [];
+      this.setState({});
+    }).catch(() => {});
+  },
+
+  // Rows for a version/status sub-facet inside the plugin chip popover:
+  // largest site count first; picking keeps the popover open for stacking.
+  subFacetOpts(options, cur, key) {
+    const sorted = (options || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0) || String(a.name).localeCompare(String(b.name)));
+    const row = (label, badge) => ({ label, badge,
+      mark: cur === label || (label === 'Any' && !cur) ? '✓' : '',
+      bg: cur === label || (label === 'Any' && !cur) ? 'var(--brand-soft)' : 'transparent',
+      pick: () => { this.setState({ [key]: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } });
+    return [row('Any', ''), ...sorted.map(o => row(String(o.name), (o.count || 0) + ' sites'))];
+  },
+
   applyServerFilter() {
     // Deferred so it reads the just-set state.
     setTimeout(() => {
       const s = this.state;
       const themeSel = s.fTheme && s.fTheme !== 'Any';
       const plugSel = s.fPlugin && s.fPlugin !== 'Any';
+      if (plugSel && this._subFor !== s.fPlugin) { this._subFor = s.fPlugin; this.loadPluginSubfilters(s.fPlugin); }
+      if (!plugSel) { this._subFor = null; this.PLUGVER_OPTIONS = []; this.PLUGSTATUS_OPTIONS = []; }
       if (!themeSel && !plugSel) { this._filterMatch = null; this.setState({}); return; }
+      const verSel = plugSel && s.fPlugVer && s.fPlugVer !== 'Any';
+      const statSel = plugSel && s.fPlugStatus && s.fPlugStatus !== 'Any';
       const body = {
         logic: s.fOp || 'AND',
         themes: themeSel ? [pluck(this.filterOptionByName(this.THEME_OPTIONS, s.fTheme))] : [],
         plugins: plugSel ? [pluck(this.filterOptionByName(this.PLUGIN_OPTIONS, s.fPlugin))] : [],
-        core: [], versions: [], statuses: []
+        core: [],
+        versions: verSel ? [{ name: s.fPlugVer, slug: s.fPlugin, type: 'plugins' }] : [],
+        statuses: statSel ? [{ name: s.fPlugStatus, slug: s.fPlugin, type: 'plugins' }] : [],
+        status_mode: s.fPlugIs === 'IS NOT' ? 'exclude' : 'include'
       };
       const token = this._filterToken = (this._filterToken || 0) + 1;
       this._filterMatch = 'loading';

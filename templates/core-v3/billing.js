@@ -125,6 +125,81 @@ Object.assign(Component.prototype, {
     }).catch(() => this.updateToast(tid, 'Verification failed', { kind: 'error' }));
   },
 
+  // ── Invoice detail page (/account/billing/{order_id}) ────────
+  openInvoice(id) {
+    id = String(id).replace(/^#/, '');
+    this.setState({ route: 'invoice', invoiceId: id, paletteOpen: false });
+    if (!this._hydrated) return;
+    if (this._invoiceView && this._invoiceView.id === id && this._invoiceView.data) return;
+    const view = this._invoiceView = { id, data: null };
+    this.api('/invoices/' + id).then(d => {
+      if (this._invoiceView !== view) return;
+      view.data = (d && !d.code) ? d : { error: 'Could not load invoice #' + id + '.' };
+      this.setState({});
+    }).catch(() => { if (this._invoiceView === view) { view.data = { error: 'Could not load invoice #' + id + '.' }; this.setState({}); } });
+  },
+
+  // Props for the invoice page (spread from computeBilling).
+  computeInvoice(s) {
+    // WooCommerce renders line totals as HTML price spans — flatten to text.
+    const txt = h => String(h || '').replace(/<[^>]*>/g, '').replace(/&#36;/g, '$').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').trim();
+    const id = s.invoiceId ? String(s.invoiceId) : '';
+    const back = () => this.setState({ route: 'billing', billTab: 'invoices' });
+    let d = null, loading = false, err = '';
+    if (this._hydrated) {
+      const view = this._invoiceView;
+      if (view && view.id === id) {
+        if (view.data && view.data.error) err = view.data.error;
+        else if (view.data) d = view.data;
+        else loading = true;
+      } else loading = true;
+    } else {
+      // Demo mode: synthesize a detail record from the sample row.
+      const row = this.INVOICES.find(iv => String(iv.id).replace(/^#/, '') === id);
+      if (row) d = { order_id: id, status: row.due && !s.paid[row.id] ? 'pending' : 'completed',
+        line_items: [{ name: row.items, quantity: 1, description: [], total: row.amount }],
+        payment_method: 'Visa ··4242', paid_on: row.due ? '' : row.date, total: row.amount.replace('$', ''),
+        _dateLabel: row.date };
+      else err = 'Invoice not found.';
+    }
+    const status = d ? String(d.status || '') : '';
+    const paid = /completed|processing|paid|refunded/i.test(status);
+    const canPay = /pending|failed|on-hold/i.test(status);
+    return {
+      invBack: back,
+      invLoading: loading,
+      invErr: err, invHasErr: !!err,
+      invReady: !!d,
+      invTitle: 'Invoice #' + id,
+      invStatus: status || '—',
+      invStBg: paid ? 'var(--ok-soft)' : canPay ? 'var(--warn-soft)' : 'var(--panel-2)',
+      invDate: d ? (d._dateLabel || (d.created_at && this.fmtEpoch ? this.fmtEpoch(d.created_at) : '')) : '',
+      invLines: d ? (Array.isArray(d.line_items) ? d.line_items : []).map(li => ({
+        name: li.name || '',
+        qty: String(li.quantity || 1),
+        desc: (Array.isArray(li.description) ? li.description : []).map(m => txt(m.value)).filter(Boolean).join('\n'),
+        total: txt(li.total)
+      })) : [],
+      invTotal: d ? '$' + (Number(String(d.total).replace(/[^0-9.]/g, '')) || 0).toFixed(2) : '',
+      invPayMethod: d ? txt(d.payment_method) : '',
+      invPaidOn: d && d.paid_on ? String(d.paid_on) : '',
+      invHasPaidOn: !!(d && d.paid_on),
+      invCanPay: !!d && canPay,
+      invPdf: () => this._hydrated ? this.downloadInvoicePdf(id) : null,
+      invPay: () => {
+        if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true } })); return; }
+        if (!confirm('Pay invoice #' + id + ' with your default payment method?')) return;
+        const tid = this.toast('Paying invoice #' + id + '…', { kind: 'loading' });
+        this.api('/billing/pay-invoice', { method: 'POST', body: { value: id } }).then(() => {
+          this.updateToast(tid, 'Payment submitted', { kind: 'success' });
+          this._invoiceView = null;
+          this.openInvoice(id);
+          this.loadBilling(true);
+        }).catch(() => this.updateToast(tid, 'Payment failed', { kind: 'error' }));
+      }
+    };
+  },
+
   downloadInvoicePdf(orderId) {
     const boot = window.CC_BOOT || {};
     fetch(boot.restRoot + 'captaincore/v1/invoices/' + orderId + '/pdf', { headers: { 'X-WP-Nonce': boot.nonce } })
@@ -152,6 +227,7 @@ Object.assign(Component.prototype, {
         status: iv.status || '',
         stBg: paid ? 'var(--ok-soft)' : canPay ? 'var(--warn-soft)' : 'var(--panel-2)', stFg: 'var(--ink)',
         canPay,
+        view: () => this.openInvoice(iv.order_id),
         pdf: () => this.downloadInvoicePdf(iv.order_id),
         pay: () => { if (!confirm('Pay invoice #' + iv.order_id + ' ($' + iv.total + ') with your default payment method?')) return;
           this.api('/billing/pay-invoice', { method: 'POST', body: { value: iv.order_id } })

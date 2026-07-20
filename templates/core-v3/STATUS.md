@@ -226,8 +226,33 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   and magic login use it; `finishJob` resolves a job's dispatch toast.
 - **`sites-filters.js`** — theme/plugin Sites-list filters. `GET /site-filters`
   (fleet-wide option list), pick → `POST /filters/sites` → intersect matched site-ids
-  with the fleet. Presence-only (version/status stay 'Any').
-- **`version-recovery.js`** — Versions/Backups/Snapshots/Timeline (see below).
+  with the fleet. Picking a plugin also loads its Version/Status sub-filter options
+  (`GET /filters/<name>/versions/` + `/statuses/`, per-option site counts, sorted
+  largest-count first); selections ride the same POST as `versions`/`statuses`, and
+  the IS / IS NOT chip maps to `status_mode: include|exclude`. AND/OR + IS chips +
+  clears re-run the server filter when hydrated.
+- **Filter builder UI** (app.js `facetDefs` + app.html): only ACTIVE facets render
+  as chips (label + ▾ + ✕); adding one goes through a "+ Filter" two-level menu
+  (category list → searchable options). The active Plugin chip opens a popover
+  holding Version list, Status list, IS/IS NOT, and Remove — picks keep the popover
+  open for stacking. AND/OR pill only shows with ≥2 active conditions. "Unassigned"
+  moved out of the filter row into the Labels row as an operator-only pseudo-label
+  (warn-colored chip toggling `fUnassigned`).
+- **`version-recovery.js`** — Versions/Backups/Snapshots/Captures/Timeline (see below).
+  Captures tab: `loadCaptures()` (GET `/site/{id}/{env}/captures`, cached per env on
+  `_detail.caps`) + `computeCaptures()` (history rail w/ show-older paging, per-page
+  screenshot cards with broken-image fallback, Overview teaser via env `captures`
+  count). Tab sits after Snapshots; deep-links via `/account/sites/{id}/captures`.
+- **Invoice detail page** (`billing.js` `openInvoice`/`computeInvoice` + `invoice`
+  route): `/account/billing/{order_id}` renders a full-page invoice (line items from
+  GET `/invoices/{id}`, WC price HTML flattened to text, PDF download + pay-now).
+  Invoice rows on Billing link into it. Router: `invoice` route maps to the billing
+  segment; hydrate's deep-link re-apply list includes it; stub whitelist too.
+- **RENDER-TIME MIXIN GUARD (convention):** computeList/computeDetail/computeBilling
+  run for every screen on every render — any method defined in a LATER mixin file
+  must be called guarded (`this.method ? this.method(...) : fallback`), else a render
+  that fires mid-script-eval shows "Root.renderVals(): … is not a function" (seen
+  once on the user-switching return URL).
 
 ### Vendored runtime (`../../public/js/v3/`)
 `support.js` (DC runtime), `react.production.min.js`, `react-dom.production.min.js`.

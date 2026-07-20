@@ -10,7 +10,7 @@
 Object.assign(Component.prototype, {
 
   openSite(id, env) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '' });
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', capSel: '', capLimit: 60 });
     if (this._hydrated) this.loadSiteDetail(id);
   },
 
@@ -43,9 +43,10 @@ Object.assign(Component.prototype, {
   setEnv(name) {
     const real = this._detail;
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
-    this.setState({ env: name, logFile: '' });
+    this.setState({ env: name, logFile: '', capSel: '', capLimit: 60 });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
     if (real && this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
+    if (real && this.state.siteTab === 'captures') setTimeout(() => this.loadCaptures(), 0);
   },
 
   // ── Overview ──────────────────────────────────────────────────
