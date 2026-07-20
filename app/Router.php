@@ -103,8 +103,6 @@ class Router {
             $ui = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
             if ( $ui === 'v3' ) {
                 $template_file = 'templates/core-v3.php';
-            } elseif ( $ui === 'v2' ) {
-                $template_file = 'templates/core-v2.php';
             } elseif ( $ui === 'tailwind' ) {
                 $template_file = 'templates/core-tailwind.php';
             } else {
