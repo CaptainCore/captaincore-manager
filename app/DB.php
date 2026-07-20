@@ -92,6 +92,34 @@ class DB {
         return $wpdb->get_results( $wpdb->prepare( $sql, $values ) );
     }
 
+    // COUNT(*) with the same condition semantics as where(), without hydrating rows.
+    static function count_where( $conditions ) {
+        global $wpdb;
+        $where_clauses = [];
+        $values = [];
+
+        foreach ( $conditions as $column => $value ) {
+            $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+
+            if ( is_array( $value ) ) {
+                $placeholders = implode( ',', array_fill( 0, count( $value ), '%s' ) );
+                $where_clauses[] = "`$column` IN ($placeholders)";
+                $values = array_merge( $values, $value );
+            } else {
+                $where_clauses[] = "`$column` = %s";
+                $values[] = $value;
+            }
+        }
+
+        if ( empty( $where_clauses ) ) {
+            return 0;
+        }
+
+        $sql = "SELECT COUNT(*) FROM " . self::_table() . " WHERE " . implode( " AND ", $where_clauses );
+
+        return (int) $wpdb->get_var( $wpdb->prepare( $sql, $values ) );
+    }
+
     static function where_compare( $conditions ) {
         global $wpdb;
         $allowed_compare  = [ '=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE' ];
@@ -749,7 +777,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "49";
+        $required_version = (int) "51";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -767,7 +795,8 @@ class DB {
             created_at datetime NOT NULL,
             git_commit varchar(100),
             pages longtext,
-        PRIMARY KEY  (capture_id)
+        PRIMARY KEY  (capture_id),
+        KEY site_env (site_id,environment_id)
         ) $charset_collate;";
         
         dbDelta($sql);
@@ -871,7 +900,8 @@ class DB {
             site_id bigint(20) UNSIGNED NOT NULL,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
-        PRIMARY KEY  (process_log_site_id)
+        PRIMARY KEY  (process_log_site_id),
+        KEY site_id (site_id)
         ) $charset_collate;";
 
         dbDelta($sql);
