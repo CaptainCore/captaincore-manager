@@ -383,19 +383,86 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
               <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Filter sites…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
             </div>
-            <span onClick="{{ unassignedToggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px solid {{ unBd }};border-radius:99px;background:{{ unBg }};color:{{ unFg }};font:500 13px var(--sans);cursor:pointer;white-space:nowrap">⚠ {{ unassignedLabel }}</span>
-            <sc-for list="{{ facets }}" as="fc" hint-placeholder-count="5">
+            <sc-for list="{{ facets }}" as="fc" hint-placeholder-count="2">
               <div style="position:relative">
-                <div onClick="{{ fc.toggle }}" style="display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;border:1px solid {{ fc.bd }};border-radius:99px;background:{{ fc.bg }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">
+                <div onClick="{{ fc.toggle }}" style="display:flex;align-items:center;gap:7px;height:30px;padding:0 8px 0 12px;border:1px solid {{ fc.bd }};border-radius:99px;background:{{ fc.bg }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">
                   <span style="font:500 13px var(--sans);color:{{ fc.fg }}">{{ fc.label }}</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                  <span onClick="{{ fc.clear }}" title="Remove filter" style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;color:var(--ink-dim);font:600 11px var(--sans)" style-hover="background:var(--panel-2);color:var(--bad)">✕</span>
                 </div>
                 <sc-if value="{{ fc.open }}" hint-placeholder-val="{{ false }}">
                   <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                  <div style="position:absolute;top:36px;left:0;z-index:40;width:250px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <sc-if value="{{ fc.notPlugin }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;top:36px;left:0;z-index:40;width:250px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                      <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Filter…" style="width:100%;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                      <div style="max-height:210px;overflow-y:auto">
+                        <sc-for list="{{ fc.opts }}" as="o" hint-placeholder-count="5">
+                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
+                            <span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
+                            <span style="font:500 12.5px var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
+                            <span style="font:500 10.5px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 7px;flex:none">{{ o.badge }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ fc.isPlugin }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:36px;left:0;z-index:40;width:260px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:8px;animation:ccfade .12s ease">
+                      <div style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:2px 5px 6px">Version</div>
+                      <div style="max-height:150px;overflow-y:auto">
+                        <sc-for list="{{ plugVerOpts }}" as="o" hint-placeholder-count="3">
+                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
+                            <span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
+                            <span style="font:500 12.5px var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
+                            <span style="font:500 10.5px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 7px;flex:none">{{ o.badge }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 5px 6px">
+                        <span style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">Status</span>
+                        <div style="flex:1"></div>
+                        <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:2px">
+                          <sc-for list="{{ isChips }}" as="c" hint-placeholder-count="2">
+                            <span onClick="{{ c.go }}" style="padding:2px 8px;border-radius:20px;cursor:pointer;font:600 11px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <div style="max-height:120px;overflow-y:auto">
+                        <sc-for list="{{ plugStatusOpts }}" as="o" hint-placeholder-count="3">
+                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
+                            <span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
+                            <span style="font:500 12.5px var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
+                            <span style="font:500 10.5px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 7px;flex:none">{{ o.badge }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="border-top:1px solid var(--rule);margin-top:8px;padding:8px 5px 2px">
+                        <span onClick="{{ clearPlugin }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">✕ Remove plugin filter</span>
+                      </div>
+                    </div>
+                  </sc-if>
+                </sc-if>
+              </div>
+            </sc-for>
+            <div style="position:relative">
+              <div onClick="{{ addFilterToggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border:1px dashed var(--rule);border-radius:99px;background:transparent;cursor:pointer;white-space:nowrap;color:var(--ink-dim);font:500 13px var(--sans)" style-hover="border-color:var(--brand);color:var(--brand-ink)">+ Filter</div>
+              <sc-if value="{{ addFilterOpen }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
+                <div style="position:absolute;top:36px;left:0;z-index:40;width:250px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <sc-if value="{{ addFilterShowCats }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ addFilterCats }}" as="c" hint-placeholder-count="5">
+                      <div onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;cursor:pointer" style-hover="background:var(--panel-2)">
+                        <span style="font:500 12.5px var(--sans);flex:1">{{ c.label }}</span>
+                        <span style="font:500 11px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px">{{ c.cur }}</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ addFilterShowOpts }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ addFilterBack }}" style="display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:6px;cursor:pointer;color:var(--ink-dim);font:600 11px var(--sans);letter-spacing:.05em;text-transform:uppercase" style-hover="background:var(--panel-2);color:var(--ink)">← {{ addFilterCatLabel }}</div>
                     <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Filter…" style="width:100%;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
                     <div style="max-height:210px;overflow-y:auto">
-                      <sc-for list="{{ fc.opts }}" as="o" hint-placeholder-count="5">
+                      <sc-for list="{{ addFilterOpts }}" as="o" hint-placeholder-count="5">
                         <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
                           <span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
                           <span style="font:500 12.5px var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
@@ -403,15 +470,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                         </div>
                       </sc-for>
                     </div>
-                  </div>
-                </sc-if>
-              </div>
-            </sc-for>
-            <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:3px">
-              <sc-for list="{{ opChips }}" as="c" hint-placeholder-count="2">
-                <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
-              </sc-for>
+                  </sc-if>
+                </div>
+              </sc-if>
             </div>
+            <sc-if value="{{ opShow }}" hint-placeholder-val="{{ false }}">
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:3px">
+                <sc-for list="{{ opChips }}" as="c" hint-placeholder-count="2">
+                  <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
+                </sc-for>
+              </div>
+            </sc-if>
             <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
               <span onClick="{{ clearFilters }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
             </sc-if>
@@ -422,39 +491,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span onClick="{{ setViewList }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);background:{{ lstBg }};color:{{ lstFg }}">List</span>
             </div>
           </div>
-          <sc-if value="{{ plugRowShow }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">
-              <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ plugRowLabel }}:</span>
-              <sc-for list="{{ facets2 }}" as="fc" hint-placeholder-count="2">
-                <div style="position:relative">
-                  <div onClick="{{ fc.toggle }}" style="display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;border:1px solid {{ fc.bd }};border-radius:99px;background:{{ fc.bg }};cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">
-                    <span style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:{{ fc.fg }}">{{ fc.label }}</span>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
-                  </div>
-                  <sc-if value="{{ fc.open }}" hint-placeholder-val="{{ false }}">
-                    <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                    <div style="position:absolute;top:34px;left:0;z-index:40;width:230px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                      <div style="max-height:210px;overflow-y:auto">
-                        <sc-for list="{{ fc.opts }}" as="o" hint-placeholder-count="4">
-                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
-                            <span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
-                            <span style="font:500 12.5px var(--sans);flex:1">{{ o.label }}</span>
-                            <span style="font:500 10.5px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 7px;flex:none">{{ o.badge }}</span>
-                          </div>
-                        </sc-for>
-                      </div>
-                    </div>
-                  </sc-if>
-                </div>
-              </sc-for>
-              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:3px">
-                <sc-for list="{{ isChips }}" as="c" hint-placeholder-count="2">
-                  <span onClick="{{ c.go }}" style="padding:3px 10px;border-radius:20px;cursor:pointer;font:600 12px var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
-                </sc-for>
-              </div>
-              <span onClick="{{ clearPlugin }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">✕ Remove plugin filter</span>
-            </div>
-          </sc-if>
           <sc-if value="{{ hasLabels }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
               <span style="font:500 12px var(--sans);color:var(--ink-dim)">Labels:</span>
@@ -668,6 +704,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     </div>
                   </sc-for>
                 </section>
+                <sc-if value="{{ capTeaserShow }}" hint-placeholder-val="{{ false }}">
+                  <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;display:flex;align-items:center;gap:9px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
+                    <span style="font:600 13.5px var(--sans)">Visual captures</span>
+                    <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ capTeaserLabel }}</span>
+                    <div style="flex:1"></div>
+                    <span onClick="{{ goCaptures }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View history →</span>
+                  </section>
+                </sc-if>
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Domains</h2><span onClick="{{ dGoDomains }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
                   <sc-for list="{{ dDomains }}" as="d" hint-placeholder-count="2">
@@ -959,6 +1004,54 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
             </div>
+          </sc-if>
+
+          <sc-if value="{{ tabCaptures }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">Visual history — screenshots of the configured pages, captured over time.</span>
+              <div style="flex:1"></div>
+              <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ capCount }}</span>
+            </div>
+            <sc-if value="{{ capLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">Loading captures…</div>
+            </sc-if>
+            <sc-if value="{{ capEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">No captures yet for this environment.</div>
+            </sc-if>
+            <sc-if value="{{ capHasSel }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;margin-top:12px;align-items:start">
+                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <div style="padding:11px 14px;border-bottom:1px solid var(--rule);font:600 13.5px var(--sans)">History</div>
+                  <div style="max-height:600px;overflow-y:auto">
+                    <sc-for list="{{ capRows }}" as="cp" hint-placeholder-count="6">
+                      <div onClick="{{ cp.pick }}" style="padding:9px 14px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ cp.bg }}" style-hover="background:var(--panel-2)">
+                        <div style="font:500 12.5px var(--sans);color:{{ cp.fg }}">{{ cp.when }}</div>
+                        <div style="display:flex;gap:9px;margin-top:3px;font:400 11px var(--mono);color:var(--ink-dim)"><span>{{ cp.hash }}</span><span>{{ cp.pagesN }}</span></div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ capMoreShow }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ capMore }}" style="padding:10px 14px;font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer;text-align:center" style-hover="background:var(--panel-2)">{{ capMoreLabel }}</div>
+                    </sc-if>
+                  </div>
+                </section>
+                <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font:600 14px var(--sans)">{{ capSelWhen }}</span>
+                    <span style="font:500 12px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ capSelHash }}</span>
+                  </div>
+                  <sc-for list="{{ capPages }}" as="pg" hint-placeholder-count="2">
+                    <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule)">
+                        <span style="font:500 12.5px var(--mono)">{{ pg.name }}</span>
+                        <div style="flex:1"></div>
+                        <span onClick="{{ pg.open }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Open full size ↗</span>
+                      </div>
+                      <img src="{{ pg.url }}" loading="lazy" onClick="{{ pg.open }}" onError="{{ pg.err }}" style="display:block;width:100%;height:auto;background:var(--panel);cursor:zoom-in">
+                    </section>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ tabTimeline }}" hint-placeholder-val="{{ false }}">
@@ -1505,12 +1598,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ invoices }}" as="iv" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                  <span style="font:500 13px var(--mono)">{{ iv.id }}</span>
+                  <span onClick="{{ iv.view }}" style="font:500 13px var(--mono);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ iv.id }}</span>
                   <span style="font:400 13.5px var(--sans)">{{ iv.items }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ iv.date }}</span>
                   <div style="flex:1"></div>
                   <span style="font:600 13.5px var(--mono)">{{ iv.amount }}</span>
                   <span style="font:500 12px var(--sans);background:{{ iv.stBg }};color:{{ iv.stFg }};border-radius:99px;padding:3px 10px">{{ iv.status }}</span>
+                  <span onClick="{{ iv.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
                   <span onClick="{{ iv.pdf }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
                   <sc-if value="{{ iv.canPay }}" hint-placeholder-val="{{ false }}">
                     <button onClick="{{ iv.pay }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
@@ -1559,6 +1653,54 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="padding:14px 16px">
                 <div style="font:500 13.5px var(--sans)">{{ addrL1 }}</div>
                 <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">{{ addrL2 }}<br>{{ addrL3 }}<br>{{ addrL4 }}</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showInvoice }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:860px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
+          <span onClick="{{ invBack }}" style="font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Invoices</span>
+          <sc-if value="{{ invLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">Loading invoice…</div>
+          </sc-if>
+          <sc-if value="{{ invHasErr }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">{{ invErr }}</div>
+          </sc-if>
+          <sc-if value="{{ invReady }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+              <h1 style="margin:0;font:700 22px var(--sans);letter-spacing:-.02em">{{ invTitle }}</h1>
+              <span style="font:500 12px var(--sans);background:{{ invStBg }};border-radius:99px;padding:3px 11px;text-transform:capitalize">{{ invStatus }}</span>
+              <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ invDate }}</span>
+              <div style="flex:1"></div>
+              <span onClick="{{ invPdf }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:5px 12px" style-hover="border-color:var(--brand)">Download PDF</span>
+              <sc-if value="{{ invCanPay }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ invPay }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
+              </sc-if>
+            </div>
+            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+              <div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--panel);font:600 11px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">
+                <span style="flex:1">Item</span><span style="width:40px;text-align:right">Qty</span><span style="width:110px;text-align:right">Total</span>
+              </div>
+              <sc-for list="{{ invLines }}" as="li" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:flex-start">
+                  <span style="flex:1;min-width:0">
+                    <span style="display:block;font:500 13.5px var(--sans)">{{ li.name }}</span>
+                    <span style="display:block;font:400 12px/1.6 var(--mono);color:var(--ink-dim);white-space:pre-line;margin-top:2px">{{ li.desc }}</span>
+                  </span>
+                  <span style="width:40px;text-align:right;font:400 13px var(--mono)">{{ li.qty }}</span>
+                  <span style="width:110px;text-align:right;font:500 13px var(--mono)">{{ li.total }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--panel)">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ invPayMethod }}</span>
+                <sc-if value="{{ invHasPaidOn }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">· Paid on {{ invPaidOn }}</span>
+                </sc-if>
+                <div style="flex:1"></div>
+                <span style="font:600 13px var(--sans);color:var(--ink-dim)">Total</span>
+                <span style="font:700 16px var(--mono)">{{ invTotal }}</span>
               </div>
             </div>
           </sc-if>

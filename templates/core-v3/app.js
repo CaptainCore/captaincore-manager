@@ -10,6 +10,7 @@ class Component extends DCLogic {
     fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
+    capSel: '', capLimit: 60,
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
@@ -25,9 +26,9 @@ class Component extends DCLogic {
     snapFilter: 'Everything', dq: '', domainId: null, domTab: 'dns',
     dnsRecs: null, dnsDirty: false, dnsT: 'A', dnsN: '', dnsV: '',
     fwds: null, fwdAlias: '', fwdDest: '', reg: { auto: true, lock: true, priv: true },
-    ddOpen: '', ddQ: '',
+    ddOpen: '', ddQ: '', ddCat: '',
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
-    invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0,
+    invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
     secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '',
     audits: null, audSite: 'bloomandbranch.com', audTypes: { Core: true, Plugins: true }, 
@@ -412,7 +413,9 @@ class Component extends DCLogic {
           stBg: paid ? 'var(--ok-soft)' : 'var(--warn-soft)', stFg: 'var(--ink)',
           canPay: iv.due && !s.paid[iv.id],
           pdf: () => {},
+          view: () => this.openInvoice(iv.id),
           pay: () => this.setState(st => ({ paid: { ...st.paid, [iv.id]: true } })) }; }),
+      ...(this.computeInvoice ? this.computeInvoice(s) : {}),
       payMethods: this.PAY_METHODS.map((pm, i) => ({ ...pm,
         isPrimary: s.primaryPm === i, canPrimary: s.primaryPm !== i, needsVerify: false, verify: () => {},
         setPrimary: () => this.setState({ primaryPm: i }), remove: () => {} })),
@@ -715,7 +718,7 @@ class Component extends DCLogic {
     this.setState(st => ({ jobs: [{ id: Date.now(), label, target, state: 'running', pct: 4 }, ...st.jobs] }));
   }
   openSite(id, env) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false });
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, capSel: '', capLimit: 60 });
   }
 
   computeList(s, isOp) {
@@ -770,6 +773,20 @@ class Component extends DCLogic {
       open: s.ddOpen === id,
       toggle: () => this.setState(st => ({ ddOpen: st.ddOpen === id ? '' : id, ddQ: '' })),
       opts });
+    // Facet definitions for the "+ Filter" builder — only ACTIVE facets render
+    // as chips; the plugin chip opens a Version/Status popover (see app.html).
+    const facetDefs = [
+      { id: 'fProv', base: 'Provider', cur: s.fProv, opts: () => facetOpts(cntBy(x => x.provider), s.fProv, 'fProv') },
+      { id: 'fBackup', base: 'Backup', cur: s.fBackup, opts: () => facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup') },
+      { id: 'fCore', base: 'Core', cur: s.fCore, opts: () => facetOpts(cntBy(x => x.core), s.fCore, 'fCore') },
+      { id: 'fTheme', base: 'Theme', cur: s.fTheme, opts: () => this._hydrated
+          ? this.filterFacetOpts(this.THEME_OPTIONS, s.fTheme, 'fTheme')
+          : facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme') },
+      { id: 'fPlugin', base: 'Plugin', cur: s.fPlugin, plugin: true, opts: () => this._hydrated
+          ? this.filterFacetOpts(this.PLUGIN_OPTIONS, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' })
+          : facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }) }
+    ];
+    const activeFacets = facetDefs.filter(d => !inactive(d.cur));
     const unassignedCnt = fleet.filter(x => x.unassigned).length;
     const labelCnt = {};
     fleet.forEach(x => { [...new Set(x.labels || [])].forEach(l => { if (l) labelCnt[l] = (labelCnt[l] || 0) + 1; }); });
@@ -867,39 +884,47 @@ class Component extends DCLogic {
       sitesNext: () => this.setState({ sitesPage: Math.min(totalPages, pageNum + 1) }),
       sitesPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
       sitesNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
-      unassignedLabel: unassignedCnt + ' unassigned',
-      unBg: s.fUnassigned ? 'var(--warn-soft)' : 'var(--paper)',
-      unFg: s.fUnassigned ? 'var(--ink)' : 'var(--ink-dim)',
-      unBd: s.fUnassigned ? 'var(--warn)' : 'var(--rule)',
-      unassignedToggle: () => this.setState(st => ({ fUnassigned: !st.fUnassigned, sitesPage: 1 })),
-      facets: [
-        mkFacet('fProv', 'Provider', s.fProv, facetOpts(cntBy(x => x.provider), s.fProv, 'fProv')),
-        mkFacet('fBackup', 'Backup', s.fBackup, facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup')),
-        mkFacet('fCore', 'Core', s.fCore, facetOpts(cntBy(x => x.core), s.fCore, 'fCore')),
-        mkFacet('fTheme', 'Theme', s.fTheme, this._hydrated
-          ? this.filterFacetOpts(this.THEME_OPTIONS, s.fTheme, 'fTheme')
-          : facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme')),
-        mkFacet('fPlugin', 'Plugin', s.fPlugin, this._hydrated
-          ? this.filterFacetOpts(this.PLUGIN_OPTIONS, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' })
-          : facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }))
-      ],
+      facets: activeFacets.map(d => ({
+        ...mkFacet(d.id, d.base, d.cur, d.plugin ? [] : d.opts()),
+        isPlugin: !!d.plugin, notPlugin: !d.plugin,
+        clear: (e) => { e.stopPropagation();
+          this.setState({ [d.id]: 'Any', ddOpen: '', ddQ: '', sitesPage: 1, ...(d.plugin ? { fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS' } : {}) });
+          if (this._hydrated) this.applyServerFilter(); }
+      })),
+      addFilterOpen: s.ddOpen === 'addFilter',
+      addFilterToggle: () => this.setState(st => ({ ddOpen: st.ddOpen === 'addFilter' ? '' : 'addFilter', ddQ: '', ddCat: '' })),
+      addFilterShowCats: !s.ddCat,
+      addFilterShowOpts: !!s.ddCat,
+      addFilterCats: facetDefs.map(d => ({ label: d.base, cur: inactive(d.cur) ? '' : d.cur,
+        pick: () => this.setState({ ddCat: d.id, ddQ: '' }) })),
+      addFilterCatLabel: (facetDefs.find(d => d.id === s.ddCat) || {}).base || '',
+      addFilterBack: () => this.setState({ ddCat: '', ddQ: '' }),
+      addFilterOpts: s.ddCat ? (facetDefs.find(d => d.id === s.ddCat) || { opts: () => [] }).opts() : [],
+      opShow: activeFacets.length + (s.fUnassigned ? 1 : 0) >= 2,
       opChips: ['AND', 'OR'].map(label => ({ label,
         bg: s.fOp === label ? 'var(--panel-2)' : 'transparent',
         fg: s.fOp === label ? 'var(--ink)' : 'var(--ink-dim)',
-        go: () => this.setState({ fOp: label }) })),
-      plugRowShow: !inactive(s.fPlugin),
-      plugRowLabel: s.fPlugin,
-      facets2: [
-        mkFacet('fPlugVer', 'Version', s.fPlugVer, facetOpts(verCnt, s.fPlugVer, 'fPlugVer')),
-        mkFacet('fPlugStatus', 'Status', s.fPlugStatus, facetOpts(statCnt, s.fPlugStatus, 'fPlugStatus'))
-      ],
+        go: () => { this.setState({ fOp: label }); if (this._hydrated) this.applyServerFilter(); } })),
+      plugVerOpts: this.subFacetOpts ? this.subFacetOpts(this._hydrated
+        ? this.PLUGVER_OPTIONS
+        : Object.keys(verCnt).map(k => ({ name: k, count: verCnt[k] })), s.fPlugVer, 'fPlugVer') : [],
+      plugStatusOpts: this.subFacetOpts ? this.subFacetOpts(this._hydrated
+        ? this.PLUGSTATUS_OPTIONS
+        : Object.keys(statCnt).map(k => ({ name: k, count: statCnt[k] })), s.fPlugStatus, 'fPlugStatus') : [],
       isChips: ['IS', 'IS NOT'].map(label => ({ label,
         bg: s.fPlugIs === label ? 'var(--panel-2)' : 'transparent',
         fg: s.fPlugIs === label ? 'var(--ink)' : 'var(--ink-dim)',
-        go: () => this.setState({ fPlugIs: label }) })),
-      clearPlugin: () => this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any' }),
-      hasLabels: Object.keys(labelCnt).length > 0,
-      labelChips: Object.keys(labelCnt)
+        go: () => { this.setState({ fPlugIs: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } })),
+      clearPlugin: () => { this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddOpen: '', sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); },
+      hasLabels: Object.keys(labelCnt).length > 0 || (isOp && unassignedCnt > 0),
+      labelChips: [
+        // Unassigned rides with the labels as an operator-only pseudo-label.
+        ...(isOp && unassignedCnt > 0 ? [{ label: 'unassigned', n: unassignedCnt,
+          bg: 'var(--warn-soft)', fg: 'var(--ink)',
+          icon: this.LABEL_ICONS['mdi-alert'] || this.LABEL_ICONS['mdi-tag'],
+          bd: s.fUnassigned ? 'var(--warn)' : 'transparent',
+          go: () => this.setState(st => ({ fUnassigned: !st.fUnassigned, sitesPage: 1 })) }] : []),
+        ...Object.keys(labelCnt)
         .sort((a, b) => labelCnt[b] - labelCnt[a] || a.localeCompare(b))
         .map(label => {
           const fallbackColor = { down: 'red', 'domain-expired': 'red', 'dns-elsewhere': 'blue', moved: 'orange' };
@@ -917,9 +942,10 @@ class Component extends DCLogic {
           const on = !!s.labelsSel[label];
           return { label, n: labelCnt[label], bg, fg, icon, bd: on ? bd : 'transparent',
             go: () => this.setState(st => ({ labelsSel: { ...st.labelsSel, [label]: !st.labelsSel[label] } })) };
-        }),
+        })
+      ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       hasSel: selIds.length > 0, selCount: selIds.length,
       clearSel: () => this.setState({ sel: {} }),
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
@@ -1197,6 +1223,7 @@ class Component extends DCLogic {
       else if (tab === 'versions') this.loadQuicksaves();
       else if (tab === 'backups') this.loadBackups();
       else if (tab === 'snapshots') this.loadSnapshots();
+      else if (tab === 'captures') this.loadCaptures();
       else if (tab === 'timeline') this.loadTimeline();
     }, 0);
     const slug = site.name.split('.')[0];
@@ -1212,7 +1239,7 @@ class Component extends DCLogic {
       ['Database', 'wp_' + slug.replace(/-/g, '_')], ['DB password', 'mR7$xT4@nL9c'],
       ['SSH', 'ssh ' + slug + '@35.223.94.108']
     ]).map(mkCopy);
-    const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
+    const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
       .map(([id, label]) => ({ label,
         fg: s.siteTab === id ? 'var(--ink)' : 'var(--ink-dim)',
         bg: s.siteTab === id ? 'var(--panel-2)' : 'transparent',
@@ -1223,6 +1250,7 @@ class Component extends DCLogic {
           else if (id === 'versions') this.loadQuicksaves();
           else if (id === 'backups') this.loadBackups();
           else if (id === 'snapshots') this.loadSnapshots();
+          else if (id === 'captures') this.loadCaptures();
           else if (id === 'timeline') this.loadTimeline(); } }));
     const addonsSrc = real ? this.realAddonSrc(real, s) : (s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
@@ -1358,7 +1386,7 @@ class Component extends DCLogic {
       pullEnv: () => real ? this.realPush(real, 'down') : this.runJob('deploy', 'production → staging on ' + site.name),
       dTabs: tabs,
       tabOverview: s.siteTab === 'overview', tabStats: s.siteTab === 'stats', tabAddons: s.siteTab === 'addons', tabVersions: s.siteTab === 'versions',
-      tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
+      tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabCaptures: s.siteTab === 'captures', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
@@ -1511,6 +1539,7 @@ class Component extends DCLogic {
           this.setState({ copied: sn.id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
         regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
         doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
+      ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
       dUsers, logChips, logLines,
       nsuOpen: !!s.nsuOpen,
       openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),
@@ -1663,6 +1692,13 @@ class Component extends DCLogic {
       if (el) el.focus();
     }
     this._ddWasOpen = this.state.ddOpen;
+    // The "+ Filter" builder mounts its search input only after a category is
+    // picked (ddCat), while ddOpen stays 'addFilter' — focus on that step too.
+    if (this.state.ddCat && this.state.ddCat !== this._ddCatWas) {
+      const el = document.querySelector('input[placeholder="Filter…"]');
+      if (el) el.focus();
+    }
+    this._ddCatWas = this.state.ddCat;
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
@@ -1931,7 +1967,7 @@ class Component extends DCLogic {
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: isOp ? [this.navItem('users', 'Users', 'accounts'), this.navItem('settings', 'Settings')] : [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
@@ -1952,10 +1988,10 @@ class Component extends DCLogic {
       dockSide: 'right',
       showHome: s.route === 'home', showSites: s.route === 'sites', showSite: s.route === 'site',
       showDomains: s.route === 'domains', showDomain: s.route === 'domain',
-      showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing',
+      showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
+      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
