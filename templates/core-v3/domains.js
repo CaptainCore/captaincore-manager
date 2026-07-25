@@ -17,6 +17,8 @@
 //   POST /domain/{id}/activate-forward-email (409 mx_conflict → re-post {overwrite_mx:true})
 //   GET/POST/DELETE /domain/{id}/email-forwards[/{alias_id}] · GET /email-forwarding/status
 //   GET  /domain/{id}/mailgun · POST /mailgun/setup {domain} · POST /mailgun/verify · GET /mailgun/events
+//   GET  /domain/{id}/mailgun/usage?period=day|month|year → { totals:{sent,delivered,failed,delivery_rate},
+//        series:[{time,label,sent,received,delivered,failed}] } (Mailgun stats/total, 10-min transient)
 // Known contract gaps (STATUS.md): no expiry/auto-renew anywhere; /domains/ list has no account names.
 // DNS edits stage locally (design behavior) and commit per-record on Save.
 
@@ -34,7 +36,8 @@ Object.assign(Component.prototype, {
   loadDomainDetail(id) {
     const dom = this._domain = { domainId: id, info: null, infoErr: '', dns: null, dnsErr: '',
       noZone: false, dnsLoading: true, saving: false, forwards: null, fwdStatus: null,
-      fwdLoading: false, fwdErr: '', mailgun: null, mgLoading: false, mgErr: '', mgEvents: null };
+      fwdLoading: false, fwdErr: '', mailgun: null, mgLoading: false, mgErr: '', mgEvents: null,
+      mgUsage: null, mgUsagePeriod: 'day', mgUsageLoading: false, mgUsageErr: '' };
     const bump = () => { if (this._domain === dom) this.setState({}); };
     this.api('/domain/' + id).then(info => {
       if (this._domain !== dom) return;
@@ -189,6 +192,22 @@ Object.assign(Component.prototype, {
       dom.mgEvents = (res && Array.isArray(res.items)) ? res.items : [];
       this.setState({});
     }).catch(() => {});
+    this.loadMailgunUsage(dom.mgUsagePeriod);
+  },
+
+  loadMailgunUsage(period) {
+    const dom = this._domain;
+    if (!dom || !dom.info) return;
+    if (!(dom.info.details || {}).mailgun_id) { dom.mgUsage = null; this.setState({}); return; }
+    dom.mgUsagePeriod = period; dom.mgUsageLoading = true; dom.mgUsageErr = '';
+    this.setState({});
+    this.api('/domain/' + dom.domainId + '/mailgun/usage?period=' + period).then(res => {
+      if (this._domain !== dom || dom.mgUsagePeriod !== period) return;
+      dom.mgUsageLoading = false;
+      if (!res || res.code) { dom.mgUsageErr = (res && res.message) || 'Could not load usage.'; dom.mgUsage = null; }
+      else dom.mgUsage = res;
+      this.setState({});
+    }).catch(() => { if (this._domain === dom) { dom.mgUsageLoading = false; dom.mgUsageErr = 'Could not load usage.'; this.setState({}); } });
   },
 
   // ── Binding overrides (spread at the end of computeDomain) ───
@@ -245,6 +264,28 @@ Object.assign(Component.prototype, {
       pending: r.valid !== 'valid',
       verify: () => { this.api('/domain/' + dom.domainId + '/mailgun/verify', { method: 'POST', body: {} })
         .then(() => { dom.mgLoading = false; dom.mailgun = null; this.loadMailgun(); }).catch(() => {}); } }));
+    const usage = dom.mgUsage;
+    const usageSeries = (usage && usage.series) || [];
+    const usagePeak = usageSeries.reduce((m, b) => Math.max(m, b.sent), 0) || 1;
+    const usageTotals = (usage && usage.totals) || {};
+    const num = n => (n == null ? '—' : Number(n).toLocaleString());
+    const mgUsagePeriods = [['day', 'Daily'], ['month', 'Monthly'], ['year', 'Yearly']].map(([id, label]) => ({ label,
+      fg: dom.mgUsagePeriod === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: dom.mgUsagePeriod === id ? 'var(--panel-2)' : 'transparent',
+      go: () => this.loadMailgunUsage(id) }));
+    const mgUsageStats = [
+      { label: 'Sent', v: num(usageTotals.sent), fg: 'var(--ink)' },
+      { label: 'Delivered', v: num(usageTotals.delivered), fg: 'var(--ok)' },
+      { label: 'Failed', v: num(usageTotals.failed), fg: 'var(--bad)' },
+      { label: 'Delivery rate', v: usageTotals.delivery_rate == null ? '—' : usageTotals.delivery_rate + '%', fg: 'var(--ink)' }
+    ];
+    // Every Nth label only — a label is wider than one of 30 daily bar slots, so the
+    // rest are blanked and the kept ones are allowed to overflow into their neighbors.
+    const usageSkip = Math.ceil(usageSeries.length / 6) || 1;
+    const mgUsageBars = usageSeries.map((b, i) => ({
+      h: Math.max(2, Math.round(b.sent / usagePeak * 100)) + '%',
+      tip: b.label + ' · ' + b.sent + ' sent, ' + b.delivered + ' delivered, ' + b.failed + ' failed',
+      label: i % usageSkip === 0 ? b.label : '' }));
     const mgEvents = (dom.mgEvents || []).map(ev => ({
       t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
@@ -317,6 +358,10 @@ Object.assign(Component.prototype, {
       mgHost: details.mailgun_zone || 'mg.' + d.name,
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
+      mgUsagePeriods, mgUsageStats, mgUsageBars,
+      mgUsageHasData: !!usageSeries.length,
+      mgUsageRange: usage ? usage.start + ' — ' + usage.end : (dom.mgUsageLoading ? 'Loading usage…' : ''),
+      mgUsageNotice: !!dom.mgUsageErr, mgUsageNoticeText: dom.mgUsageErr,
       mgShowDeploy: false, mgDeploy: () => {}
     };
   }

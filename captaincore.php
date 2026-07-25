@@ -6226,8 +6226,117 @@ function captaincore_domain_mailgun_events_func( $request ) {
     } else {
         $response = CaptainCore\Remote\Mailgun::get( "v3/$zone/events", $params );
     }
-    
+
     return $response;
+}
+
+/**
+ * Normalizes Mailgun sending usage for a zone into a chartable series.
+ *
+ * Mailgun's stats/total endpoint resolves to hour, day or month and retains 24 months
+ * of history, so yearly totals are rolled up locally from the monthly buckets.
+ *
+ * @param string $zone   Mailgun domain (e.g. mg.example.com). Empty for account-wide totals.
+ * @param string $period day|month|year
+ */
+function captaincore_mailgun_usage( $zone = '', $period = 'day' ) {
+    $periods = [
+        'day'   => [ 'duration' => '30d', 'resolution' => 'day',   'label' => 'M j' ],
+        'month' => [ 'duration' => '12m', 'resolution' => 'month', 'label' => 'M Y' ],
+        'year'  => [ 'duration' => '24m', 'resolution' => 'month', 'label' => 'Y' ],
+    ];
+    if ( ! isset( $periods[ $period ] ) ) {
+        $period = 'day';
+    }
+    $config    = $periods[ $period ];
+    $cache_key = 'captaincore_mailgun_usage_' . md5( "$zone|$period" );
+    $cached    = get_transient( $cache_key );
+    if ( $cached !== false ) {
+        return $cached;
+    }
+
+    // Mailgun expects the event filter as repeated params, which http_build_query would
+    // turn into event[0]=… — so the query is assembled by hand.
+    $query    = 'event=accepted&event=delivered&event=failed&' . http_build_query( [
+        'duration'   => $config['duration'],
+        'resolution' => $config['resolution'],
+    ] );
+    $endpoint = empty( $zone ) ? "v3/stats/total" : "v3/$zone/stats/total";
+    $stats    = CaptainCore\Remote\Mailgun::get( "$endpoint?$query" );
+
+    if ( empty( $stats ) || ! empty( $stats->errors ) || ! isset( $stats->stats ) ) {
+        $message = $stats->message ?? ( $stats->errors[0] ?? 'Unable to fetch usage from Mailgun.' );
+        return new WP_Error( 'mailgun_usage_error', $message, [ 'status' => 502 ] );
+    }
+
+    $series = [];
+    foreach ( $stats->stats as $stat ) {
+        $time      = strtotime( $stat->time );
+        $sent      = (int) ( $stat->accepted->outgoing ?? 0 );
+        $received  = (int) ( $stat->accepted->incoming ?? 0 );
+        $delivered = (int) ( $stat->delivered->total ?? 0 );
+        $failed    = (int) ( $stat->failed->permanent->total ?? 0 ) + (int) ( $stat->failed->temporary->total ?? 0 );
+
+        // Yearly rolls the monthly buckets up into calendar years.
+        $key = ( $period == 'year' ) ? gmdate( 'Y', $time ) : $time;
+        if ( ! isset( $series[ $key ] ) ) {
+            $series[ $key ] = [
+                'time'      => ( $period == 'year' ) ? strtotime( gmdate( 'Y-01-01', $time ) . ' UTC' ) : $time,
+                'label'     => gmdate( $config['label'], $time ),
+                'sent'      => 0,
+                'received'  => 0,
+                'delivered' => 0,
+                'failed'    => 0,
+            ];
+        }
+        $series[ $key ]['sent']      += $sent;
+        $series[ $key ]['received']  += $received;
+        $series[ $key ]['delivered'] += $delivered;
+        $series[ $key ]['failed']    += $failed;
+    }
+    $series = array_values( $series );
+
+    $totals = [ 'sent' => 0, 'received' => 0, 'delivered' => 0, 'failed' => 0 ];
+    foreach ( $series as $bucket ) {
+        foreach ( array_keys( $totals ) as $metric ) {
+            $totals[ $metric ] += $bucket[ $metric ];
+        }
+    }
+    $totals['delivery_rate'] = $totals['sent'] > 0 ? round( $totals['delivered'] / $totals['sent'] * 100, 1 ) : null;
+
+    $response = [
+        'zone'       => $zone,
+        'period'     => $period,
+        'resolution' => $config['resolution'],
+        'start'      => $stats->start ?? '',
+        'end'        => $stats->end ?? '',
+        'totals'     => $totals,
+        'series'     => $series,
+    ];
+
+    set_transient( $cache_key, $response, 10 * MINUTE_IN_SECONDS );
+
+    return $response;
+}
+
+/**
+ * Fetches Mailgun sending usage (outgoing volume) for a domain.
+ */
+function captaincore_domain_mailgun_usage_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain  = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    return captaincore_mailgun_usage( $details->mailgun_zone, $request->get_param( 'period' ) );
 }
 
 /**
@@ -7149,6 +7258,18 @@ function captaincore_register_rest_endpoints() {
         'methods'  => 'GET',
         'callback' => 'captaincore_domain_mailgun_events_func',
         'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/usage', [
+        'methods'  => 'GET',
+        'callback' => 'captaincore_domain_mailgun_usage_func',
+        'permission_callback' => 'captaincore_permission_check',
+        'args'     => [
+            'period' => [
+                'default'           => 'day',
+                'validate_callback' => function( $value ) { return in_array( $value, [ 'day', 'month', 'year' ] ); },
+            ],
+        ],
     ] );
 
 	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/suppressions/(?P<type>[a-z]+)', [

@@ -2559,6 +2559,99 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_mailgun_usage.show" max-width="900px" scrollable>
+					<v-card>
+						<v-toolbar color="primary" flat>
+							<v-btn icon="mdi-close" @click="dialog_mailgun_usage.show = false"></v-btn>
+							<v-toolbar-title>Email Usage for {{ dialog_mailgun_usage.name }}</v-toolbar-title>
+							<v-progress-linear :active="dialog_mailgun_usage.loading" indeterminate absolute bottom color="white"></v-progress-linear>
+						</v-toolbar>
+						<v-card-text>
+							<v-container>
+								<v-btn-toggle
+									v-model="dialog_mailgun_usage.period"
+									@update:model-value="fetchMailgunUsage()"
+									color="primary"
+									variant="outlined"
+									density="comfortable"
+									mandatory
+									class="mb-4"
+								>
+									<v-btn value="day">Daily</v-btn>
+									<v-btn value="month">Monthly</v-btn>
+									<v-btn value="year">Yearly</v-btn>
+								</v-btn-toggle>
+
+								<v-alert v-if="dialog_mailgun_usage.error" type="error" variant="tonal" class="mb-4">
+									{{ dialog_mailgun_usage.error }}
+								</v-alert>
+
+								<div v-else>
+									<v-row dense class="mb-2">
+										<v-col cols="6" sm="3">
+											<v-card variant="tonal" color="primary">
+												<v-card-text class="pa-3">
+													<div class="text-caption">Sent</div>
+													<div class="text-h6">{{ (dialog_mailgun_usage.response.totals.sent || 0).toLocaleString() }}</div>
+												</v-card-text>
+											</v-card>
+										</v-col>
+										<v-col cols="6" sm="3">
+											<v-card variant="tonal" color="success">
+												<v-card-text class="pa-3">
+													<div class="text-caption">Delivered</div>
+													<div class="text-h6">{{ (dialog_mailgun_usage.response.totals.delivered || 0).toLocaleString() }}</div>
+												</v-card-text>
+											</v-card>
+										</v-col>
+										<v-col cols="6" sm="3">
+											<v-card variant="tonal" color="error">
+												<v-card-text class="pa-3">
+													<div class="text-caption">Failed</div>
+													<div class="text-h6">{{ (dialog_mailgun_usage.response.totals.failed || 0).toLocaleString() }}</div>
+												</v-card-text>
+											</v-card>
+										</v-col>
+										<v-col cols="6" sm="3">
+											<v-card variant="tonal">
+												<v-card-text class="pa-3">
+													<div class="text-caption">Delivery Rate</div>
+													<div class="text-h6">{{ dialog_mailgun_usage.response.totals.delivery_rate !== null ? dialog_mailgun_usage.response.totals.delivery_rate + '%' : '-' }}</div>
+												</v-card-text>
+											</v-card>
+										</v-col>
+									</v-row>
+
+									<div class="text-caption text-medium-emphasis mb-2" v-if="dialog_mailgun_usage.response.start">
+										{{ dialog_mailgun_usage.response.start }} &mdash; {{ dialog_mailgun_usage.response.end }}
+									</div>
+
+									<div style="position: relative; height: 260px;" class="mb-4">
+										<canvas id="mailgun_usage_chart"></canvas>
+									</div>
+
+									<v-data-table
+										:headers='[
+											{"title":"Period","key":"label","sortable":false},
+											{"title":"Sent","key":"sent","sortable":false,"align":"end"},
+											{"title":"Delivered","key":"delivered","sortable":false,"align":"end"},
+											{"title":"Failed","key":"failed","sortable":false,"align":"end"},
+											{"title":"Received","key":"received","sortable":false,"align":"end"}
+										]'
+										:items="usage_series_desc"
+										:items-per-page="-1"
+										density="compact"
+										hide-default-footer
+									>
+										<template v-slot:no-data>
+											<div class="pa-4 text-center">No usage data available.</div>
+										</template>
+									</v-data-table>
+								</div>
+							</v-container>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_mailgun_details.show" max-width="800px" scrollable>
 					<v-card>
 						<v-toolbar color="primary" flat>
@@ -8148,6 +8241,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</v-list>
 											
 											<v-btn color="primary" class="mt-2 mr-2" @click="viewDomainMailgunLogs(dialog_domain.domain)">View Logs</v-btn>
+											<v-btn color="primary" variant="tonal" class="mt-2 mr-2" @click="viewDomainMailgunUsage(dialog_domain.domain)">View Usage</v-btn>
 											<v-btn color="secondary" variant="tonal" class="mt-2 mr-2" @click="openMailgunSuppressions(dialog_domain.domain)">View Suppressions</v-btn>
 											
 											<v-btn
@@ -13335,6 +13429,7 @@ const app = createApp({
 		},
 		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "", subject: "Website Inactive", status: "This website is currently unavailable.", action: "Site owners may contact" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
+		dialog_mailgun_usage: { show: false, name: "", domain_id: null, period: 'day', loading: false, error: "", response: { totals: {}, series: [] } },
 		dialog_mailgun_suppressions: { show: false, loading: false, active_tab: 'bounces', items: [], domain_id: null },
 		dialog_mailgun_details: { show: false, event: {} },
 		dialog_forwarding_log_details: { show: false, item: {} },
@@ -14185,6 +14280,10 @@ const app = createApp({
 		}
 	},
 	computed: {
+		usage_series_desc() {
+			// Chart reads oldest-first; the table reads better newest-first.
+			return ( this.dialog_mailgun_usage.response.series || [] ).slice().reverse()
+		},
 		auditCoverageLabel() {
 			const s = this.dialog_site.environment_selected && this.dialog_site.environment_selected.audit_summary
 			if ( !s || !s.total ) return ""
@@ -20759,6 +20858,77 @@ const app = createApp({
 			if (this.dialog_mailgun.response.paging && this.dialog_mailgun.response.paging.next) {
 				this.fetchDomainMailgunLogs(this.dialog_mailgun.response.paging.next);
 			}
+		},
+		viewDomainMailgunUsage(domain) {
+			this.dialog_mailgun_usage.name = domain.name
+			this.dialog_mailgun_usage.domain_id = domain.domain_id
+			this.dialog_mailgun_usage.response = { totals: {}, series: [] }
+			this.dialog_mailgun_usage.error = ""
+			this.dialog_mailgun_usage.show = true
+			this.fetchMailgunUsage()
+		},
+		fetchMailgunUsage() {
+			this.dialog_mailgun_usage.loading = true
+			this.dialog_mailgun_usage.error = ""
+
+			axios.get(`/wp-json/captaincore/v1/domain/${this.dialog_mailgun_usage.domain_id}/mailgun/usage`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				params: { period: this.dialog_mailgun_usage.period }
+			})
+			.then(response => {
+				this.dialog_mailgun_usage.response = response.data
+				this.renderMailgunUsageChart()
+			})
+			.catch(error => {
+				this.dialog_mailgun_usage.error = error.response?.data?.message || error.message
+			})
+			.finally(() => {
+				this.dialog_mailgun_usage.loading = false
+			})
+		},
+		renderMailgunUsageChart() {
+			this.$nextTick(() => {
+				const el = document.getElementById('mailgun_usage_chart')
+				if (!el) return
+
+				if ( statsCharts['mailgun_usage_chart'] ) { statsCharts['mailgun_usage_chart'].destroy() }
+
+				const series = this.dialog_mailgun_usage.response.series || []
+
+				statsCharts['mailgun_usage_chart'] = new Chart( el, {
+					type: 'bar',
+					data: {
+						labels: series.map( bucket => bucket.label ),
+						datasets: [
+							{
+								label: 'Sent',
+								data: series.map( bucket => bucket.sent ),
+								backgroundColor: this.configurations.colors.primary + '99',
+								borderColor: this.configurations.colors.primary,
+								borderWidth: 1
+							},
+							{
+								label: 'Failed',
+								data: series.map( bucket => bucket.failed ),
+								backgroundColor: this.configurations.colors.error + '99',
+								borderColor: this.configurations.colors.error,
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+						},
+						scales: {
+							x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkipPadding: 12 } },
+							y: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 } }
+						}
+					}
+				})
+			})
 		},
 		viewMailgunEventDetails( item ) {
 			this.dialog_mailgun_details.item = item

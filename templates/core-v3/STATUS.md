@@ -581,3 +581,14 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   prompt/target picker/cookbook/⌃` hint are wrapped in `termShow` (operator
   only) — customers get the same dock as a plain activity feed with friendly
   idle copy, so background jobs stay visible without a scary terminal.
+- **Mailgun usage panel (Sending tab)**: new `GET /domain/{id}/mailgun/usage?period=day|month|year`
+  (`captaincore_mailgun_usage()` in `captaincore.php`, normalizing Mailgun's
+  `v3/{zone}/stats/total`; 10-minute transient). The Sending tab gained a **Usage**
+  card above Recent events — Daily/Monthly/Yearly pills, Sent/Delivered/Failed/
+  delivery-rate stat tiles, and a token-styled CSS bar strip (no chart library in
+  v3). Mailgun resolves to hour/day/month with 24 months of retention, so "yearly"
+  is rolled up from monthly buckets server-side; the earliest yearly bucket is a
+  partial year. Bar labels render every ~6th bucket with `overflow:visible` so a
+  label wider than its 1/30 slot spills into the blank neighbors instead of clipping.
+  Parity note: v1 (`core.php`) got the same feature as a "View Usage" dialog with a
+  Chart.js bar chart plus a per-bucket table.
