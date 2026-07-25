@@ -112,16 +112,100 @@ Object.assign(Component.prototype, {
     const source = direction === 'up' ? stag : prod;
     const target = direction === 'up' ? prod : stag;
     const name = (real.site && real.site.name) || '';
+    this.realPushTo(real, source.environment_id, target.environment_id,
+      source.environment.toLowerCase() + ' → ' + target.environment.toLowerCase() + ' on ' + name);
+  },
+
+  // Targets for "Push to another site" — the provider endpoint returns every
+  // environment (same Kinsta account, permission-filtered) except the source.
+  loadPushTargets(real, s) {
+    const env = real.envs && real.envs.find(e => e.environment === s.env);
+    if (!env) { this.setState({ ptoTargets: [] }); return; }
+    this.api('/sites/' + real.siteId + '/environments/' + env.environment_id + '/push-targets')
+      .then(list => this.setState({ ptoTargets: Array.isArray(list) ? list : [] }))
+      .catch(err => { console.warn('push-targets failed', err); this.toast('Could not load push targets', { kind: 'error' }); this.setState({ ptoTargets: [] }); });
+  },
+
+  // Bindings for the deploy confirm dialog (spread into computeDetail's return).
+  // dir 'other' confirms a push onto the target picked in the pto dialog.
+  computeDeployConfirm(real, s, site) {
+    const dir = s.deployConfirm;
+    const t = s.ptoSel || {};
+    const from = dir === 'up' ? 'staging on ' + site.name
+      : dir === 'down' ? 'production on ' + site.name
+      : (s.env || '').toLowerCase() + ' on ' + site.name;
+    const to = dir === 'up' ? 'production on ' + site.name
+      : dir === 'down' ? 'staging on ' + site.name
+      : (t.environment || '').toLowerCase() + ' on ' + (t.name || '');
+    const label = from + ' → ' + to;
+    return {
+      depOpen: !!dir,
+      depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : 'Push to another site',
+      depFrom: from, depTo: to,
+      depWarn: 'This overwrites ' + to + ' with a copy of ' + from + '. Anything on the target that isn’t in the copy will be lost.',
+      depBtn: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
+      // Red whenever a production environment is about to be overwritten.
+      depBtnBg: (dir === 'up' || (dir === 'other' && t.environment === 'Production')) ? 'var(--bad)' : 'var(--brand)',
+      closeDep: () => this.setState({ deployConfirm: '', ptoSel: null }),
+      depGo: () => {
+        if (!dir) return;
+        this.setState({ deployConfirm: '', ptoSel: null });
+        if (dir === 'other') {
+          if (!t.environment_id) return;
+          if (!real) { this.runJob('deploy', label); return; }
+          const env = real.envs && real.envs.find(e => e.environment === s.env);
+          if (env) this.realPushTo(real, env.environment_id, t.environment_id, label);
+          return;
+        }
+        if (real) this.realPush(real, dir);
+        else this.runJob('deploy', (dir === 'up' ? 'staging → production' : 'production → staging') + ' on ' + site.name);
+      },
+    };
+  },
+
+  // Bindings for the "Push to another site" target-picker dialog.
+  computePushToOther(real, s, site) {
+    const q = (s.ptoQ || '').toLowerCase();
+    const loaded = Array.isArray(s.ptoTargets);
+    const rows = (loaded ? s.ptoTargets : [])
+      .filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.home_url || '').toLowerCase().includes(q))
+      .slice(0, 100)
+      .map(t => ({
+        label: t.name + ' (' + (t.environment || '').toLowerCase() + ')',
+        sub: t.home_url || '',
+        pick: () => this.setState({ ptoOpen: false, ptoSel: t, deployConfirm: 'other' }),
+      }));
+    return {
+      pushOther: () => {
+        // Sample mode demos with other fleet sites; real mode fetches the
+        // provider's permission-filtered target list.
+        this.setState({ ptoOpen: true, ptoQ: '', ptoSel: null,
+          ptoTargets: real ? null : this.FLEET.filter(x => x.id !== site.id).slice(0, 12)
+            .map(x => ({ site_id: x.id, name: x.name, environment: 'Production', environment_id: -1, home_url: x.name })) });
+        if (real) this.loadPushTargets(real, s);
+      },
+      ptoOpen: !!s.ptoOpen,
+      closePto: () => this.setState({ ptoOpen: false }),
+      ptoTitle: 'Push ' + site.name + ' (' + (s.env || '').toLowerCase() + ') to…',
+      ptoQ: s.ptoQ, onPtoQ: e => this.setState({ ptoQ: e.target.value }),
+      ptoLoading: !!s.ptoOpen && !loaded,
+      ptoEmpty: !!s.ptoOpen && loaded && rows.length === 0,
+      ptoHasRows: rows.length > 0,
+      ptoRows: rows,
+    };
+  },
+
+  realPushTo(real, sourceEnvId, targetEnvId, label) {
     // Push is a provider operation (202 + operation_id), not a token job —
     // the dock entry is resolved by polling /provider-actions/check until the
     // registered action leaves the active list (v1: checkProviderActions).
     const jobId = this.startJob({
-      label: 'deploy', target: source.environment.toLowerCase() + ' → ' + target.environment.toLowerCase() + ' on ' + name,
+      label: 'deploy', target: label,
       command: 'push', siteId: real.siteId
     });
     const job = this._jobObjs[jobId];
     this.api('/sites/environments/push', { method: 'POST',
-      body: { source_environment_id: source.environment_id, target_environment_id: target.environment_id } })
+      body: { source_environment_id: sourceEnvId, target_environment_id: targetEnvId } })
       .then(res => {
         if (res && res.code) { job.stream.push('Error: ' + (res.message || res.code)); this.finishJob(job, 'error'); return; }
         job.stream.push((res && res.message) || 'Push requested.');

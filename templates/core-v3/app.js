@@ -14,6 +14,7 @@ class Component extends DCLogic {
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
+    deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'request', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'US Central (Iowa)', nsClone: 'None (fresh install)',
@@ -394,6 +395,9 @@ class Component extends DCLogic {
         { k: 'Auto-pay', v: 'On · Visa ··4242' }, { k: 'Addons', v: 'Priority support +$10/mo' }, { k: 'Credits', v: '−$15.00' }
       ],
       planRequest: () => this.runJob('plan-request', acc.name + ' — change request sent'),
+      // Edit plan is a live-data (operator) feature — inert in the DC editor,
+      // realAccountVals overrides with the working implementation.
+      accShowEditPlan: true, openEditPlan: () => {}, epOpen: false,
       accActivity: this.ACC_ACTIVITY,
       ...(this._hydrated ? this.realAccountVals(s) : {})
     };
@@ -1382,8 +1386,14 @@ class Component extends DCLogic {
       dSync: () => real ? this.realSync(real, s) : this.runJob('sync-data', site.name),
       dTerm: () => this.setState({ dockOpen: true }),
       dWpLogin: () => real ? this.realMagicLogin(real, s) : this.runJob('magiclogin', site.name),
-      pushEnv: () => real ? this.realPush(real, 'up') : this.runJob('deploy', 'staging → production on ' + site.name),
-      pullEnv: () => real ? this.realPush(real, 'down') : this.runJob('deploy', 'production → staging on ' + site.name),
+      // Deploys are destructive (they overwrite the target environment) — the
+      // buttons open the confirm dialog; depGo runs the actual push. Three
+      // directions: 'up' (staging → production), 'down' (production → staging),
+      // 'other' (current env → an env on another site, picked in the pto dialog).
+      pushEnv: () => this.setState({ deployConfirm: 'up' }),
+      pullEnv: () => this.setState({ deployConfirm: 'down' }),
+      ...this.computeDeployConfirm(real, s, site),
+      ...this.computePushToOther(real, s, site),
       dTabs: tabs,
       tabOverview: s.siteTab === 'overview', tabStats: s.siteTab === 'stats', tabAddons: s.siteTab === 'addons', tabVersions: s.siteTab === 'versions',
       tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabCaptures: s.siteTab === 'captures', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
@@ -1657,7 +1667,7 @@ class Component extends DCLogic {
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false }); }
+      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }

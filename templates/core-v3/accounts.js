@@ -15,6 +15,111 @@ Object.assign(Component.prototype, {
 
   ACC_LEVEL_LABELS: { 'full-billing': 'Owner', 'full': 'Full access', 'sites-only': 'Sites only', 'domains-only': 'Domains only' },
   ACC_LEVEL_API: { 'Full access': 'full', 'Sites only': 'sites-only', 'Domains only': 'domains-only' },
+  EP_INTERVALS: [['1', 'Monthly'], ['3', 'Quarterly'], ['6', 'Biannual'], ['12', 'Yearly']],
+
+  // Edit plan (operator) — v1 parity with core.php modifyPlan/updatePlan.
+  // Draft lives on this._ep (instance, not state) and is mutated in place;
+  // hosting plans from GET /configurations/ (+ a synthetic Custom entry, v1
+  // convention). Save = PUT /accounts/{id}/plan {plan} (admin-gated).
+  openEditPlan(plan) {
+    const d = JSON.parse(JSON.stringify(plan || {}));
+    d.limits = d.limits || {};
+    ['addons', 'credits', 'charges'].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+    if (!d.billing_mode) d.billing_mode = 'standard';
+    if (!d.interval) d.interval = '12';
+    if (d.next_renewal == null) d.next_renewal = '';
+    if (d.additional_emails == null) d.additional_emails = '';
+    if (Array.isArray(d.price)) d.price = '';
+    d.auto_pay = d.auto_pay === true || d.auto_pay === 'true';
+    d.auto_switch = d.auto_switch === true || d.auto_switch === 'true';
+    this._ep = d; this._epMsg = ''; this._epSaving = false;
+    if (!this._epPlans) {
+      const custom = { name: 'Custom', interval: '12', price: '', limits: { visits: '', storage: '', sites: '' } };
+      this.api('/configurations/').then(cfg => {
+        const plans = (cfg && Array.isArray(cfg.hosting_plans)) ? cfg.hosting_plans : [];
+        this._epPlans = plans.concat([custom]);
+        this.setState({});
+      }).catch(() => { this._epPlans = [custom]; this.setState({}); });
+    }
+    this.setState({ epOpen: true });
+  },
+
+  computeEditPlan(s, acc, a, plan, reload) {
+    const users = ((acc.data || {}).users) || [];
+    const ep = this._ep || {};
+    const plans = this._epPlans || [];
+    const mut = fn => { fn(this._ep); this.setState({}); };
+    const recalc = () => { const base = plans.find(p => p.name === ep.name);
+      if (!base || !base.price) { if (base) ep.price = base.price; return; }
+      const bi = parseInt(base.interval, 10) || 12, ci = parseInt(ep.interval, 10) || 12;
+      ep.price = ci === bi ? base.price : ((parseFloat(base.price) / bi) * ci).toFixed(2); };
+    const chip = on => ({ bd: on ? 'var(--brand)' : 'var(--rule)', bg: on ? 'var(--brand-soft)' : 'var(--paper)', fg: on ? 'var(--brand-ink)' : 'var(--ink-dim)' });
+    const listRows = key => (ep[key] || []).map((it, i) => { const locked = key === 'addons' && !!it.required;
+      return { name: it.name || '', qty: it.quantity || '', price: it.price || '',
+        editable: !locked, locked,
+        onName: e => mut(x => { x[key][i].name = e.target.value; }),
+        onQty: e => mut(x => { x[key][i].quantity = e.target.value; }),
+        onPrice: e => mut(x => { x[key][i].price = e.target.value; }),
+        del: () => mut(x => { x[key].splice(i, 1); }) }; });
+    const addRow = key => () => mut(x => { x[key].push({ name: '', quantity: '', price: '' }); });
+    const toggle = key => ({ bg: ep[key] ? 'var(--brand)' : 'var(--rule)', just: ep[key] ? 'flex-end' : 'flex-start',
+      flip: () => mut(x => { x[key] = !x[key]; }) });
+    const ap = toggle('auto_pay'), asw = toggle('auto_switch');
+    return {
+      accShowEditPlan: (window.CC_BOOT || {}).dcRole === 'operator',
+      openEditPlan: () => this.openEditPlan(plan),
+      epOpen: !!s.epOpen && !!this._ep,
+      closeEp: () => this.setState({ epOpen: false }),
+      epTitle: 'Edit plan for ' + (a.name || ''),
+      epPlansLoading: !this._epPlans,
+      epPlanChips: plans.map(p => ({ label: p.name, ...chip(ep.name === p.name),
+        pick: () => mut(x => { x.name = p.name; x.limits = JSON.parse(JSON.stringify(p.limits || {}));
+          if (p.billing_mode) x.billing_mode = p.billing_mode;
+          x.price = p.price; recalc(); }) })),
+      epIntervalChips: this.EP_INTERVALS.map(([v, label]) => ({ label, ...chip(String(ep.interval) === v),
+        pick: () => mut(x => { x.interval = v; recalc(); }) })),
+      epHasBillUsers: users.length > 0,
+      epBillRows: users.map(u => ({ label: u.name || u.email, sub: u.email,
+        mark: String(ep.billing_user_id) === String(u.user_id) ? '✓' : '',
+        bg: String(ep.billing_user_id) === String(u.user_id) ? 'var(--brand-soft)' : 'transparent',
+        pick: () => mut(x => { x.billing_user_id = u.user_id; }) })),
+      epRenewal: ep.next_renewal || '', onEpRenewal: e => mut(x => { x.next_renewal = e.target.value; }),
+      epAutoPayBg: ap.bg, epAutoPayJust: ap.just, epAutoPayFlip: ap.flip,
+      epAutoSwitchBg: asw.bg, epAutoSwitchJust: asw.just, epAutoSwitchFlip: asw.flip,
+      epModeChips: [['standard', 'Standard'], ['per_site', 'Per site']].map(([v, label]) => ({ label, ...chip(ep.billing_mode === v),
+        pick: () => mut(x => { x.billing_mode = v; }) })),
+      epPerSite: ep.billing_mode === 'per_site',
+      epIsCustom: ep.billing_mode !== 'per_site' && ep.name === 'Custom',
+      epFixed: ep.billing_mode !== 'per_site' && ep.name !== 'Custom',
+      epStorage: (ep.limits || {}).storage || '', onEpStorage: e => mut(x => { x.limits.storage = e.target.value; }),
+      epVisits: (ep.limits || {}).visits || '', onEpVisits: e => mut(x => { x.limits.visits = e.target.value; }),
+      epSites: (ep.limits || {}).sites || '', onEpSites: e => mut(x => { x.limits.sites = e.target.value; }),
+      epPrice: ep.price == null ? '' : String(ep.price), onEpPrice: e => mut(x => { x.price = e.target.value; }),
+      epSitesActive: (((plan || {}).usage || {}).sites || 0) + ' active',
+      epFixedRows: [['Storage (GBs)', (ep.limits || {}).storage], ['Visits', (ep.limits || {}).visits], ['Sites', (ep.limits || {}).sites], ['Price', ep.price]]
+        .map(([k, v]) => ({ k, v: (v == null || v === '' || (Array.isArray(v) && !v.length)) ? '—' : String(v) })),
+      epAddons: listRows('addons'), addEpAddon: addRow('addons'),
+      epCredits: listRows('credits'), addEpCredit: addRow('credits'),
+      epCharges: listRows('charges'), addEpCharge: addRow('charges'),
+      epEmails: ep.additional_emails || '', onEpEmails: e => mut(x => { x.additional_emails = e.target.value; }),
+      epMsg: this._epMsg || '', epHasMsg: !!this._epMsg,
+      epSaveLabel: this._epSaving ? 'Saving…' : 'Save changes',
+      epSave: () => {
+        if (this._epSaving || !this._ep) return;
+        const payload = JSON.parse(JSON.stringify(this._ep));
+        payload.auto_pay = this._ep.auto_pay ? 'true' : 'false';
+        payload.auto_switch = this._ep.auto_switch ? 'true' : 'false';
+        if (payload.limits && payload.limits.visits != null) payload.limits.visits = String(payload.limits.visits).replace(/,/g, '');
+        payload.addons = (payload.addons || []).filter(x => !x.required);
+        this._epSaving = true; this._epMsg = ''; this.setState({});
+        this.api('/accounts/' + acc.accountId + '/plan', { method: 'PUT', body: { plan: payload } })
+          .then(res => { this._epSaving = false;
+            if (res && res.code) { this._epMsg = res.message || 'Save failed.'; this.setState({}); return; }
+            this._ep = null; this.setState({ epOpen: false }); this.toast('Plan updated', { kind: 'success' }); reload(); })
+          .catch(() => { this._epSaving = false; this._epMsg = 'Save failed.'; this.setState({}); });
+      }
+    };
+  },
 
   openAccount(id) {
     this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false,
@@ -133,6 +238,7 @@ Object.assign(Component.prototype, {
       accShowTransfer: (d.users || []).some(u => (u.level || '') !== 'full-billing') && (d.owner || d.level === 'full-billing'),
       accShowTrusted: false, accShowCancel: false,
       ...this.transferVals(s, d, reload),
+      ...this.computeEditPlan(s, acc, a, plan, reload),
       accUsers: (d.users || []).map(u => { const label = this.ACC_LEVEL_LABELS[u.level] || u.level || 'Full access';
         return { n: u.name || u.email, e: u.email, level: label, last: '',
           init: (u.name || u.email).split(/[\s@]/).map(w => w[0]).join('').slice(0, 2).toUpperCase(),

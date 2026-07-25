@@ -503,6 +503,45 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   (Kinsta mysqleditor verified live on 2912). Shown only for kinsta/rocketdotnet.
   Note: a site with empty `provider_site_id` in the local DB 400s (`not_kinsta_site`)
   — data staleness, same in v1 (site 135 locally).
+- **Deploy confirm dialog**: push/pull staging no longer fires immediately —
+  the Actions-card buttons set `deployConfirm: 'up'|'down'` and open a styled
+  confirm dialog (`computeDeployConfirm` slice in site-detail.js, markup next
+  to the delete-user dialog in app.html). Confirm button is `var(--bad)` red
+  whenever a production env would be overwritten; warning text names source and
+  target as "env on site". Escape + backdrop + Cancel all close it; `depGo`
+  runs the old realPush/runJob path. Verified live headless on a customer site
+  (both directions, open/cancel/Escape).
+- **Edit plan dialog** (v1 parity, core.php `modifyPlan`/`updatePlan`): the
+  account Plan tab gains an operator-only **Edit plan** button (customer keeps
+  Request changes). `computeEditPlan` slice in accounts.js, `ep*` bindings;
+  draft plan lives on `this._ep` (instance, mutated in place + `setState({})`),
+  hosting plans lazy-fetched once from `GET /configurations/` + synthetic
+  "Custom" entry (cached on `this._epPlans`). Plan/interval/billing-mode as
+  chip rows (STATUS rule: no absolute dropdowns in dialogs), billing user as
+  in-flow pick list, autopay/auto-switch toggles, limits row renders one of
+  three variants (per_site price-only / Custom editable / fixed read-only),
+  editable addons/credits/charges lists (required addons locked + stripped
+  from the payload, v1 convention), additional emails. Interval change
+  recalculates price from the base plan (base price ÷ base interval × new).
+  Save = `PUT /accounts/{id}/plan {plan}` (admin-gated) with auto_pay/
+  auto_switch serialized to 'true'/'false' strings (v1 consumers compare
+  strings) → toast + account reload. Verified live headless end-to-end on
+  account 3 (chips, Custom variant, addon row, save persisted + Plan tab
+  updated; test data restored after).
+- **Push to another site** (v1 parity, `showPushToOtherDialog`): Actions-card
+  "Push to another site…" opens a target-picker dialog (`computePushToOther`
+  slice, `pto*` bindings/state). Targets from
+  `GET /sites/{id}/environments/{envId}/push-targets` (source = currently
+  selected env; provider- and permission-filtered, Kinsta-only; includes the
+  source site's own other env). Search filters name+home_url client-side,
+  rows capped at 100. Picking a target sets `deployConfirm: 'other'` and
+  reuses the same confirm dialog; `depGo` posts the same
+  `/sites/environments/push` via new `realPushTo(real, srcEnvId, tgtEnvId,
+  label)` (realPush is now a thin wrapper over it) with the usual provider-op
+  dock tracking. Sample mode demos targets from FLEET. Gotcha: the target list
+  is big (~3.4k envs locally) — first load takes several seconds; the dialog
+  shows a loading line until then. Verified live headless: picker → search
+  "a-target-site" → confirm (red button, correct from/to sentence) → cancel.
 - **Deploy tracking**: push/pull now stays a live dock job. Backend:
   `app/ProviderAction.php` never handled `push_environment` actions (they sat
   "started" forever, v1 included) — added it to `check()`'s Kinsta operations
