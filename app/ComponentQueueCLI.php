@@ -277,8 +277,11 @@ class ComponentQueueCLI {
 		$any_sv = []; // [type]["slug|version"] => true — (slug,version) audited under ANY hash
 		foreach ( array_keys( $needed_types ) as $t ) {
 			$endpoint = $type_to_endpoint[ $t ];
-			$any[ $t ]  = RegistryClient::manifest( $endpoint, '' );
-			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model ) : [];
+			// Admin projection ($public = false): this is the WP-CLI audit-queue
+			// pipeline, not a customer surface. It must see embargoed coverage or
+			// it would re-queue work that is already audited and under disclosure.
+			$any[ $t ]  = RegistryClient::manifest( $endpoint, '', false );
+			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model, false ) : [];
 
 			// The manifest is hash-keyed, but each entry carries its own slug+version.
 			// Roll those up into a (slug,version) coverage set so we can tell "this

@@ -22,8 +22,8 @@ class SecurityPatches {
 	 * Pull the patch manifest from WP Registry (transient-cached inside
 	 * RegistryClient). Returns patches keyed by `type|slug|version`.
 	 */
-	private static function fetch_manifest(): array {
-		return RegistryClient::patches_manifest();
+	private static function fetch_manifest( bool $public = false ): array {
+		return RegistryClient::patches_manifest( $public );
 	}
 
 	/**
@@ -65,9 +65,12 @@ class SecurityPatches {
 
 	/**
 	 * Patches keyed by `type|slug|version` for in-process joins.
+	 *
+	 * @param bool $public Use the embargo-redacted manifest. Required for any
+	 *                     surface a customer or anonymous caller can reach.
 	 */
-	public static function get_lookup(): array {
-		$patches = self::fetch_manifest();
+	public static function get_lookup( bool $public = false ): array {
+		$patches = self::fetch_manifest( $public );
 		$lookup  = [];
 
 		foreach ( $patches as $key => $patch ) {
@@ -89,11 +92,18 @@ class SecurityPatches {
 	/**
 	 * Match an array of {slug, version, type} components to available patches.
 	 *
+	 * PUBLIC manifest, always. This backs REST /security-patches/check, whose
+	 * permission_callback is __return_true, so anyone on the internet can POST a
+	 * slug+version and read the answer. Against the admin manifest that turned
+	 * into an oracle for embargoed work: it confirmed the vulnerability exists,
+	 * its severity, and the patched_version — i.e. exactly which two releases to
+	 * diff to recover an unpublished bug.
+	 *
 	 * @param array $components
 	 * @return array
 	 */
 	public static function check( $components ): array {
-		$lookup  = self::get_lookup();
+		$lookup  = self::get_lookup( true );
 		$matches = [];
 
 		foreach ( $components as $component ) {

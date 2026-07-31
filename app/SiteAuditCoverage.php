@@ -93,12 +93,19 @@ class SiteAuditCoverage {
 		return $rows;
 	}
 
+	/**
+	 * Per-hash findings for the customer-facing audit dialog.
+	 *
+	 * PUBLIC projection, always. This renders in /account for the site owner, so
+	 * it must not carry findings still under coordinated disclosure — the admin
+	 * projection returns those in full, with titles and detail.
+	 */
 	public static function findings_by_hash( $hash ) {
 		if ( ! RegistryClient::ready() ) {
 			return null;
 		}
 
-		$detail = RegistryClient::findings_by_hash( $hash );
+		$detail = RegistryClient::findings_by_hash( $hash, true );
 		if ( ! is_array( $detail ) || empty( $detail['audited'] ) ) {
 			return null;
 		}
@@ -210,9 +217,13 @@ class SiteAuditCoverage {
 		// can be audited on the registry as a "mu-plugin" (WP-CLI surfaces
 		// mu-plugins inside the plugins array). Look across all four manifests
 		// so cross-type matches don't appear as false-negative unaudited rows.
+		//
+		// PUBLIC projection: this feeds the customer-facing audit-coverage view,
+		// so `status` must come from the registry's embargo-aware public_status
+		// and `key_issue` must be withheld while a finding is under disclosure.
 		$map = [];
 		foreach ( [ 'plugins', 'themes', 'mu-plugins', 'files' ] as $endpoint ) {
-			$manifest = RegistryClient::manifest( $endpoint );
+			$manifest = RegistryClient::manifest( $endpoint, '', true );
 			foreach ( $manifest as $hash => $entry ) {
 				if ( isset( $needed[ $hash ] ) && ! isset( $map[ $hash ] ) ) {
 					$map[ $hash ] = (array) $entry;
