@@ -151,6 +151,22 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   when it matches the open site, falling back to the design's sample data otherwise.
 - **`data.js`** — REST helper `api(path,{method,body})` + fleet hydration (`/sites/`,
   `/accounts/`, `/domains/`) into FLEET/ACCOUNTS/DOMAINS. Sets `this._hydrated`.
+- **`processes.js`** — fleet bulk-process monitor (v1's bulk-progress dashboard).
+  Operator-only 15s poll of `GET /progress/` (Manager proxies the CLI dispatch
+  server's progress files — the runs started by `captaincore ssh @staging …`,
+  update, backup, etc. on the CLI server or a local dev CLI). Rows render in the
+  dock above the job strip (pulse dot, mini bar, `545/1157 · 47.1% · ETA 27m`,
+  Stale chip + dismiss ✕ for dead runs); clicking opens the detail dialog
+  (`bp*` bindings): progress bar, Elapsed/ETA/Parallel/Failed/PID/Target stats,
+  args, Pending/Completed/Failed pill tabs with per-site chips (capped at 400,
+  fed by `GET /progress/{pid}`, refreshed on each poll while open), Kill process
+  (`DELETE /progress/{pid}`, confirm() first) and Dismiss for stale. The topbar
+  running chip counts fleet runs too — a lone fleet run reads as live progress
+  ("update · 47.1%"). A run that finishes deletes its progress files server-side
+  and vanishes from the list — the poll toasts "<command> finished across N
+  sites" and closes its dialog if open. Local dev: the topbar chip reflects
+  bulk runs of the LOCAL `captaincore` CLI via the local daemon
+  (`CAPTAINCORE_CLI_ADDRESS` → captaincore-api.localhost).
 - **`jobs.js`** — the job engine. `startJob({label,target,command,dispatch,onFinish})`
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
   sentinel → `onFinish`. The activity dock renders `activeJob()`.
@@ -426,10 +442,10 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   new/clone, Connect import wizard, Manual). "Select all in filter."
 - **Addons** — per-item "update available" badge + per-row Update (needs update-queue);
   whole-site update. (Add dialog is DONE — see addons.js above.)
-- **Realtime depth** — the design has a single dock; v1 also has a **bulk-progress**
-  dashboard (`GET /progress` poll), **archive SSE** (`/my-jobs/{token}/stream`), and a
-  **fleet process monitor** (`running listen` WS). Not yet built. Also: WS **reconnect +
-  reload-resume** (jobs are lost on refresh today; v1 also lacks reconnect).
+- **Realtime depth** — the design has a single dock; v1 also has **archive SSE**
+  (`/my-jobs/{token}/stream`) and a **fleet process monitor** (`running listen` WS).
+  Not yet built. Also: WS **reconnect + reload-resume** (jobs are lost on refresh
+  today; v1 also lacks reconnect). (The bulk-progress dashboard is DONE — processes.js.)
 - **Deep-linking** — routes are in-memory `state.route`; the design does not yet use the
   History API. Spec §8.2 wants every view/tab/filter URL-addressable with back/forward.
   Current `Router.php` rewrite already supports `/account/<route>` paths.

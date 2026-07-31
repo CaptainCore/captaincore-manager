@@ -50,6 +50,10 @@ class Component extends DCLogic {
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     aaOpen: false, aaTab: 'upload', aaQ: '', aaEQ: '', aaDrag: false,
     shareDlgOpen: false, shareEmail: '', shareErr: '', shareSending: false, shareLoading: false,
+    bpPid: 0, bpTab: 'pending', bpDetail: null, bpLoading: false, bpKilling: false,
+    bulkOps: window.CC_BOOT ? [] : [
+      { command: 'update', completed: 545, failed: 0, total: 1157, percent: 47.1, pid: 3307992, running: true, started_at: 0, elapsed_seconds: 8010, parallel: 16, eta: '2h 30m', elapsed: '2h 13m', target: '', args: '' }
+    ],
     jobs: window.CC_BOOT ? [] : [
       { id: 1, label: 'update-wp', target: '3 sites · steer queue', state: 'running', pct: 64 },
       { id: 2, label: 'backup', target: 'cascadecoffeeroasters.com', state: 'running', pct: 31 },
@@ -1667,7 +1671,7 @@ class Component extends DCLogic {
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false }); }
+      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0 }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }
@@ -1675,12 +1679,13 @@ class Component extends DCLogic {
     window.addEventListener('keydown', this.onKey);
     this.hydrate();
     if (this.hydrateHome) this.hydrateHome();
+    if (window.CC_BOOT && this.initBulkProgress) this.initBulkProgress();
     this.timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1,
       jobs: s.jobs.map(j => j.state === 'running' && !j.real
         ? (j.pct >= 100 ? { ...j, state: 'done', right: 'just now', pct: 100 } : { ...j, pct: Math.min(100, j.pct + 3 + Math.random() * 7) })
         : j) })), 1800);
   }
-  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); if (this._bulkTimer) clearInterval(this._bulkTimer); }
   componentDidUpdate() {
     this.applyBrand();
     if (this._routerReady) this.syncUrl();
@@ -1961,6 +1966,10 @@ class Component extends DCLogic {
     }
     const liveTail = consoleLines.length ? consoleLines[consoleLines.length - 1].text : 'No jobs running';
 
+    // Fleet bulk runs from the CLI dispatch server (processes.js poll) count
+    // toward the topbar running chip alongside session-dispatched jobs.
+    const fleetRunning = (s.bulkOps || []).filter(p => p.running);
+
     const palResults = this.filteredPal(s.palQuery).map((r, i) => ({ ...r,
       bg: i === s.palIdx ? 'var(--panel-2)' : 'transparent', run: () => this.runPal(r) }));
 
@@ -1987,7 +1996,13 @@ class Component extends DCLogic {
       switchBackLabel: (window.CC_BOOT && window.CC_BOOT.switchBackLabel) || 'Switch back',
       dockBtnTitle: 'Terminal · ⌃`',
       dockBtnIcon: 'M4 17l6-6-6-6M12 19h8',
-      runningLabel: (c => c === 1 ? '1 job running' : c + ' jobs running')(jobs.filter(j => j.running).length),
+      runningLabel: (() => {
+        const jc = jobs.filter(j => j.running).length;
+        // A lone fleet bulk run reads as its live progress ("update · 47.1%").
+        if (jc === 0 && fleetRunning.length === 1) return fleetRunning[0].command + ' · ' + fleetRunning[0].percent + '%';
+        const c = jc + fleetRunning.length;
+        return c === 1 ? '1 job running' : c + ' jobs running';
+      })(),
       showOperate: isOp && variant !== 'topnav',
       showRail: variant !== 'topnav' && !s.navHidden, showTopNav: variant === 'topnav',
       toggleNav: () => this.toggleNav(),
@@ -2028,13 +2043,15 @@ class Component extends DCLogic {
         }
         this._consoleEl = el;
       },
-      runningCount: jobs.filter(j => j.running).length,
-      hasRunning: jobs.some(j => j.running),
-      dockIdle: !jobs.some(j => j.running),
+      runningCount: jobs.filter(j => j.running).length + fleetRunning.length,
+      hasRunning: jobs.some(j => j.running) || fleetRunning.length > 0,
+      dockIdle: !jobs.some(j => j.running) && fleetRunning.length === 0,
       consoleLines, liveTail, consoleBg: 'var(--panel)',
       ...this.computeTermVals(s),
       ...this.computeActivityPage(s),
       ...this.computeUsersPage(s),
+      // processes.js loads after app.js — guard per the render-time mixin rule.
+      ...(this.computeBulkOps ? this.computeBulkOps(s) : { bulkOps: [], bulkShow: false, bpOpen: false }),
       dockOpen: s.dockOpen, dockClosed: !s.dockOpen,
       // The console is available to everyone. The server scopes /run/code to
       // sites the caller can access (captaincore_verify_permissions per env),

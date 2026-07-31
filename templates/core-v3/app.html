@@ -2395,6 +2395,26 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </sc-if>
         <span onClick="{{ closeDock }}" style="cursor:pointer;color:var(--ink-dim);width:24px;height:24px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
       </div>
+      <!-- Fleet bulk processes (CLI dispatch server) — operator only; rows open the detail dialog -->
+      <sc-if value="{{ bulkShow }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none;display:flex;flex-direction:column;padding:6px 8px;border-bottom:1px solid var(--rule)">
+          <sc-for list="{{ bulkOps }}" as="b" hint-placeholder-count="1">
+            <div onClick="{{ b.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 13.5px var(--sans)" style-hover="background:var(--panel-2)">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ b.dot }};flex:none;animation:{{ b.dotAnim }}"></span>
+              <span style="font-weight:600;flex:none">{{ b.label }}</span>
+              <span style="font-size:12.5px;color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.sub }}</span>
+              <sc-if value="{{ b.staleShow }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:600 10.5px var(--sans);color:var(--warn);background:var(--warn-soft);border-radius:99px;padding:2px 8px">Stale</span>
+                <span onClick="{{ b.dismiss }}" title="Dismiss" style="flex:none;cursor:pointer;color:var(--ink-dim);width:18px;height:18px;display:grid;place-items:center;border-radius:5px;font-size:11px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+              </sc-if>
+              <span style="margin-left:auto;flex:none;width:90px;height:6px;border-radius:99px;background:var(--panel-2);overflow:hidden">
+                <span style="display:block;height:100%;width:{{ b.barW }};background:{{ b.barColor }};border-radius:99px"></span>
+              </span>
+              <span style="font-size:12.5px;color:var(--ink-dim);font-variant-numeric:tabular-nums;flex:none">{{ b.right }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
       <sc-if value="{{ dockJobsShow }}" hint-placeholder-val="{{ true }}">
         <div style="flex:none;display:flex;flex-direction:column;padding:6px 8px;border-bottom:1px solid var(--rule);max-height:38vh;overflow-y:auto">
           <sc-for list="{{ dockJobs }}" as="j" hint-placeholder-count="3">
@@ -2489,6 +2509,74 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
   
+  <!-- ══ Fleet process detail dialog ══ -->
+  <sc-if value="{{ bpOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ bpClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:520px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--rule)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+          <span style="font:700 15.5px var(--sans)">{{ bpTitle }}</span>
+          <sc-if value="{{ bpStaleShow }}" hint-placeholder-val="{{ false }}">
+            <span style="font:600 10.5px var(--sans);color:var(--warn);background:var(--warn-soft);border-radius:99px;padding:2px 8px">Stale</span>
+          </sc-if>
+          <div style="flex:1"></div>
+          <span onClick="{{ bpClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;font:600 13.5px var(--sans)">
+            <span>{{ bpCount }}</span>
+            <span>{{ bpPct }}</span>
+          </div>
+          <div style="height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin:8px 0 16px">
+            <div style="height:100%;width:{{ bpBarW }};background:{{ bpBarColor }};border-radius:99px;transition:width .4s ease"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 14px">
+            <sc-for list="{{ bpStats }}" as="st" hint-placeholder-count="6">
+              <div>
+                <div style="font:500 11.5px var(--sans);color:var(--ink-dim)">{{ st.k }}</div>
+                <div style="font:600 13.5px var(--sans);color:{{ st.fg }};margin-top:2px;font-variant-numeric:tabular-nums">{{ st.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ bpArgsShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px">
+              <div style="font:500 11.5px var(--sans);color:var(--ink-dim)">Arguments</div>
+              <div style="font:400 12px var(--mono);background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;margin-top:5px;word-break:break-all">{{ bpArgs }}</div>
+            </div>
+          </sc-if>
+          <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
+            <sc-for list="{{ bpTabs }}" as="t" hint-placeholder-count="2">
+              <span onClick="{{ t.pick }}" style="font:600 12.5px var(--sans);color:{{ t.fg }};background:{{ t.bg }};border-radius:8px;padding:5px 12px;cursor:pointer;white-space:nowrap">{{ t.label }}</span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ bpLoadingDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:18px 0;font:400 12.5px var(--sans);color:var(--ink-dim)">Loading site list…</div>
+          </sc-if>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:12px;max-height:230px;overflow-y:auto">
+            <sc-for list="{{ bpChips }}" as="c" hint-placeholder-count="8">
+              <span style="font:500 11.5px var(--mono);color:{{ c.fg }};background:{{ c.bg }};border-radius:99px;padding:3px 9px">{{ c.label }}</span>
+            </sc-for>
+            <sc-if value="{{ bpMoreShow }}" hint-placeholder-val="{{ false }}">
+              <span style="font:500 11.5px var(--sans);color:var(--ink-dim);padding:3px 6px">{{ bpMoreLabel }}</span>
+            </sc-if>
+          </div>
+          <sc-if value="{{ bpChipsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 0 2px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ bpChipsEmptyText }}</div>
+          </sc-if>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ bpClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Close</button>
+          <sc-if value="{{ bpDismissShow }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ bpDismiss }}" style="border:none;background:var(--warn-soft);color:var(--warn);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.05)">Dismiss</button>
+          </sc-if>
+          <sc-if value="{{ bpKillShow }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ bpKill }}" style="border:none;background:var(--bad-soft);color:var(--bad);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.05)">{{ bpKillLabel }}</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Quicksave dialog ══ -->
   <sc-if value="{{ qsDialogOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeQsDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
