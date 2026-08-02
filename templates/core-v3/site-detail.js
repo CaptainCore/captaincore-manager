@@ -43,8 +43,9 @@ Object.assign(Component.prototype, {
   setEnv(name) {
     const real = this._detail;
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
-    this.setState({ env: name, logFile: '', capSel: '', capLimit: 60 });
+    this.setState({ env: name, logFile: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1 });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
+    if (real && this.state.siteTab === 'registry') setTimeout(() => this.loadRegistry(), 0);
     if (real && this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
     if (real && this.state.siteTab === 'captures') setTimeout(() => this.loadCaptures(), 0);
   },

@@ -70,8 +70,14 @@ Object.assign(Component.prototype, {
     const all = this._users || (window.CC_BOOT ? [] : this.USERS_SAMPLE);
     const q = (s.uq || '').toLowerCase();
     const filtered = q ? all.filter(u => ((u.name || '') + ' ' + (u.username || '') + ' ' + (u.email || '')).toLowerCase().includes(q)) : all;
+    const accountChips = u => (u.account_ids || []).map(String).map(id => {
+      const a = this.ACCOUNTS.find(x => x.id === id);
+      return { id, name: a ? a.name : '#' + id,
+        open: (e) => { e.stopPropagation(); this.openAccount(id); } };
+    });
     const rows = filtered.slice(0, 250).map(u => ({
       id: u.user_id,
+      accounts: accountChips(u),
       name: u.name || u.username,
       initials: (((u.name || u.username || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('')) || '?').toUpperCase(),
       username: u.username,
@@ -83,6 +89,7 @@ Object.assign(Component.prototype, {
       ctx: (e) => this.openCtxMenu(e, [
         { label: 'Edit user', act: () => this.openEditUser(u.user_id) },
         ...(u.switch_to_url ? [{ label: 'Access as ' + (u.name || u.username), act: () => { window.location.href = u.switch_to_url; } }] : []),
+        ...accountChips(u).slice(0, 3).map(a => ({ label: 'Open account ' + a.name, act: () => this.openAccount(a.id) })),
         { label: 'Copy email', act: () => this.ctxCopy(u.email, 'email') }
       ])
     }));

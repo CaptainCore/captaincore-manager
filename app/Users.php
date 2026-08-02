@@ -17,6 +17,12 @@ class Users {
     public function list() {
         $users       = [];
         $fetch_users = get_users();
+        // One pass over the account-user pivot table — a per-user accounts()
+        // lookup here would be an N+1 across the entire fleet user list.
+        $account_map = [];
+        foreach ( AccountUser::all() as $row ) {
+            $account_map[ $row->user_id ][] = (int) $row->account_id;
+        }
         foreach( $fetch_users as $user ) {
             $record = [
                 "user_id"     => $user->ID,
@@ -27,6 +33,7 @@ class Users {
                 "username"    => $user->user_login,
                 "roles"       => $user->roles,
                 "created_at"  => $user->user_registered,
+                "account_ids" => isset( $account_map[ $user->ID ] ) ? $account_map[ $user->ID ] : [],
             ];
             if ( class_exists( 'user_switching' ) ) {
                 $wp_user = new \WP_User( $user->ID );

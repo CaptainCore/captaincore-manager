@@ -118,6 +118,53 @@ Object.assign(Component.prototype, {
       .catch(() => { if (this._domain === dom) { dom.dnsLoading = false; dom.dnsErr = 'Could not activate the DNS zone.'; this.setState({}); } });
   },
 
+  // ── Admin zone teardown (v1 parity; each has a v1 DELETE route) ──
+  // DNS zone → Constellix, forwarding → Mailgun routes, sending → Mailgun
+  // sending domain. All destructive, so each confirms with the domain name.
+  deleteZone(kind) {
+    const dom = this._domain;
+    if (!dom) return;
+    const name = (dom.info && dom.info.name) || 'this domain';
+    const spec = {
+      dns:     { path: '/domain/' + dom.domainId + '/dns-zone',        label: 'DNS zone',
+                 warn: 'Delete the DNS zone for ' + name + '? Every record is removed at Constellix and the domain stops resolving through Anchor.' },
+      forward: { path: '/domain/' + dom.domainId + '/email-forwarding', label: 'Email forwarding',
+                 warn: 'Delete email forwarding for ' + name + '? All aliases stop delivering immediately.' },
+      sending: { path: '/domain/' + dom.domainId + '/mailgun',          label: 'Email sending',
+                 warn: 'Delete the sending zone for ' + name + '? Any site using these SMTP credentials will stop sending mail.' }
+    }[kind];
+    if (!spec || !confirm(spec.warn)) return;
+    this.setState({ zoneBusy: kind });
+    this.api(spec.path, { method: 'DELETE' }).then(() => {
+      if (this._domain !== dom) return;
+      if (this.toast) this.toast(spec.label + ' deleted.', { kind: 'success' });
+      this.setState({ zoneBusy: '', fwds: [], dnsRecs: null });
+      this.loadDomainDetail(dom.domainId);
+    }).catch(() => {
+      this.setState({ zoneBusy: '' });
+      if (this.toast) this.toast('Could not delete the ' + spec.label.toLowerCase() + '.', { kind: 'error' });
+    });
+  },
+
+  // Per-tab operator teardown rows. Creation already lives in each tab's
+  // Activate button (activate-dns-zone / activate-forward-email /
+  // mailgun/setup), so this only adds the delete half.
+  zoneAdminVals(s, dom, d, details, fwdActive) {
+    const isOp = (window.CC_BOOT || {}).dcRole === 'operator';
+    const busy = s.zoneBusy || '';
+    return {
+      zoneShowDns:  isOp && !dom.noZone && !dom.dnsLoading,
+      zoneShowFwd:  isOp && fwdActive,
+      zoneShowSend: isOp && !!details.mailgun_id,
+      zoneDnsLabel:  busy === 'dns' ? 'Deleting…' : 'Delete DNS zone',
+      zoneFwdLabel:  busy === 'forward' ? 'Deleting…' : 'Delete email forwarding',
+      zoneSendLabel: busy === 'sending' ? 'Deleting…' : 'Delete sending zone',
+      zoneDelDns:  () => this.deleteZone('dns'),
+      zoneDelFwd:  () => this.deleteZone('forward'),
+      zoneDelSend: () => this.deleteZone('sending')
+    };
+  },
+
   exportZoneReal(name) {
     this.api('/domains/' + this._domain.domainId + '/zone').then(zone => {
       const text = typeof zone === 'string' ? zone : JSON.stringify(zone, null, 2);
@@ -285,7 +332,12 @@ Object.assign(Component.prototype, {
     const mgUsageBars = usageSeries.map((b, i) => ({
       h: Math.max(2, Math.round(b.sent / usagePeak * 100)) + '%',
       tip: b.label + ' · ' + b.sent + ' sent, ' + b.delivered + ' delivered, ' + b.failed + ' failed',
-      label: i % usageSkip === 0 ? b.label : '' }));
+      label: i % usageSkip === 0 ? b.label : '',
+      // Hover tooltip, same pattern as the site Stats chart (stats.js).
+      bucket: b.label, sent: String(b.sent), delivered: String(b.delivered), failed: String(b.failed),
+      enter: () => this.setState({ mgHoverIdx: i }) }));
+    const mgHi = s.mgHoverIdx;
+    const mgHovered = (mgHi != null && mgHi >= 0 && mgHi < mgUsageBars.length) ? mgUsageBars[mgHi] : null;
     const mgEvents = (dom.mgEvents || []).map(ev => ({
       t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
@@ -298,6 +350,9 @@ Object.assign(Component.prototype, {
       dnsNotice: !!dnsNote, dnsNoticeText: dnsNote,
       dnsShowActivate: dom.noZone && !dom.dnsLoading,
       activateZone: () => this.activateDnsZone(),
+      // Operator zone management — create is the existing per-tab Activate
+      // button; this card adds the teardown side for all three zone types.
+      ...this.zoneAdminVals(s, dom, d, details, fwdActive),
       dnsEditDone: () => this.setState(st => ({ dnsRecs: st.dnsRecs.map(x => x.uid === st.dnsEdit
         ? { ...x, name: st.dnsEN.trim() || '@', value: st.dnsEV.trim() || x.value, ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }
         : x), dnsEdit: 0, dnsDirty: true })),
@@ -338,7 +393,9 @@ Object.assign(Component.prototype, {
           this.setState({ authBusy: false, copied: 'auth' });
           clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400);
         }).catch(() => this.setState({ authBusy: false })); },
-      fwdInactive: !fwdActive, fwdLoading: dom.fwdLoading,
+      // The alias list + add row only make sense once a Mailgun forwarding
+      // zone exists — adding a forward before that just 400s.
+      fwdActive, fwdInactive: !fwdActive, fwdLoading: dom.fwdLoading,
       fwdNotice: !!dom.fwdErr, fwdNoticeText: dom.fwdErr,
       activateFwd: () => this.activateForwarding(false),
       addFwd: () => { const a = this.state.fwdAlias.trim(), t = this.state.fwdDest.trim();
@@ -359,6 +416,14 @@ Object.assign(Component.prototype, {
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
       mgUsagePeriods, mgUsageStats, mgUsageBars,
+      mgChartMove: e => { const r = e.currentTarget.getBoundingClientRect();
+        this.setState({ mgHoverX: Math.round(e.clientX - r.left), mgHoverY: Math.round(e.clientY - r.top) }); },
+      mgChartLeave: () => this.setState({ mgHoverIdx: -1 }),
+      mgTipShow: !!mgHovered,
+      mgTipLeft: mgHovered ? (s.mgHoverX || 0) : 0,
+      mgTipTop: mgHovered ? ((s.mgHoverY || 0) - 14) : 0,
+      mgTipBucket: mgHovered ? mgHovered.bucket : '',
+      mgTipLine: mgHovered ? (mgHovered.sent + ' sent · ' + mgHovered.delivered + ' delivered · ' + mgHovered.failed + ' failed') : '',
       mgUsageHasData: !!usageSeries.length,
       mgUsageRange: usage ? usage.start + ' — ' + usage.end : (dom.mgUsageLoading ? 'Loading usage…' : ''),
       mgUsageNotice: !!dom.mgUsageErr, mgUsageNoticeText: dom.mgUsageErr,

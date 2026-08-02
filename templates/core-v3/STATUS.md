@@ -167,6 +167,20 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   sites" and closes its dialog if open. Local dev: the topbar chip reflects
   bulk runs of the LOCAL `captaincore` CLI via the local daemon
   (`CAPTAINCORE_CLI_ADDRESS` → captaincore-api.localhost).
+- **`registry.js`** — WP Registry audit coverage as a site tab (v1 parity with
+  core.php's showAuditCoverage/showAuditFindings dialogs). `loadRegistry()` hits
+  `GET /sites/{id}/environments/{envId}/audit-coverage` (summary + every
+  installed component's content hash matched against findings.wpregistry.io via
+  RegistryClient), cached per environment_id on `_detail.reg`. `computeRegistry`
+  renders severity chips + a coverage bar, then groups rows by kind
+  (plugin/theme/mu-plugin/loose files). Clicking an AUDITED row opens the
+  findings dialog (`rg*` bindings) — per-hash `GET …/audit-coverage/{hash}`,
+  accordion findings with description/location/CVE/code/recommendation.
+  **Links go to the PUBLIC registry**: `https://wpregistry.io/finding/<hash>`
+  (the worker's public per-hash page — findings.wpregistry.io is the private
+  origin and 401s for customers). The per-hash route is the public projection,
+  so embargoed findings never reach the browser and the tab is customer-safe.
+  Env switch clears the dialog and reloads (both setEnv and the tab handler).
 - **`jobs.js`** — the job engine. `startJob({label,target,command,dispatch,onFinish})`
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
   sentinel → `onFinish`. The activity dock renders `activeJob()`.
@@ -425,6 +439,38 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   /scheduled-reports/{id}`).
 - **Accounts**: Transfer ownership member-picker dialog (`PUT .../users/{uid}/level`
   `full-billing`, owner excluded, confirm) — shown when caller is owner/admin.
+
+### Round: admin gaps + polish (2026-08-02, verified live)
+- **Sidebar collapse animates** (Minn's `width/padding/opacity .25s`). The nav is
+  no longer wrapped in `sc-if showRail` — it stays MOUNTED and shrinks to width 0
+  (an sc-if unmounts and kills the transition), with `.cc-rail>*{min-width:216px}`
+  in the helmet so rows slide out of the clip instead of squishing. `showRail`
+  still computes but nothing consumes it.
+- **Credentials passwords are masked** (site Overview): any row whose key matches
+  /password/i renders `••••` with click-to-reveal; Copy always copies the real
+  value. Reveal state is keyed `siteId|env|key` so switching sites/envs re-masks.
+- **Edit plan → Next renewal is a real date picker** (`<input type="datetime-local"
+  step="1">`). The API stores `YYYY-MM-DD HH:MM:SS` and the input wants a `T`
+  separator — accounts.js converts both ways (and appends `:00` when the browser
+  omits seconds).
+- **Delete account** (operator-only) on account detail — `DELETE /accounts/{id}`
+  (v1's deleteAccount; the route also queues the CLI's background `account delete`),
+  confirm → toast → drop from ACCOUNTS → route back to the list.
+- **Users listing shows accounts per user.** Backend: `Users::list()` now attaches
+  `account_ids` from ONE grouped pass over the AccountUser pivot (a per-user
+  `accounts()` call is an N+1 across 2k users). Frontend: brand chips per row that
+  `openAccount(id)`, names resolved from hydrated ACCOUNTS; also in the ctx menu.
+- **Domains — forwarding add-row is gated.** The alias list + "Add forward" row
+  only render once a Mailgun forwarding zone exists (`fwdActive`); before that the
+  POST just 400s, so the row was a trap.
+- **Domains — operator zone teardown.** Each tab gained a delete row (all three
+  v1 routes already existed; only the UI was missing): DNS `DELETE /domain/{id}/
+  dns-zone`, forwarding `DELETE /domain/{id}/email-forwarding`, sending
+  `DELETE /domain/{id}/mailgun`. Each confirms naming the domain and reloads the
+  detail. Creation stays each tab's existing Activate button.
+- **Mailgun Usage chart has the Stats hover tooltip** (`mg*` mirror of stats.js's
+  `chartHoverIdx/X/Y`): bucket label + sent/delivered/failed, positioned off the
+  container's bounding rect.
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.

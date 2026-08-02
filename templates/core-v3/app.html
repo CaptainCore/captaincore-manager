@@ -59,6 +59,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 @keyframes ccspin{to{transform:rotate(360deg)}}
 @keyframes ccshimmer{to{background-position:-200% 0}}
 .cc-skel{display:inline-block;border-radius:6px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:ccshimmer 1.1s linear infinite}
+/* Sidebar collapse: the rail animates its width to 0, so its rows keep a fixed
+   width and slide out of the clip instead of squishing on the way. */
+.cc-rail>*{min-width:216px}
 .cc-md p{margin:0 0 4px}.cc-md p:last-child{margin-bottom:0}
 .cc-md code{font:400 12px var(--mono);background:var(--panel-2);border-radius:4px;padding:1px 5px}
 .cc-md a{color:var(--brand-ink)}
@@ -73,8 +76,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
   <div style="flex:1;display:flex;min-height:0">
     <!-- ══ Sidebar (Minn shell: logo · search · grouped nav · user card) ══ -->
-    <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
-      <nav style="flex:none;width:240px;border-right:1px solid var(--rule);background:var(--panel);display:flex;flex-direction:column;padding:14px 12px;gap:2px;min-height:0">
+    <!-- Collapse animates (Minn: width/padding/opacity) — the nav stays MOUNTED
+         and shrinks to 0, so an sc-if here would kill the transition. The inner
+         rail keeps a fixed 216px so content slides out instead of squishing. -->
+      <nav class="cc-rail" style="flex:none;width:{{ navW }};border-right:{{ navBorder }};background:var(--panel);display:flex;flex-direction:column;padding:14px {{ navPadX }};gap:2px;min-height:0;overflow:hidden;opacity:{{ navOpacity }};transition:width .25s ease,padding .25s ease,opacity .2s ease">
         <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px 16px;cursor:pointer">
           <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));display:grid;place-items:center;flex:none">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14m0 0c-4.5 0-8-3-8.5-7L2 13m10 8c4.5 0 8-3 8.5-7l1.5-1M7 10h10"></path></svg>
@@ -139,7 +144,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </a>
         </div>
       </nav>
-    </sc-if>
 
     <!-- ══ Main ══ -->
     <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
@@ -348,14 +352,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="flex:1"></div>
           </div>
           <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-            <div style="display:grid;grid-template-columns:40px 1.3fr 1.2fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">
-              <span></span><span>Name</span><span>Email</span><span>Role</span><span></span>
+            <div style="display:grid;grid-template-columns:40px 1.2fr 1.1fr 1fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">
+              <span></span><span>Name</span><span>Email</span><span>Accounts</span><span>Role</span><span></span>
             </div>
             <sc-for list="{{ usersRows }}" as="u" hint-placeholder-count="8">
-              <div onClick="{{ u.edit }}" onContextMenu="{{ u.ctx }}" style="display:grid;grid-template-columns:40px 1.3fr 1.2fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+              <div onClick="{{ u.edit }}" onContextMenu="{{ u.ctx }}" style="display:grid;grid-template-columns:40px 1.2fr 1.1fr 1fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                 <span style="width:32px;height:32px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 11.5px var(--sans)">{{ u.initials }}</span>
                 <span style="min-width:0"><span style="display:block;font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.name }}</span><span style="display:block;font:400 12.5px var(--sans);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.username }}</span></span>
                 <span style="font:400 13px var(--mono);color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.email }}</span>
+                <span style="display:flex;flex-wrap:wrap;gap:4px;min-width:0">
+                  <sc-for list="{{ u.accounts }}" as="ua" hint-placeholder-count="1">
+                    <span onClick="{{ ua.open }}" title="Open account" style="font:500 11.5px var(--sans);color:var(--brand-ink);background:var(--brand-soft);border-radius:99px;padding:3px 9px;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="filter:brightness(1.06)">{{ ua.name }}</span>
+                  </sc-for>
+                </span>
                 <span><span style="font:600 12px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:3px 9px">{{ u.role }}</span></span>
                 <span style="display:flex;justify-content:flex-end;gap:6px">
                   <a href="{{ u.switchUrl }}" onClick="{{ stopProp }}" title="Access as this user" style="display:{{ u.switchDisplay }};align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--rule);border-radius:7px;color:var(--ink-dim)" style-hover="border-color:var(--brand);color:var(--brand-ink)">
@@ -689,7 +698,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <sc-for list="{{ credRows }}" as="c" hint-placeholder-count="7">
                   <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)">
                     <span style="flex:none;width:110px;font:500 12px var(--sans);color:var(--ink-dim)">{{ c.k }}</span>
-                    <span style="flex:1;min-width:0;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.v }}</span>
+                    <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:1;min-width:0;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:{{ c.vCursor }}">{{ c.v }}</span>
                     <span onClick="{{ c.copy }}" style="flex:none;font:500 11.5px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="border-color:var(--brand)">{{ c.mark }}</span>
                   </div>
                 </sc-for>
@@ -1007,6 +1016,57 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-if>
 
+          <!-- ══ Registry tab — WP Registry audit coverage for this environment ══ -->
+          <sc-if value="{{ tabRegistry }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;font:400 13px var(--sans);color:var(--ink-dim)">Every installed component's content hash, matched against audits on <a href="https://wpregistry.io/" target="_blank" rel="noopener" style="color:var(--brand-ink);text-decoration:none">WP Registry</a>.</div>
+            <sc-if value="{{ regLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">Matching component hashes…</div>
+            </sc-if>
+            <sc-if value="{{ regErrShow }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:24px;font:400 13.5px var(--sans);color:var(--bad)">{{ regErr }}</div>
+            </sc-if>
+            <sc-if value="{{ regEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">No hashed components on this environment. Run a sync to populate hash data.</div>
+            </sc-if>
+            <sc-if value="{{ regChipsShow }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px">
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ regChips }}" as="rc" hint-placeholder-count="4">
+                    <span style="font:500 12px var(--sans);color:{{ rc.fg }};background:{{ rc.bg }};border-radius:99px;padding:4px 11px"><strong style="font-weight:700">{{ rc.n }}</strong> {{ rc.label }}</span>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ regCoverageShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:12px">{{ regCoverage }}</div>
+                  <div style="height:5px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:6px">
+                    <div style="height:100%;width:{{ regBarW }};background:var(--ok);border-radius:99px"></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-for list="{{ regGroups }}" as="rg" hint-placeholder-count="2">
+              <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule)">
+                  <h2 style="margin:0;font:600 14px var(--sans)">{{ rg.label }}</h2>
+                  <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ rg.count }}</span>
+                </div>
+                <sc-for list="{{ rg.rows }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:{{ r.rowCursor }}" style-hover="background:var(--panel-2)">
+                    <span style="flex:none;min-width:70px;text-align:center;font:600 11px var(--sans);color:{{ r.chipFg }};background:{{ r.chipBg }};border-radius:99px;padding:3px 9px">{{ r.label }}</span>
+                    <span style="min-width:0;flex:1">
+                      <span style="display:block;font:500 13.5px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }} <span style="color:var(--ink-dim);font-weight:400">{{ r.version }}</span> <code style="font:400 11.5px var(--mono);color:var(--ink-dim)">{{ r.hash }}</code></span>
+                      <sc-if value="{{ r.issueShow }}" hint-placeholder-val="{{ false }}">
+                        <span style="display:block;font:400 12.5px/1.5 var(--sans);color:var(--ink-dim);margin-top:2px">{{ r.issue }}</span>
+                      </sc-if>
+                    </span>
+                    <sc-if value="{{ r.countShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex:none;font:500 12px var(--sans);color:var(--brand-ink)">{{ r.count }} →</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-for>
+          </sc-if>
+
           <sc-if value="{{ tabCaptures }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Visual history — screenshots of the configured pages, captured over time.</span>
@@ -1253,6 +1313,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <button onClick="{{ saveDns }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:7px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Save zone</button>
               </div>
             </sc-if>
+            <sc-if value="{{ zoneShowDns }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:11px 14px;border:1px solid var(--rule);border-radius:10px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Removes every record and the zone itself at Constellix.</span>
+                <div style="flex:1"></div>
+                <button onClick="{{ zoneDelDns }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="background:var(--bad-soft)">{{ zoneDnsLabel }}</button>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ domTabReg }}" hint-placeholder-val="{{ false }}">
@@ -1325,6 +1392,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ fwdNotice }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--warn)">{{ fwdNoticeText }}</div>
             </sc-if>
+            <sc-if value="{{ fwdActive }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ fwdRows }}" as="f" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
@@ -1343,6 +1411,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <button onClick="{{ addFwd }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Add forward</button>
               </div>
             </div>
+            </sc-if>
+            <sc-if value="{{ zoneShowFwd }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:11px 14px;border:1px solid var(--rule);border-radius:10px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Deletes the Mailgun forwarding zone and every alias on it.</span>
+                <div style="flex:1"></div>
+                <button onClick="{{ zoneDelFwd }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="background:var(--bad-soft)">{{ zoneFwdLabel }}</button>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ domTabSnd }}" hint-placeholder-val="{{ false }}">
@@ -1399,10 +1475,16 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
               <sc-if value="{{ mgUsageHasData }}" hint-placeholder-val="{{ true }}">
                 <div style="padding:0 16px 6px">
-                  <div style="display:flex;align-items:flex-end;gap:3px;height:110px">
+                  <div onMouseMove="{{ mgChartMove }}" onMouseLeave="{{ mgChartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:110px">
                     <sc-for list="{{ mgUsageBars }}" as="b" hint-placeholder-count="12">
-                      <div title="{{ b.tip }}" style="flex:1;min-width:3px;height:{{ b.h }};background:var(--brand);border-radius:3px 3px 0 0;opacity:.85"></div>
+                      <div onMouseEnter="{{ b.enter }}" style="flex:1;min-width:3px;height:{{ b.h }};background:var(--brand);border-radius:3px 3px 0 0;opacity:.85;transition:filter .1s" style-hover="filter:brightness(.88)"></div>
                     </sc-for>
+                    <sc-if value="{{ mgTipShow }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:{{ mgTipTop }}px;left:{{ mgTipLeft }}px;transform:translate(-50%,-100%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5">
+                        <div style="font:600 12px var(--sans)">{{ mgTipBucket }}</div>
+                        <div style="font:400 11.5px var(--mono);opacity:.85;margin-top:2px">{{ mgTipLine }}</div>
+                      </div>
+                    </sc-if>
                   </div>
                   <div style="display:flex;gap:3px;margin-top:5px">
                     <sc-for list="{{ mgUsageBars }}" as="b" hint-placeholder-count="12">
@@ -1422,6 +1504,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ zoneShowSend }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:11px 14px;border:1px solid var(--rule);border-radius:10px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Deletes the Mailgun sending domain and its SMTP credentials.</span>
+                <div style="flex:1"></div>
+                <button onClick="{{ zoneDelSend }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="background:var(--bad-soft)">{{ zoneSendLabel }}</button>
+              </div>
+            </sc-if>
           </sc-if>
         </div>
       </sc-if>
@@ -1469,6 +1558,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
             <div style="flex:1"></div>
+            <sc-if value="{{ accShowDelete }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ accDelete }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--bad-soft)">Delete account…</button>
+            </sc-if>
             <sc-if value="{{ accShowTransfer }}" hint-placeholder-val="{{ true }}">
               <button onClick="{{ openTransfer }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Transfer ownership…</button>
             </sc-if>
@@ -2509,6 +2601,76 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
   
+  <!-- ══ WP Registry findings dialog (per component hash) ══ -->
+  <sc-if value="{{ rgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ rgClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:820px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+          <span style="font:700 15.5px var(--sans)">{{ rgTitle }}</span>
+          <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ rgVersion }}</span>
+          <span style="font:600 11px var(--sans);color:{{ rgStatusFg }};background:{{ rgStatusBg }};border-radius:99px;padding:3px 10px">{{ rgStatus }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ rgClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 18px">
+          <div style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ rgSub }}</div>
+          <div style="font:400 11.5px var(--mono);color:var(--ink-dim);margin-top:3px;word-break:break-all">{{ rgHashFull }}</div>
+          <sc-if value="{{ rgIssueShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;border-radius:9px;background:{{ rgIssueBg }};color:{{ rgIssueFg }};padding:11px 13px;font:500 13px/1.55 var(--sans)">{{ rgIssue }}</div>
+          </sc-if>
+          <sc-if value="{{ rgAuditShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ rgAudit }}
+              <sc-if value="{{ rgAuditLinkShow }}" hint-placeholder-val="{{ false }}">
+                <a href="{{ rgAuditUrl }}" target="_blank" rel="noopener" style="color:var(--brand-ink);text-decoration:none;margin-left:6px">View full audit ↗</a>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rgLoadingDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px 0;font:400 12.5px var(--sans);color:var(--ink-dim)">Loading findings…</div>
+          </sc-if>
+          <sc-if value="{{ rgCountShow }}" hint-placeholder-val="{{ false }}">
+            <h3 style="margin:18px 0 8px;font:600 14px var(--sans)">{{ rgCount }}</h3>
+          </sc-if>
+          <sc-for list="{{ rgFindings }}" as="f" hint-placeholder-count="2">
+            <div style="border:1px solid var(--rule);border-radius:10px;margin-bottom:8px;overflow:hidden">
+              <div onClick="{{ f.toggle }}" style="display:flex;align-items:center;gap:10px;padding:10px 13px;cursor:pointer" style-hover="background:var(--panel-2)">
+                <span style="flex:none;color:var(--ink-dim);font:400 11px var(--sans)">{{ f.arrow }}</span>
+                <span style="flex:none;font:600 11px var(--sans);color:{{ f.sevFg }};background:{{ f.sevBg }};border-radius:99px;padding:3px 9px">{{ f.sev }}</span>
+                <span style="font:500 13.5px var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.title }}</span>
+                <span style="margin-left:auto;flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ f.type }}</span>
+              </div>
+              <sc-if value="{{ f.bodyShow }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:2px 13px 13px;border-top:1px solid var(--rule)">
+                  <sc-if value="{{ f.descShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="font:400 13px/1.6 var(--sans);margin-top:11px">{{ f.desc }}</div>
+                  </sc-if>
+                  <sc-if value="{{ f.locShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="font:400 12px var(--sans);color:var(--ink-dim);margin-top:9px">Location <code style="font:400 12px var(--mono);color:var(--ink);background:var(--panel-2);border-radius:4px;padding:1px 6px;margin-left:4px">{{ f.loc }}</code></div>
+                  </sc-if>
+                  <sc-if value="{{ f.cveShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="font:400 12px var(--sans);color:var(--ink-dim);margin-top:6px">CVE <span style="color:var(--ink);font-weight:500">{{ f.cve }}</span></div>
+                  </sc-if>
+                  <sc-if value="{{ f.codeShow }}" hint-placeholder-val="{{ false }}">
+                    <pre style="margin:10px 0 0;background:var(--panel-2);border-radius:8px;padding:10px 12px;overflow-x:auto;font:400 12px/1.65 var(--mono);white-space:pre">{{ f.code }}</pre>
+                  </sc-if>
+                  <sc-if value="{{ f.recShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:11px;font:400 13px/1.6 var(--sans)"><strong style="font-weight:600">Recommendation </strong>{{ f.rec }}</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ rgEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:16px 0 2px;font:400 13px var(--sans);color:var(--ink-dim)">No findings recorded for this component.</div>
+          </sc-if>
+        </div>
+        <div style="flex:none;display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ rgClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Close</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Fleet process detail dialog ══ -->
   <sc-if value="{{ bpOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ bpClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
@@ -2841,7 +3003,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <div style="display:flex;align-items:center;gap:12px">
             <span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim);flex:none">Next renewal</span>
-            <input value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" placeholder="YYYY-MM-DD HH:MM:SS" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none">
+            <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none;color-scheme:light dark">
           </div>
           <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
             <span style="display:flex;align-items:center;gap:8px">

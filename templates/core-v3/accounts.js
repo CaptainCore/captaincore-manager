@@ -83,7 +83,12 @@ Object.assign(Component.prototype, {
         mark: String(ep.billing_user_id) === String(u.user_id) ? '✓' : '',
         bg: String(ep.billing_user_id) === String(u.user_id) ? 'var(--brand-soft)' : 'transparent',
         pick: () => mut(x => { x.billing_user_id = u.user_id; }) })),
-      epRenewal: ep.next_renewal || '', onEpRenewal: e => mut(x => { x.next_renewal = e.target.value; }),
+      // datetime-local wants "YYYY-MM-DDTHH:MM:SS"; the API stores "YYYY-MM-DD HH:MM:SS".
+      epRenewal: (ep.next_renewal || '').replace(' ', 'T'),
+      onEpRenewal: e => mut(x => {
+        const v = e.target.value || '';
+        x.next_renewal = v ? (v.replace('T', ' ') + (v.length === 16 ? ':00' : '')) : '';
+      }),
       epAutoPayBg: ap.bg, epAutoPayJust: ap.just, epAutoPayFlip: ap.flip,
       epAutoSwitchBg: asw.bg, epAutoSwitchJust: asw.just, epAutoSwitchFlip: asw.flip,
       epModeChips: [['standard', 'Standard'], ['per_site', 'Per site']].map(([v, label]) => ({ label, ...chip(ep.billing_mode === v),
@@ -237,6 +242,18 @@ Object.assign(Component.prototype, {
       accTabs: tabs,
       accShowTransfer: (d.users || []).some(u => (u.level || '') !== 'full-billing') && (d.owner || d.level === 'full-billing'),
       accShowTrusted: false, accShowCancel: false,
+      // v1 parity (deleteAccount): admin-only; the route also kicks off the
+      // CLI's background "account delete" cleanup.
+      accShowDelete: (window.CC_BOOT || {}).dcRole === 'operator',
+      accDelete: () => {
+        if (!confirm('Delete account "' + (a.name || '') + '"? This cannot be undone.')) return;
+        this.api('/accounts/' + acc.accountId, { method: 'DELETE' }).then(() => {
+          this.ACCOUNTS = this.ACCOUNTS.filter(x => x.id !== String(acc.accountId));
+          this._account = null;
+          if (this.toast) this.toast('Deleting account ' + (a.name || '') + '.', { kind: 'success' });
+          this.setState({ route: 'accounts', accountId: null });
+        }).catch(() => { if (this.toast) this.toast('Failed to delete account.', { kind: 'error' }); });
+      },
       ...this.transferVals(s, d, reload),
       ...this.computeEditPlan(s, acc, a, plan, reload),
       accUsers: (d.users || []).map(u => { const label = this.ACC_LEVEL_LABELS[u.level] || u.level || 'Full access';

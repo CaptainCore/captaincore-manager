@@ -11,6 +11,7 @@ class Component extends DCLogic {
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
     capSel: '', capLimit: 60,
+    rgHash: '', rgDetail: null, rgLoading: false, rgOpenIdx: -1,
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
@@ -25,7 +26,8 @@ class Component extends DCLogic {
     zoneOpen: false, zoneText: '', nsvOpen: false, nsvText: '', nsCustom: null,
     ctOpen: false, contact: null, ctDraft: {},
     snapFilter: 'Everything', dq: '', domainId: null, domTab: 'dns',
-    dnsRecs: null, dnsDirty: false, dnsT: 'A', dnsN: '', dnsV: '',
+    dnsRecs: null, dnsDirty: false, dnsT: 'A', dnsN: '', dnsV: '', zoneBusy: '',
+    mgHoverIdx: -1, mgHoverX: 0, mgHoverY: 0,
     fwds: null, fwdAlias: '', fwdDest: '', reg: { auto: true, lock: true, priv: true },
     ddOpen: '', ddQ: '', ddCat: '',
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
@@ -362,6 +364,7 @@ class Component extends DCLogic {
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
       accShowTransfer: true, accShowTrusted: true, accShowCancel: true,
+      accShowDelete: true, accDelete: () => {},
       transferOpen: false, openTransfer: () => {}, closeTransfer: () => {}, transferEmpty: false,
       transferBtnBg: 'var(--ink-dim)', transferCandidates: [], confirmTransfer: () => {},
       accUsers: this.ACC_USERS.map(u => ({ ...u,
@@ -1144,6 +1147,10 @@ class Component extends DCLogic {
       domBack: () => this.setState({ route: 'domains' }),
       domTabs: tabs,
       domTabDns: s.domTab === 'dns', domTabReg: s.domTab === 'registrar', domTabFwd: s.domTab === 'forwarding', domTabSnd: s.domTab === 'sending',
+      // Zone teardown is operator-only and real-data-only (domains.js override).
+      zoneShowDns: false, zoneShowFwd: false, zoneShowSend: false,
+      zoneDnsLabel: 'Delete DNS zone', zoneFwdLabel: 'Delete email forwarding', zoneSendLabel: 'Delete sending zone',
+      zoneDelDns: () => {}, zoneDelFwd: () => {}, zoneDelSend: () => {},
       dnsRows, dnsDirty: s.dnsDirty, dnsT: s.dnsT, dnsN: s.dnsN, dnsV: s.dnsV,
       dnsEN: s.dnsEN, onDnsEN: e => this.setState({ dnsEN: e.target.value }),
       dnsEV: s.dnsEV, onDnsEV: e => this.setState({ dnsEV: e.target.value }),
@@ -1209,7 +1216,7 @@ class Component extends DCLogic {
       mgSupp: '2 bounces · 0 unsubscribes · 0 complaints',
       mgDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
-      fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
+      fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
       regShowRenew: true, mgShowDeploy: true, regShowAuto: true,
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
@@ -1238,22 +1245,35 @@ class Component extends DCLogic {
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
     const segBg = l => s.env === l ? 'var(--panel-2)' : 'transparent';
     const segFg = l => s.env === l ? 'var(--ink)' : 'var(--ink-dim)';
-    const mkCopy = ([k, v]) => ({ k, v, mark: s.copied === k ? 'Copied ✓' : 'Copy',
-      copy: () => { try { navigator.clipboard.writeText(v); } catch (e) {}
-        this.setState({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); } });
+    const mkCopy = ([k, v]) => {
+      // Passwords render masked; clicking the value toggles reveal. Copy
+      // always copies the real value. Reveal state is keyed per site + env so
+      // switching sites never carries a revealed password along.
+      const rk = s.siteId + '|' + s.env + '|' + k;
+      const masked = /password/i.test(k) && !(s.credShow || {})[rk];
+      return { k, v: masked ? '••••••••••••••' : v,
+        vCursor: /password/i.test(k) ? 'pointer' : 'text',
+        vTitle: /password/i.test(k) ? (masked ? 'Click to reveal' : 'Click to hide') : '',
+        vToggle: () => { if (!/password/i.test(k)) return;
+          this.setState(st => ({ credShow: { ...(st.credShow || {}), [rk]: !(st.credShow || {})[rk] } })); },
+        mark: s.copied === k ? 'Copied ✓' : 'Copy',
+        copy: () => { try { navigator.clipboard.writeText(v); } catch (e) {}
+          this.setState({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); } };
+    };
     const credRows = (real ? this.realCredPairs(real, s) : [
       ['Site URL', 'https://' + host], ['WP admin', 'https://' + host + '/wp-admin'],
       ['SFTP', slug + '@sftp.kinsta.com:22'], ['SFTP password', 'uY3!kW8#pQ2v'],
       ['Database', 'wp_' + slug.replace(/-/g, '_')], ['DB password', 'mR7$xT4@nL9c'],
       ['SSH', 'ssh ' + slug + '@35.223.94.108']
     ]).map(mkCopy);
-    const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
+    const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['registry', 'Registry'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
       .map(([id, label]) => ({ label,
         fg: s.siteTab === id ? 'var(--ink)' : 'var(--ink-dim)',
         bg: s.siteTab === id ? 'var(--panel-2)' : 'transparent',
         go: () => { this.setState({ siteTab: id });
           if (!this._detail) return;
           if (id === 'logs') this.loadLogs();
+          else if (id === 'registry') this.loadRegistry();
           else if (id === 'stats') this.loadStats();
           else if (id === 'versions') this.loadQuicksaves();
           else if (id === 'backups') this.loadBackups();
@@ -1401,6 +1421,7 @@ class Component extends DCLogic {
       dTabs: tabs,
       tabOverview: s.siteTab === 'overview', tabStats: s.siteTab === 'stats', tabAddons: s.siteTab === 'addons', tabVersions: s.siteTab === 'versions',
       tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabCaptures: s.siteTab === 'captures', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
+      tabRegistry: s.siteTab === 'registry',
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
@@ -1554,6 +1575,7 @@ class Component extends DCLogic {
         regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
         doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
+      ...(this.computeRegistry ? this.computeRegistry(real, s) : { regGroups: [], regChips: [], rgOpen: false }),
       dUsers, logChips, logLines,
       nsuOpen: !!s.nsuOpen,
       openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),
@@ -1671,7 +1693,7 @@ class Component extends DCLogic {
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0 }); }
+      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0, rgHash: '', rgDetail: null }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }
@@ -2005,6 +2027,11 @@ class Component extends DCLogic {
       })(),
       showOperate: isOp && variant !== 'topnav',
       showRail: variant !== 'topnav' && !s.navHidden, showTopNav: variant === 'topnav',
+      // Collapse is animated, not unmounted (see the .cc-rail note in app.html).
+      navW: s.navHidden ? '0px' : '240px',
+      navPadX: s.navHidden ? '0px' : '12px',
+      navOpacity: s.navHidden ? '0' : '1',
+      navBorder: s.navHidden ? '0' : '1px solid var(--rule)',
       toggleNav: () => this.toggleNav(),
       railWidth: variant === 'slim' ? '56px' : '208px',
       labelDisplay: variant === 'slim' ? 'none' : 'inline',
