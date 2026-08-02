@@ -148,7 +148,11 @@ Object.assign(Component.prototype, {
           tip: label + ' · ' + fmtN(views) + ' views' + (i ? ' · ' + fmtN(i.visits) + ' visits' : ''),
           bg: !views ? 'var(--panel-2)'
             : idx === buckets.length - 1 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)',
-          enter: () => this.setState({ chartHoverIdx: idx })
+          // Snap the tooltip to the BAR, not the cursor (Chart.js behavior in
+          // v1): anchor on the bar's horizontal center and its top edge. The
+          // plot div is position:relative, so offsetLeft/Top are already
+          // relative to it.
+          enter: (e) => this.setState(this.barAnchor(e, 'chartHover', idx))
         };
       });
     })();
@@ -162,11 +166,10 @@ Object.assign(Component.prototype, {
         { k: 'Bounce rate', v: sum ? Math.round(parseFloat(sum.bounce_rate) || 0) + '%' : '—', delta: '', deltaFg: 'var(--ink-dim)' }
       ],
       statBars, statsShowPerf: false,
-      chartMove: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ chartHoverX: Math.round(e.clientX - r.left), chartHoverY: Math.round(e.clientY - r.top) }); },
       chartLeave: () => this.setState({ chartHoverIdx: -1 }),
       chartTipShow: !!hovered,
       chartTipLeft: hovered ? (s.chartHoverX || 0) : 0,
-      chartTipTop: hovered ? ((s.chartHoverY || 0) - 14) : 0,
+      chartTipTop: hovered ? (s.chartHoverY || 0) : 0,
       chartTipDate: hovered ? hovered.date : '',
       chartTipViews: hovered ? hovered.views : '',
       chartTipVisits: hovered ? hovered.visits : '',

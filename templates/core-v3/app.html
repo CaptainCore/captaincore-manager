@@ -835,7 +835,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <h2 style="margin:0;font:600 14px var(--sans)">Pageviews</h2>
                 <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">{{ statChartLabel }}</span>
               </div>
-              <div onMouseMove="{{ chartMove }}" onMouseLeave="{{ chartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:150px;margin-top:12px">
+              <div onMouseLeave="{{ chartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:150px;margin-top:12px">
                 <sc-for list="{{ statBars }}" as="b" hint-placeholder-count="28">
                   <div onMouseEnter="{{ b.enter }}" style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px 2px 0 0;transition:filter .1s" style-hover="filter:brightness(.9)"></div>
                 </sc-for>
@@ -1475,7 +1475,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
               <sc-if value="{{ mgUsageHasData }}" hint-placeholder-val="{{ true }}">
                 <div style="padding:0 16px 6px">
-                  <div onMouseMove="{{ mgChartMove }}" onMouseLeave="{{ mgChartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:110px">
+                  <div onMouseLeave="{{ mgChartLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:3px;height:110px">
                     <sc-for list="{{ mgUsageBars }}" as="b" hint-placeholder-count="12">
                       <div onMouseEnter="{{ b.enter }}" style="flex:1;min-width:3px;height:{{ b.h }};background:var(--brand);border-radius:3px 3px 0 0;opacity:.85;transition:filter .1s" style-hover="filter:brightness(.88)"></div>
                     </sc-for>

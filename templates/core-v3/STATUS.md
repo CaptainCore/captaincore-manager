@@ -469,8 +469,17 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   `DELETE /domain/{id}/mailgun`. Each confirms naming the domain and reloads the
   detail. Creation stays each tab's existing Activate button.
 - **Mailgun Usage chart has the Stats hover tooltip** (`mg*` mirror of stats.js's
-  `chartHoverIdx/X/Y`): bucket label + sent/delivered/failed, positioned off the
-  container's bounding rect.
+  `chartHoverIdx/X/Y`): bucket label + sent/delivered/failed.
+- **Chart tooltips SNAP TO THE COLUMN, not the cursor** (Chart.js behavior, v1
+  parity). Shared `barAnchor(e, prefix, idx)` in app.js returns the
+  `<prefix>Idx/X/Y` state patch from the hovered bar's own geometry —
+  `offsetLeft + offsetWidth/2` and `offsetTop - 8`, relative to the
+  position:relative plot area — clamped ±90px so an end bar can't push the
+  bubble outside the card. Both the Stats chart and the Mailgun Usage chart use
+  it; the old `onMouseMove` cursor-tracking handlers are GONE (only the
+  `onMouseLeave` reset remains on the plot container). New bar charts should
+  call `barAnchor` from the bar's `onMouseEnter` rather than re-deriving
+  coordinates from mouse events.
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.

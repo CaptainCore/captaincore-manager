@@ -1740,6 +1740,25 @@ class Component extends DCLogic {
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
 
+  // Bar-chart tooltip anchoring, shared by the Stats and Mailgun-usage charts.
+  // The tooltip snaps to the hovered COLUMN (Chart.js behavior, matching v1)
+  // instead of trailing the cursor: horizontal center of the bar, vertical top
+  // edge, both relative to the position:relative plot area. The result is
+  // clamped so a bar at either end doesn't push the bubble out of the card.
+  // Returns a state patch for `<prefix>Idx/X/Y`.
+  barAnchor(e, prefix, idx) {
+    const el = e.currentTarget;
+    const plot = el.parentElement;
+    const half = 90; // ~half the widest tooltip; keeps the bubble inside the plot
+    const cx = el.offsetLeft + el.offsetWidth / 2;
+    const max = Math.max(half, (plot ? plot.clientWidth : cx) - half);
+    return {
+      [prefix + 'Idx']: idx,
+      [prefix + 'X']: Math.round(Math.min(Math.max(cx, half), max)),
+      [prefix + 'Y']: Math.round(el.offsetTop - 8)
+    };
+  }
+
   toggleNav() {
     this.setState(st => {
       const v = !st.navHidden;

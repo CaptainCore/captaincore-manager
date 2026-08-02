@@ -335,7 +335,8 @@ Object.assign(Component.prototype, {
       label: i % usageSkip === 0 ? b.label : '',
       // Hover tooltip, same pattern as the site Stats chart (stats.js).
       bucket: b.label, sent: String(b.sent), delivered: String(b.delivered), failed: String(b.failed),
-      enter: () => this.setState({ mgHoverIdx: i }) }));
+      // Snap to the column, not the cursor — shared helper with the Stats chart.
+      enter: (e) => this.setState(this.barAnchor(e, 'mgHover', i)) }));
     const mgHi = s.mgHoverIdx;
     const mgHovered = (mgHi != null && mgHi >= 0 && mgHi < mgUsageBars.length) ? mgUsageBars[mgHi] : null;
     const mgEvents = (dom.mgEvents || []).map(ev => ({
@@ -416,12 +417,10 @@ Object.assign(Component.prototype, {
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
       mgUsagePeriods, mgUsageStats, mgUsageBars,
-      mgChartMove: e => { const r = e.currentTarget.getBoundingClientRect();
-        this.setState({ mgHoverX: Math.round(e.clientX - r.left), mgHoverY: Math.round(e.clientY - r.top) }); },
       mgChartLeave: () => this.setState({ mgHoverIdx: -1 }),
       mgTipShow: !!mgHovered,
       mgTipLeft: mgHovered ? (s.mgHoverX || 0) : 0,
-      mgTipTop: mgHovered ? ((s.mgHoverY || 0) - 14) : 0,
+      mgTipTop: mgHovered ? (s.mgHoverY || 0) : 0,
       mgTipBucket: mgHovered ? mgHovered.bucket : '',
       mgTipLine: mgHovered ? (mgHovered.sent + ' sent · ' + mgHovered.delivered + ' delivered · ' + mgHovered.failed + ' failed') : '',
       mgUsageHasData: !!usageSeries.length,
