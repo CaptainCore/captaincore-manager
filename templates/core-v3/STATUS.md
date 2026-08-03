@@ -481,17 +481,24 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   call `barAnchor` from the bar's `onMouseEnter` rather than re-deriving
   coordinates from mouse events.
 
-### Site-detail tabs: 11 → 5 groups (2026-08-02)
-Eleven tabs became five GROUPS over the same twelve leaves, driven by
+### Site-detail tabs: 11 → 6 groups (2026-08-02)
+Eleven tabs became six GROUPS over the same twelve leaves, driven by
 `SITE_TAB_GROUPS` in app.js:
 
 | Tab | Leaves |
 |---|---|
 | Overview | overview |
 | Stats | stats |
-| **Inventory** | plugins · themes · users · registry |
+| **Inventory** | plugins · themes · registry |
+| Users | users |
 | **History** | versions · backups · snapshots · captures |
 | **Activity** | logs · timeline |
+
+- **Users is deliberately TOP-LEVEL, not inside Inventory** (Austin's call after
+  a first pass grouped it there). Grouping pays off for tabs you skip past;
+  Users is the opposite — "pick a site → Users → Login as" is a spoken
+  instruction to customers, so it has to stay one click and one word. Frequency
+  beats taxonomy when the two disagree.
 
 - **`state.siteTab` still stores the LEAF**, which is also the URL segment — so
   `/account/sites/135/backups` and every `tab*` flag, lazy-load and KPI-tile jump

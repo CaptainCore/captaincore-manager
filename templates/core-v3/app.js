@@ -1757,7 +1757,11 @@ class Component extends DCLogic {
   SITE_TAB_GROUPS = [
     { id: 'overview',  label: 'Overview',  leaves: [['overview', 'Overview']] },
     { id: 'stats',     label: 'Stats',     leaves: [['stats', 'Stats']] },
-    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['users', 'Users'], ['registry', 'Registry']] },
+    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['registry', 'Registry']] },
+    // Users stays TOP-LEVEL on purpose. Grouping buys the most for tabs you
+    // skip past; Users is the opposite — "pick a site → Users → Login as" is a
+    // spoken instruction to customers, so it must stay one click and one word.
+    { id: 'users',     label: 'Users',     leaves: [['users', 'Users']] },
     { id: 'history',   label: 'History',   leaves: [['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures']] },
     { id: 'activity',  label: 'Activity',  leaves: [['logs', 'Logs'], ['timeline', 'Timeline']] }
   ];
