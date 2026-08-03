@@ -310,11 +310,22 @@ Object.assign(Component.prototype, {
     const email = (s.shareEmail || '').trim();
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const siteName = (real && real.site && real.site.name) || site.name;
+    // Both lists are capped so a big account (10 sites / 28 domains here)
+    // stays scannable; the remainder is stated, never silently dropped.
+    const CAP = 12;
+    const chipsOf = (list, key) => {
+      const all = (list || []).map(x => x.name).filter(Boolean);
+      return { chips: all.slice(0, CAP).map(name => ({ name })),
+        more: all.length > CAP ? '+' + (all.length - CAP) + ' more' : '',
+        moreShow: all.length > CAP };
+    };
+    const siteChips = chipsOf(p && p.sites_list);
+    const domChips = chipsOf(p && p.domains_list);
     let acctLead = '', acctSites = '', acctSitesList = '', acctDomains = '', simpleLine = '';
     if (p && p.has_account_access) {
       acctLead = 'Inviting ' + email + ' will grant them access to the account ' + (p.account_name || '') + '. This includes:';
       const n = p.total_sites || 0;
-      acctSites = n + ' Website' + (n === 1 ? '' : 's') + ':';
+      acctSites = n + ' Website' + (n === 1 ? '' : 's');
       acctSitesList = (p.sites_list || []).map(x => x.name).join(', ');
       if (p.total_domains > 0) acctDomains = p.total_domains + ' Domain' + (p.total_domains === 1 ? '' : 's');
     } else if (p) {
@@ -335,6 +346,11 @@ Object.assign(Component.prototype, {
       shareIsAcct: !!(p && p.has_account_access), shareIsSimple: !!(p && !p.has_account_access),
       shAcctLead: acctLead, shAcctSites: acctSites, shAcctSitesList: acctSitesList,
       shAcctDomains: acctDomains, shHasAcctDomains: !!acctDomains,
+      // Named lists — the payload carries domains_list too, which v1 fetches
+      // and then throws away (it only ever printed the domain COUNT).
+      shSiteChips: siteChips.chips, shSiteMore: siteChips.more, shSiteMoreShow: siteChips.moreShow,
+      shDomChips: domChips.chips, shDomMore: domChips.more, shDomMoreShow: domChips.moreShow,
+      shHasDomList: !!(p && p.has_account_access && domChips.chips.length),
       shSimpleLine: simpleLine,
       shareErr: s.shareErr, shareHasErr: !!s.shareErr,
       shareSendLabel: s.shareSending ? 'Sending…' : 'Send invite',

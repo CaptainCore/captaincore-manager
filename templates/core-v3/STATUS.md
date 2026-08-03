@@ -562,6 +562,25 @@ persisted), then cancelled — the table is empty again and no rows were left in
 maintenance, deploy-defaults, reset-permissions) were NOT fired against a real
 site; only their dialogs and payload construction were exercised.
 
+### Timeline composer + share preview (2026-08-02)
+- **Timeline entries are Markdown, so the composer is a TEXTAREA.** Add and edit
+  were single-line `<input>`s, which couldn't author or edit the multi-line
+  entries the `/captaincore-log` skill posts (headings, lists, links, code).
+  Both are now auto-sizing textareas with a "Markdown · ⌘⏎" hint; ⌘⏎ submits
+  via `submitTlDraft()`/`submitTlEdit()` (the dock check in the keydown handler
+  runs first, so the terminal still owns ⌘⏎ while it's open). The DC runtime
+  binds textarea `value` like `defaultValue`, so both are seeded and cleared
+  through refs (`tlDraftRef`/`tlEditRef`) — the edit ref re-seeds on `_forUid`
+  change so switching rows loads the right text. Rows also list attached files
+  (the diffs the CLI logs alongside an entry) instead of ignoring them.
+  **Add/edit/delete themselves already worked** — verified end to end against
+  real data before touching anything.
+- **Share Access lists domain NAMES.** `invite-preview` returns a full
+  `domains_list`, which v1 fetches and then prints only the count of — v3
+  inherited that. Both sites and domains now render as chip lists capped at 12
+  with an explicit "+N more" (never a silent truncation), and the dialog got
+  `max-height:82vh` + a scrolling body since the preview can now be tall.
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…".

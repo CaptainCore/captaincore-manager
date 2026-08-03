@@ -1622,6 +1622,9 @@ class Component extends DCLogic {
           const want = t.html || String(t.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           if (el._md !== want) { el._md = want; el.innerHTML = want; } },
         editing: s.tlEdit === t.uid, notEditing: s.tlEdit !== t.uid,
+        // Attached files (diffs the CLI logged alongside the entry).
+        files: (((t._raw && t._raw.files) || [])).map(f => ({ name: f.filename || f.name || 'file' })),
+        filesShow: !!((t._raw && t._raw.files) || []).length,
         startEdit: () => this.setState({ tlEdit: t.uid, tlEditText: t.text }),
         doneEdit: () => { if (real) { const v = this.state.tlEditText.trim(); if (v && v !== t.text) this.realTimelineEdit(real, t, v); this.setState({ tlEdit: 0 }); return; }
           this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).map(x => x.uid === st.tlEdit ? { ...x, text: st.tlEditText.trim() || x.text } : x), tlEdit: 0 })); },
@@ -1630,8 +1633,20 @@ class Component extends DCLogic {
           this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).filter(x => x.uid !== t.uid) })); } })),
       tlDraft: s.tlDraft, onTlDraft: e => this.setState({ tlDraft: e.target.value }),
       tlEditText: s.tlEditText, onTlEditText: e => this.setState({ tlEditText: e.target.value }),
+      tlAddBg: (s.tlDraft || '').trim() ? 'var(--brand)' : 'var(--ink-dim)',
+      // The DC runtime binds textarea value like defaultValue, so composer text
+      // is driven through refs (same escape hatch the terminal input uses):
+      // seed on mount, clear after submit.
+      tlDraftRef: (el) => { this._tlDraftEl = el;
+        if (el && el._seeded !== true) { el._seeded = true; el.value = this.state.tlDraft || ''; } },
+      tlEditRef: (el) => { this._tlEditEl = el;
+        // Re-seed whenever a different row enters edit mode.
+        if (el && el._forUid !== s.tlEdit) { el._forUid = s.tlEdit; el.value = this.state.tlEditText || ''; el.focus(); } },
       addTl: () => { const v = this.state.tlDraft.trim(); if (!v) return;
-        if (real) { this.realTimelineAdd(real, v); this.setState({ tlDraft: '' }); return; }
+        if (real) { this.realTimelineAdd(real, v);
+          this.setState({ tlDraft: '' });
+          if (this._tlDraftEl) { this._tlDraftEl.value = ''; this._tlDraftEl.style.height = 'auto'; }
+          return; }
         this.setState(st => ({ timeline: [{ uid: Date.now(), text: v, who: 'Austin Ginder', when: 'just now' }, ...(st.timeline || this.TIMELINE_INIT)], tlDraft: '' })); },
       exportTl: () => { if (real) {
           const blob = new Blob([JSON.stringify({ site: { name: site.name, site_id: real.siteId }, entries: (real.timeline || []).map(t => t._raw || t) }, null, 2)], { type: 'application/json' });
@@ -1707,6 +1722,10 @@ class Component extends DCLogic {
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
+      // ⌘⏎ in a timeline composer submits it (the dock check above wins when
+      // the terminal is open, so this only fires on the Timeline tab).
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlEditEl) { e.preventDefault(); this.submitTlEdit(); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlDraftEl) { e.preventDefault(); this.submitTlDraft(); }
       else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '' }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
@@ -1753,6 +1772,25 @@ class Component extends DCLogic {
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
+
+  // Timeline composer submits, shared by the buttons and the ⌘⏎ handler.
+  submitTlDraft() {
+    const real = this._detail;
+    const v = (this.state.tlDraft || '').trim();
+    if (!real || !v) return;
+    this.realTimelineAdd(real, v);
+    this.setState({ tlDraft: '' });
+    if (this._tlDraftEl) { this._tlDraftEl.value = ''; this._tlDraftEl.style.height = 'auto'; }
+  }
+
+  submitTlEdit() {
+    const real = this._detail;
+    const row = real && (real.timeline || []).find(x => x.uid === this.state.tlEdit);
+    const v = (this.state.tlEditText || '').trim();
+    if (!real || !row) return;
+    if (v && v !== row.text) this.realTimelineEdit(real, row, v);
+    this.setState({ tlEdit: 0 });
+  }
 
   // ── Site-detail tabs: five GROUPS over the same twelve leaves ──────────
   // `state.siteTab` holds the LEAF (backups, timeline, …) — that is also the

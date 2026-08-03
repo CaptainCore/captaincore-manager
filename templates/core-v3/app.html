@@ -1167,15 +1167,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span onClick="{{ exportTl }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">Export JSON</span>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-              <div style="display:flex;gap:10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--rule)">
-                <input value="{{ tlDraft }}" onInput="{{ onTlDraft }}" placeholder="Add a timeline entry — what did you do?" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
-                <button onClick="{{ addTl }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Add entry</button>
+              <!-- Markdown composer: the field is rendered server-side by
+                   Parsedown, so it must accept multi-line input (headings,
+                   lists, links), not a single-line <input>. -->
+              <div style="padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--rule)">
+                <textarea ref="{{ tlDraftRef }}" onInput="{{ onTlDraft }}" rows="2" placeholder="Add a timeline entry — what did you do, and why? Markdown supported." style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12.5px/1.6 var(--sans);padding:8px 10px;outline:none;resize:vertical;min-height:38px;max-height:280px"></textarea>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                  <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">Markdown · ⌘⏎ to add</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ addTl }}" style="border:none;background:{{ tlAddBg }};color:white;font:600 12.5px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add entry</button>
+                </div>
               </div>
               <sc-for list="{{ tlRows }}" as="t" hint-placeholder-count="5">
                 <div style="border-bottom:1px solid var(--rule)">
                   <sc-if value="{{ t.notEditing }}" hint-placeholder-val="{{ true }}">
-                    <div style="display:flex;align-items:center;gap:12px;padding:11px 16px">
-                      <span ref="{{ t.mdRef }}" class="cc-md" style="flex:1;min-width:0;font:400 13.5px/1.5 var(--sans)"></span>
+                    <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px">
+                      <span style="flex:1;min-width:0">
+                        <span ref="{{ t.mdRef }}" class="cc-md" style="display:block;font:400 13.5px/1.55 var(--sans)"></span>
+                        <sc-if value="{{ t.filesShow }}" hint-placeholder-val="{{ false }}">
+                          <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
+                            <sc-for list="{{ t.files }}" as="fl" hint-placeholder-count="1">
+                              <span style="font:500 11px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ fl.name }}</span>
+                            </sc-for>
+                          </span>
+                        </sc-if>
+                      </span>
                       <span style="flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ t.who }}</span>
                       <span style="flex:none;font:400 12px var(--mono);color:var(--ink-dim)">{{ t.when }}</span>
                       <span onClick="{{ t.startEdit }}" style="flex:none;font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
@@ -1183,10 +1199,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     </div>
                   </sc-if>
                   <sc-if value="{{ t.editing }}" hint-placeholder-val="{{ false }}">
-                    <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--panel)">
-                      <input value="{{ tlEditText }}" onInput="{{ onTlEditText }}" style="flex:1;height:32px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
-                      <button onClick="{{ t.doneEdit }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
-                      <span onClick="{{ t.cancelEdit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                    <div style="padding:10px 16px;background:var(--panel)">
+                      <textarea ref="{{ tlEditRef }}" onInput="{{ onTlEditText }}" rows="4" style="width:100%;box-sizing:border-box;border:1px solid var(--brand);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12.5px/1.6 var(--sans);padding:8px 10px;outline:none;resize:vertical;min-height:76px;max-height:340px"></textarea>
+                      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                        <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">Markdown · ⌘⏎ to save</span>
+                        <div style="flex:1"></div>
+                        <span onClick="{{ t.cancelEdit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                        <button onClick="{{ t.doneEdit }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save</button>
+                      </div>
                     </div>
                   </sc-if>
                 </div>
@@ -4076,14 +4096,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
   <!-- ══ Share Access dialog ══ -->
   <sc-if value="{{ shareDlgOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeShareDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:14vh">
-      <div onClick="{{ stopProp }}" style="width:520px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
-        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+    <div onClick="{{ closeShareDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
+      <div onClick="{{ stopProp }}" style="width:520px;max-width:calc(100vw - 40px);max-height:82vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
           <span style="font:600 15px var(--sans)">Share Access</span>
           <div style="flex:1"></div>
           <span onClick="{{ closeShareDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
           <span style="font:400 13px var(--sans);color:var(--ink)">{{ shareDlgTitle }}</span>
           <input value="{{ shareEmail }}" onInput="{{ onShareEmail }}" onKeyDown="{{ shareKey }}" placeholder="Email address" style="height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
           <sc-if value="{{ shareLoadingB }}" hint-placeholder-val="{{ false }}">
@@ -4093,10 +4113,27 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
               <sc-if value="{{ shareIsAcct }}" hint-placeholder-val="{{ true }}">
                 <span style="font:400 12.5px/1.5 var(--sans);color:var(--ink)">{{ shAcctLead }}</span>
-                <span style="font:600 12.5px var(--sans);color:var(--brand-ink)">{{ shAcctSites }}</span>
-                <span style="font:400 12px/1.5 var(--sans);color:var(--ink-dim)">{{ shAcctSitesList }}</span>
+                <span style="font:600 12.5px var(--sans);color:var(--brand-ink);margin-top:2px">{{ shAcctSites }}</span>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                  <sc-for list="{{ shSiteChips }}" as="sc" hint-placeholder-count="4">
+                    <span style="font:500 11.5px var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:2px 9px">{{ sc.name }}</span>
+                  </sc-for>
+                  <sc-if value="{{ shSiteMoreShow }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:500 11.5px var(--sans);color:var(--ink-dim);padding:2px 4px">{{ shSiteMore }}</span>
+                  </sc-if>
+                </div>
                 <sc-if value="{{ shHasAcctDomains }}" hint-placeholder-val="{{ false }}">
-                  <span style="font:600 12.5px var(--sans);color:var(--brand-ink)">{{ shAcctDomains }}</span>
+                  <span style="font:600 12.5px var(--sans);color:var(--brand-ink);margin-top:6px">{{ shAcctDomains }}</span>
+                </sc-if>
+                <sc-if value="{{ shHasDomList }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    <sc-for list="{{ shDomChips }}" as="dc" hint-placeholder-count="4">
+                      <span style="font:500 11.5px var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:2px 9px">{{ dc.name }}</span>
+                    </sc-for>
+                    <sc-if value="{{ shDomMoreShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 11.5px var(--sans);color:var(--ink-dim);padding:2px 4px">{{ shDomMore }}</span>
+                    </sc-if>
+                  </div>
                 </sc-if>
               </sc-if>
               <sc-if value="{{ shareIsSimple }}" hint-placeholder-val="{{ false }}">
@@ -4108,7 +4145,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <span style="font:500 12.5px var(--sans);color:var(--bad)">{{ shareErr }}</span>
           </sc-if>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeShareDlg }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ shareSend }}" style="border:none;background:{{ shareSendBg }};color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ shareSendLabel }}</button>
