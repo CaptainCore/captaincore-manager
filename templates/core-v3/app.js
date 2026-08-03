@@ -1266,21 +1266,27 @@ class Component extends DCLogic {
       ['Database', 'wp_' + slug.replace(/-/g, '_')], ['DB password', 'mR7$xT4@nL9c'],
       ['SSH', 'ssh ' + slug + '@35.223.94.108']
     ]).map(mkCopy);
-    const tabs = [['overview', 'Overview'], ['stats', 'Stats'], ['addons', 'Addons'], ['registry', 'Registry'], ['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures'], ['users', 'Users'], ['logs', 'Logs'], ['timeline', 'Timeline']]
-      .map(([id, label]) => ({ label,
-        fg: s.siteTab === id ? 'var(--ink)' : 'var(--ink-dim)',
-        bg: s.siteTab === id ? 'var(--panel-2)' : 'transparent',
-        go: () => { this.setState({ siteTab: id });
-          if (!this._detail) return;
-          if (id === 'logs') this.loadLogs();
-          else if (id === 'registry') this.loadRegistry();
-          else if (id === 'stats') this.loadStats();
-          else if (id === 'versions') this.loadQuicksaves();
-          else if (id === 'backups') this.loadBackups();
-          else if (id === 'snapshots') this.loadSnapshots();
-          else if (id === 'captures') this.loadCaptures();
-          else if (id === 'timeline') this.loadTimeline(); } }));
-    const addonsSrc = real ? this.realAddonSrc(real, s) : (s.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
+    // Tabs are GROUPS of leaves; `siteTab` still stores the LEAF, so every
+    // deep link (/sites/135/backups), tab flag and lazy-load keeps working —
+    // only the chrome is grouped. A group with one leaf renders no segment row.
+    const leaf = this.siteLeaf(s.siteTab);
+    const group = this.siteGroupOf(leaf);
+    const tabs = this.SITE_TAB_GROUPS.map(g => ({ label: g.label,
+      fg: g.id === group.id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: g.id === group.id ? 'var(--panel-2)' : 'transparent',
+      // Entering a group lands on its first leaf, unless the current leaf
+      // already belongs to it (clicking the active tab is then a no-op).
+      go: () => this.goSiteTab(g.id === group.id ? leaf : g.leaves[0][0]) }));
+    const siteSegs = group.leaves.length > 1 ? group.leaves.map(([id, label]) => ({ label,
+      fg: leaf === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: leaf === id ? 'var(--panel-2)' : 'transparent',
+      go: () => this.goSiteTab(id) })) : [];
+    // The addons list keys off addonKind; when the leaf IS plugins/themes it
+    // wins, so a cold deep link to /sites/1/themes renders themes even before
+    // goSiteTab has synced the two.
+    const sAK = (leaf === 'plugins' || leaf === 'themes') && s.addonKind !== leaf
+      ? Object.assign({}, s, { addonKind: leaf }) : s;
+    const addonsSrc = real ? this.realAddonSrc(real, sAK) : (sAK.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
       const doToggle = () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name);
       const doUpdate = () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name);
@@ -1419,19 +1425,22 @@ class Component extends DCLogic {
       ...this.computeDeployConfirm(real, s, site),
       ...this.computePushToOther(real, s, site),
       dTabs: tabs,
-      tabOverview: s.siteTab === 'overview', tabStats: s.siteTab === 'stats', tabAddons: s.siteTab === 'addons', tabVersions: s.siteTab === 'versions',
-      tabBackups: s.siteTab === 'backups', tabSnapshots: s.siteTab === 'snapshots', tabCaptures: s.siteTab === 'captures', tabUsers: s.siteTab === 'users', tabLogs: s.siteTab === 'logs', tabTimeline: s.siteTab === 'timeline',
-      tabRegistry: s.siteTab === 'registry',
+      dSegs: siteSegs, dSegsShow: siteSegs.length > 0,
+      // Flags key off the normalized LEAF, so a legacy 'addons' link still
+      // renders the plugins list.
+      tabOverview: leaf === 'overview', tabStats: leaf === 'stats',
+      tabAddons: leaf === 'plugins' || leaf === 'themes', tabVersions: leaf === 'versions',
+      tabBackups: leaf === 'backups', tabSnapshots: leaf === 'snapshots', tabCaptures: leaf === 'captures',
+      tabUsers: leaf === 'users', tabLogs: leaf === 'logs', tabTimeline: leaf === 'timeline',
+      tabRegistry: leaf === 'registry',
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
         { k: 'Backups', v: real ? (real.backups ? String(real.backups.length) : '—') : '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups', icon: 'M21 8v13H3V8 M1 3h22v5H1 M10 12h4' },
         { k: 'Versions', v: real ? (real.qs ? String(real.qs.length) : '—') : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions', icon: 'M6 3v12 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a9 9 0 0 1-9 9' },
         { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3' }
-      ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => { this.setState({ siteTab: t.act });
-        if (!real) return;
-        if (t.act === 'backups') this.loadBackups(); else if (t.act === 'versions') this.loadQuicksaves(); else if (t.act === 'timeline') this.loadTimeline(); else if (t.act === 'stats') this.loadStats(); } })),
-      openStats: () => { this.setState({ siteTab: 'stats' }); if (real) this.loadStats(); },
+      ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => this.goSiteTab(t.act) })),
+      openStats: () => this.goSiteTab('stats'),
       statG: s.statG, statR: s.statR,
       ddStatGOpen: s.ddOpen === 'statG',
       ddToggleStatG: () => this.setState(st => ({ ddOpen: st.ddOpen === 'statG' ? '' : 'statG', ddQ: '' })),
@@ -1739,6 +1748,46 @@ class Component extends DCLogic {
   }
 
   applyTheme(t) { document.documentElement.dataset.theme = t; }
+
+  // ── Site-detail tabs: five GROUPS over the same twelve leaves ──────────
+  // `state.siteTab` holds the LEAF (backups, timeline, …) — that is also the
+  // URL segment, so old bookmarks keep resolving and every `tab*` flag and
+  // lazy-load below is unchanged. The tab bar shows the leaf's group; a second
+  // pill row picks the leaf within it.
+  SITE_TAB_GROUPS = [
+    { id: 'overview',  label: 'Overview',  leaves: [['overview', 'Overview']] },
+    { id: 'stats',     label: 'Stats',     leaves: [['stats', 'Stats']] },
+    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['users', 'Users'], ['registry', 'Registry']] },
+    { id: 'history',   label: 'History',   leaves: [['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures']] },
+    { id: 'activity',  label: 'Activity',  leaves: [['logs', 'Logs'], ['timeline', 'Timeline']] }
+  ];
+  // 'addons' was the pre-grouping name for the plugins/themes pair — keep the
+  // alias so links minted before the reorg still land somewhere sensible.
+  SITE_TAB_ALIASES = { addons: 'plugins' };
+
+  siteLeaf(tab) {
+    const t = this.SITE_TAB_ALIASES[tab] || tab || 'overview';
+    return this.SITE_TAB_GROUPS.some(g => g.leaves.some(([id]) => id === t)) ? t : 'overview';
+  }
+
+  siteGroupOf(leaf) {
+    return this.SITE_TAB_GROUPS.find(g => g.leaves.some(([id]) => id === leaf)) || this.SITE_TAB_GROUPS[0];
+  }
+
+  // Single entry point for switching site tabs: normalizes the leaf, keeps
+  // addonKind in step (the addons list still reads it), and fires that leaf's
+  // lazy load.
+  goSiteTab(tab) {
+    const leaf = this.siteLeaf(tab);
+    const patch = { siteTab: leaf };
+    if (leaf === 'plugins' || leaf === 'themes') patch.addonKind = leaf;
+    this.setState(patch);
+    if (!this._detail) return;
+    const load = { logs: 'loadLogs', registry: 'loadRegistry', stats: 'loadStats',
+      versions: 'loadQuicksaves', backups: 'loadBackups', snapshots: 'loadSnapshots',
+      captures: 'loadCaptures', timeline: 'loadTimeline' }[leaf];
+    if (load && this[load]) this[load]();
+  }
 
   // Bar-chart tooltip anchoring, shared by the Stats and Mailgun-usage charts.
   // The tooltip snaps to the hovered COLUMN (Chart.js behavior, matching v1)

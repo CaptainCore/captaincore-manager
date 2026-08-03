@@ -481,6 +481,36 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   call `barAnchor` from the bar's `onMouseEnter` rather than re-deriving
   coordinates from mouse events.
 
+### Site-detail tabs: 11 → 5 groups (2026-08-02)
+Eleven tabs became five GROUPS over the same twelve leaves, driven by
+`SITE_TAB_GROUPS` in app.js:
+
+| Tab | Leaves |
+|---|---|
+| Overview | overview |
+| Stats | stats |
+| **Inventory** | plugins · themes · users · registry |
+| **History** | versions · backups · snapshots · captures |
+| **Activity** | logs · timeline |
+
+- **`state.siteTab` still stores the LEAF**, which is also the URL segment — so
+  `/account/sites/135/backups` and every `tab*` flag, lazy-load and KPI-tile jump
+  keep working untouched. The tab bar highlights the leaf's GROUP
+  (`siteGroupOf`); a second pill row picks the leaf. Single-leaf groups render no
+  segment row (Overview/Stats don't grow a blank line).
+- **Secondary pills sit on their own line** below the group tabs.
+- **`goSiteTab(tab)` is the single entry point** — normalizes via `siteLeaf()`
+  (which resolves `SITE_TAB_ALIASES`), syncs `addonKind` for plugins/themes, and
+  fires that leaf's lazy load. Router `applyUrl`, the Overview KPI tiles, and
+  `goCaptures` all call it; do NOT `setState({ siteTab })` directly or you skip
+  all three.
+- **Legacy `/addons` links alias to `plugins`** (`SITE_TAB_ALIASES`). The old
+  in-tab Plugins/Themes toggle was REMOVED from the addons markup — the segment
+  row is now the only control (`setAddP`/`setAddT`/`akp*`/`akt*` bindings still
+  compute but nothing consumes them).
+- `computeDetail` also derives addonKind defensively from the leaf, so a cold
+  deep link to `/themes` renders themes before goSiteTab has synced state.
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…".

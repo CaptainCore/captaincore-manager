@@ -48,7 +48,9 @@ Object.assign(Component.prototype, {
     this._suppressPush = true;
     if (head === 'sites' && parts[1]) {
       this.openSite(parts[1]);
-      if (parts[2]) this.setState({ siteTab: parts[2] });
+      // goSiteTab normalizes legacy leaf names ('addons'), syncs addonKind and
+      // fires that leaf's lazy load — a plain setState would skip all three.
+      if (parts[2]) this.goSiteTab(parts[2]);
     } else if (head === 'domains' && parts[1]) {
       this.openDomain(parts[1]);
     } else if (head === 'accounts' && parts[1]) {

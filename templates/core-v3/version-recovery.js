@@ -77,7 +77,7 @@ Object.assign(Component.prototype, {
       })) : [],
       capTeaserShow: teaserN > 0,
       capTeaserLabel: teaserN.toLocaleString() + (teaserN === 1 ? ' capture' : ' captures'),
-      goCaptures: () => { this.setState({ siteTab: 'captures' }); if (this._detail) this.loadCaptures(); }
+      goCaptures: () => this.goSiteTab('captures')
     };
   },
 

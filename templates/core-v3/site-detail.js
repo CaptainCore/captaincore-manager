@@ -23,7 +23,14 @@ Object.assign(Component.prototype, {
       detail.envs = Array.isArray(envs) ? envs : [];
       const cur = detail.envs.some(e => e.environment === this.state.env);
       if (!cur && detail.envs[0]) this.setState({ env: detail.envs[0].environment });
-      if (this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
+      // Cold deep link to a lazy tab: goSiteTab ran BEFORE this fetch resolved,
+      // so it bailed on the missing _detail and the tab would sit empty until
+      // you clicked away and back. Fire the current leaf's load now that the
+      // environment list exists (stats/registry/captures key off it).
+      const deferred = { stats: 'loadStats', registry: 'loadRegistry', captures: 'loadCaptures',
+        logs: 'loadLogs', versions: 'loadQuicksaves', backups: 'loadBackups',
+        snapshots: 'loadSnapshots', timeline: 'loadTimeline' }[this.state.siteTab];
+      if (deferred && this[deferred]) setTimeout(() => this[deferred](), 0);
       bump();
     }).catch(() => { detail.envs = []; bump(); });
     this.api('/sites/' + id + '/details').then(d => {

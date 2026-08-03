@@ -666,10 +666,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
           <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
-            <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="6">
+            <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="5">
               <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
             </sc-for>
           </div>
+          <!-- Leaf picker for the active group, on its OWN line (hidden for
+               single-leaf groups so Overview/Stats don't grow a blank row). -->
+          <sc-if value="{{ dSegsShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:block;margin-top:10px">
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                <sc-for list="{{ dSegs }}" as="sg" hint-placeholder-count="4">
+                  <span onClick="{{ sg.go }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);color:{{ sg.fg }};background:{{ sg.bg }}" style-hover="color:var(--ink)">{{ sg.label }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
 
           <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-top:16px">
@@ -885,11 +896,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <sc-if value="{{ tabAddons }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
-              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
-                <span onClick="{{ setAddP }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ akpBg }};color:{{ akpFg }}">Plugins</span>
-                <span onClick="{{ setAddT }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 12.5px var(--sans);background:{{ aktBg }};color:{{ aktFg }}">Themes</span>
-              </div>
+            <!-- Plugins/Themes now live in the tab-bar segment row (Inventory),
+                 so this row carries only the right-aligned actions. -->
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
               <div style="flex:1"></div>
               <sc-if value="{{ hasUpdates }}" hint-placeholder-val="{{ false }}">
                 <button onClick="{{ doUpdateAll }}" style="border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer">{{ updateAllLabel }}</button>
