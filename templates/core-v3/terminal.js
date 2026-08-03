@@ -73,6 +73,48 @@ Object.assign(Component.prototype, {
     if (job) job.stream.push('$ ' + cmd);
   },
 
+  // ── Scheduling (v1 parity: terminal_schedule) ────────────────
+  // POST /scripts/schedule per target environment. The server parses
+  // "{date} {time}" in the browser's IANA zone and stores a UTC timestamp, so
+  // the payload must carry the zone — never a pre-converted time.
+  openTermSchedule() {
+    const cmd = (this.state.termCmd || '').trim();
+    if (!cmd) return;
+    if (!this.resolveTermTargets().length) { this.setState({ tpOpen: true, cookOpen: false }); return; }
+    // Default to an hour out, in local time, rounded to the minute.
+    const d = new Date(Date.now() + 3600000);
+    const pad = n => String(n).padStart(2, '0');
+    this.setState({ schedOpen: true, tpOpen: false, cookOpen: false, schedErr: '',
+      schedDate: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()),
+      schedTime: pad(d.getHours()) + ':' + pad(d.getMinutes()) });
+  },
+
+  confirmTermSchedule() {
+    const s = this.state;
+    const cmd = (s.termCmd || '').trim();
+    const targets = this.resolveTermTargets();
+    if (!cmd || !targets.length || !s.schedDate || !s.schedTime) {
+      this.setState({ schedErr: 'Pick a date and time.' });
+      return;
+    }
+    this.setState({ schedBusy: true, schedErr: '' });
+    const run_at = { date: s.schedDate, time: s.schedTime,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    Promise.all(targets.map(t => this.api('/scripts/schedule', { method: 'POST',
+      body: { environment_id: Number(t.id) || t.id, code: cmd, run_at } })))
+      .then(() => {
+        this.setState({ schedOpen: false, schedBusy: false, termCmd: '' });
+        if (this._termEl) { this._termEl.value = ''; this._termEl.style.height = 'auto'; }
+        this.toast('Scheduled on ' + (targets.length === 1 ? targets[0].label : targets.length + ' environments')
+          + ' for ' + s.schedDate + ' ' + s.schedTime, { kind: 'success' });
+        // The list lives on the environments payload, so refresh the open site.
+        if (this._detail && this.state.route === 'site') {
+          const id = this._detail.siteId; this._detail = null; this.loadSiteDetail(id);
+        }
+      })
+      .catch(() => this.setState({ schedBusy: false, schedErr: 'Could not schedule. Try again.' }));
+  },
+
   loadRecipes() {
     if (this._recipes || this._recipesLoading) return;
     this._recipesLoading = true;
@@ -127,6 +169,20 @@ Object.assign(Component.prototype, {
       termRun: () => this.termRun(),
       termRunFg: (s.termCmd || '').trim() ? '#fff' : 'var(--ink-dim)',
       termRunBg: (s.termCmd || '').trim() ? 'var(--brand)' : 'var(--panel-2)',
+      // Schedule the typed command instead of running it now.
+      termSchedShow: !!(s.termCmd || '').trim(),
+      termSchedule: () => this.openTermSchedule(),
+      schedOpen: !!s.schedOpen,
+      schedDate: s.schedDate || '', onSchedDate: e => this.setState({ schedDate: e.target.value }),
+      schedTime: s.schedTime || '', onSchedTime: e => this.setState({ schedTime: e.target.value }),
+      schedTargets: (() => { const t = targets; return t.length === 1 ? t[0].label : t.length + ' environments'; })(),
+      schedCode: (s.termCmd || '').trim(),
+      schedErr: s.schedErr || '', schedErrShow: !!s.schedErr,
+      schedBusy: !!s.schedBusy,
+      schedLabel: s.schedBusy ? 'Scheduling…' : 'Schedule',
+      schedZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      schedClose: () => this.setState({ schedOpen: false }),
+      schedConfirm: () => this.confirmTermSchedule(),
       termTargetLabel: targets.length === 0 ? 'Select target'
         : targets.length === 1 ? targets[0].label
         : targets.length + ' environments selected',

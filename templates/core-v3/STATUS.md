@@ -181,10 +181,38 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   origin and 401s for customers). The per-hash route is the public projection,
   so embargoed findings never reach the browser and the tab is customer-safe.
   Env switch clears the dialog and reloads (both setEnv and the tab handler).
+- **`tools.js`** — the v1 Scripts tab's **System Tools**, rehomed into the site
+  Overview (the old "Actions" card split into **Deploy** and **Tools**). Six
+  tools, all streaming through `startJob` like any other action:
+  deploy-defaults · apply-https (www variant) · launch (domain) go through
+  `POST /sites/bulk-tools {tool, environments:[envId], params}`;
+  reset-permissions · migrate (`value` + `update_urls`, compared to the STRING
+  "true" server-side) · maintenance on/off go through `POST /sites/cli`
+  (bulk-tools' deactivate can't carry the visitor-facing subject/status/action
+  copy). Both endpoints return a job token — a bare string from `Run::task`,
+  `{token}` from `background_task` — and `dispatchJob` already accepts either.
+  **No role gate**, matching v1: the routes are site-scoped
+  (`captaincore_verify_permissions` per environment), so a customer can only
+  act on their own sites. Maintenance defaults its business name/link from
+  `CC_BOOT.name`/`homeLink` (no fetch), preferring a loaded Settings config.
+  Also owns **Activity → Scheduled** (`computeScheduled`): the list needs NO
+  fetch — `Site::environments()` already attaches `scheduled_scripts` to every
+  environment — plus the edit dialog (`POST /scripts/{id}`, note POST not PUT)
+  and cancel (`DELETE /scripts/{id}`). **Its bindings use an `ss` prefix, not
+  `sched`** — reports.js owns `schedRows`/`schedEmpty` for scheduled REPORTS
+  and spreads after computeDetail, so the `sched` names get silently clobbered
+  (this bit once: the count read "1 scheduled script" beside an empty list).
 - **`jobs.js`** — the job engine. `startJob({label,target,command,dispatch,onFinish})`
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
   sentinel → `onFinish`. The activity dock renders `activeJob()`.
 - **`terminal.js`** — the dock-footer terminal (loads after jobs.js; owns `termRun`).
+  **Schedule** (v1's terminal_schedule): a button beside Run, shown once
+  something is typed, opens a date/time dialog and POSTs `/scripts/schedule`
+  once per selected target (`{environment_id, code, run_at:{date,time,timezone}}`).
+  The server parses date+time in the SUPPLIED IANA zone and stores UTC, so send
+  the local wall-clock values plus the zone — never a pre-converted time. On
+  success it clears the input and reloads the open site so Activity → Scheduled
+  picks the new row up.
   Multi-target @ picker (search + multi-select over `FLEET[].environmentsRaw`
   `environment_id`s, falls back to the open site's current env), cookbook popup
   (`GET /recipes` lazily, click inserts `content` into the input — never auto-runs),
@@ -492,7 +520,7 @@ Eleven tabs became six GROUPS over the same twelve leaves, driven by
 | **Inventory** | plugins · themes · registry |
 | Users | users |
 | **History** | versions · backups · snapshots · captures |
-| **Activity** | logs · timeline |
+| **Activity** | logs · timeline · scheduled |
 
 - **Users is deliberately TOP-LEVEL, not inside Inventory** (Austin's call after
   a first pass grouped it there). Grouping pays off for tabs you skip past;
@@ -517,6 +545,22 @@ Eleven tabs became six GROUPS over the same twelve leaves, driven by
   compute but nothing consumes them).
 - `computeDetail` also derives addonKind defensively from the leaf, so a cold
   deep link to `/themes` renders themes before goSiteTab has synced state.
+
+### v1 Scripts tab: ported (2026-08-02)
+The v1 Scripts tab had four sections. Two needed no port — its **Command
+Console** bar is just a terminal launcher (v3 reaches the terminal three ways
+already) and its **Recipes** grid is the dock's cookbook popup. The other two
+shipped: **System Tools** → the Overview Tools card (tools.js) and **Scheduled
+Scripts** → Activity → Scheduled + a terminal Schedule button. There is no v3
+"Scripts" tab and there should not be one.
+
+Verified live on austinginder.com: all six tools render and every dialog opens;
+a real script was scheduled from the terminal (appeared in the tab with author,
+avatar and formatted run time), edited (`wp option get home` → `siteurl`,
+persisted), then cancelled — the table is empty again and no rows were left in
+`captaincore_scripts`. The destructive tools themselves (migrate, launch,
+maintenance, deploy-defaults, reset-permissions) were NOT fired against a real
+site; only their dialogs and payload construction were exercised.
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.

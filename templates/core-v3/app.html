@@ -762,10 +762,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </div>
                 </section>
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
-                  <h2 style="margin:0 0 2px;font:600 14px var(--sans)">Actions</h2>
+                  <h2 style="margin:0 0 2px;font:600 14px var(--sans)">Deploy</h2>
                   <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
                   <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
+                </section>
+                <!-- System tools — v1 Scripts-tab parity, rehomed here (tools.js) -->
+                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
+                  <h2 style="margin:0 0 2px;font:600 14px var(--sans)">Tools</h2>
+                  <sc-for list="{{ siteTools }}" as="tl" hint-placeholder-count="6">
+                    <span onClick="{{ tl.go }}" title="{{ tl.desc }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="{{ tl.icon }}"></path></svg>{{ tl.label }}</span>
+                  </sc-for>
                   <sc-if value="{{ showPma }}" hint-placeholder-val="{{ true }}">
                     <span onClick="{{ openPma }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 9c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3Z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg>Open phpMyAdmin</span>
                   </sc-if>
@@ -1023,6 +1030,35 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
             </div>
+          </sc-if>
+
+          <!-- ══ Scheduled tab — queued one-off scripts for this environment ══ -->
+          <sc-if value="{{ tabScheduled }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">Commands queued to run once on this environment. Schedule new ones from the terminal.</span>
+              <div style="flex:1"></div>
+              <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ ssCount }}</span>
+            </div>
+            <sc-if value="{{ ssEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">Nothing scheduled on this environment.</div>
+            </sc-if>
+            <sc-for list="{{ ssRows }}" as="sr" hint-placeholder-count="3">
+              <div onClick="{{ sr.edit }}" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:12px 15px;display:flex;align-items:center;gap:13px;cursor:pointer" style-hover="border-color:var(--brand)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                <span style="min-width:0;flex:1">
+                  <span style="display:block;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sr.code }}</span>
+                  <sc-if value="{{ sr.multiShow }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:block;font:400 11px var(--sans);color:var(--ink-dim);margin-top:2px">{{ sr.multi }}</span>
+                  </sc-if>
+                </span>
+                <span style="flex:none;display:flex;align-items:center;gap:7px">
+                  <img src="{{ sr.avatar }}" style="width:20px;height:20px;border-radius:50%">
+                  <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ sr.author }}</span>
+                </span>
+                <span style="flex:none;font:500 12.5px var(--sans);color:var(--ink);font-variant-numeric:tabular-nums;min-width:150px;text-align:right">{{ sr.when }}</span>
+                <span onClick="{{ sr.del }}" title="Cancel" style="flex:none;font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Cancel</span>
+              </div>
+            </sc-for>
           </sc-if>
 
           <!-- ══ Registry tab — WP Registry audit coverage for this environment ══ -->
@@ -2603,6 +2639,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <div style="display:flex;gap:8px;align-items:flex-end;padding:8px 12px 12px">
               <textarea ref="{{ termRef }}" onInput="{{ onTermCmd }}" rows="1" placeholder="Run a command across the fleet…" spellcheck="false" style="flex:1;min-width:0;box-sizing:border-box;background:var(--panel);border:1px solid var(--rule);border-radius:9px;outline:none;color:var(--ink);font:400 13px/1.5 var(--mono);resize:none;padding:9px 12px;min-height:38px;max-height:160px;overflow-y:auto"></textarea>
+              <sc-if value="{{ termSchedShow }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ termSchedule }}" title="Schedule this command" style="font:600 13px var(--sans);color:var(--ink);background:var(--panel-2);cursor:pointer;white-space:nowrap;border:none;border-radius:9px;padding:0 14px;height:38px;display:inline-flex;align-items:center;gap:7px;flex:none" style-hover="filter:brightness(1.06)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+                  Schedule
+                </span>
+              </sc-if>
               <span onClick="{{ termRun }}" style="font:600 13px var(--sans);color:{{ termRunFg }};background:{{ termRunBg }};cursor:pointer;white-space:nowrap;border:none;border-radius:9px;padding:0 16px;height:38px;display:inline-flex;align-items:center;flex:none" style-hover="filter:brightness(1.08)">Run</span>
             </div>
           </div>
@@ -2610,6 +2652,151 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
   
+  <!-- ══ Edit scheduled script dialog (tools.js) ══ -->
+  <sc-if value="{{ esOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ esClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Edit scheduled script</div>
+        <div style="padding:16px 18px">
+          <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">Command</div>
+          <textarea value="{{ esCode }}" onInput="{{ onEsCode }}" rows="5" spellcheck="false" style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 12.5px/1.6 var(--mono);padding:9px 11px;outline:none;resize:vertical"></textarea>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <div style="flex:1">
+              <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">Date</div>
+              <input type="date" value="{{ esDate }}" onInput="{{ onEsDate }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--mono);padding:0 11px;outline:none;color-scheme:light dark">
+            </div>
+            <div style="flex:none;width:150px">
+              <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">Time</div>
+              <input type="time" value="{{ esTime }}" onInput="{{ onEsTime }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--mono);padding:0 11px;outline:none;color-scheme:light dark">
+            </div>
+          </div>
+          <div style="font:400 11.5px var(--sans);color:var(--ink-dim);margin-top:8px">Your timezone · {{ esZone }}</div>
+          <sc-if value="{{ esErrShow }}" hint-placeholder-val="{{ false }}">
+            <div style="font:500 12.5px var(--sans);color:var(--bad);margin-top:10px">{{ esErr }}</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ esDelete }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--bad-soft)">Cancel script</button>
+          <div style="flex:1"></div>
+          <button onClick="{{ esClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Close</button>
+          <button onClick="{{ esSave }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ esLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Schedule command dialog (terminal.js) ══ -->
+  <sc-if value="{{ schedOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ schedClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:75;display:flex;justify-content:center;align-items:flex-start;padding:12vh 20px">
+      <div onClick="{{ stopProp }}" style="width:500px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Schedule command</div>
+        <div style="padding:16px 18px">
+          <div style="font:400 12.5px var(--sans);color:var(--ink-dim)">Runs once on {{ schedTargets }}.</div>
+          <pre style="margin:9px 0 0;background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:9px 11px;font:400 12px/1.6 var(--mono);max-height:110px;overflow:auto;white-space:pre-wrap;word-break:break-word">{{ schedCode }}</pre>
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <div style="flex:1">
+              <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">Date</div>
+              <input type="date" value="{{ schedDate }}" onInput="{{ onSchedDate }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--mono);padding:0 11px;outline:none;color-scheme:light dark">
+            </div>
+            <div style="flex:none;width:150px">
+              <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">Time</div>
+              <input type="time" value="{{ schedTime }}" onInput="{{ onSchedTime }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--mono);padding:0 11px;outline:none;color-scheme:light dark">
+            </div>
+          </div>
+          <div style="font:400 11.5px var(--sans);color:var(--ink-dim);margin-top:8px">Your timezone · {{ schedZone }}</div>
+          <sc-if value="{{ schedErrShow }}" hint-placeholder-val="{{ false }}">
+            <div style="font:500 12.5px var(--sans);color:var(--bad);margin-top:10px">{{ schedErr }}</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ schedClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ schedConfirm }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ schedLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ System tool dialogs (tools.js) ══ -->
+  <sc-if value="{{ thOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeToolDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:12vh 20px">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Apply HTTPS URLs</div>
+        <div style="padding:16px 18px">
+          <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim)">Search and replace <code style="font:400 12px var(--mono)">http://</code> with <code style="font:400 12px var(--mono)">https://</code> across the database on {{ thSiteName }}.</div>
+          <div onClick="{{ thToggleWww }}" style="display:flex;align-items:center;gap:9px;margin-top:14px;cursor:pointer">
+            <span style="width:17px;height:17px;border:1px solid var(--rule);border-radius:5px;display:grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ thWwwMark }}</span>
+            <span style="font:500 13px var(--sans)">Also replace the www variant</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeToolDlg }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ thRun }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Apply HTTPS</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tlOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeToolDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:12vh 20px">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Launch site</div>
+        <div style="padding:16px 18px">
+          <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim)">Replaces the temporary domain with the live one across the database, then updates the site record.</div>
+          <div style="font:500 12px var(--sans);color:var(--ink-dim);margin:14px 0 5px">Live domain</div>
+          <input value="{{ tlDomain }}" onInput="{{ onTlDomain }}" placeholder="example.com" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--mono);padding:0 11px;outline:none">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeToolDlg }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ tlRun }}" style="border:none;background:{{ tlBg }};color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Launch</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeToolDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:12vh 20px">
+      <div onClick="{{ stopProp }}" style="width:520px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Migrate backup</div>
+        <div style="padding:16px 18px">
+          <div style="font:500 13px/1.6 var(--sans);color:var(--bad);background:var(--bad-soft);border-radius:9px;padding:10px 12px">This overwrites everything at {{ tmSiteName }} with the contents of the backup.</div>
+          <div style="font:500 12px var(--sans);color:var(--ink-dim);margin:14px 0 5px">Backup URL</div>
+          <input value="{{ tmUrl }}" onInput="{{ onTmUrl }}" placeholder="https://example.com/backup.zip" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px var(--mono);padding:0 11px;outline:none">
+          <div onClick="{{ tmToggleUpdate }}" style="display:flex;align-items:center;gap:9px;margin-top:14px;cursor:pointer">
+            <span style="width:17px;height:17px;border:1px solid var(--rule);border-radius:5px;display:grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ tmUpdateMark }}</span>
+            <span style="font:500 13px var(--sans)">Update URLs to match this site</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeToolDlg }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ tmRun }}" style="border:none;background:{{ tmBg }};color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Migrate</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tnOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeToolDlg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Maintenance mode · {{ tnSiteName }}</div>
+        <div style="flex:1;overflow-y:auto;padding:16px 18px">
+          <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim)">Turning maintenance on replaces the site with a notice built from these fields. Turning it off restores the site as it was.</div>
+          <sc-for list="{{ tnFields }}" as="f" hint-placeholder-count="5">
+            <div style="margin-top:12px">
+              <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:5px">{{ f.k }}</div>
+              <input value="{{ f.v }}" onInput="{{ f.on }}" style="width:100%;box-sizing:border-box;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ tnActivate }}" style="border:1px solid var(--rule);background:transparent;color:var(--ok);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--ok-soft)">Turn maintenance off</button>
+          <div style="flex:1"></div>
+          <button onClick="{{ closeToolDlg }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ tnDeactivate }}" style="border:none;background:var(--warn);color:var(--paper);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Turn maintenance on</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ WP Registry findings dialog (per component hash) ══ -->
   <sc-if value="{{ rgOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ rgClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">

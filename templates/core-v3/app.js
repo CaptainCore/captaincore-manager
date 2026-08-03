@@ -12,6 +12,9 @@ class Component extends DCLogic {
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
     capSel: '', capLimit: 60,
     rgHash: '', rgDetail: null, rgLoading: false, rgOpenIdx: -1,
+    toolDlg: '', httpsWww: false, lnDomain: '', mgUrl: '', mgUpdateUrls: true,
+    esId: 0, esCode: '', esDate: '', esTime: '', esErr: '', esBusy: false,
+    mtName: '', mtLink: '', mtSubject: '', mtStatus: '', mtAction: '',
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
@@ -50,6 +53,7 @@ class Component extends DCLogic {
     verifyDlgOpen: false, verifyToken: null, verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
+    schedOpen: false, schedDate: '', schedTime: '', schedErr: '', schedBusy: false,
     aaOpen: false, aaTab: 'upload', aaQ: '', aaEQ: '', aaDrag: false,
     shareDlgOpen: false, shareEmail: '', shareErr: '', shareSending: false, shareLoading: false,
     bpPid: 0, bpTab: 'pending', bpDetail: null, bpLoading: false, bpKilling: false,
@@ -1432,7 +1436,7 @@ class Component extends DCLogic {
       tabAddons: leaf === 'plugins' || leaf === 'themes', tabVersions: leaf === 'versions',
       tabBackups: leaf === 'backups', tabSnapshots: leaf === 'snapshots', tabCaptures: leaf === 'captures',
       tabUsers: leaf === 'users', tabLogs: leaf === 'logs', tabTimeline: leaf === 'timeline',
-      tabRegistry: leaf === 'registry',
+      tabRegistry: leaf === 'registry', tabScheduled: leaf === 'scheduled',
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
@@ -1585,6 +1589,7 @@ class Component extends DCLogic {
         doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
       ...(this.computeRegistry ? this.computeRegistry(real, s) : { regGroups: [], regChips: [], rgOpen: false }),
+      ...(this.computeTools ? this.computeTools(real, s) : { siteTools: [], thOpen: false, tlOpen: false, tmOpen: false, tnOpen: false }),
       dUsers, logChips, logLines,
       nsuOpen: !!s.nsuOpen,
       openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),
@@ -1702,7 +1707,7 @@ class Component extends DCLogic {
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
       else if ((e.metaKey || e.ctrlKey) && e.key === '.') { e.preventDefault(); this.toggleNav(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.state.dockOpen) { e.preventDefault(); this.termRun(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0, rgHash: '', rgDetail: null }); }
+      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '' }); }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }
@@ -1763,7 +1768,7 @@ class Component extends DCLogic {
     // spoken instruction to customers, so it must stay one click and one word.
     { id: 'users',     label: 'Users',     leaves: [['users', 'Users']] },
     { id: 'history',   label: 'History',   leaves: [['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures']] },
-    { id: 'activity',  label: 'Activity',  leaves: [['logs', 'Logs'], ['timeline', 'Timeline']] }
+    { id: 'activity',  label: 'Activity',  leaves: [['logs', 'Logs'], ['timeline', 'Timeline'], ['scheduled', 'Scheduled']] }
   ];
   // 'addons' was the pre-grouping name for the plugins/themes pair — keep the
   // alias so links minted before the reorg still land somewhere sensible.
