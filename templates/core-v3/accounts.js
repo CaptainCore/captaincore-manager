@@ -79,10 +79,21 @@ Object.assign(Component.prototype, {
       epIntervalChips: this.EP_INTERVALS.map(([v, label]) => ({ label, ...chip(String(ep.interval) === v),
         pick: () => mut(x => { x.interval = v; recalc(); }) })),
       epHasBillUsers: users.length > 0,
-      epBillRows: users.map(u => ({ label: u.name || u.email, sub: u.email,
-        mark: String(ep.billing_user_id) === String(u.user_id) ? '✓' : '',
-        bg: String(ep.billing_user_id) === String(u.user_id) ? 'var(--brand-soft)' : 'transparent',
-        pick: () => mut(x => { x.billing_user_id = u.user_id; }) })),
+      // Clicking the selected row TOGGLES it off — an account can legitimately
+      // have no billing user (Account.php normalizes empty to 0 and the
+      // invoice path guards on it), and there was otherwise no way back out
+      // once one was picked.
+      epBillRows: users.map(u => {
+        const on = String(ep.billing_user_id) === String(u.user_id);
+        return { label: u.name || u.email, sub: u.email,
+          mark: on ? '✓' : '',
+          bg: on ? 'var(--brand-soft)' : 'transparent',
+          title: on ? 'Click to clear the billing user' : 'Set as billing user',
+          pick: () => mut(x => { x.billing_user_id = on ? 0 : u.user_id; }) };
+      }),
+      epBillClearShow: !!Number(ep.billing_user_id),
+      epBillClear: () => mut(x => { x.billing_user_id = 0; }),
+      epBillNone: !Number(ep.billing_user_id),
       // datetime-local wants "YYYY-MM-DDTHH:MM:SS"; the API stores "YYYY-MM-DD HH:MM:SS".
       epRenewal: (ep.next_renewal || '').replace(' ', 'T'),
       onEpRenewal: e => mut(x => {

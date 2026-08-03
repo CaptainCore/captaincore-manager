@@ -591,6 +591,23 @@ site; only their dialogs and payload construction were exercised.
   with an explicit "+N more" (never a silent truncation), and the dialog got
   `max-height:82vh` + a scrolling body since the preview can now be tall.
 
+### Edit plan: billing user can be cleared (2026-08-03)
+The picker was select-only — once a billing user was set there was no way back
+to "none". Clicking the SELECTED row now toggles it off, and a **Clear** link
+sits beside the "Billing user" label whenever one is set (with a "none
+selected" hint when it isn't). This is a legitimate state, not a hack:
+`Accounts::update_plan()` itself normalizes an empty billing user to `""`
+(Accounts.php:133), `Account.php:156` reads it back as `0`, and the invoice
+path guards on `empty()`. Verified end to end on account 3: pick → toggle off →
+re-pick → Clear → save, persisted as the server's canonical `""`.
+
+**Backend fix that came with it:** `Account::calculate_usage()` fataled on any
+plan that exists but predates the `usage` key — the old guard only caught a
+wholly EMPTY plan, so `$account->plan->usage->storage = …` threw and took the
+entire account detail page down (500 on `GET /accounts/{id}`). One account of
+4,119 was affected (account 3, the local test account), which is why this went
+unnoticed. `usage` is now initialized whenever it's missing or not an object.
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…".

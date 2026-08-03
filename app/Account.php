@@ -530,6 +530,14 @@ class Account {
             $account->plan = (object) [ "usage" => (object) [ "storage" => "", "visits" => "", "sites" => "" ] ];
         }
 
+        // A plan can be populated yet predate the `usage` key (older records
+        // written before usage tracking). The guard above only catches a wholly
+        // empty plan, so assigning `plan->usage->storage` below fataled on
+        // those and took the whole account detail page down with it.
+        if ( ! isset( $account->plan->usage ) || ! is_object( $account->plan->usage ) ) {
+            $account->plan->usage = (object) [ "storage" => "", "visits" => "", "sites" => "" ];
+        }
+
         // Initialize totals
         $total_storage = 0;
         $total_visits  = 0;

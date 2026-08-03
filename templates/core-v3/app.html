@@ -3206,10 +3206,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </div>
           <sc-if value="{{ epHasBillUsers }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:7px">
-              <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">Billing user</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">Billing user</span>
+                <sc-if value="{{ epBillNone }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">none selected</span>
+                </sc-if>
+                <div style="flex:1"></div>
+                <sc-if value="{{ epBillClearShow }}" hint-placeholder-val="{{ false }}">
+                  <span onClick="{{ epBillClear }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
+                </sc-if>
+              </div>
               <div style="border:1px solid var(--rule);border-radius:10px;overflow-y:auto;max-height:150px">
                 <sc-for list="{{ epBillRows }}" as="bu" hint-placeholder-count="2">
-                  <div onClick="{{ bu.pick }}" style="display:flex;align-items:center;gap:9px;padding:7px 11px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ bu.bg }}" style-hover="background:var(--panel-2)">
+                  <div onClick="{{ bu.pick }}" title="{{ bu.title }}" style="display:flex;align-items:center;gap:9px;padding:7px 11px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ bu.bg }}" style-hover="background:var(--panel-2)">
                     <span style="width:14px;font:600 12px var(--sans);color:var(--brand-ink);flex:none">{{ bu.mark }}</span>
                     <span style="min-width:0"><span style="display:block;font:500 12.5px var(--sans)">{{ bu.label }}</span><span style="display:block;font:400 11px var(--mono);color:var(--ink-dim)">{{ bu.sub }}</span></span>
                   </div>
