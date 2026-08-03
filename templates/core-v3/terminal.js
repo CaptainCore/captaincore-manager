@@ -160,7 +160,27 @@ Object.assign(Component.prototype, {
         pick: () => this.insertRecipe(r) }));
     return {
       termCmd: s.termCmd || '',
-      termRef: (el) => { this._termEl = el; },
+      // The textarea has no value binding (the DC runtime treats value like
+      // defaultValue), so a FRESH mount starts empty even when state.termCmd
+      // holds text. Seed it here or anything that fills the input while the
+      // dock is CLOSED is lost when the dock opens — which is exactly what
+      // Cookbook → Run did. `_seeded` lives on the DOM node, so it re-seeds on
+      // every real remount while surviving the ref(null)/ref(el) churn that
+      // fires on ordinary re-renders. Side benefit: a typed draft now survives
+      // closing and reopening the dock.
+      termRef: (el) => {
+        this._termEl = el;
+        if (el && el._seeded !== true) {
+          el._seeded = true;
+          const pending = this.state.termCmd || '';
+          if (pending) {
+            el.value = pending;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+            el.focus();
+          }
+        }
+      },
       onTermCmd: e => {
         this.setState({ termCmd: e.target.value });
         e.target.style.height = 'auto';

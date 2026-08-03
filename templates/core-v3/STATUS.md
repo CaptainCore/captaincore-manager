@@ -206,6 +206,16 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   → daemon token → WebSocket `{token,action:"start"}` → plain-text frames → `"Finished."`
   sentinel → `onFinish`. The activity dock renders `activeJob()`.
 - **`terminal.js`** — the dock-footer terminal (loads after jobs.js; owns `termRun`).
+  **`termRef` SEEDS the textarea from `state.termCmd` on mount** — do not
+  simplify it back to `el => { this._termEl = el; }`. The textarea has no value
+  binding (the runtime treats `value` like `defaultValue`), so anything that
+  fills the input while the dock is CLOSED was silently lost the moment the
+  dock mounted a fresh empty node. That was the Cookbook → Run bug: the recipe
+  only appeared if the terminal happened to be open already. The `_seeded` flag
+  lives on the DOM node so it re-seeds per real remount while surviving the
+  ref(null)/ref(el) churn of ordinary re-renders. Any NEW "send this text to the
+  terminal" entry point gets this for free; it also means a typed draft now
+  survives closing and reopening the dock.
   **Schedule** (v1's terminal_schedule): a button beside Run, shown once
   something is typed, opens a date/time dialog and POSTs `/scripts/schedule`
   once per selected target (`{environment_id, code, run_at:{date,time,timezone}}`).
