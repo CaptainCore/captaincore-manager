@@ -1572,8 +1572,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Transactional sending via <span style="font:500 12.5px var(--mono);color:var(--ink)">{{ mgHost }}</span> · {{ mgSupp }}</span>
               <div style="flex:1"></div>
-              <sc-if value="{{ mgShowDeploy }}" hint-placeholder-val="{{ true }}">
-                <button onClick="{{ mgDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to site (SMTP)</button>
+              <sc-if value="{{ mgActive }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ mgOpenSupp }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Suppressions</button>
+                <button onClick="{{ mgOpenDeploy }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to…</button>
               </sc-if>
             </div>
             <sc-if value="{{ mgInactive }}" hint-placeholder-val="{{ false }}">
@@ -1585,6 +1586,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ mgNotice }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--warn)">{{ mgNoticeText }}</div>
             </sc-if>
+            <sc-if value="{{ mgActive }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">DNS verification</h2></div>
               <sc-for list="{{ mgRecs }}" as="r" hint-placeholder-count="3">
@@ -1651,6 +1653,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
             </div>
+            </sc-if>
             <sc-if value="{{ zoneShowSend }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding:11px 14px;border:1px solid var(--rule);border-radius:10px">
                 <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">Deletes the Mailgun sending domain and its SMTP credentials.</span>
@@ -4079,6 +4082,95 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeCt }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveCt }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save contacts</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Mailgun suppressions dialog ══ -->
+  <sc-if value="{{ mgSuppOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMgSupp }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:7vh 20px">
+      <div onClick="{{ stopProp }}" style="width:780px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Suppressions</span>
+          <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ mgHost }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ mgSuppRefresh }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">Refresh</span>
+          <span onClick="{{ closeMgSupp }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:none;padding:10px 18px 0">
+          <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:3px">
+            <sc-for list="{{ mgSuppTabs }}" as="t" hint-placeholder-count="4">
+              <span onClick="{{ t.go }}" style="padding:4px 12px;border-radius:6px;cursor:pointer;font:500 12px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:12px 18px 16px">
+          <sc-if value="{{ mgSuppNotice }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 2px;font:400 12.5px var(--sans);color:var(--ink-dim)">{{ mgSuppNoticeText }}</div>
+          </sc-if>
+          <sc-if value="{{ mgSuppHasRows }}" hint-placeholder-val="{{ true }}">
+            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+              <sc-for list="{{ mgSuppRows }}" as="sp" hint-placeholder-count="5">
+                <div style="display:flex;align-items:baseline;gap:12px;padding:9px 14px;border-bottom:1px solid var(--rule)">
+                  <span style="flex:none;width:230px;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sp.addr }}</span>
+                  <span style="flex:1;min-width:0;font:400 12px var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sp.detail }}</span>
+                  <span style="flex:none;font:400 11.5px var(--mono);color:var(--ink-dim)">{{ sp.date }}</span>
+                  <span onClick="{{ sp.del }}" style="flex:none;font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Mailgun deploy dialog ══ -->
+  <sc-if value="{{ mgDeployOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMgDeploy }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:100%;max-height:80vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">Deploy to connected site</span>
+          <span style="font:400 12.5px var(--sans);color:var(--ink-dim)"><span style="font:400 12px var(--mono)">{{ mgHost }}</span> → Gravity SMTP</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeMgDeploy }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ mgDepPicking }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:none;padding:12px 18px 0">
+            <input value="{{ mgDepQ }}" onInput="{{ onMgDepQ }}" placeholder="Filter sites…" style="width:100%;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 13px var(--sans);padding:0 11px;outline:none">
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 18px 16px">
+            <sc-if value="{{ mgDepNone }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 2px;font:400 12.5px var(--sans);color:var(--ink-dim)">No connected sites found for this domain.</div>
+            </sc-if>
+            <sc-if value="{{ mgDepHasRows }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ mgDepRows }}" as="cs" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule)">
+                    <span style="font:500 13px var(--sans)">{{ cs.name }}</span>
+                    <span style="font:400 11.5px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ cs.env }}</span>
+                    <div style="flex:1"></div>
+                    <button onClick="{{ cs.pick }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:5px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Deploy</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mgDepPicked }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:400 13px/1.6 var(--sans);color:var(--ink-dim)">Configures Gravity SMTP on <span style="font:500 13px var(--sans);color:var(--ink)">{{ mgDepTargetLabel }}</span> with the <span style="font:400 12px var(--mono)">{{ mgHost }}</span> sending credentials.</span>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:120px;font:500 12.5px var(--sans);color:var(--ink-dim);flex:none">Send from name</span>
+              <input value="{{ mgDepFrom }}" onInput="{{ onMgDepFrom }}" placeholder="e.g. Acme Co" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
+            </div>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+            <span onClick="{{ mgDepBack }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Back</span>
+            <div style="flex:1"></div>
+            <button onClick="{{ mgDepSubmit }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ mgDepSubmitLabel }}</button>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>

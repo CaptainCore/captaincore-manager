@@ -752,8 +752,8 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…". (Edit site + per-environment connection
   editing are DONE — see the Edit-site section above.)
-- **Domains**: Mailgun "View all logs →" pager; Mailgun deploy-to-site (needs a
-  site/env/from-name picker — real SMTP write).
+- **Domains**: Mailgun "View all logs →" pager. (Deploy-to-site and suppressions
+  are DONE — see the Sending-tab parity section below.)
 - **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
 - Gated-off-on-real: "Access as" (User Switching plugin — no per-user REST route),
   provider Import wizard, archive Delete (no v1 route).
@@ -788,8 +788,7 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
 - **Customer-role attention is minimal.** The admin-gated signals 403 for customers,
   so they get real activity plus an "all clear"/site-count row. The design's customer
   mock (invoice due, report ready) belongs to the Billing and Reports slices.
-- **Domains slice leftovers.** Not wired: Mailgun deploy-to-site (needs a site/env/
-  from-name picker — button hidden when real), suppressions view/delete, forwarding
+- **Domains slice leftovers.** Not wired: forwarding
   logs pager, domain→account assignment (admin `PUT /domains/{id}/account`),
   update-site-link, domain delete, DNS-zone delete. Wired but not live-toggled
   (registrar writes on real domains): lock/privacy toggles, contacts save,
@@ -970,3 +969,18 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   label wider than its 1/30 slot spills into the blank neighbors instead of clipping.
   Parity note: v1 (`core.php`) got the same feature as a "View Usage" dialog with a
   Chart.js bar chart plus a per-bucket table.
+- **Sending-tab parity (setup gate, suppressions, deploy-to)**: before a domain has
+  a Mailgun zone (`details.mailgun_id` absent), the Sending tab now shows ONLY the
+  intro line + "Set up mg.{domain}" banner — the DNS verification / Usage / Recent
+  events cards are wrapped in a new `mgActive` `sc-if` (previously they rendered
+  empty). Once active, two header buttons replace the old dead "Deploy to site
+  (SMTP)" stub: **Suppressions** opens a dialog with Bounces / Unsubscribes /
+  Complaints / Allowlist pills over the existing v1 routes
+  (`GET|DELETE /domain/{id}/mailgun/suppressions/{type}` — delete passes
+  `?address=`, allowlist rows key on `value`/`createdAt` instead of
+  `address`/`created_at`); **Deploy to…** opens a two-step dialog — filterable
+  `connected_sites` list (from the `/domain/{id}` payload) → send-from-name prompt
+  → `POST /domain/{id}/mailgun/deploy` `{site_id, environment, from_name}` (the v1
+  handler ignores the `domain` field core.php sends, so v3 omits it). Verified live
+  on both states: a no-Mailgun domain collapses to the setup banner; an active zone
+  shows the buttons, tab switching, empty-state copy, and the step-2 prompt.

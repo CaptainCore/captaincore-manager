@@ -1218,11 +1218,12 @@ class Component extends DCLogic {
       mgHost: 'mg.' + d.name,
       mgRecs, mgEvents: this.MG_EVENTS,
       mgSupp: '2 bounces · 0 unsubscribes · 0 complaints',
-      mgDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
+      mgSuppOpen: false, mgDeployOpen: false, mgOpenSupp: () => {},
+      mgOpenDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
-      mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
-      regShowRenew: true, mgShowDeploy: true, regShowAuto: true,
+      mgActive: true, mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
+      regShowRenew: true, regShowAuto: true,
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };
   }

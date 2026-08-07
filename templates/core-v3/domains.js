@@ -29,6 +29,7 @@ Object.assign(Component.prototype, {
       dnsRecs: this._hydrated ? [] : this.DNS_RECS.map(r => ({ ...r })),
       dnsDirty: false, dnsDel: [], dnsT: 'A', dnsN: '', dnsV: '', dnsEdit: 0,
       fwds: this._hydrated ? [] : this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',
+      mgSuppOpen: false, mgDeployOpen: false, mgDepQ: '', mgDepTarget: null, mgDepFrom: '', mgDepBusy: false,
       reg: { auto: false, lock: false, priv: false } });
     if (this._hydrated) this.loadDomainDetail(id);
   },
@@ -37,7 +38,8 @@ Object.assign(Component.prototype, {
     const dom = this._domain = { domainId: id, info: null, infoErr: '', dns: null, dnsErr: '',
       noZone: false, dnsLoading: true, saving: false, forwards: null, fwdStatus: null,
       fwdLoading: false, fwdErr: '', mailgun: null, mgLoading: false, mgErr: '', mgEvents: null,
-      mgUsage: null, mgUsagePeriod: 'day', mgUsageLoading: false, mgUsageErr: '' };
+      mgUsage: null, mgUsagePeriod: 'day', mgUsageLoading: false, mgUsageErr: '',
+      suppType: 'bounces', suppItems: null, suppLoading: false, suppErr: '' };
     const bump = () => { if (this._domain === dom) this.setState({}); };
     this.api('/domain/' + id).then(info => {
       if (this._domain !== dom) return;
@@ -257,6 +259,59 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this._domain === dom) { dom.mgUsageLoading = false; dom.mgUsageErr = 'Could not load usage.'; this.setState({}); } });
   },
 
+  // ── Mailgun suppressions (v1 parity: core.php View Suppressions) ──
+  loadMailgunSuppressions(type) {
+    const dom = this._domain;
+    if (!dom) return;
+    dom.suppType = type; dom.suppLoading = true; dom.suppErr = ''; dom.suppItems = null;
+    this.setState({});
+    this.api('/domain/' + dom.domainId + '/mailgun/suppressions/' + type).then(res => {
+      if (this._domain !== dom || dom.suppType !== type) return;
+      dom.suppLoading = false;
+      if (!res || res.code) { dom.suppErr = (res && res.message) || 'Could not load suppressions.'; this.setState({}); return; }
+      // Bounces/unsubscribes/complaints stamp created_at; the allowlist uses createdAt.
+      dom.suppItems = (res.items || []).slice().sort((a, b) =>
+        new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+      this.setState({});
+    }).catch(() => { if (this._domain === dom) { dom.suppLoading = false; dom.suppErr = 'Could not load suppressions.'; this.setState({}); } });
+  },
+
+  deleteMailgunSuppression(item) {
+    const dom = this._domain;
+    if (!dom) return;
+    const type = dom.suppType || 'bounces';
+    const identifier = type === 'whitelists' ? item.value : item.address;
+    if (!identifier || !confirm('Remove ' + identifier + ' from the ' + (type === 'whitelists' ? 'allowlist' : type) + '?')) return;
+    dom.suppLoading = true;
+    this.setState({});
+    this.api('/domain/' + dom.domainId + '/mailgun/suppressions/' + type + '?address=' + encodeURIComponent(identifier), { method: 'DELETE' })
+      .then(() => { if (this._domain !== dom) return;
+        if (this.toast) this.toast(identifier + ' removed.', { kind: 'success' });
+        dom.suppLoading = false;
+        this.loadMailgunSuppressions(type); })
+      .catch(() => { if (this._domain === dom) { dom.suppLoading = false; this.setState({});
+        if (this.toast) this.toast('Could not remove ' + identifier + '.', { kind: 'error' }); } });
+  },
+
+  // Deploy the zone's SMTP credentials to a connected site via Gravity SMTP.
+  // The v1 endpoint only reads site_id / environment / from_name.
+  deployMailgunReal() {
+    const dom = this._domain;
+    const site = this.state.mgDepTarget;
+    const from = (this.state.mgDepFrom || '').trim();
+    if (!dom || !site || this.state.mgDepBusy) return;
+    if (!from) { if (this.toast) this.toast('The send-from name cannot be empty.', { kind: 'error' }); return; }
+    this.setState({ mgDepBusy: true });
+    this.api('/domain/' + dom.domainId + '/mailgun/deploy', { method: 'POST',
+      body: { site_id: site.id, environment: site.environment, from_name: from } }).then(res => {
+      if (res && res.code) { this.setState({ mgDepBusy: false });
+        if (this.toast) this.toast(res.message || 'Mailgun deploy failed.', { kind: 'error' }); return; }
+      this.setState({ mgDepBusy: false, mgDeployOpen: false });
+      if (this.toast) this.toast('Gravity SMTP deployed to ' + site.name + ' (' + site.environment + ').', { kind: 'success' });
+    }).catch(() => { this.setState({ mgDepBusy: false });
+      if (this.toast) this.toast('Mailgun deploy failed.', { kind: 'error' }); });
+  },
+
   // ── Binding overrides (spread at the end of computeDomain) ───
   realDomainVals(s, d) {
     const dom = (this._domain && this._domain.domainId === s.domainId) ? this._domain : null;
@@ -339,6 +394,21 @@ Object.assign(Component.prototype, {
       enter: (e) => this.setState(this.barAnchor(e, 'mgHover', i)) }));
     const mgHi = s.mgHoverIdx;
     const mgHovered = (mgHi != null && mgHi >= 0 && mgHi < mgUsageBars.length) ? mgUsageBars[mgHi] : null;
+    const suppType = dom.suppType || 'bounces';
+    const suppRows = (dom.suppItems || []).map(item => ({
+      addr: suppType === 'whitelists' ? (item.value || '') : (item.address || ''),
+      detail: suppType === 'bounces' ? [item.code, item.error].filter(Boolean).join(' · ')
+        : suppType === 'unsubscribes' ? (Array.isArray(item.tags) ? item.tags.filter(t => t && t !== '*').join(', ') : '')
+        : suppType === 'whitelists' ? (item.reason || '') : '',
+      date: (dt => isNaN(dt) ? '' : dt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }))(new Date(item.created_at || item.createdAt)),
+      del: () => this.deleteMailgunSuppression(item) }));
+    const suppNote = dom.suppLoading ? 'Loading suppressions…'
+      : dom.suppErr ? dom.suppErr
+      : (dom.suppItems && !dom.suppItems.length ? 'No entries on the ' + (suppType === 'whitelists' ? 'allowlist' : suppType) + ' list.' : '');
+    const depQ = (s.mgDepQ || '').toLowerCase();
+    const depRows = (info.connected_sites || [])
+      .filter(cs => !depQ || (cs.name + ' ' + cs.environment).toLowerCase().includes(depQ))
+      .map(cs => ({ name: cs.name, env: cs.environment, pick: () => this.setState({ mgDepTarget: cs }) }));
     const mgEvents = (dom.mgEvents || []).map(ev => ({
       t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
@@ -409,7 +479,7 @@ Object.assign(Component.prototype, {
         stFg: f.status === 'Verified' ? 'var(--ok)' : f.status === 'Catch-all' ? 'var(--ink-dim)' : 'var(--warn)',
         del: () => this.api('/domain/' + dom.domainId + '/email-forwards/' + f.uid, { method: 'DELETE' })
           .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}) })),
-      mgInactive: !mgActive, mgLoading: dom.mgLoading,
+      mgActive, mgInactive: !mgActive, mgLoading: dom.mgLoading,
       mgNotice: !!dom.mgErr, mgNoticeText: dom.mgErr,
       mgSetup: () => { this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: 'mg.' + d.name } })
         .then(() => this.loadDomainDetail(dom.domainId)).catch(() => {}); },
@@ -426,7 +496,29 @@ Object.assign(Component.prototype, {
       mgUsageHasData: !!usageSeries.length,
       mgUsageRange: usage ? usage.start + ' — ' + usage.end : (dom.mgUsageLoading ? 'Loading usage…' : ''),
       mgUsageNotice: !!dom.mgUsageErr, mgUsageNoticeText: dom.mgUsageErr,
-      mgShowDeploy: false, mgDeploy: () => {}
+      // Suppressions dialog (v1 parity: core.php View Suppressions)
+      mgOpenSupp: () => { this.setState({ mgSuppOpen: true }); this.loadMailgunSuppressions('bounces'); },
+      closeMgSupp: () => this.setState({ mgSuppOpen: false }),
+      mgSuppOpen: !!s.mgSuppOpen,
+      mgSuppTabs: [['bounces', 'Bounces'], ['unsubscribes', 'Unsubscribes'], ['complaints', 'Complaints'], ['whitelists', 'Allowlist']].map(([id, label]) => ({ label,
+        fg: suppType === id ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: suppType === id ? 'var(--panel-2)' : 'transparent',
+        go: () => this.loadMailgunSuppressions(id) })),
+      mgSuppRefresh: () => this.loadMailgunSuppressions(suppType),
+      mgSuppRows: suppRows, mgSuppHasRows: suppRows.length > 0,
+      mgSuppNotice: !!suppNote, mgSuppNoticeText: suppNote,
+      // Deploy dialog (v1 parity: core.php Deploy to…)
+      mgOpenDeploy: () => this.setState({ mgDeployOpen: true, mgDepQ: '', mgDepTarget: null, mgDepFrom: '' }),
+      closeMgDeploy: () => this.setState({ mgDeployOpen: false }),
+      mgDeployOpen: !!s.mgDeployOpen,
+      mgDepQ: s.mgDepQ || '', onMgDepQ: e => this.setState({ mgDepQ: e.target.value }),
+      mgDepRows: depRows, mgDepHasRows: depRows.length > 0, mgDepNone: depRows.length === 0,
+      mgDepPicking: !s.mgDepTarget, mgDepPicked: !!s.mgDepTarget,
+      mgDepTargetLabel: s.mgDepTarget ? s.mgDepTarget.name + ' (' + s.mgDepTarget.environment + ')' : '',
+      mgDepFrom: s.mgDepFrom || '', onMgDepFrom: e => this.setState({ mgDepFrom: e.target.value }),
+      mgDepBack: () => this.setState({ mgDepTarget: null }),
+      mgDepSubmit: () => this.deployMailgunReal(),
+      mgDepSubmitLabel: s.mgDepBusy ? 'Deploying…' : 'Deploy'
     };
   }
 
