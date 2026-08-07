@@ -675,11 +675,25 @@ config at the production path (restored after): 30d/90d counts, Error filter,
 month grouping, real signed-link download (HTTP 200 from B2, correct object),
 and the staging empty state — no page errors.
 
-**Phase 2 (not built):** in-browser viewing — fetch the signed URL, gunzip
-client-side via `DecompressionStream('gzip')`, feed the existing highlighted
-log viewer. Gated on the B2 bucket CORS rules allowing a browser fetch from
-the app origin; check that before building (fallback: a Manager proxy route
-+ CLI `archive-cat`).
+**Phase 2 — in-browser viewer (2026-08-07, same day):** clicking a row (or
+its View link) swaps the list for an inline viewer — ← Archive back link,
+mono filename, line count ("last 1,000 of N lines" when truncated), Download,
+and the same line-number + `logSegments` highlighting as the Live view.
+**CORS check came back negative** — a signed-link GET returns no
+`Access-Control-Allow-Origin`, so the client-side `DecompressionStream` plan
+was dropped for the fallback, minus the CLI command: NEW Manager route
+`GET /site/{id}/{env}/logs-archive/view?file=…[&lines=N]`
+(`captaincore_site_logs_archive_view_func`, plain function — no classmap
+regen) resolves the signed link via the existing CLI `archive-get`, then
+`wp_remote_get`s and `gzdecode`s it SERVER-SIDE and returns
+`{file, total, truncated, content}` capped at the last 1000 lines (max 5000).
+Same filename validation + site-scoped permission as the download route; no
+bucket or CLI changes. Client: `viewArchivedLog` caches per env+file on
+`_detail.la[env].content`; row Download stops propagation (the row itself
+opens the viewer); `laView` clears on env switch and `openSite`. Verified
+live (same config-flip method, restored after): 382-line error log rendered
+highlighted, back-to-list, instant cached reopen, viewer-header download,
+no page errors.
 
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.

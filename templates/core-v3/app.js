@@ -1646,7 +1646,7 @@ class Component extends DCLogic {
       lmSetLive: () => this.setState({ logMode: 'live' }),
       lmSetArch: () => { this.setState({ logMode: 'archive' }); if (real && this.loadLogsArchive) this.loadLogsArchive(); },
       logsLead: s.logMode === 'archive' ? 'Rotated server logs archived to long-term storage.' : 'Server log files for this environment.',
-      ...(this.computeLogsArchive ? this.computeLogsArchive(real, s) : { laGroups: [], laRanges: [], laTypes: [], laLoading: false, laHasError: false, laEmpty: false }),
+      ...(this.computeLogsArchive ? this.computeLogsArchive(real, s) : { laGroups: [], laRanges: [], laTypes: [], laLoading: false, laHasError: false, laEmpty: false, laListShow: true, laViewOpen: false, laViewLines: [] }),
       tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         // Raw-HTML escape hatch: the DC runtime has no innerHTML binding, so

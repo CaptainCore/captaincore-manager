@@ -5787,6 +5787,61 @@ function captaincore_site_logs_archive_get_func( $request ) {
 	return $site->logs_archive_get( $file, $environment );
 }
 
+function captaincore_site_logs_archive_view_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+	$file        = $request->get_param( 'file' );
+	$lines       = intval( $request->get_param( 'lines' ) );
+	$lines       = ( $lines > 0 && $lines <= 5000 ) ? $lines : 1000;
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	if ( empty( $file ) ) {
+		return new WP_Error( 'missing_file', 'Missing file parameter', [ 'status' => 400 ] );
+	}
+
+	if ( ! preg_match( '/^(access|error)\.log-\d{4}-\d{2}-\d{2}-\d+(\.gz)?$/', $file ) ) {
+		return new WP_Error( 'invalid_file', 'Invalid file name', [ 'status' => 400 ] );
+	}
+
+	// Resolve a signed B2 link via the CLI, then fetch and decompress
+	// server-side — the bucket has no CORS rules, so the browser can't fetch
+	// the signed URL itself.
+	$site   = new CaptainCore\Site( $site_id );
+	$result = $site->logs_archive_get( $file, $environment );
+	$link   = is_object( $result ) && ! empty( $result->link ) ? $result->link : '';
+	if ( empty( $link ) ) {
+		$error = is_object( $result ) && ! empty( $result->error ) ? $result->error : 'Could not resolve the archived file.';
+		return new WP_Error( 'link_failed', $error, [ 'status' => 502 ] );
+	}
+
+	$response = wp_remote_get( $link, [ 'timeout' => 60 ] );
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'fetch_failed', 'Could not fetch the archived file.', [ 'status' => 502 ] );
+	}
+	$body = wp_remote_retrieve_body( $response );
+	if ( substr( $file, -3 ) === '.gz' ) {
+		$body = gzdecode( $body );
+		if ( $body === false ) {
+			return new WP_Error( 'gunzip_failed', 'Could not decompress the archived file.', [ 'status' => 502 ] );
+		}
+	}
+
+	$all       = explode( "\n", rtrim( $body, "\n" ) );
+	$total     = count( $all );
+	$truncated = $total > $lines;
+	$tail      = $truncated ? array_slice( $all, -$lines ) : $all;
+
+	return [
+		'file'      => $file,
+		'total'     => $total,
+		'truncated' => $truncated,
+		'content'   => implode( "\n", $tail ),
+	];
+}
+
 function captaincore_site_invite_preview_func( $request ) {
     $site_id = $request['id'];
     
@@ -7193,6 +7248,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs-archive/download', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_site_logs_archive_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs-archive/view', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_logs_archive_view_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]

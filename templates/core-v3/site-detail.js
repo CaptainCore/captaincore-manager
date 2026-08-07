@@ -10,7 +10,7 @@
 Object.assign(Component.prototype, {
 
   openSite(id, env) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', capSel: '', capLimit: 60 });
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', laView: '', capSel: '', capLimit: 60 });
     if (this._hydrated) this.loadSiteDetail(id);
   },
 
@@ -50,7 +50,7 @@ Object.assign(Component.prototype, {
   setEnv(name) {
     const real = this._detail;
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
-    this.setState({ env: name, logFile: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1 });
+    this.setState({ env: name, logFile: '', laView: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1 });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
     if (real && this.state.siteTab === 'logs' && this.state.logMode === 'archive') setTimeout(() => this.loadLogsArchive(name), 0);
     if (real && this.state.siteTab === 'registry') setTimeout(() => this.loadRegistry(), 0);
@@ -598,6 +598,30 @@ Object.assign(Component.prototype, {
     return n + ' B';
   },
 
+  // Phase 2: in-browser viewing. The B2 bucket has no CORS rules (verified:
+  // signed-link GET carries no Access-Control-Allow-Origin), so the browser
+  // can't fetch the signed URL itself — the Manager proxies instead:
+  // GET /site/{id}/{env}/logs-archive/view?file=… resolves the link via the
+  // CLI, downloads + gunzips server-side, and returns the last 1000 lines
+  // as {file, total, truncated, content}.
+  viewArchivedLog(name) {
+    const real = this._detail;
+    if (!real) return;
+    const env = this.state.env.toLowerCase();
+    const bucket = (real.la || {})[env];
+    if (!bucket) return;
+    bucket.content = bucket.content || {};
+    this.setState({ laView: name });
+    if (bucket.content[name] !== undefined) return;
+    bucket.content[name] = null; // loading
+    this.api('/site/' + real.siteId + '/' + env + '/logs-archive/view?file=' + encodeURIComponent(name)).then(res => {
+      bucket.content[name] = (res && typeof res.content === 'string')
+        ? { text: res.content, total: res.total || 0, truncated: !!res.truncated }
+        : { text: '', error: (res && res.message) || 'Could not load this file.' };
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { bucket.content[name] = { text: '', error: 'Could not load this file.' }; this.setState({ tick: this.state.tick }); });
+  },
+
   // Design-preview sample rows, dated relative to today so the default
   // 30-day range never renders an empty preview.
   laSample() {
@@ -642,11 +666,40 @@ Object.assign(Component.prototype, {
         typeFg: f.type === 'error' ? 'var(--bad)' : 'var(--brand-ink)',
         size: this.fmtBytes(f.size),
         name: f.name,
-        dl: () => real ? this.downloadArchivedLog(f.name) : this.toast('Sample data — downloads work on a real site', { kind: 'info' })
+        view: (e) => { if (e && e.stopPropagation) e.stopPropagation();
+          if (real) this.viewArchivedLog(f.name); else this.setState({ laView: f.name }); },
+        // The whole row opens the viewer, so Download must not bubble into it.
+        dl: (e) => { if (e && e.stopPropagation) e.stopPropagation();
+          if (real) this.downloadArchivedLog(f.name); else this.toast('Sample data — downloads work on a real site', { kind: 'info' }); }
       });
     });
     const totalSize = files.reduce((t, f) => t + (Number(f.size) || 0), 0);
+    // Inline viewer (replaces the list while a file is open).
+    const viewName = s.laView || '';
+    let vc = null; // {text, total, truncated, error} | {loading:true}
+    if (viewName) {
+      if (real) {
+        const c = ((bucket.content || {})[viewName]);
+        vc = c === undefined || c === null ? { loading: true } : c;
+      } else {
+        vc = { text: Array.from({ length: 8 }, (_, i) =>
+          '2026-08-0' + (i % 6 + 1) + ' 12:0' + i + ':11 [error] PHP Warning: sample archived log line ' + (i + 1)).join('\n'), total: 8, truncated: false };
+      }
+    }
+    const viewLines = vc && !vc.loading && !vc.error
+      ? (vc.text ? vc.text.split('\n') : ['(empty file)']).map((text, i) => ({ n: String(i + 1), segs: this.logSegments(text) }))
+      : [];
     return {
+      laListShow: !viewName,
+      laViewOpen: !!viewName,
+      laViewName: viewName,
+      laViewMeta: !vc ? '' : vc.loading ? 'Loading…' : vc.error ? '' :
+        (vc.truncated ? 'last ' + viewLines.length.toLocaleString() + ' of ' + Number(vc.total).toLocaleString() + ' lines' : viewLines.length.toLocaleString() + ' lines'),
+      laViewLoading: !!(vc && vc.loading),
+      laViewErr: (vc && vc.error) || '', laViewHasErr: !!(vc && vc.error),
+      laViewLines: viewLines,
+      laBack: () => this.setState({ laView: '' }),
+      laViewDl: () => { if (real) this.downloadArchivedLog(viewName); },
       laRanges: [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'All']].map(([d, label]) => ({ label,
         bg: range === d ? 'var(--panel-2)' : 'transparent', fg: range === d ? 'var(--ink)' : 'var(--ink-dim)',
         go: () => this.setState({ laRange: d }) })),
