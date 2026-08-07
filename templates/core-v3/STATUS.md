@@ -1023,7 +1023,16 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   (a >64 KB file view, a huge directory) kills the scanner, the pipe stops
   draining, ssh blocks, and the request hangs to the 120 s curl timeout (hit
   live on a 261 KB file view). server.go also got an s.Buffer bump to 8 MB as
-  defense-in-depth, but that only takes effect on the next CLI server rebuild. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  defense-in-depth, but that only takes effect on the next CLI server rebuild.
+- **File manager stale-while-revalidate cache**: every listing and file view is
+  cached for the session (`_fmCache`/`_fmViewCache`, keyed environment_id +
+  path). Navigating to a cached path renders instantly with a quiet
+  "Refreshing…" note while the ssh roundtrip re-fetches in the background and
+  swaps in changes; Refresh forces the same cycle. A background refresh that
+  errors from the server (path deleted) REPLACES the stale listing with the
+  error; a network-level failure keeps the cached copy silently. Responses that
+  land after the user navigated away still update the cache. Measured live:
+  cold subdir 3.3 s → warm 0.04 s; warm file reopen 0.04 s. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
   symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
   detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
   environment_id so env switches self-heal via the render-time lazy loader.

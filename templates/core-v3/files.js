@@ -11,6 +11,14 @@
 // the render-time/self-guarded form — it only fetches when the current env has
 // nothing loaded, so calling it on every render is cheap (site-detail lazy
 // pattern). loadFiles(path) always fetches.
+//
+// Every listing and file view is cached for the session (this._fmCache /
+// this._fmViewCache, keyed by environment_id + path). Navigation is
+// stale-while-revalidate: a cache hit renders instantly with a quiet
+// "Refreshing…" note while the ssh roundtrip re-fetches in the background and
+// swaps in whatever changed. A background refresh that ERRORS (path deleted)
+// replaces the stale listing; one that merely fails to connect keeps showing
+// the cached copy.
 
 Object.assign(Component.prototype, {
 
@@ -25,22 +33,38 @@ Object.assign(Component.prototype, {
       if (cur && cur.envId === envId) return; // already loaded/loading this env
       path = '';
     }
-    const next = this._fm = { envId, path, entries: null, loading: true, err: '' };
+    const cache = this._fmCache = this._fmCache || {};
+    const hit = cache[envId + ':' + path];
+    const next = this._fm = { envId, path: hit ? hit.path : path,
+      entries: hit ? hit.entries : null, loading: !hit, syncing: !!hit, err: '' };
     this.setState({});
     this.api('/environment/' + envId + '/files?path=' + encodeURIComponent(path)).then(res => {
-      if (this._fm !== next) return;
+      const ok = res && !res.code && Array.isArray(res.entries);
+      if (ok) {
+        const stored = { path: res.path || '', entries: res.entries };
+        cache[envId + ':' + path] = stored;
+        if (stored.path !== path) cache[envId + ':' + stored.path] = stored;
+      }
+      if (this._fm !== next) return; // navigated away — cache updated anyway
       next.loading = false;
-      if (!res || res.code || !Array.isArray(res.entries)) {
-        next.err = (res && res.message) || 'Could not load files.';
-      } else {
+      next.syncing = false;
+      if (ok) {
         next.path = res.path || '';
         next.entries = res.entries;
+      } else if (res && res.code && res.message) {
+        // The server answered with a real error (e.g. the path no longer
+        // exists) — a stale listing would mislead, so show the error.
+        next.entries = null;
+        next.err = res.message;
+      } else if (!hit) {
+        next.err = 'Could not load files.';
       }
       this.setState({});
     }).catch(() => {
       if (this._fm !== next) return;
       next.loading = false;
-      next.err = 'Could not load files.';
+      next.syncing = false;
+      if (!hit) next.err = 'Could not load files.'; // hit: keep the cached copy
       this.setState({});
     });
   },
@@ -49,19 +73,35 @@ Object.assign(Component.prototype, {
     const fm = this._fm;
     if (!fm) return;
     const p = (fm.path ? fm.path + '/' : '') + name;
-    this.setState({ fmViewOpen: true, fmViewName: name, fmViewText: '', fmViewNote: 'Loading…' });
+    const cache = this._fmViewCache = this._fmViewCache || {};
+    const key = fm.envId + ':' + p;
+    const hit = cache[key];
+    this.setState(hit
+      ? { fmViewOpen: true, fmViewName: name, fmViewText: hit.text, fmViewNote: hit.note + ' · refreshing…' }
+      : { fmViewOpen: true, fmViewName: name, fmViewText: '', fmViewNote: 'Loading…' });
     this.api('/environment/' + fm.envId + '/files?action=view&path=' + encodeURIComponent(p)).then(res => {
-      if (!this.state.fmViewOpen || this.state.fmViewName !== name) return;
-      if (!res || res.code) { this.setState({ fmViewNote: (res && res.message) || 'Could not load the file.' }); return; }
-      if (res.binary) { this.setState({ fmViewNote: 'Binary file — no preview · ' + this.fmSize(res.size) }); return; }
+      const live = this.state.fmViewOpen && this.state.fmViewName === name;
+      if (!res || res.code) {
+        if (live && !hit) this.setState({ fmViewNote: (res && res.message) || 'Could not load the file.' });
+        else if (live) this.setState({ fmViewNote: hit.note });
+        return;
+      }
+      if (res.binary) {
+        const note = 'Binary file — no preview · ' + this.fmSize(res.size);
+        cache[key] = { text: '', note };
+        if (live) this.setState({ fmViewNote: note });
+        return;
+      }
       let text = '';
       try {
         text = new TextDecoder().decode(Uint8Array.from(atob(res.content_b64 || ''), c => c.charCodeAt(0)));
       } catch (e) { /* leave empty */ }
-      this.setState({ fmViewText: text,
-        fmViewNote: this.fmSize(res.size) + (res.truncated ? ' · showing the first 512 KB' : '') });
+      const note = this.fmSize(res.size) + (res.truncated ? ' · showing the first 512 KB' : '');
+      cache[key] = { text, note };
+      if (live) this.setState({ fmViewText: text, fmViewNote: note });
     }).catch(() => {
-      if (this.state.fmViewName === name) this.setState({ fmViewNote: 'Could not load the file.' });
+      if (this.state.fmViewName !== name) return;
+      this.setState({ fmViewNote: hit ? hit.note : 'Could not load the file.' });
     });
   },
 
@@ -123,6 +163,7 @@ Object.assign(Component.prototype, {
       fmUpShow: !!path && !loading,
       fmUp: () => this.loadFiles(segs.slice(0, -1).join('/')),
       fmRefresh: () => { if (real) this.loadFiles(path); },
+      fmSyncing: !!(fm && fm.syncing),
       fmViewOpen: !!s.fmViewOpen,
       closeFmView: () => this.setState({ fmViewOpen: false }),
       fmViewName: s.fmViewName || '',

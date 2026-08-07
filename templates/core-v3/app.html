@@ -1142,6 +1142,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </sc-if>
               </sc-for>
               <div style="flex:1"></div>
+              <sc-if value="{{ fmSyncing }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 12px var(--sans);color:var(--ink-dim);animation:ccfade .2s ease">Refreshing…</span>
+              </sc-if>
               <span style="font:400 12px var(--sans);color:var(--ink-dim)">Read-only · locked to the home directory</span>
               <span onClick="{{ fmRefresh }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">Refresh</span>
             </div>
