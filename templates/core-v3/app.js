@@ -1299,12 +1299,15 @@ class Component extends DCLogic {
       const doDelete = () => real ? this.realDeleteAddon(a, real, sAK)
         : this.runJob((sAK.addonKind === 'plugins' ? 'plugin' : 'theme') + ' delete', a.slug + ' on ' + site.name);
       return { ...a, upd,
+      isMu: !!a.mu, notMu: !a.mu,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
-      dot: a.active ? 'var(--ok)' : 'var(--rule)',
-      statusLabel: a.active ? 'Active' : 'Inactive',
+      dot: a.mu ? 'var(--ink-dim)' : a.active ? 'var(--ok)' : 'var(--rule)',
+      statusLabel: a.mu ? a.muLabel : a.active ? 'Active' : 'Inactive',
       toggleLabel: a.active ? 'Deactivate' : 'Activate',
       doToggle, doUpdate,
-      ctx: (e) => this.openCtxMenu(e, [
+      ctx: (e) => this.openCtxMenu(e, a.mu ? [
+        { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') }
+      ] : [
         ...(upd ? [{ label: 'Update to ' + a.latest, act: doUpdate }] : []),
         { label: a.active ? 'Deactivate' : 'Activate', act: doToggle },
         { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') },

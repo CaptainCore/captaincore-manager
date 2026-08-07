@@ -994,3 +994,15 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   mode runs the usual simulated job. Verified live: menu entry renders red, the
   confirm carries the real wording, cancel leaves the row (actual deletion not
   exercised against a customer site — same dispatch path as the proven actions).
+- **Must-use plugins are no longer toggleable, and the Add dialog delete got
+  guards.** fetch-site-data reports mu-plugins/drop-ins with `status:
+  "must-use"`/`"dropin"`; the old `active: status === 'active'` collapsed them
+  into "inactive", rendering a dead Activate button (wp plugin activate/
+  deactivate/delete can't touch them). `realAddonSrc` now carries `mu`/`muLabel`
+  (and treats `active-network` as active); mu rows render a dimmed dot + a
+  static "Must-use"/"Drop-in" chip instead of the toggle, and their context
+  menu is Copy slug only. The Add dialog's wp.org "Uninstall" link (which fired
+  with NO confirm) is now "Delete" with the same confirm + guards as the row
+  delete: hidden for mu slugs, refused for the active theme, active plugins
+  deactivate first. Verified live: 4 mu rows render chips, mu context menu has
+  only Copy slug, dialog Delete confirms and cancel is a no-op.

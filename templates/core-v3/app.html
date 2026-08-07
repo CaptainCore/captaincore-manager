@@ -941,7 +941,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <sc-if value="{{ a.upd }}" hint-placeholder-val="{{ false }}">
                       <button onClick="{{ a.doUpdate }}" style="border:none;background:var(--brand);color:white;font:500 12px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Update</button>
                     </sc-if>
-                    <button onClick="{{ a.doToggle }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">{{ a.toggleLabel }}</button>
+                    <sc-if value="{{ a.isMu }}" hint-placeholder-val="{{ false }}">
+                      <span title="Loaded from mu-plugins — can't be toggled or deleted here" style="font:500 12px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:5px 11px">{{ a.statusLabel }}</span>
+                    </sc-if>
+                    <sc-if value="{{ a.notMu }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ a.doToggle }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 12px var(--sans);padding:5px 11px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">{{ a.toggleLabel }}</button>
+                    </sc-if>
                   </div>
                 </div>
               </sc-for>
@@ -4365,8 +4370,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </sc-if>
                   <div style="flex:1"></div>
                   <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 12px;margin-top:8px;border-top:1px solid var(--rule)">
+                    <sc-if value="{{ i.canDelete }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ i.doUninstall }}" style="font:500 12px var(--sans);color:var(--bad);cursor:pointer;padding:5px 8px">Delete</span>
+                    </sc-if>
                     <sc-if value="{{ i.installed }}" hint-placeholder-val="{{ false }}">
-                      <span onClick="{{ i.doUninstall }}" style="font:500 12px var(--sans);color:var(--bad);cursor:pointer;padding:5px 8px">Uninstall</span>
                       <span style="font:500 12px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:5px 11px">Installed</span>
                     </sc-if>
                     <sc-if value="{{ i.notInstalled }}" hint-placeholder-val="{{ true }}">

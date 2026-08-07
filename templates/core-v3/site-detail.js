@@ -587,7 +587,11 @@ Object.assign(Component.prototype, {
       name: p.title || p.plugin || p.name || '',
       slug: p.name || p.slug || '',
       v: p.version || '', latest: p.version || '',
-      active: p.status === 'active',
+      active: p.status === 'active' || p.status === 'active-network',
+      // must-use plugins and drop-ins can't be toggled, updated, or deleted
+      // by wp plugin commands — the UI renders them as a static chip.
+      mu: p.status === 'must-use' || p.status === 'dropin',
+      muLabel: p.status === 'dropin' ? 'Drop-in' : 'Must-use',
       _status: p.status || ''
     }));
   },
