@@ -360,6 +360,65 @@ Object.assign(Component.prototype, {
     };
   },
 
+  // ── Accounts card (customer/billing contacts + assignment) ────
+  // Scoped write: PUT /sites/{id}/accounts {customer_id, account_id,
+  // shared_with} — never the monolithic /sites/update, whose payload
+  // round-trips environments and deletes any it doesn't carry.
+  siteAcctIds(real) {
+    return (real && real.sharedWith ? real.sharedWith : []).map(a => String(a.account_id));
+  },
+
+  saveSiteAccounts(patch, doneMsg) {
+    const real = this._detail;
+    if (!real || !real.site || this._acctSaving) return;
+    this._acctSaving = true;
+    const body = {
+      customer_id: patch.customer_id !== undefined ? patch.customer_id : (real.site.customer_id || ''),
+      account_id: patch.account_id !== undefined ? patch.account_id : (real.site.account_id || ''),
+      shared_with: patch.shared_with !== undefined ? patch.shared_with : this.siteAcctIds(real)
+    };
+    const tid = this.toast('Saving account assignment…', { kind: 'loading' });
+    this.api('/sites/' + real.siteId + '/accounts', { method: 'PUT', body }).then(res => {
+      this._acctSaving = false;
+      if (!res || res.code || !res.site) {
+        this.updateToast(tid, (res && res.message) || 'Could not save account assignment', { kind: 'error' });
+        return;
+      }
+      if (this._detail === real) {
+        real.site = res.site;
+        real.sharedWith = res.shared_with || [];
+      }
+      this.updateToast(tid, doneMsg || 'Account assignment saved', { kind: 'success' });
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { this._acctSaving = false; this.updateToast(tid, 'Could not save account assignment', { kind: 'error' }); });
+  },
+
+  // Bindings for the assign-account picker (spread into computeDetail's return).
+  computeAssignAccount(real, s) {
+    const assigned = new Set(this.siteAcctIds(real));
+    const q = (s.asgQ || '').toLowerCase();
+    const rows = (s.asgOpen ? this.ACCOUNTS : [])
+      .filter(a => !assigned.has(String(a.id)))
+      .filter(a => !q || (a.name || '').toLowerCase().includes(q))
+      .slice(0, 100)
+      .map(a => ({
+        label: a.name,
+        sub: [a.sites + ' site' + (a.sites === 1 ? '' : 's'), a.plan].filter(Boolean).join(' · '),
+        pick: () => {
+          this.setState({ asgOpen: false });
+          this.saveSiteAccounts({ shared_with: [...assigned, String(a.id)] }, 'Assigned ' + a.name);
+        }
+      }));
+    return {
+      acctEdit: !!real && ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator',
+      openAsg: () => this.setState({ asgOpen: true, asgQ: '' }),
+      asgOpen: !!s.asgOpen,
+      closeAsg: () => this.setState({ asgOpen: false }),
+      asgQ: s.asgQ || '', onAsgQ: e => this.setState({ asgQ: e.target.value }),
+      asgRows: rows, asgHasRows: rows.length > 0, asgEmpty: !!s.asgOpen && rows.length === 0
+    };
+  },
+
   // ── Addons ────────────────────────────────────────────────────
   realAddonSrc(real, s) {
     const e = this.currentEnv(real, s);

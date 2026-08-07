@@ -2482,6 +2482,56 @@ function captaincore_sites_update_func( WP_REST_Request $request ) {
 	return $response;
 }
 
+function captaincore_site_accounts_update_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) ) {
+		return new WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+	}
+	$customer_id = $request->get_param( 'customer_id' );
+	$account_id  = $request->get_param( 'account_id' );
+	$shared_with = $request->get_param( 'shared_with' );
+	$customer_id = empty( $customer_id ) ? "" : intval( $customer_id );
+	$account_id  = empty( $account_id ) ? $current->account_id : intval( $account_id );
+	$shared_with = is_array( $shared_with ) ? array_map( 'intval', $shared_with ) : [];
+
+	$account_id_previous = $current->account_id;
+
+	( new CaptainCore\Sites )->update( [
+		'account_id'  => $account_id,
+		'customer_id' => $customer_id,
+		'updated_at'  => date( "Y-m-d H:i:s" ),
+	], [ 'site_id' => $site_id ] );
+
+	// Same dedup as Site::update() — the customer & billing accounts live on
+	// the site row, never in the AccountSite pivot.
+	$shared_with_ids = [];
+	foreach ( $shared_with as $shared_account_id ) {
+		if ( $shared_account_id == $customer_id || $shared_account_id == $account_id ) {
+			continue;
+		}
+		$shared_with_ids[] = $shared_account_id;
+	}
+
+	$site = new CaptainCore\Site( $site_id );
+	$site->assign_accounts( $shared_with_ids );
+
+	CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $current->name, "Updated account assignments for site {$current->name}", [], $customer_id ? $customer_id : null );
+
+	if ( ! empty( $account_id_previous ) ) {
+		( new CaptainCore\Account( $account_id_previous, true ) )->calculate_totals();
+	}
+	if ( ! empty( $account_id ) && $account_id != $account_id_previous ) {
+		( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
+	}
+
+	return [
+		'response'    => 'Successfully updated site accounts',
+		'site'        => $site->fetch(),
+		'shared_with' => $site->shared_with(),
+	];
+}
+
 function captaincore_sites_details_func( WP_REST_Request $request ) {
 	$post_id     = intval( $request['id'] );
 	if ( ! captaincore_verify_permissions( $post_id ) ) {
@@ -9438,6 +9488,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/update', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_sites_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/accounts', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_site_accounts_update_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]

@@ -1231,6 +1231,7 @@ class Component extends DCLogic {
     const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0]
       || { id: '', name: '', provider: '', account: '', core: '', visits: '', storage: '', envs: '', updates: 0, vuln: 0, labels: [], plugins: {}, theme: '', backup: '' };
     const real = this._detail && this._detail.siteId === s.siteId ? this._detail : null;
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
     // Load the active tab's data whenever the site detail is shown — covers
     // deep links to /account/sites/{id}/{tab}, not just tab clicks. Gated on
     // envs being loaded (stats needs the env's tracker); each loader self-guards
@@ -1490,17 +1491,37 @@ class Component extends DCLogic {
       dGoDomains: () => this.setState({ route: 'domains' }),
       sharedRows: (real && real.sharedWith
         ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: a.name, accId: String(a.account_id),
-            owner: real.site && String(real.site.customer_id) === String(a.account_id),
-            level: real.site && String(real.site.customer_id) === String(a.account_id) ? 'Owner' : 'Shared' })),
+            isCust: !!(real.site && String(real.site.customer_id) === String(a.account_id)),
+            isBill: !!(real.site && String(real.site.account_id) === String(a.account_id)) })),
            ...(s.shared || [])]
         : (s.shared || this.SHARED_INIT)).map(sh => ({ ...sh,
-        level: sh.level || (sh.pending ? 'Invited' : 'Shared'),
+        // Real rows wear their role chips (a row can be both contacts); sample
+        // and pending-invite rows keep the old single level chip.
+        chips: sh.isCust || sh.isBill
+          ? [...(sh.isCust ? [{ t: 'Customer', bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }] : []),
+             ...(sh.isBill ? [{ t: 'Billing', bg: 'var(--ok-soft)', fg: 'var(--ok)' }] : [])]
+          : [{ t: sh.level || (sh.pending ? 'Invited' : 'Shared'),
+               bg: sh.owner ? 'var(--brand-soft)' : 'var(--panel-2)',
+               fg: sh.owner ? 'var(--brand-ink)' : 'var(--ink-dim)' }],
         sub: sh.pending ? 'invite sent — pending' : (sh.people !== undefined ? sh.people + (sh.people === 1 ? ' person' : ' people') : 'account with access'),
-        lvlBg: sh.owner ? 'var(--brand-soft)' : 'var(--panel-2)',
-        lvlFg: sh.owner ? 'var(--brand-ink)' : 'var(--ink-dim)',
         removable: !sh.owner && !!sh.pending,
+        hasMenu: !!(isOp && real && sh.accId),
+        // Contact reassignment + unassign live in the row menu (right-click or
+        // the ⋯ button). The customer/billing account can't be removed —
+        // reassign the role first (v1's mandatory-toggle invariant).
+        ctx: (e) => {
+          if (!(isOp && real && sh.accId)) return;
+          this.openCtxMenu(e, [
+            ...(!sh.isCust ? [{ label: 'Set as customer contact', act: () => this.saveSiteAccounts({ customer_id: sh.accId }, sh.name + ' is now the customer contact') }] : []),
+            ...(!sh.isBill ? [{ label: 'Set as billing contact', act: () => this.saveSiteAccounts({ account_id: sh.accId }, sh.name + ' is now the billing contact') }] : []),
+            { label: 'Open account', act: () => this.openAccount(sh.accId) },
+            ...(!sh.isCust && !sh.isBill ? [{ label: 'Remove from site', act: () => {
+              if (confirm('Remove ' + sh.name + ' from this site?')) this.saveSiteAccounts({ shared_with: this.siteAcctIds(real).filter(id => id !== sh.accId) }, 'Removed ' + sh.name); } }] : [])
+          ]);
+        },
         open: () => { if (sh.accId) this.openAccount(sh.accId); },
         remove: () => this.setState(st => ({ shared: (st.shared || []).filter(x => x.uid !== sh.uid) })) })),
+      ...(this.computeAssignAccount ? this.computeAssignAccount(real, s) : {}),
       shareDraft: s.shareDraft, onShareDraft: e => this.setState({ shareDraft: e.target.value }),
       doShare: () => { if (real) { this.openShareDialog(); return; }
         if (window.CC_BOOT) { this.toast('Site details still loading…', { kind: 'info' }); return; }
