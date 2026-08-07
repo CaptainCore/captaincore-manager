@@ -370,7 +370,7 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   hid all 27); "all clear" row (excluded from the badge count) when nothing's open.
   Recent-activity feed real from `/activity-logs`. Security launcher tile shows the
   live open-threat count. Home jobs list = real session-dispatched jobs (see gaps).
-- **Stats tab** (verified on a customer site, tracker REDACTED) — KPI tiles,
+- **Stats tab** (verified on a customer site with a live Fathom tracker) — KPI tiles,
   zero-filled pageviews chart, top pages/referrers, grouping (Daily/Monthly/Yearly →
   Fathom day/month/year; no week grouping upstream) + range presets, sharing chips,
   empty state when no tracker. **Includes a backend change**: `captaincore.php` now
@@ -386,8 +386,8 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   caret only blinks while streaming; input reliably clears after a run.
 - **Label facets (Sites list)** — fixed: counter only read each site's first label
   (3 of 6 types were invisible); chips now colored from label metadata (v1 semantics).
-- **Accounts / Users / Access** (verified live on the a customer account account: 9 users,
-  plan usage 3/8 sites · 10.2/20 GB · 562k/1M visits) — account detail on real data:
+- **Accounts / Users / Access** (verified live on a multi-user customer account
+  with real plan usage bars) — account detail on real data:
   users with level labels (Owner row protected), pending invites (send/copy-link/
   revoke wired), sites + domains tabs from the bundle, Plan tab with real usage bars
   and plan facts, Activity tab from account-scoped activity logs. List shows real
@@ -608,6 +608,43 @@ entire account detail page down (500 on `GET /accounts/{id}`). One account of
 4,119 was affected (account 3, the local test account), which is why this went
 unnoticed. `usage` is now initialized whenever it's missing or not an object.
 
+### Accounts card: customer/billing contacts + assignment (2026-08-07)
+v1's Edit-Site dialog handled account assignment with icon toggles (person =
+`customer_id`, $ = `account_id` — account_id MEANS BILLING). v3 decomposes it
+into the Overview "Shared with" card, retitled **Accounts** ("access &
+contacts"):
+
+- **Role chips per row** — labeled "Customer" (brand-soft) and "Billing"
+  (ok-soft) instead of v1's tooltip-only icons; a row can wear both. Sample /
+  pending-invite rows keep the old single level chip.
+- **Row menu** (right-click or ⋯, operator-only): Set as customer contact ·
+  Set as billing contact · Open account · Remove from site. The current
+  customer/billing account can't be removed — reassign the role first (v1's
+  mandatory-toggle invariant). Remove confirms.
+- **Assign… button** (operator, beside Share) → searchable picker dialog
+  (`asg*` bindings in site-detail.js `computeAssignAccount`, spread GUARDED in
+  computeDetail) listing hydrated ACCOUNTS minus already-assigned.
+- **Immediate commit per action** (DNS-per-record pattern): each action PUTs
+  the NEW SCOPED ROUTE `PUT /sites/{id}/accounts` `{customer_id, account_id,
+  shared_with}` — `captaincore_site_accounts_update_func` in captaincore.php
+  (admin-gated; plain function, no classmap regen). It updates the two Sites
+  columns, dedups customer/billing out of the pivot, syncs via
+  `Site::assign_accounts` (which logs shared/unshared + recalcs pivot-account
+  totals), logs 'updated', and recalcs totals on the previous + new billing
+  accounts. **Never reuse `PUT /sites/update` from a scoped UI** — its payload
+  round-trips environments and DELETES any environment it doesn't carry
+  (Site.php update()), and it chains a full CLI update job.
+- Response returns refreshed `site` + `shared_with`; the client patches
+  `_detail` in place (no full reload). Toast loading→success per action.
+
+Verified live headless on a customer site with three assigned accounts: chips
+render for the baseline (distinct billing + customer + plain-shared rows);
+moved customer then billing onto the shared account (dual-chip row); assigned
+a fourth account via the picker; removed it (confirm); restored baseline. DB
+checked after each phase (Sites columns + AccountSite pivot exactly restored)
+and the activity log carries the full shared/unshared/updated trail.
+Unauthenticated PUT → 401.
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…".
@@ -738,8 +775,8 @@ unnoticed. `usage` is now initialized whenever it's missing or not an object.
   label)` (realPush is now a thin wrapper over it) with the usual provider-op
   dock tracking. Sample mode demos targets from FLEET. Gotcha: the target list
   is big (~3.4k envs locally) — first load takes several seconds; the dialog
-  shows a loading line until then. Verified live headless: picker → search
-  "a-target-site" → confirm (red button, correct from/to sentence) → cancel.
+  shows a loading line until then. Verified live headless: picker → search for
+  a target site → confirm (red button, correct from/to sentence) → cancel.
 - **Deploy tracking**: push/pull now stays a live dock job. Backend:
   `app/ProviderAction.php` never handled `push_environment` actions (they sat
   "started" forever, v1 included) — added it to `check()`'s Kinsta operations
