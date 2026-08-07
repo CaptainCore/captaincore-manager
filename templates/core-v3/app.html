@@ -1085,7 +1085,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px">
                 <div style="display:flex;flex-wrap:wrap;gap:6px">
                   <sc-for list="{{ regChips }}" as="rc" hint-placeholder-count="4">
-                    <span style="font:500 12px var(--sans);color:{{ rc.fg }};background:{{ rc.bg }};border-radius:99px;padding:4px 11px"><strong style="font-weight:700">{{ rc.n }}</strong> {{ rc.label }}</span>
+                    <span onClick="{{ rc.go }}" style="font:500 12px var(--sans);color:{{ rc.fg }};background:{{ rc.bg }};border:1.5px solid {{ rc.bd }};border-radius:99px;padding:4px 11px;cursor:pointer;user-select:none" style-hover="border-color:{{ rc.fg }}"><strong style="font-weight:700">{{ rc.n }}</strong> {{ rc.label }}</span>
                   </sc-for>
                 </div>
                 <sc-if value="{{ regCoverageShow }}" hint-placeholder-val="{{ false }}">
@@ -1095,6 +1095,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </div>
                 </sc-if>
               </div>
+            </sc-if>
+            <sc-if value="{{ regFilterEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:28px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">{{ regFilterEmptyText }}</div>
             </sc-if>
             <sc-for list="{{ regGroups }}" as="rg" hint-placeholder-count="2">
               <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">

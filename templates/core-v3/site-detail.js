@@ -10,7 +10,7 @@
 Object.assign(Component.prototype, {
 
   openSite(id, env) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', laView: '', capSel: '', capLimit: 60 });
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', laView: '', capSel: '', capLimit: 60, rgFilter: '' });
     if (this._hydrated) this.loadSiteDetail(id);
   },
 
@@ -50,7 +50,7 @@ Object.assign(Component.prototype, {
   setEnv(name) {
     const real = this._detail;
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
-    this.setState({ env: name, logFile: '', laView: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1 });
+    this.setState({ env: name, logFile: '', laView: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1, rgFilter: '' });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
     if (real && this.state.siteTab === 'logs' && this.state.logMode === 'archive') setTimeout(() => this.loadLogsArchive(name), 0);
     if (real && this.state.siteTab === 'registry') setTimeout(() => this.loadRegistry(), 0);

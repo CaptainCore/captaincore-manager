@@ -83,13 +83,21 @@ Object.assign(Component.prototype, {
           { label: 'Copy hash', act: () => this.ctxCopy(c.hash, 'hash') }
         ]) };
     };
+    // Summary-chip filter: '' = all; 'malware' matches the malware flag,
+    // status labels match non-malware rows of that status (a malware row only
+    // ever shows under its malware chip, mirroring the chip label logic).
+    const filt = s.rgFilter || '';
+    const matches = c => !filt ? true :
+      filt === 'malware' ? !!c.malware :
+      filt === 'unaudited' ? c.status === 'unaudited' :
+      (!c.malware && c.status === filt);
     const regGroups = KINDS.map(([kind, label]) => {
-      const rows = comps.filter(c => c.kind === kind);
+      const rows = comps.filter(c => c.kind === kind && matches(c));
       return { label, count: rows.length, rows: rows.map(mkRow), show: rows.length > 0 };
     }).filter(g => g.show);
 
     const chip = (n, label, tone) => n > 0 ? [{ n: String(n), label, bg: tone[0], fg: tone[1] }] : [];
-    const regChips = sum ? [
+    const regChips = (sum ? [
       { n: String(sum.total || 0), label: 'total', bg: 'var(--panel-2)', fg: 'var(--ink)' },
       ...chip(sum.malware, 'malware', ['var(--bad-soft)', 'var(--bad)']),
       ...chip(sum.critical, 'critical', ['var(--bad-soft)', 'var(--bad)']),
@@ -98,7 +106,10 @@ Object.assign(Component.prototype, {
       ...chip(sum.low, 'low', ['var(--panel-2)', 'var(--ink)']),
       ...chip(sum.clean, 'clean', ['var(--ok-soft)', 'var(--ok)']),
       ...chip(sum.unaudited, 'unaudited', ['var(--panel-2)', 'var(--ink-dim)'])
-    ] : [];
+    ] : []).map(c => ({ ...c,
+      // Active chip wears its own text color as a ring; "total" clears.
+      bd: filt && filt === c.label ? c.fg : 'transparent',
+      go: () => this.setState(st => ({ rgFilter: (c.label === 'total' || st.rgFilter === c.label) ? '' : c.label })) }));
 
     // Findings dialog.
     const d = s.rgDetail;
@@ -160,6 +171,8 @@ Object.assign(Component.prototype, {
       regErr: (bundle && bundle.err) || '',
       regErrShow: !!(bundle && bundle.err),
       regEmpty: !loading && !!bundle && comps.length === 0 && !(bundle && bundle.err),
+      regFilterEmpty: !loading && !!filt && comps.length > 0 && regGroups.length === 0,
+      regFilterEmptyText: 'No components match "' + filt + '" — click the chip again to show everything.',
       ...dlg
     };
   }

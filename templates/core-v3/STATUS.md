@@ -181,6 +181,11 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   origin and 401s for customers). The per-hash route is the public projection,
   so embargoed findings never reach the browser and the tab is customer-safe.
   Env switch clears the dialog and reloads (both setEnv and the tab handler).
+  **Summary chips are filters** (2026-08-07): clicking "3 high" etc. filters
+  the component groups to that bucket (`rgFilter` state; active chip wears its
+  text color as a ring; re-click or "total" clears; status labels match
+  non-malware rows only — a malware row shows only under its malware chip,
+  mirroring the chip-label logic). Cleared on env switch and openSite.
 - **`tools.js`** — the v1 Scripts tab's **System Tools**, rehomed into the site
   Overview (the old "Actions" card split into **Deploy** and **Tools**). Six
   tools, all streaming through `startJob` like any other action:
