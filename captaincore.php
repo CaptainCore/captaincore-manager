@@ -10656,12 +10656,15 @@ function captaincore_environment_files_func( WP_REST_Request $request ) {
 		return new WP_Error( 'cli_error', 'CaptainCore CLI server returned HTTP ' . wp_remote_retrieve_response_code( $response ), [ 'status' => 502 ] );
 	}
 
-	// Output may carry ssh/motd noise — the payload is the CC_FM_JSON: line.
+	// The payload arrives base64-encoded in short wrapped lines between
+	// markers — the dispatch server's line scanner caps at 64 KB/line, so one
+	// long JSON line (big file view, huge directory) would hang the request.
+	// Anything outside the markers is ssh/motd noise.
 	$body = wp_remote_retrieve_body( $response );
-	if ( ! preg_match( '/^CC_FM_JSON:(.*)$/m', $body, $matches ) ) {
+	if ( ! preg_match( '/CC_FM_BEGIN\s+(.*?)\s*CC_FM_END/s', $body, $matches ) ) {
 		return new WP_Error( 'fm_no_payload', 'No file listing returned: ' . substr( trim( $body ), 0, 300 ), [ 'status' => 502 ] );
 	}
-	$payload = json_decode( trim( $matches[1] ), true );
+	$payload = json_decode( base64_decode( preg_replace( '/\s+/', '', $matches[1] ) ), true );
 	if ( ! is_array( $payload ) ) {
 		return new WP_Error( 'fm_bad_payload', 'Could not parse the file listing.', [ 'status' => 502 ] );
 	}

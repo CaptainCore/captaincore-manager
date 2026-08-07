@@ -1015,9 +1015,15 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   file-manager`, bash + a PHP payload piped `echo | php` so it can't eat the ssh
   stdin the script itself arrives on) resolves every request through `realpath`
   and refuses anything that lands outside the home dir — traversal AND symlink
-  escapes — so the lock is enforced on the site, not in the UI. The Manager
-  greps the `CC_FM_JSON:` line out of the ssh output so MOTD noise can't break
-  parsing. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  escapes — so the lock is enforced on the site, not in the UI. Output protocol:
+  the JSON rides base64-encoded in SHORT WRAPPED LINES between CC_FM_BEGIN /
+  CC_FM_END markers (MOTD noise outside the markers is ignored). Short lines
+  are load-bearing, not cosmetic: the dispatch server's runCommand reads child
+  output with a default bufio.Scanner (64 KB/line cap) — one long JSON line
+  (a >64 KB file view, a huge directory) kills the scanner, the pipe stops
+  draining, ssh blocks, and the request hangs to the 120 s curl timeout (hit
+  live on a 261 KB file view). server.go also got an s.Buffer bump to 8 MB as
+  defense-in-depth, but that only takes effect on the next CLI server rebuild. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
   symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
   detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
   environment_id so env switches self-heal via the render-time lazy loader.
