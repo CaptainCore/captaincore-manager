@@ -1,3 +1,0 @@
-[submodule "inc/constellix-api"]
-	path = includes/constellix-api
-	url = https://github.com/anchorhost/constellix-api
