@@ -1133,6 +1133,49 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-for>
           </sc-if>
 
+          <sc-if value="{{ tabFiles }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:6px;margin-top:16px;flex-wrap:wrap">
+              <sc-for list="{{ fmCrumbs }}" as="c" hint-placeholder-count="2">
+                <span onClick="{{ c.go }}" style="font:500 13px var(--sans);color:{{ c.fg }};cursor:pointer">{{ c.label }}</span>
+                <sc-if value="{{ c.sep }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:400 12px var(--sans);color:var(--ink-dim)">/</span>
+                </sc-if>
+              </sc-for>
+              <div style="flex:1"></div>
+              <span style="font:400 12px var(--sans);color:var(--ink-dim)">Read-only · locked to the home directory</span>
+              <span onClick="{{ fmRefresh }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">Refresh</span>
+            </div>
+            <sc-if value="{{ fmNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">{{ fmNoticeText }}</div>
+            </sc-if>
+            <sc-if value="{{ fmHasRows }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);font:600 11.5px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
+                  <span style="flex:1">Name</span>
+                  <span style="flex:none;width:80px;text-align:right">Size</span>
+                  <span style="flex:none;width:110px;text-align:right">Modified</span>
+                </div>
+                <sc-if value="{{ fmUpShow }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ fmUp }}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                    <span style="flex:none;width:16px;text-align:center;font:400 13px var(--mono);color:var(--ink-dim)">↰</span>
+                    <span style="font:400 13px var(--mono);color:var(--ink-dim)">..</span>
+                  </div>
+                </sc-if>
+                <sc-for list="{{ fmRows }}" as="f" hint-placeholder-count="8">
+                  <div onClick="{{ f.open }}" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ f.iconFg }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ f.icon }}"></path></svg>
+                    <span style="flex:1;min-width:0;font:400 13px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+                    <sc-if value="{{ f.linkShow }}" hint-placeholder-val="{{ false }}">
+                      <span title="Symlink" style="flex:none;font:500 11px var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:1px 8px">link</span>
+                    </sc-if>
+                    <span style="flex:none;width:80px;text-align:right;font:400 12px var(--mono);color:var(--ink-dim)">{{ f.sizeLabel }}</span>
+                    <span style="flex:none;width:110px;text-align:right;font:400 12px var(--mono);color:var(--ink-dim)">{{ f.dateLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
+
           <sc-if value="{{ tabCaptures }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Visual history — screenshots of the configured pages, captured over time.</span>
@@ -4087,6 +4130,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeCt }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveCt }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save contacts</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ File viewer dialog (Files tab) ══ -->
+  <sc-if value="{{ fmViewOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeFmView }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:860px;max-width:100%;max-height:86vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 14px var(--mono)">{{ fmViewName }}</span>
+          <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ fmViewNote }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeFmView }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ fmViewHasBody }}" hint-placeholder-val="{{ true }}">
+          <pre style="flex:1;overflow:auto;margin:0;padding:14px 18px;background:var(--panel);font:400 12px/1.65 var(--mono);color:var(--ink);white-space:pre;tab-size:4">{{ fmViewBody }}</pre>
+        </sc-if>
       </div>
     </div>
   </sc-if>

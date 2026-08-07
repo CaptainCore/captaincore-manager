@@ -9564,6 +9564,25 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// File manager — browse/read files within an environment's home directory.
+	// Runs `captaincore ssh <target> --script=file-manager` synchronously via
+	// the CLI dispatch server; the remote script enforces the home-dir lock.
+	register_rest_route(
+		'captaincore/v1', '/environment/(?P<id>[\d]+)/files', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_environment_files_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+			'args'                => [
+				'path'   => [ 'default' => '' ],
+				'action' => [
+					'default'           => 'list',
+					'validate_callback' => function( $value ) { return in_array( $value, [ 'list', 'view' ], true ); },
+				],
+			],
+		]
+	);
+
 	// Email subscription management (public endpoint)
 	register_rest_route(
 		'captaincore/v1', '/email/subscription', [
@@ -10573,6 +10592,84 @@ function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 		'plugin_slug' => $plugin_slug,
 		'diff'        => $diff,
 	];
+}
+
+/**
+ * REST endpoint: File manager for an environment, locked to the home directory.
+ *
+ * GET /environment/{id}/files?path=<relative>&action=list|view
+ *
+ * Dispatches `ssh <target> --script=file-manager` synchronously through the
+ * CLI server. The requested path travels base64-encoded so spaces and shell
+ * metacharacters can't break out of the command; containment (realpath under
+ * the home directory, symlinks included) is enforced by the remote script on
+ * the site itself.
+ */
+function captaincore_environment_files_func( WP_REST_Request $request ) {
+	$environment_id = $request['id'];
+	$path           = (string) $request->get_param( 'path' );
+	$action         = $request->get_param( 'action' );
+
+	$environment = CaptainCore\Environments::get( $environment_id );
+	if ( ! $environment ) {
+		return new WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
+	}
+
+	$site = CaptainCore\Sites::get( $environment->site_id );
+	if ( ! $site || ! captaincore_verify_permissions( $site->site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$target = $site->site;
+	if ( strtolower( $environment->environment ) !== 'production' ) {
+		$target = "{$target}-" . strtolower( $environment->environment );
+	}
+	if ( ! preg_match( '/^[a-zA-Z0-9._-]+$/', $target ) ) {
+		return new WP_Error( 'invalid_target', 'Invalid site target.', [ 'status' => 400 ] );
+	}
+
+	$path_b64 = base64_encode( $path );
+	$command  = "ssh {$target} --script=file-manager --action={$action} --path-b64={$path_b64}";
+
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$response = wp_remote_post(
+		CAPTAINCORE_CLI_ADDRESS . '/run',
+		[
+			'timeout' => 120,
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8',
+				'token'        => captaincore_get_cli_token(),
+			],
+			'body'        => json_encode( [ 'command' => $command ] ),
+			'method'      => 'POST',
+			'data_format' => 'body',
+		]
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'cli_unreachable', 'CaptainCore CLI server unreachable: ' . $response->get_error_message(), [ 'status' => 502 ] );
+	}
+	if ( wp_remote_retrieve_response_code( $response ) >= 400 ) {
+		return new WP_Error( 'cli_error', 'CaptainCore CLI server returned HTTP ' . wp_remote_retrieve_response_code( $response ), [ 'status' => 502 ] );
+	}
+
+	// Output may carry ssh/motd noise — the payload is the CC_FM_JSON: line.
+	$body = wp_remote_retrieve_body( $response );
+	if ( ! preg_match( '/^CC_FM_JSON:(.*)$/m', $body, $matches ) ) {
+		return new WP_Error( 'fm_no_payload', 'No file listing returned: ' . substr( trim( $body ), 0, 300 ), [ 'status' => 502 ] );
+	}
+	$payload = json_decode( trim( $matches[1] ), true );
+	if ( ! is_array( $payload ) ) {
+		return new WP_Error( 'fm_bad_payload', 'Could not parse the file listing.', [ 'status' => 502 ] );
+	}
+	if ( ! empty( $payload['error'] ) ) {
+		return new WP_Error( 'fm_remote_error', $payload['error'], [ 'status' => 400 ] );
+	}
+
+	return new WP_REST_Response( $payload, 200 );
 }
 
 /**

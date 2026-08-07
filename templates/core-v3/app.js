@@ -1246,6 +1246,7 @@ class Component extends DCLogic {
       else if (tab === 'snapshots') this.loadSnapshots();
       else if (tab === 'captures') this.loadCaptures();
       else if (tab === 'timeline') this.loadTimeline();
+      else if (tab === 'files') this.loadFiles();
     }, 0);
     const slug = site.name.split('.')[0];
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
@@ -1445,6 +1446,7 @@ class Component extends DCLogic {
       tabBackups: leaf === 'backups', tabSnapshots: leaf === 'snapshots', tabCaptures: leaf === 'captures',
       tabUsers: leaf === 'users', tabLogs: leaf === 'logs', tabTimeline: leaf === 'timeline',
       tabRegistry: leaf === 'registry', tabScheduled: leaf === 'scheduled',
+      tabFiles: leaf === 'files',
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
@@ -1544,6 +1546,7 @@ class Component extends DCLogic {
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
       doUpdateAll: () => this.runJob('update-wp', site.name + ' · ' + updCount + ' components'),
       ...this.computeAddAddon(real, s, site),
+      ...this.computeFiles(real, s),
       quicksaves, newQuicksave: () => real ? this.realNewQuicksave(real) : this.runJob('quicksave', site.name),
       qsDialogOpen: !!dlgQk,
       dlgHash: dlgQk ? (dlgQk.hashShort || dlgQk.hash) : '', dlgDesc: dlgQk ? dlgQk.desc : '', dlgWhen: dlgQk ? dlgQk.when : '',
@@ -1842,7 +1845,7 @@ class Component extends DCLogic {
   SITE_TAB_GROUPS = [
     { id: 'overview',  label: 'Overview',  leaves: [['overview', 'Overview']] },
     { id: 'stats',     label: 'Stats',     leaves: [['stats', 'Stats']] },
-    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['registry', 'Registry']] },
+    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['registry', 'Registry'], ['files', 'Files']] },
     // Users stays TOP-LEVEL on purpose. Grouping buys the most for tabs you
     // skip past; Users is the opposite — "pick a site → Users → Login as" is a
     // spoken instruction to customers, so it must stay one click and one word.
@@ -1874,7 +1877,7 @@ class Component extends DCLogic {
     if (!this._detail) return;
     const load = { logs: 'loadLogs', registry: 'loadRegistry', stats: 'loadStats',
       versions: 'loadQuicksaves', backups: 'loadBackups', snapshots: 'loadSnapshots',
-      captures: 'loadCaptures', timeline: 'loadTimeline' }[leaf];
+      captures: 'loadCaptures', timeline: 'loadTimeline', files: 'loadFiles' }[leaf];
     if (load && this[load]) this[load]();
   }
 

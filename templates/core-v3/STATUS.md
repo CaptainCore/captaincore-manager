@@ -1006,3 +1006,22 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   delete: hidden for mu slugs, refused for the active theme, active plugins
   deactivate first. Verified live: 4 mu rows render chips, mu context menu has
   only Copy slug, dialog Delete confirms and cancel is a no-op.
+- **File manager (Inventory → Files leaf)**: read-only browser over the
+  environment's home directory. New Manager route `GET
+  /environment/{id}/files?path=&action=list|view` (permission via env→site
+  ownership) dispatches `ssh <target> --script=file-manager` through the CLI
+  server's SYNCHRONOUS `/run` (the plugin-diff pattern) — no job dock involved.
+  The path travels base64-encoded; the new CLI remote-script (`lib/remote-scripts/
+  file-manager`, bash + a PHP payload piped `echo | php` so it can't eat the ssh
+  stdin the script itself arrives on) resolves every request through `realpath`
+  and refuses anything that lands outside the home dir — traversal AND symlink
+  escapes — so the lock is enforced on the site, not in the UI. The Manager
+  greps the `CC_FM_JSON:` line out of the ssh output so MOTD noise can't break
+  parsing. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
+  detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
+  environment_id so env switches self-heal via the render-time lazy loader.
+  Verified live end-to-end on a Freighter tenant: root listing, subdir
+  navigation, file preview; traversal (`../../etc`) refused remotely. NOTE: the
+  CLI half ships from the captaincore repo — the remote script must be pulled on
+  the core server for prod to work.
