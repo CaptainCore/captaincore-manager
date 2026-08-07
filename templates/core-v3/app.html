@@ -1165,7 +1165,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </div>
                 </sc-if>
                 <sc-for list="{{ fmRows }}" as="f" hint-placeholder-count="8">
-                  <div onClick="{{ f.open }}" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                  <div onClick="{{ f.open }}" onContextMenu="{{ f.ctx }}" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ f.iconFg }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ f.icon }}"></path></svg>
                     <span style="flex:1;min-width:0;font:400 13px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
                     <sc-if value="{{ f.linkShow }}" hint-placeholder-val="{{ false }}">

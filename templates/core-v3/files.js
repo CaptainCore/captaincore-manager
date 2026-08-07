@@ -105,6 +105,32 @@ Object.assign(Component.prototype, {
     });
   },
 
+  // Delete one regular file (the remote script refuses directories and
+  // symlinks). Optimistically drops the row + caches, then re-fetches for truth.
+  deleteFmFile(name) {
+    const fm = this._fm;
+    const real = this._detail;
+    if (!fm || !real) return;
+    const path = fm.path;
+    const p = (path ? path + '/' : '') + name;
+    const site = (real.site && real.site.name) || '';
+    if (!confirm('Delete ' + p + ' from ' + site + '? The file is removed from the server.')) return;
+    this.api('/environment/' + fm.envId + '/files?path=' + encodeURIComponent(p), { method: 'DELETE' }).then(res => {
+      if (!res || res.code || !res.deleted) {
+        if (this.toast) this.toast((res && res.message) || 'Could not delete ' + name + '.', { kind: 'error' });
+        return;
+      }
+      if (this.toast) this.toast(p + ' deleted.', { kind: 'success' });
+      const drop = l => l ? l.filter(en => en.name !== name) : l;
+      const cached = (this._fmCache || {})[fm.envId + ':' + path];
+      if (cached) cached.entries = drop(cached.entries);
+      if (this._fm && this._fm.envId === fm.envId && this._fm.path === path) this._fm.entries = drop(this._fm.entries);
+      if (this._fmViewCache) delete this._fmViewCache[fm.envId + ':' + p];
+      this.setState({});
+      this.loadFiles(path);
+    }).catch(() => { if (this.toast) this.toast('Could not delete ' + name + '.', { kind: 'error' }); });
+  },
+
   fmSize(bytes) {
     const n = parseInt(bytes, 10);
     if (isNaN(n)) return '—';
@@ -135,20 +161,32 @@ Object.assign(Component.prototype, {
     const sorted = entries.slice().sort((a, b) =>
       a.type === b.type ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1));
     const dateFmt = t => t ? new Date(t * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    const rows = sorted.map(en => ({
-      name: en.name,
-      isDir: en.type === 'dir',
-      icon: en.type === 'dir'
-        ? 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
-        : 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
-      iconFg: en.type === 'dir' ? 'var(--brand-ink)' : 'var(--ink-dim)',
-      linkShow: !!en.link,
-      sizeLabel: en.type === 'dir' ? '' : this.fmSize(en.size),
-      dateLabel: dateFmt(en.mtime),
-      open: () => { if (!real) return;
-        if (en.type === 'dir') this.loadFiles((this._fm && this._fm.path ? this._fm.path + '/' : '') + en.name);
-        else this.viewFile(en.name); }
-    }));
+    const relOf = n => (fm && fm.path ? fm.path + '/' : '') + n;
+    const rows = sorted.map(en => {
+      const isDir = en.type === 'dir';
+      const open = () => { if (!real) return;
+        if (isDir) this.loadFiles(relOf(en.name));
+        else this.viewFile(en.name); };
+      return {
+        name: en.name,
+        isDir,
+        icon: isDir
+          ? 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
+          : 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
+        iconFg: isDir ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        linkShow: !!en.link,
+        sizeLabel: isDir ? '' : this.fmSize(en.size),
+        dateLabel: dateFmt(en.mtime),
+        open,
+        // Delete is files-only (the remote script refuses dirs + symlinks); a
+        // symlinked file is excluded here too since the server won't remove it.
+        ctx: (e) => this.openCtxMenu(e, [
+          { label: isDir ? 'Open folder' : 'View file', act: open },
+          { label: 'Copy path', act: () => this.ctxCopy(relOf(en.name), 'path') },
+          ...(!isDir && !en.link ? [{ label: 'Delete…', danger: true, act: () => this.deleteFmFile(en.name) }] : [])
+        ])
+      };
+    });
     const segs = path ? path.split('/') : [];
     const crumbs = [{ label: 'Home', fg: segs.length ? 'var(--brand-ink)' : 'var(--ink)', sep: segs.length > 0,
       go: () => { if (real) this.loadFiles(''); } }];

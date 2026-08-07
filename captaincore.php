@@ -9567,6 +9567,7 @@ function captaincore_register_rest_endpoints() {
 	// File manager — browse/read files within an environment's home directory.
 	// Runs `captaincore ssh <target> --script=file-manager` synchronously via
 	// the CLI dispatch server; the remote script enforces the home-dir lock.
+	// HTTP DELETE removes one regular file (never a directory or symlink).
 	register_rest_route(
 		'captaincore/v1', '/environment/(?P<id>[\d]+)/files', [
 			'methods'             => 'GET',
@@ -9579,6 +9580,17 @@ function captaincore_register_rest_endpoints() {
 					'default'           => 'list',
 					'validate_callback' => function( $value ) { return in_array( $value, [ 'list', 'view' ], true ); },
 				],
+			],
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/environment/(?P<id>[\d]+)/files', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_environment_files_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+			'args'                => [
+				'path' => [ 'required' => true ],
 			],
 		]
 	);
@@ -10608,7 +10620,7 @@ function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 function captaincore_environment_files_func( WP_REST_Request $request ) {
 	$environment_id = $request['id'];
 	$path           = (string) $request->get_param( 'path' );
-	$action         = $request->get_param( 'action' );
+	$action         = $request->get_method() === 'DELETE' ? 'delete' : $request->get_param( 'action' );
 
 	$environment = CaptainCore\Environments::get( $environment_id );
 	if ( ! $environment ) {
@@ -10672,15 +10684,25 @@ function captaincore_environment_files_func( WP_REST_Request $request ) {
 		return new WP_Error( 'fm_remote_error', $payload['error'], [ 'status' => 400 ] );
 	}
 
-	// Audit trail for file reads — the home dir holds wp-config.php, .env
-	// files, and backups, so file CONTENTS reaching a browser is worth a row
-	// (same precedent as "Retrieved auth code"). Listings stay unlogged:
-	// navigation + background cache refreshes would be all noise.
+	// Audit trail for file reads and deletes — the home dir holds
+	// wp-config.php, .env files, and backups, so contents reaching a browser
+	// (same precedent as "Retrieved auth code") and destructive removals both
+	// get a row. Listings stay unlogged: navigation + background cache
+	// refreshes would be all noise.
 	if ( $action === 'view' ) {
 		$logged_path = ! empty( $payload['path'] ) ? $payload['path'] : $path;
 		CaptainCore\ActivityLog::log(
 			'viewed', 'file', $site->site_id, $site->name,
 			"Viewed file {$logged_path} on {$site->name} ({$environment->environment})",
+			[ 'path' => $logged_path, 'environment' => $environment->environment ],
+			$site->customer_id ?? null
+		);
+	}
+	if ( $action === 'delete' ) {
+		$logged_path = ! empty( $payload['deleted'] ) ? $payload['deleted'] : $path;
+		CaptainCore\ActivityLog::log(
+			'deleted', 'file', $site->site_id, $site->name,
+			"Deleted file {$logged_path} on {$site->name} ({$environment->environment})",
 			[ 'path' => $logged_path, 'environment' => $environment->environment ],
 			$site->customer_id ?? null
 		);

@@ -1041,7 +1041,21 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   deliberately unlogged (navigation + SWR background refreshes = noise), and
   duplicate rows from the view cache's background refresh are accepted by
   design — each row is a real server-side read. Renders on the Activity page
-  with no UI changes. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  with no UI changes.
+- **File manager right-click menu + file delete**: every row now has a context
+  menu (`openCtxMenu`, the Minn pattern used across the app) — files get View
+  file / Copy path / Delete…, folders get Open folder / Copy path (NO delete).
+  Delete is a new remote-script action (`--action=delete`) + Manager route
+  (HTTP DELETE on the same `/environment/{id}/files`, `path` required). The
+  script deletes the LITERAL path (not realpath — you never want to unlink a
+  symlink's target), checks containment on the parent dir, and refuses
+  directories AND symlinks; the UI also hides Delete on symlinked files so the
+  two agree. `deleteFmFile` confirms, calls DELETE, then optimistically drops
+  the row from the live list + `_fmCache` + evicts the `_fmViewCache` entry
+  before a truth re-fetch. Deletes are audit-logged (`deleted`/`file`, same
+  shape as views). Verified live end-to-end: menu contents differ file vs
+  folder, directory delete refused server-side, a scratch file deleted through
+  the menu (confirm → row vanished) with an audit row written. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
   symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
   detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
   environment_id so env switches self-heal via the render-time lazy loader.
