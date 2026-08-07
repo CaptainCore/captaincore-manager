@@ -159,7 +159,7 @@ Object.assign(Component.prototype, {
     const loading = !!real && (!fm || fm.loading);
     const err = (fm && fm.err) || '';
     const sorted = entries.slice().sort((a, b) =>
-      a.type === b.type ? a.name.localeCompare(b.name) : (a.type === 'dir' ? -1 : 1));
+      a.type === b.type ? a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }) : (a.type === 'dir' ? -1 : 1));
     const dateFmt = t => t ? new Date(t * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const relOf = n => (fm && fm.path ? fm.path + '/' : '') + n;
     const rows = sorted.map(en => {

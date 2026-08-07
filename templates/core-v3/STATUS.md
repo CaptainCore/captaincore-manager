@@ -1024,6 +1024,8 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   draining, ssh blocks, and the request hangs to the 120 s curl timeout (hit
   live on a 261 KB file view). server.go also got an s.Buffer bump to 8 MB as
   defense-in-depth, but that only takes effect on the next CLI server rebuild.
+  Listing sort is numeric-aware (`localeCompare` with `{ numeric: true }`) so
+  numbered directories order 1, 2 … 10, 11 instead of lexically.
 - **File manager stale-while-revalidate cache**: every listing and file view is
   cached for the session (`_fmCache`/`_fmViewCache`, keyed environment_id +
   path). Navigating to a cached path renders instantly with a quiet
