@@ -1296,6 +1296,8 @@ class Component extends DCLogic {
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
       const doToggle = () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name);
       const doUpdate = () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name);
+      const doDelete = () => real ? this.realDeleteAddon(a, real, sAK)
+        : this.runJob((sAK.addonKind === 'plugins' ? 'plugin' : 'theme') + ' delete', a.slug + ' on ' + site.name);
       return { ...a, upd,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
       dot: a.active ? 'var(--ok)' : 'var(--rule)',
@@ -1305,7 +1307,8 @@ class Component extends DCLogic {
       ctx: (e) => this.openCtxMenu(e, [
         ...(upd ? [{ label: 'Update to ' + a.latest, act: doUpdate }] : []),
         { label: a.active ? 'Deactivate' : 'Activate', act: doToggle },
-        { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') }
+        { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') },
+        { label: 'Delete…', danger: true, act: doDelete }
       ]) }; });
     const updCount = real ? 0 : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
     const qsFiles = real ? this.realQsFiles(real, s) : this.QS_FILES;

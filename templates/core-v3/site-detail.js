@@ -612,6 +612,31 @@ Object.assign(Component.prototype, {
     });
   },
 
+  realDeleteAddon(a, real, s) {
+    const e = this.currentEnv(real, s);
+    if (!e) return;
+    const kind = s.addonKind === 'plugins' ? 'plugin' : 'theme';
+    const name = (real.site && real.site.name) || '';
+    if (kind === 'theme' && a.active) { this.toast("The active theme can't be deleted — activate another theme first.", { kind: 'error' }); return; }
+    if (!confirm('Delete ' + a.slug + ' from ' + name + ' (' + s.env + ')? Its files are removed from the site.')) return;
+    // Deactivate an active plugin first so delete never races a request
+    // still running its code (v1 parity: wp plugin delete, no uninstall hooks).
+    const code = (kind === 'plugin' && a.active ? 'wp plugin deactivate ' + a.slug + ' --skip-themes --skip-plugins && ' : '')
+      + 'wp ' + kind + ' delete ' + a.slug + ' --skip-themes --skip-plugins';
+    // Optimistic removal; the chained sync restores truth if the delete failed.
+    const list = kind === 'plugin' ? e.plugins : e.themes;
+    if (Array.isArray(list)) {
+      const i = list.findIndex(p => (p.name || p.slug) === a.slug);
+      if (i >= 0) list.splice(i, 1);
+    }
+    this.startJob({
+      label: kind + ' delete', target: a.slug + ' on ' + name, command: 'manage',
+      siteId: real.siteId, environment: s.env,
+      dispatch: () => this.api('/run/code', { method: 'POST', body: { environments: [e.environment_id], code } }),
+      onFinish: () => this.realSync(real, { env: s.env })
+    });
+  },
+
   // ── Users ─────────────────────────────────────────────────────
   realUserRows(real, s) {
     if (!real.users) return [];

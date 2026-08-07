@@ -333,4 +333,5 @@ Object.assign(Component.prototype, {
 });
 
 // Toast verbs for the new job labels (jobs.js JOB_VERBS lookup).
-Component.prototype.JOB_VERBS = Object.assign({}, Component.prototype.JOB_VERBS, { install: 'Install' });
+Component.prototype.JOB_VERBS = Object.assign({}, Component.prototype.JOB_VERBS,
+  { install: 'Install', 'plugin delete': 'Delete plugin', 'theme delete': 'Delete theme' });

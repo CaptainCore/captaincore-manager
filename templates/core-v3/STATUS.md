@@ -984,3 +984,13 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   handler ignores the `domain` field core.php sends, so v3 omits it). Verified live
   on both states: a no-Mailgun domain collapses to the setup banner; an active zone
   shows the buttons, tab switching, empty-state copy, and the step-2 prompt.
+- **Inventory row delete (plugins + themes)**: the addon row context menu gained a
+  danger-styled "Delete…" after Copy slug (`realDeleteAddon` in site-detail.js).
+  Confirms naming the slug/site/env, then dispatches `wp {plugin|theme} delete
+  --skip-themes --skip-plugins` through the same `POST /run/code` job pipeline as
+  toggle/install — an active plugin chains `wp plugin deactivate … && …` first, and
+  the ACTIVE THEME is refused with a toast (WP-CLI can't delete it). Optimistic row
+  removal + `realSync` on finish restores truth if the remote delete failed. Demo
+  mode runs the usual simulated job. Verified live: menu entry renders red, the
+  confirm carries the real wording, cancel leaves the row (actual deletion not
+  exercised against a customer site — same dispatch path as the proven actions).
