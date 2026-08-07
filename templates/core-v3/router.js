@@ -20,9 +20,9 @@ Object.assign(Component.prototype, {
   // state.route → the path segment(s) after the base.
   ROUTE_SEG: { home: '', sites: 'sites', site: 'sites', domains: 'domains', domain: 'domains',
     accounts: 'accounts', account: 'accounts', billing: 'billing', invoice: 'billing', security: 'security',
-    audits: 'site-audits', reports: 'reports', archives: 'archives', settings: 'settings', profile: 'profile' },
+    audits: 'site-audits', activity: 'activity', reports: 'reports', archives: 'archives', settings: 'settings', profile: 'profile' },
   SEG_ROUTE: { '': 'home', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
-    security: 'security', 'site-audits': 'audits', reports: 'reports', archives: 'archives',
+    security: 'security', 'site-audits': 'audits', activity: 'activity', reports: 'reports', archives: 'archives',
     settings: 'settings', profile: 'profile' },
 
   pathForState() {

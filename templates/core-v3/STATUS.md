@@ -1055,7 +1055,27 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   before a truth re-fetch. Deletes are audit-logged (`deleted`/`file`, same
   shape as views). Verified live end-to-end: menu contents differ file vs
   folder, directory delete refused server-side, a scratch file deleted through
-  the menu (confirm → row vanished) with an audit row written. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  the menu (confirm → row vanished) with an audit row written.
+- **Activity rows show actor + type + gravatar**: `ActivityLog::fetch()` now
+  adds `avatar_url` (`get_avatar_url` with an `identicon` default so every
+  actor renders something; 'System'/user_id 0 rows get ''). `activityRow()` in
+  home.js is the shared mapper for both the Home "Recent activity" card and the
+  full Activity page — each row carries `user`, a `type` chip label
+  (entity_type → DNS/Site/Domain/Account/Deploy/Email/File/Security, else
+  title-cased), and an avatar with a 3-way precedence: gravatar img → system
+  gear icon (automated/user_id-0 rows) → initials circle. Verified live:
+  gravatars + FILE/SITE chips on both surfaces, 24 system-gear rows rendered.
+- **Activity page pagination + deep link**: the page was hard-capped at
+  per_page=100 with no controls. `loadActivityPage(page)` now pages through the
+  server's existing `total`/`pages` (100/page), with a "1–100 of 401" range +
+  Newer/Older controls (disabled at the ends / while a page is in flight) and
+  the header count switched from the visible-row count to the true total.
+  Deep-linking was ALSO broken: `activity` was missing from the router's
+  ROUTE_SEG/SEG_ROUTE maps, so `/account/activity` fell through to home and the
+  URL never updated when opening the page. Added both map entries (server-side
+  is already a `/account/*` catch-all, no rewrite change). Verified live: direct
+  load of `/account/activity/` renders the paginated log, "View all →" from
+  home now pushes `/account/activity`, and Older advances to "101–200 of 401". UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
   symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
   detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
   environment_id so env switches self-heal via the render-time lazy loader.

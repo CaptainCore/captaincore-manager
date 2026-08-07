@@ -91,9 +91,11 @@ class ActivityLog {
         $query_values   = array_merge( $values, [ $per_page, $offset ] );
         $items = $wpdb->get_results( $wpdb->prepare( $sql, $query_values ) );
 
-        // Enrich with user display names
+        // Enrich with user display names + a gravatar (identicon fallback so
+        // every actor renders something; 'System' rows have no avatar).
         foreach ( $items as &$item ) {
-            $item->user_name = $item->user_id ? get_the_author_meta( 'display_name', $item->user_id ) : 'System';
+            $item->user_name  = $item->user_id ? get_the_author_meta( 'display_name', $item->user_id ) : 'System';
+            $item->avatar_url = $item->user_id ? get_avatar_url( $item->user_id, [ 'size' => 48, 'default' => 'identicon' ] ) : '';
             if ( $item->context ) {
                 $item->context = json_decode( $item->context );
             }

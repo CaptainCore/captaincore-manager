@@ -2086,20 +2086,27 @@ class Component extends DCLogic {
       : dockRunning.length >= DOCK_JOB_CAP ? dockRunning
       : dockSorted.slice(0, DOCK_JOB_CAP);
 
-    const activity = this._activity ? this._activity : booted ? [] : isOp ? [
-      { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed' },
-      { t: '18m', text: 'Austin deployed staging → production on petersonlaw.com' },
-      { t: '1h', text: 'Mailgun sending verified for thewildflowerpantry.com' },
-      { t: '3h', text: 'kara@petersonlaw.com accepted invite to Peterson Law (sites-only)' },
-      { t: '5h', text: 'Restic backup completed on 128 sites — 0 failures' },
-      { t: '8h', text: 'DNS zone imported for midwestmakersmarket.com (14 records)' }
-    ] : [
-      { t: '2h', text: 'Quicksave created on bloomandbranch.com — 3 files changed' },
-      { t: '6h', text: 'Nightly backup completed on all 4 sites' },
-      { t: '1d', text: 'gravityforms updated 2.9.1 → 2.9.4 on bloomandbranch.com' },
-      { t: '2d', text: 'June maintenance report sent to 2 recipients' },
-      { t: '4d', text: 'DNS record added on harborlightyoga.com (TXT · verification)' }
-    ];
+    // Design-preview rows (pre-boot only). Real data arrives already shaped by
+    // activityRow(); demo rows carry just {t,text,user,type} so normalize both
+    // through activityRow-compatible defaults for the avatar fields.
+    const demoAct = arr => arr.map(r => ({ ...r,
+      user: r.user || 'System', type: r.type || '',
+      hasAvatar: false, isSystem: !r.user, showInitials: !!r.user,
+      initials: (r.user || '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '·' }));
+    const activity = this._activity ? this._activity : booted ? [] : isOp ? demoAct([
+      { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed', user: 'Austin', type: 'Site' },
+      { t: '18m', text: 'Deployed staging → production on petersonlaw.com', user: 'Austin', type: 'Deploy' },
+      { t: '1h', text: 'Mailgun sending verified for thewildflowerpantry.com', type: 'Email' },
+      { t: '3h', text: 'kara@petersonlaw.com accepted invite to Peterson Law', user: 'Kara', type: 'Account' },
+      { t: '5h', text: 'Restic backup completed on 128 sites — 0 failures', type: 'Site' },
+      { t: '8h', text: 'DNS zone imported for midwestmakersmarket.com (14 records)', user: 'Austin', type: 'DNS' }
+    ]) : demoAct([
+      { t: '2h', text: 'Quicksave created on bloomandbranch.com — 3 files changed', type: 'Site' },
+      { t: '6h', text: 'Nightly backup completed on all 4 sites', type: 'Site' },
+      { t: '1d', text: 'gravityforms updated 2.9.1 → 2.9.4 on bloomandbranch.com', type: 'Site' },
+      { t: '2d', text: 'June maintenance report sent to 2 recipients', type: 'Site' },
+      { t: '4d', text: 'DNS record added on harborlightyoga.com (TXT · verification)', user: 'Austin', type: 'DNS' }
+    ]);
 
     const pinned = (this._hydrated ? this.realPinned() : booted ? [] : isOp ? [
       { id: 'bloom', name: 'bloomandbranch.com', sub: 'Kinsta · 6.8.1 · 12.4k visits/wk', health: 'Vulnerability', dot: 'var(--bad)' },

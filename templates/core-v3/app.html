@@ -241,9 +241,26 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ goActivity }}" style="font:500 12.5px var(--sans);color:var(--brand-ink);cursor:pointer">View all →</span>
                 </div>
                 <sc-for list="{{ activity }}" as="ev" hint-placeholder-count="5">
-                  <div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:baseline">
-                    <span style="flex:none;width:44px;font:500 12px var(--mono);color:var(--ink-dim);text-align:right">{{ ev.t }}</span>
-                    <span style="font:400 13.5px/1.5 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                  <div style="display:flex;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:flex-start">
+                    <span style="flex:none;width:34px;font:500 12px var(--mono);color:var(--ink-dim);text-align:right;padding-top:4px">{{ ev.t }}</span>
+                    <sc-if value="{{ ev.hasAvatar }}" hint-placeholder-val="{{ false }}">
+                      <img src="{{ ev.avatar }}" alt="" style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--panel-2)">
+                    </sc-if>
+                    <sc-if value="{{ ev.isSystem }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--panel-2);display:grid;place-items:center" title="System"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                    </sc-if>
+                    <sc-if value="{{ ev.showInitials }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font:600 10px var(--sans);display:grid;place-items:center">{{ ev.initials }}</span>
+                    </sc-if>
+                    <span style="min-width:0;flex:1">
+                      <span style="display:block;font:400 13.5px/1.5 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                      <span style="display:flex;align-items:center;gap:7px;margin-top:2px">
+                        <span style="font:500 11.5px var(--sans);color:var(--ink-dim)">{{ ev.user }}</span>
+                        <sc-if value="{{ ev.type }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:600 10px var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:1px 7px">{{ ev.type }}</span>
+                        </sc-if>
+                      </span>
+                    </span>
                   </div>
                 </sc-for>
                 <sc-if value="{{ homeSkel }}" hint-placeholder-val="{{ false }}">
@@ -325,9 +342,26 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <h2 style="margin:0;font:700 16px var(--sans);letter-spacing:-.2px">Fleet activity</h2>
             </div>
             <sc-for list="{{ actRows }}" as="ev" hint-placeholder-count="10">
-              <div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:baseline">
-                <span style="flex:none;width:44px;font:500 12px var(--mono);color:var(--ink-dim);text-align:right">{{ ev.t }}</span>
-                <span style="font:400 14px/1.55 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+              <div style="display:flex;gap:12px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:flex-start">
+                <span style="flex:none;width:40px;font:500 12px var(--mono);color:var(--ink-dim);text-align:right;padding-top:4px">{{ ev.t }}</span>
+                <sc-if value="{{ ev.hasAvatar }}" hint-placeholder-val="{{ false }}">
+                  <img src="{{ ev.avatar }}" alt="" style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--panel-2)">
+                </sc-if>
+                <sc-if value="{{ ev.isSystem }}" hint-placeholder-val="{{ false }}">
+                  <span style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:grid;place-items:center" title="System"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                </sc-if>
+                <sc-if value="{{ ev.showInitials }}" hint-placeholder-val="{{ false }}">
+                  <span style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font:600 11px var(--sans);display:grid;place-items:center">{{ ev.initials }}</span>
+                </sc-if>
+                <span style="min-width:0;flex:1">
+                  <span style="display:block;font:400 14px/1.55 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                  <span style="display:flex;align-items:center;gap:8px;margin-top:3px">
+                    <span style="font:500 12px var(--sans);color:var(--ink-dim)">{{ ev.user }}</span>
+                    <sc-if value="{{ ev.type }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:600 10px var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:1px 8px">{{ ev.type }}</span>
+                    </sc-if>
+                  </span>
+                </span>
               </div>
             </sc-for>
             <sc-if value="{{ actLoading }}" hint-placeholder-val="{{ false }}">
@@ -337,6 +371,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
             <sc-if value="{{ actEmpty }}" hint-placeholder-val="{{ false }}">
               <div style="padding:40px;text-align:center;font:400 14px var(--sans);color:var(--ink-dim)">No recent activity</div>
+            </sc-if>
+            <sc-if value="{{ actPagerShow }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 18px">
+                <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ actRangeText }}</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ actPrev }}" style="font:500 12.5px var(--sans);color:{{ actPrevFg }};cursor:{{ actPrevCursor }};border:1px solid var(--rule);border-radius:7px;padding:5px 12px" style-hover="border-color:var(--brand)">← Newer</span>
+                <span onClick="{{ actNext }}" style="font:500 12.5px var(--sans);color:{{ actNextFg }};cursor:{{ actNextCursor }};border:1px solid var(--rule);border-radius:7px;padding:5px 12px" style-hover="border-color:var(--brand)">Older →</span>
+              </div>
             </sc-if>
           </section>
         </div>
