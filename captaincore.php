@@ -2532,6 +2532,97 @@ function captaincore_site_accounts_update_func( WP_REST_Request $request ) {
 	];
 }
 
+function captaincore_site_identity_update_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) ) {
+		return new WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+	}
+	$name     = sanitize_text_field( (string) $request->get_param( 'name' ) );
+	$provider = sanitize_text_field( (string) $request->get_param( 'provider' ) );
+	$key      = $request->get_param( 'key' );
+	if ( empty( $name ) ) {
+		return new WP_Error( 'missing_name', 'Domain name is required', [ 'status' => 400 ] );
+	}
+	$details = json_decode( $current->details );
+	if ( ! is_object( $details ) ) {
+		$details = (object) [];
+	}
+	if ( $key !== null ) {
+		$details->key = empty( $key ) ? null : intval( $key );
+	}
+	( new CaptainCore\Sites )->update( [
+		'name'       => $name,
+		'provider'   => $provider ? $provider : $current->provider,
+		'updated_at' => date( "Y-m-d H:i:s" ),
+		'details'    => json_encode( $details ),
+	], [ 'site_id' => $site_id ] );
+	CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $name, "Updated site details for {$name}", [], $current->customer_id ? $current->customer_id : null );
+	return [
+		'response' => 'Successfully updated site',
+		'site'     => ( new CaptainCore\Site( $site_id ) )->fetch(),
+	];
+}
+
+function captaincore_site_environment_update_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$env_id  = intval( $request['environment_id'] );
+	$site    = new CaptainCore\Site( $site_id );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) || ! in_array( $env_id, $site->environment_ids() ) ) {
+		return new WP_Error( 'not_found', 'Environment not found for this site', [ 'status' => 404 ] );
+	}
+	// Whitelisted, partial update — only fields present in the payload are
+	// written. Passwords are taken raw (sanitize_text_field would mangle
+	// legitimate characters); the rest get standard sanitization.
+	$update = [];
+	foreach ( [ 'address', 'home_directory', 'username', 'database_username' ] as $field ) {
+		$value = $request->get_param( $field );
+		if ( $value !== null ) {
+			$update[ $field ] = sanitize_text_field( (string) $value );
+		}
+	}
+	foreach ( [ 'password', 'database_password' ] as $field ) {
+		$value = $request->get_param( $field );
+		if ( $value !== null ) {
+			$update[ $field ] = (string) $value;
+		}
+	}
+	$protocol = $request->get_param( 'protocol' );
+	if ( $protocol !== null && in_array( $protocol, [ 'sftp', 'ssh', 'ftp' ], true ) ) {
+		$update['protocol'] = $protocol;
+	}
+	$port = $request->get_param( 'port' );
+	if ( $port !== null ) {
+		$update['port'] = preg_replace( '/[^0-9]/', '', (string) $port );
+	}
+	if ( empty( $update ) ) {
+		return new WP_Error( 'nothing_to_update', 'No recognized fields in payload', [ 'status' => 400 ] );
+	}
+	( new CaptainCore\Environments )->update( $update, [ 'environment_id' => $env_id ] );
+	( new CaptainCore\Sites )->update( [ 'updated_at' => date( "Y-m-d H:i:s" ) ], [ 'site_id' => $site_id ] );
+	$environment = ( new CaptainCore\Environments )->get( $env_id );
+	CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $current->name, "Updated {$environment->environment} environment connection settings for {$current->name}", [], $current->customer_id ? $current->customer_id : null );
+	return [ 'response' => 'Successfully updated environment' ];
+}
+
+function captaincore_site_environment_delete_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$env_id  = intval( $request['environment_id'] );
+	$site    = new CaptainCore\Site( $site_id );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) || ! in_array( $env_id, $site->environment_ids() ) ) {
+		return new WP_Error( 'not_found', 'Environment not found for this site', [ 'status' => 404 ] );
+	}
+	$environment = ( new CaptainCore\Environments )->get( $env_id );
+	if ( empty( $environment ) || $environment->environment === 'Production' ) {
+		return new WP_Error( 'protected', 'The Production environment can not be deleted', [ 'status' => 400 ] );
+	}
+	( new CaptainCore\Environments )->delete( $env_id );
+	CaptainCore\ActivityLog::log( 'deleted', 'site', $site_id, $current->name, "Deleted {$environment->environment} environment record for {$current->name}", [], $current->customer_id ? $current->customer_id : null );
+	return [ 'response' => 'Successfully deleted environment' ];
+}
+
 function captaincore_sites_details_func( WP_REST_Request $request ) {
 	$post_id     = intval( $request['id'] );
 	if ( ! captaincore_verify_permissions( $post_id ) ) {
@@ -9553,6 +9644,29 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_sites_update_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/identity', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_site_identity_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments/(?P<environment_id>[\d]+)', [
+			[
+				'methods'             => 'PUT',
+				'callback'            => 'captaincore_site_environment_update_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => 'captaincore_site_environment_delete_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 			'show_in_index'       => false,
 		]
 	);

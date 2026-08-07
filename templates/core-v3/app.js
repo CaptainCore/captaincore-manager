@@ -1611,6 +1611,8 @@ class Component extends DCLogic {
       ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
       ...(this.computeRegistry ? this.computeRegistry(real, s) : { regGroups: [], regChips: [], rgOpen: false }),
       ...(this.computeTools ? this.computeTools(real, s) : { siteTools: [], thOpen: false, tlOpen: false, tmOpen: false, tnOpen: false }),
+      ...(this.computeEditSite ? this.computeEditSite(real, s) : { edsShow: false, edsOpen: false }),
+      ...(this.computeEnvEdit ? this.computeEnvEdit(real, s) : { eeOpen: false }),
       dUsers, logChips, logLines,
       nsuOpen: !!s.nsuOpen,
       openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),

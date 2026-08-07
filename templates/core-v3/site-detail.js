@@ -420,6 +420,163 @@ Object.assign(Component.prototype, {
     };
   },
 
+  // ── Edit site (identity) + environment connection editing ─────
+  // Operator-only. Scoped routes — PUT /sites/{id}/identity and
+  // PUT|DELETE /sites/{id}/environments/{environment_id} — so a partial
+  // payload can never delete an environment (the v1 monolith's trap:
+  // Site::update removes any environment missing from its payload).
+  ES_PROVIDERS: [['kinsta', 'Kinsta'], ['gridpane', 'GridPane'], ['rocketdotnet', 'Rocket.net'], ['wpengine', 'WP Engine']],
+
+  openEditSite() {
+    const real = this._detail;
+    if (!real || !real.site) return;
+    this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '' };
+    this.setState({ edsOpen: true, edsSaving: false });
+    if (this._esKeys === undefined) {
+      this._esKeys = null; // loading
+      this.api('/keys/').then(list => { this._esKeys = Array.isArray(list) ? list : []; this.setState({ tick: this.state.tick }); })
+        .catch(() => { this._esKeys = []; this.setState({ tick: this.state.tick }); });
+    }
+  },
+
+  saveEditSite() {
+    const real = this._detail, d = this._es || {};
+    if (!real || this.state.edsSaving) return;
+    if (!(d.name || '').trim()) { this.toast('Domain name is required', { kind: 'error' }); return; }
+    this.setState({ edsSaving: true });
+    this.api('/sites/' + real.siteId + '/identity', { method: 'PUT',
+      body: { name: d.name.trim(), provider: d.provider || '', key: d.key === '' ? '' : d.key } }).then(res => {
+      if (!res || res.code || !res.site) {
+        this.setState({ edsSaving: false });
+        this.toast((res && res.message) || 'Could not save site', { kind: 'error' });
+        return;
+      }
+      if (this._detail === real) real.site = res.site;
+      const f = this.FLEET.find(x => x.id === String(real.siteId));
+      if (f) { f.name = res.site.name; f.provider = (res.site.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase()); }
+      this.setState({ edsOpen: false, edsSaving: false });
+      this.toast('Site updated', { kind: 'success' });
+    }).catch(() => { this.setState({ edsSaving: false }); this.toast('Could not save site', { kind: 'error' }); });
+  },
+
+  computeEditSite(real, s) {
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    const d = this._es || {};
+    const keys = this._esKeys;
+    return {
+      edsShow: !!real && isOp,
+      edsOpenDlg: () => this.openEditSite(),
+      edsOpen: !!s.edsOpen,
+      closeEds: () => this.setState({ edsOpen: false }),
+      edsName: d.name || '', onEdsName: e => { this._es.name = e.target.value; },
+      edsSlug: (real && real.site && real.site.site) || '',
+      edsProviders: this.ES_PROVIDERS.map(([value, label]) => ({ label,
+        bg: (d.provider || '') === value ? 'var(--panel-2)' : 'transparent',
+        fg: (d.provider || '') === value ? 'var(--ink)' : 'var(--ink-dim)',
+        go: () => { this._es.provider = value; this.setState({ tick: this.state.tick }); } })),
+      edsKeysLoading: keys === null,
+      edsKeys: [{ key_id: '', title: 'Default (primary SSH key)' }, ...(Array.isArray(keys) ? keys : [])].map(k => ({
+        label: k.title,
+        mark: String(d.key || '') === String(k.key_id || '') ? '✓' : '',
+        bg: String(d.key || '') === String(k.key_id || '') ? 'var(--brand-soft)' : 'transparent',
+        pick: () => { this._es.key = k.key_id; this.setState({ tick: this.state.tick }); } })),
+      edsSaveLabel: s.edsSaving ? 'Saving…' : 'Save changes',
+      edsSave: () => this.saveEditSite()
+    };
+  },
+
+  openEnvEdit() {
+    const real = this._detail;
+    const env = this.currentEnv(real, this.state);
+    if (!real || !env || !env.environment_id) return;
+    this._ee = { environment_id: env.environment_id, envName: env.environment,
+      address: env.address || '', home_directory: env.home_directory || '',
+      username: env.username || '', password: env.password || '',
+      protocol: env.protocol || 'sftp', port: env.port || '' };
+    this.setState({ eeOpen: true, eeSaving: false });
+  },
+
+  // v1 preloadStagingEnvironment, applied to the dialog draft. The DC runtime
+  // binds input value like defaultValue, so the dialog is remounted (close →
+  // reopen next tick) to re-seed the visible fields from the mutated draft.
+  eePreloadApply() {
+    const real = this._detail, d = this._ee;
+    const prod = real && real.envs ? real.envs.find(e => e.environment === 'Production') : null;
+    if (!prod || !d) return;
+    d.address = prod.address || '';
+    if (d.address.includes('.kinsta.cloud')) d.address = 'staging-' + prod.address;
+    const isKinsta = !!(real.site && real.site.provider === 'kinsta');
+    d.username = isKinsta ? (prod.username || '') : (prod.username || '') + '-staging';
+    if (isKinsta) d.password = prod.password || '';
+    d.port = prod.port || '';
+    d.protocol = prod.protocol || 'sftp';
+    d.home_directory = prod.home_directory || '';
+    this.setState({ eeOpen: false });
+    setTimeout(() => this.setState({ eeOpen: true }), 0);
+  },
+
+  saveEnvEdit() {
+    const real = this._detail, d = this._ee || {}, s = this.state;
+    if (!real || !d.environment_id || s.eeSaving) return;
+    this.setState({ eeSaving: true });
+    const body = { address: d.address, home_directory: d.home_directory, username: d.username,
+      password: d.password, protocol: d.protocol, port: d.port };
+    this.api('/sites/' + real.siteId + '/environments/' + d.environment_id, { method: 'PUT', body }).then(res => {
+      if (!res || res.code) {
+        this.setState({ eeSaving: false });
+        this.toast((res && res.message) || 'Could not save environment', { kind: 'error' });
+        return;
+      }
+      // Reflect immediately, then re-sync so the CLI validates the new
+      // connection (mirrors v1 kicking `update` after an edit).
+      const env = real.envs && real.envs.find(e => String(e.environment_id) === String(d.environment_id));
+      if (env) Object.assign(env, body);
+      this.setState({ eeOpen: false, eeSaving: false });
+      this.toast(d.envName + ' connection settings saved', { kind: 'success' });
+      this.realSync(real, s);
+    }).catch(() => { this.setState({ eeSaving: false }); this.toast('Could not save environment', { kind: 'error' }); });
+  },
+
+  deleteEnvRecord() {
+    const real = this._detail, d = this._ee || {};
+    if (!real || !d.environment_id) return;
+    const name = (real.site && real.site.name) || '';
+    if (!confirm('Delete the ' + d.envName + ' environment record for ' + name + '? This removes it from CaptainCore only — the hosting environment itself is not touched.')) return;
+    this.api('/sites/' + real.siteId + '/environments/' + d.environment_id, { method: 'DELETE' }).then(res => {
+      if (!res || res.code) { this.toast((res && res.message) || 'Could not delete environment', { kind: 'error' }); return; }
+      this.setState({ eeOpen: false, env: 'Production' });
+      this.toast(d.envName + ' environment removed', { kind: 'success' });
+      this._detail = null;
+      this.loadSiteDetail(real.siteId);
+    }).catch(() => this.toast('Could not delete environment', { kind: 'error' }));
+  },
+
+  computeEnvEdit(real, s) {
+    const d = this._ee || {};
+    const isStaging = !!d.envName && d.envName !== 'Production';
+    return {
+      eeOpen: !!s.eeOpen,
+      eeOpenDlg: () => this.openEnvEdit(),
+      closeEe: () => this.setState({ eeOpen: false }),
+      eeTitle: 'Edit ' + (d.envName || '') + ' connection',
+      eeAddress: d.address || '', onEeAddress: e => { this._ee.address = e.target.value; },
+      eeHome: d.home_directory || '', onEeHome: e => { this._ee.home_directory = e.target.value; },
+      eeUser: d.username || '', onEeUser: e => { this._ee.username = e.target.value; },
+      eePass: d.password || '', onEePass: e => { this._ee.password = e.target.value; },
+      eePort: d.port || '', onEePort: e => { this._ee.port = e.target.value; },
+      eeProtocols: ['sftp', 'ssh', 'ftp'].map(p => ({ label: p,
+        bg: (d.protocol || 'sftp') === p ? 'var(--panel-2)' : 'transparent',
+        fg: (d.protocol || 'sftp') === p ? 'var(--ink)' : 'var(--ink-dim)',
+        go: () => { this._ee.protocol = p; this.setState({ tick: this.state.tick }); } })),
+      eePreloadShow: isStaging && !!real,
+      eePreload: () => this.eePreloadApply(),
+      eeDeleteShow: isStaging,
+      eeDelete: () => this.deleteEnvRecord(),
+      eeSaveLabel: s.eeSaving ? 'Saving…' : 'Save changes',
+      eeSave: () => this.saveEnvEdit()
+    };
+  },
+
   // ── Addons ────────────────────────────────────────────────────
   realAddonSrc(real, s) {
     const e = this.currentEnv(real, s);

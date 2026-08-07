@@ -700,9 +700,58 @@ live (same config-flip method, restored after): 382-line error log rendered
 highlighted, back-to-list, instant cached reopen, viewer-header download,
 no page errors.
 
+### Edit site: identity + environment connection (2026-08-07)
+The last two thirds of v1's Edit-Site dialog (the first third — account
+assignment — became the Accounts card). Both operator-only, both on scoped
+routes, because **v1's `PUT /sites/update` DELETES any environment missing
+from its payload** (Site.php update()) — a partial payload from a scoped UI
+would destroy environments, so it must never be called from v3.
+
+New routes (plain functions in captaincore.php, admin-gated, no classmap regen):
+- `PUT /sites/{id}/identity` `{name, provider, key}` — writes name/provider +
+  `details.key` (SSH override; `''` clears to the primary key), ActivityLog,
+  returns the refreshed site. Does NOT touch environments or accounts.
+- `PUT /sites/{id}/environments/{environment_id}` — **whitelisted partial**
+  update (address/home_directory/username/password/protocol/port/database_*).
+  Only keys present in the payload are written; passwords bypass
+  sanitize_text_field (it mangles legitimate characters), protocol is enum-
+  checked, port is digits-only.
+- `DELETE /sites/{id}/environments/{environment_id}` — removes ONE environment
+  record. **Production is refused (400)**, and both env routes 404 unless the
+  environment_id belongs to that site (verified: a cross-site id is rejected).
+
+UI (`computeEditSite`/`computeEnvEdit` in site-detail.js): a pencil button in
+the site-detail header opens **Edit site** (domain input, provider segmented
+pills, SSH-key pick list lazy-loaded once from `GET /keys/`); the Overview
+Credentials card header gained an **Edit** link opening **Edit
+&lt;env&gt; connection** (address, home dir, username, password, protocol
+pills, port). Saving an environment fires `realSync` afterward so the CLI
+validates the new connection (v1 kicked `update` the same way). Staging-only:
+**Preload from Production** (v1's preloadStagingEnvironment — kinsta-cloud
+address prefix, username suffix vs. kinsta password copy; mutates the draft
+then remounts the dialog because the DC runtime binds input value like
+defaultValue) and **Delete environment…** (confirm, then reload).
+
+**BINDING COLLISION (bit this round, cost a debug cycle):** tools.js already
+returns `esOpen` for the scheduled-script edit dialog. Naming the new dialog's
+bindings `es*` mounted BOTH dialogs at once (the later spread won). Renamed to
+`eds*`; `ee*` for the environment dialog was clear. Grep every new binding
+prefix against the other mixins before using it — see the render-time mixin
+guard note above.
+
+Verified live: dialog seeds real values (name/provider chip/SSH key ✓);
+renamed a site and renamed it back (header + FLEET row followed both times);
+env dialog seeded address/home/user/port, changed a port and confirmed the
+write in the DB, then restored it; staging dialog showed both staging-only
+controls, Preload copied production's address/user/port into the draft, and
+Cancel left the DB untouched. Production dialog correctly hides both. Guards
+re-checked as admin: production delete → 400, cross-site env id → 404,
+unauthenticated PUT → 401. Activity log carries both new entry types.
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
-- **Site detail**: "Delete site…".
+- **Site detail**: "Delete site…". (Edit site + per-environment connection
+  editing are DONE — see the Edit-site section above.)
 - **Domains**: Mailgun "View all logs →" pager; Mailgun deploy-to-site (needs a
   site/env/from-name picker — real SMTP write).
 - **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
