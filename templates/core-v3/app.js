@@ -1635,6 +1635,18 @@ class Component extends DCLogic {
       dsuBtnBg: dsu.reassign ? 'var(--bad)' : 'var(--panel-2)',
       dsuDelete: () => this.deleteSiteUser(),
       logMeta: real ? (real.logsLoading ? 'Loading…' : logLines.length + ' lines') : logLines.length + ' lines · last 24h',
+      // Logs: Live/Archive mode. The archive data slice (list, filters,
+      // signed-link downloads) lives in site-detail.js computeLogsArchive —
+      // spread AFTER logMeta so its count line overrides in archive mode.
+      lmLive: s.logMode !== 'archive', lmArch: s.logMode === 'archive',
+      lmLiveBg: s.logMode !== 'archive' ? 'var(--panel-2)' : 'transparent',
+      lmLiveFg: s.logMode !== 'archive' ? 'var(--ink)' : 'var(--ink-dim)',
+      lmArchBg: s.logMode === 'archive' ? 'var(--panel-2)' : 'transparent',
+      lmArchFg: s.logMode === 'archive' ? 'var(--ink)' : 'var(--ink-dim)',
+      lmSetLive: () => this.setState({ logMode: 'live' }),
+      lmSetArch: () => { this.setState({ logMode: 'archive' }); if (real && this.loadLogsArchive) this.loadLogsArchive(); },
+      logsLead: s.logMode === 'archive' ? 'Rotated server logs archived to long-term storage.' : 'Server log files for this environment.',
+      ...(this.computeLogsArchive ? this.computeLogsArchive(real, s) : { laGroups: [], laRanges: [], laTypes: [], laLoading: false, laHasError: false, laEmpty: false }),
       tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         // Raw-HTML escape hatch: the DC runtime has no innerHTML binding, so

@@ -645,6 +645,42 @@ checked after each phase (Sites columns + AccountSite pivot exactly restored)
 and the activity log carries the full shared/unshared/updated trail.
 Unauthenticated PUT → 401.
 
+### Archived server logs: phase 1 browser (2026-08-07)
+The Logs leaf (Activity → Logs) gained a **Live / Archive** segmented toggle.
+Archive view exposes the long-term B2 log retention (the CLI server's daily
+`captaincore logs archive` cron) through the two EXISTING site-scoped routes —
+no backend changes:
+
+- `GET /site/{id}/{env}/logs-archive` → `[{name, type: access|error, date,
+  epoch, size}]` (CLI `logs archive-list` over rclone lsjson, newest first)
+- `GET /site/{id}/{env}/logs-archive/download?file=…` → `{link, expires_at,
+  expires_in}` signed B2 URL (rclone link, 24h)
+
+UI (`computeLogsArchive` + `loadLogsArchive`/`downloadArchivedLog` in
+site-detail.js; mode toggle bindings in app.js computeDetail): range presets
+(7/30/90 days/All, default 30) + All/Access/Error pills, rows grouped by
+month (weekday-date · type chip · mono filename · size · Download), count
+line overrides `logMeta` ("80 files · 12.4 MB") via a spread placed AFTER the
+base logMeta. All filtering is client-side over the one list call (~2
+files/day). Download = toast → signed link → window.open. List cached per env
+on `_detail.la`; env switch reloads when the tab+mode are active; `openSite`
+resets to Live. Empty state distinguishes "no archives yet" (a fresh env, or
+staging before the 2026-08 cron) from "filters match nothing".
+
+**Local-dev gotcha:** the local CLI config's `rclone_backup` points at the
+DEV bucket path, so archive lists are legitimately EMPTY locally — the CLI
+appends `/<captainID>` in fleet mode, so the production layout `Sites/1/…` =
+system `…/Sites` + captain 1. Verified live by temporarily pointing the local
+config at the production path (restored after): 30d/90d counts, Error filter,
+month grouping, real signed-link download (HTTP 200 from B2, correct object),
+and the staging empty state — no page errors.
+
+**Phase 2 (not built):** in-browser viewing — fetch the signed URL, gunzip
+client-side via `DecompressionStream('gzip')`, feed the existing highlighted
+log viewer. Gated on the B2 bucket CORS rules allowing a browser fetch from
+the app origin; check that before building (fallback: a Manager proxy route
++ CLI `archive-cat`).
+
 ### Still-dead controls (need bigger UI or a missing backend)
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…".

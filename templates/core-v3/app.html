@@ -1243,25 +1243,68 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <sc-if value="{{ tabLogs }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;margin-top:16px">
-              <span style="font:400 13px var(--sans);color:var(--ink-dim)">Server log files for this environment.</span>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <div style="display:flex;gap:3px;padding:3px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);flex:none">
+                <span onClick="{{ lmSetLive }}" style="padding:4px 12px;border-radius:7px;background:{{ lmLiveBg }};color:{{ lmLiveFg }};font:500 13px var(--sans);cursor:pointer">Live</span>
+                <span onClick="{{ lmSetArch }}" style="padding:4px 12px;border-radius:7px;background:{{ lmArchBg }};color:{{ lmArchFg }};font:500 13px var(--sans);cursor:pointer">Archive</span>
+              </div>
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">{{ logsLead }}</span>
               <div style="flex:1"></div>
               <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ logMeta }}</span>
             </div>
-            <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-start">
-              <div style="flex:none;width:232px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                <div style="max-height:520px;overflow-y:auto">
-                  <sc-for list="{{ logChips }}" as="c" hint-placeholder-count="6">
-                    <div onClick="{{ c.go }}" title="{{ c.label }}" style="padding:9px 12px;border-bottom:1px solid var(--rule);border-left:3px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--mono);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="color:var(--ink)">{{ c.label }}</div>
+            <sc-if value="{{ lmLive }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-start">
+                <div style="flex:none;width:232px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <div style="max-height:520px;overflow-y:auto">
+                    <sc-for list="{{ logChips }}" as="c" hint-placeholder-count="6">
+                      <div onClick="{{ c.go }}" title="{{ c.label }}" style="padding:9px 12px;border-bottom:1px solid var(--rule);border-left:3px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--mono);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="color:var(--ink)">{{ c.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:0;border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:14px 16px;max-height:520px;overflow-y:auto">
+                  <sc-for list="{{ logLines }}" as="l" hint-placeholder-count="5">
+                    <div style="display:flex;align-items:flex-start"><span style="flex:none;width:40px;text-align:right;padding-right:12px;color:var(--ink-dim);opacity:.5;user-select:none;font:400 12.5px/1.8 var(--mono)">{{ l.n }}</span><span style="flex:1;min-width:0;font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all"><sc-for list="{{ l.segs }}" as="g"><span style="color:{{ g.fg }};font-weight:{{ g.w }}">{{ g.t }}</span></sc-for></span></div>
                   </sc-for>
                 </div>
               </div>
-              <div style="flex:1;min-width:0;border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:14px 16px;max-height:520px;overflow-y:auto">
-                <sc-for list="{{ logLines }}" as="l" hint-placeholder-count="5">
-                  <div style="display:flex;align-items:flex-start"><span style="flex:none;width:40px;text-align:right;padding-right:12px;color:var(--ink-dim);opacity:.5;user-select:none;font:400 12.5px/1.8 var(--mono)">{{ l.n }}</span><span style="flex:1;min-width:0;font:400 12.5px/1.8 var(--mono);color:var(--ink-dim);white-space:pre-wrap;word-break:break-all"><sc-for list="{{ l.segs }}" as="g"><span style="color:{{ g.fg }};font-weight:{{ g.w }}">{{ g.t }}</span></sc-for></span></div>
-                </sc-for>
+            </sc-if>
+            <sc-if value="{{ lmArch }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
+                <div style="display:flex;gap:3px;padding:3px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);flex:none">
+                  <sc-for list="{{ laRanges }}" as="rp" hint-placeholder-count="4">
+                    <span onClick="{{ rp.go }}" style="padding:3px 11px;border-radius:7px;background:{{ rp.bg }};color:{{ rp.fg }};font:500 12.5px var(--sans);cursor:pointer">{{ rp.label }}</span>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:3px;padding:3px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);flex:none">
+                  <sc-for list="{{ laTypes }}" as="tp" hint-placeholder-count="3">
+                    <span onClick="{{ tp.go }}" style="padding:3px 11px;border-radius:7px;background:{{ tp.bg }};color:{{ tp.fg }};font:500 12.5px var(--sans);cursor:pointer">{{ tp.label }}</span>
+                  </sc-for>
+                </div>
               </div>
-            </div>
+              <sc-if value="{{ laLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;font:400 13px var(--sans);color:var(--ink-dim)">Loading archived logs…</div>
+              </sc-if>
+              <sc-if value="{{ laHasError }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;font:400 13px var(--sans);color:var(--bad)">{{ laError }}</div>
+              </sc-if>
+              <sc-if value="{{ laEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:14px;font:400 13px var(--sans);color:var(--ink-dim)">{{ laEmptyText }}</div>
+              </sc-if>
+              <sc-for list="{{ laGroups }}" as="lg" hint-placeholder-count="1">
+                <div style="margin-top:16px;font:600 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">{{ lg.label }}</div>
+                <div style="margin-top:8px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <sc-for list="{{ lg.rows }}" as="lr" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
+                      <span style="flex:none;width:120px;font:500 13px var(--sans)">{{ lr.day }}</span>
+                      <span style="flex:none;font:500 11.5px var(--sans);background:{{ lr.typeBg }};color:{{ lr.typeFg }};border-radius:99px;padding:2px 9px">{{ lr.typeLabel }}</span>
+                      <span title="{{ lr.name }}" style="flex:1;min-width:0;font:400 12px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lr.name }}</span>
+                      <span style="flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ lr.size }}</span>
+                      <span onClick="{{ lr.dl }}" style="flex:none;font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Download</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </sc-if>
           </sc-if>
         </div>
       </sc-if>

@@ -10,7 +10,7 @@
 Object.assign(Component.prototype, {
 
   openSite(id, env) {
-    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', capSel: '', capLimit: 60 });
+    this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', capSel: '', capLimit: 60 });
     if (this._hydrated) this.loadSiteDetail(id);
   },
 
@@ -52,6 +52,7 @@ Object.assign(Component.prototype, {
     if (real && real.envs && !real.envs.some(e => e.environment === name)) return;
     this.setState({ env: name, logFile: '', capSel: '', capLimit: 60, rgHash: '', rgDetail: null, rgOpenIdx: -1 });
     if (real && this.state.siteTab === 'logs') this.loadLogs(name);
+    if (real && this.state.siteTab === 'logs' && this.state.logMode === 'archive') setTimeout(() => this.loadLogsArchive(name), 0);
     if (real && this.state.siteTab === 'registry') setTimeout(() => this.loadRegistry(), 0);
     if (real && this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
     if (real && this.state.siteTab === 'captures') setTimeout(() => this.loadCaptures(), 0);
@@ -549,6 +550,118 @@ Object.assign(Component.prototype, {
   realLogFiles(real, s) {
     const bucket = real.logs[s.env.toLowerCase()];
     return bucket ? bucket.files : [];
+  },
+
+  // ── Archived logs (B2 long-term retention) ────────────────────
+  // Phase 1: browse + signed-link download over the EXISTING site-scoped
+  // routes — GET /site/{id}/{env}/logs-archive (list: {name, type, date,
+  // epoch, size}) and .../logs-archive/download?file=… ({link, expires_at}).
+  // Files are Kinsta-rotated {access|error}.log-YYYY-MM-DD-EPOCH[.gz]; the
+  // daily archive cron runs on the CLI server, so a fresh environment (or
+  // staging before 2026-08) legitimately lists zero files.
+  loadLogsArchive(envName) {
+    const real = this._detail;
+    if (!real) return;
+    const env = (envName || this.state.env).toLowerCase();
+    real.la = real.la || {};
+    if (real.la[env]) return;
+    const bucket = real.la[env] = { loading: true, files: [], error: '' };
+    this.setState({ tick: this.state.tick });
+    this.api('/site/' + real.siteId + '/' + env + '/logs-archive').then(res => {
+      if (Array.isArray(res)) bucket.files = res;
+      else bucket.error = (res && res.error) || 'Could not load the archive list.';
+      bucket.loading = false;
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { bucket.loading = false; bucket.error = 'Could not load the archive list.'; this.setState({ tick: this.state.tick }); });
+  },
+
+  downloadArchivedLog(name) {
+    const real = this._detail;
+    if (!real) return;
+    const env = this.state.env.toLowerCase();
+    const tid = this.toast('Preparing download…', { kind: 'loading' });
+    this.api('/site/' + real.siteId + '/' + env + '/logs-archive/download?file=' + encodeURIComponent(name)).then(res => {
+      if (res && res.link) {
+        window.open(String(res.link).trim());
+        this.updateToast(tid, 'Download link opened' + (res.expires_in ? ' — valid for ' + res.expires_in : ''), { kind: 'success' });
+      } else {
+        this.updateToast(tid, (res && res.error) || 'Could not create a download link', { kind: 'error' });
+      }
+    }).catch(() => this.updateToast(tid, 'Could not create a download link', { kind: 'error' }));
+  },
+
+  fmtBytes(n) {
+    n = Number(n) || 0;
+    if (n >= 1073741824) return (n / 1073741824).toFixed(1) + ' GB';
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+    if (n >= 1024) return Math.round(n / 1024) + ' KB';
+    return n + ' B';
+  },
+
+  // Design-preview sample rows, dated relative to today so the default
+  // 30-day range never renders an empty preview.
+  laSample() {
+    const out = [];
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(Date.now() - i * 86400000);
+      const date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      out.push({ name: 'access.log-' + date + '-175400000' + i + '.gz', type: 'access', date, epoch: 1754000000 + i, size: 45056 + i * 3210 });
+      out.push({ name: 'error.log-' + date + '-175400000' + i + '.gz', type: 'error', date, epoch: 1754000000 + i, size: 2048 + i * 512 });
+    }
+    return out;
+  },
+
+  // Bindings for the Logs tab's Archive view (spread into computeDetail's
+  // return AFTER the base logMeta so the archive count line overrides it).
+  computeLogsArchive(real, s) {
+    if (s.logMode !== 'archive') return {};
+    const env = (s.env || '').toLowerCase();
+    const bucket = real
+      ? ((real.la || {})[env] || { loading: true, files: [], error: '' })
+      : { loading: false, files: window.CC_BOOT ? [] : this.laSample(), error: '' };
+    const range = s.laRange === undefined ? 30 : s.laRange;
+    const type = s.laType || '';
+    let files = bucket.files;
+    if (range) {
+      const cut = new Date(Date.now() - range * 86400000);
+      const cutStr = cut.getFullYear() + '-' + String(cut.getMonth() + 1).padStart(2, '0') + '-' + String(cut.getDate()).padStart(2, '0');
+      files = files.filter(f => f.date >= cutStr);
+    }
+    if (type) files = files.filter(f => f.type === type);
+    files = [...files].sort((a, b) => b.date.localeCompare(a.date) || b.epoch - a.epoch);
+    const groups = [];
+    let cur = null;
+    files.forEach(f => {
+      const d = new Date(f.date + 'T12:00:00');
+      const label = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      if (!cur || cur.label !== label) { cur = { label, rows: [] }; groups.push(cur); }
+      cur.rows.push({
+        day: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+        typeLabel: f.type,
+        typeBg: f.type === 'error' ? 'var(--bad-soft)' : 'var(--brand-soft)',
+        typeFg: f.type === 'error' ? 'var(--bad)' : 'var(--brand-ink)',
+        size: this.fmtBytes(f.size),
+        name: f.name,
+        dl: () => real ? this.downloadArchivedLog(f.name) : this.toast('Sample data — downloads work on a real site', { kind: 'info' })
+      });
+    });
+    const totalSize = files.reduce((t, f) => t + (Number(f.size) || 0), 0);
+    return {
+      laRanges: [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'All']].map(([d, label]) => ({ label,
+        bg: range === d ? 'var(--panel-2)' : 'transparent', fg: range === d ? 'var(--ink)' : 'var(--ink-dim)',
+        go: () => this.setState({ laRange: d }) })),
+      laTypes: [['', 'All'], ['access', 'Access'], ['error', 'Error']].map(([t, label]) => ({ label,
+        bg: type === t ? 'var(--panel-2)' : 'transparent', fg: type === t ? 'var(--ink)' : 'var(--ink-dim)',
+        go: () => this.setState({ laType: t }) })),
+      laGroups: groups,
+      laLoading: !!bucket.loading,
+      laError: bucket.error, laHasError: !!bucket.error,
+      laEmpty: !bucket.loading && !bucket.error && groups.length === 0,
+      laEmptyText: bucket.files.length
+        ? 'No archived logs match the current filters.'
+        : 'No archived logs for this environment yet — rotated server logs are archived to long-term storage daily.',
+      logMeta: bucket.loading ? 'Loading…' : files.length + ' file' + (files.length === 1 ? '' : 's') + ' · ' + this.fmtBytes(totalSize)
+    };
   },
 
   // Lightweight log-line highlighter — nginx/PHP-FPM/access-log flavored.
