@@ -1032,7 +1032,16 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   errors from the server (path deleted) REPLACES the stale listing with the
   error; a network-level failure keeps the cached copy silently. Responses that
   land after the user navigated away still update the cache. Measured live:
-  cold subdir 3.3 s → warm 0.04 s; warm file reopen 0.04 s. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
+  cold subdir 3.3 s → warm 0.04 s; warm file reopen 0.04 s.
+- **File VIEWS are audit-logged** (`ActivityLog`: action `viewed`, entity_type
+  `file`, entity_id = site_id, path + environment in context, account-scoped) —
+  the home dir holds wp-config.php/.env/backups, so contents reaching a browser
+  gets a row, same precedent as "Retrieved auth code". Logged only on a
+  SUCCESSFUL view (permission + parse + no remote error). Listings are
+  deliberately unlogged (navigation + SWR background refreshes = noise), and
+  duplicate rows from the view cache's background refresh are accepted by
+  design — each row is a real server-side read. Renders on the Activity page
+  with no UI changes. UI (`files.js`): breadcrumb + dirs-first listing (name/size/modified,
   symlink chip, `..` row), click a file → viewer dialog (512 KB cap, binary
   detection, TextDecoder for UTF-8). Listing state on `this._fm` keyed by
   environment_id so env switches self-heal via the render-time lazy loader.

@@ -10672,6 +10672,20 @@ function captaincore_environment_files_func( WP_REST_Request $request ) {
 		return new WP_Error( 'fm_remote_error', $payload['error'], [ 'status' => 400 ] );
 	}
 
+	// Audit trail for file reads — the home dir holds wp-config.php, .env
+	// files, and backups, so file CONTENTS reaching a browser is worth a row
+	// (same precedent as "Retrieved auth code"). Listings stay unlogged:
+	// navigation + background cache refreshes would be all noise.
+	if ( $action === 'view' ) {
+		$logged_path = ! empty( $payload['path'] ) ? $payload['path'] : $path;
+		CaptainCore\ActivityLog::log(
+			'viewed', 'file', $site->site_id, $site->name,
+			"Viewed file {$logged_path} on {$site->name} ({$environment->environment})",
+			[ 'path' => $logged_path, 'environment' => $environment->environment ],
+			$site->customer_id ?? null
+		);
+	}
+
 	return new WP_REST_Response( $payload, 200 );
 }
 
