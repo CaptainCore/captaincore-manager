@@ -1026,6 +1026,17 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   defense-in-depth, but that only takes effect on the next CLI server rebuild.
   Listing sort is numeric-aware (`localeCompare` with `{ numeric: true }`) so
   numbered directories order 1, 2 … 10, 11 instead of lexically.
+- **File manager image preview**: viewing an image (png/jpg/gif/webp/svg/ico/
+  bmp/avif by extension) renders it inline in the view dialog instead of
+  "Binary file — no preview". The remote script returns the WHOLE file for
+  images (a truncated image is corrupt) with an `image` mime field, up to a
+  hard 8 MB cap — larger falls back to the binary answer and the UI says
+  "Image too large to preview". Rendered as `<img src="data:…">` (the backup-
+  browser precedent): a data-URI image, SVG included, can't execute scripts,
+  so a hostile file on a managed site stays inert. Server keeps `binary: true`
+  on image responses so an older cached frontend degrades to no-preview rather
+  than dumping bytes as text. Needs the CLI repo's `file-manager` remote
+  script pulled on the core server (script-only — no rebuild).
 - **File manager stale-while-revalidate cache**: every listing and file view is
   cached for the session (`_fmCache`/`_fmViewCache`, keyed environment_id +
   path). Navigating to a cached path renders instantly with a quiet

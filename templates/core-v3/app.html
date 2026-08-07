@@ -4192,6 +4192,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <sc-if value="{{ fmViewHasBody }}" hint-placeholder-val="{{ true }}">
           <pre style="flex:1;overflow:auto;margin:0;padding:14px 18px;background:var(--panel);font:400 12px/1.65 var(--mono);color:var(--ink);white-space:pre;tab-size:4">{{ fmViewBody }}</pre>
         </sc-if>
+        <sc-if value="{{ fmViewHasImg }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;overflow:auto;margin:0;padding:18px;background:var(--panel);display:flex;justify-content:center;align-items:flex-start">
+            <img src="{{ fmViewImg }}" alt="" style="max-width:100%;height:auto;border-radius:6px">
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>

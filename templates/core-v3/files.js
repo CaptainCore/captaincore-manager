@@ -77,8 +77,8 @@ Object.assign(Component.prototype, {
     const key = fm.envId + ':' + p;
     const hit = cache[key];
     this.setState(hit
-      ? { fmViewOpen: true, fmViewName: name, fmViewText: hit.text, fmViewNote: hit.note + ' · refreshing…' }
-      : { fmViewOpen: true, fmViewName: name, fmViewText: '', fmViewNote: 'Loading…' });
+      ? { fmViewOpen: true, fmViewName: name, fmViewText: hit.text, fmViewImg: hit.img || '', fmViewNote: hit.note + ' · refreshing…' }
+      : { fmViewOpen: true, fmViewName: name, fmViewText: '', fmViewImg: '', fmViewNote: 'Loading…' });
     this.api('/environment/' + fm.envId + '/files?action=view&path=' + encodeURIComponent(p)).then(res => {
       const live = this.state.fmViewOpen && this.state.fmViewName === name;
       if (!res || res.code) {
@@ -86,10 +86,20 @@ Object.assign(Component.prototype, {
         else if (live) this.setState({ fmViewNote: hit.note });
         return;
       }
+      if (res.image) {
+        // Rendered via <img src="data:…"> — a data-URI image (SVG included)
+        // cannot execute scripts, so a hostile file on a managed site stays inert.
+        const img = 'data:' + res.image + ';base64,' + (res.content_b64 || '');
+        const note = this.fmSize(res.size);
+        cache[key] = { text: '', img, note };
+        if (live) this.setState({ fmViewText: '', fmViewImg: img, fmViewNote: note });
+        return;
+      }
       if (res.binary) {
-        const note = 'Binary file — no preview · ' + this.fmSize(res.size);
+        const isImg = /\.(png|jpe?g|gif|webp|svg|ico|bmp|avif)$/i.test(name);
+        const note = (isImg ? 'Image too large to preview · ' : 'Binary file — no preview · ') + this.fmSize(res.size);
         cache[key] = { text: '', note };
-        if (live) this.setState({ fmViewNote: note });
+        if (live) this.setState({ fmViewImg: '', fmViewNote: note });
         return;
       }
       let text = '';
@@ -98,7 +108,7 @@ Object.assign(Component.prototype, {
       } catch (e) { /* leave empty */ }
       const note = this.fmSize(res.size) + (res.truncated ? ' · showing the first 512 KB' : '');
       cache[key] = { text, note };
-      if (live) this.setState({ fmViewText: text, fmViewNote: note });
+      if (live) this.setState({ fmViewText: text, fmViewImg: '', fmViewNote: note });
     }).catch(() => {
       if (this.state.fmViewName !== name) return;
       this.setState({ fmViewNote: hit ? hit.note : 'Could not load the file.' });
@@ -207,7 +217,9 @@ Object.assign(Component.prototype, {
       fmViewName: s.fmViewName || '',
       fmViewNote: s.fmViewNote || '',
       fmViewBody: s.fmViewText || '',
-      fmViewHasBody: !!(s.fmViewText)
+      fmViewHasBody: !!(s.fmViewText),
+      fmViewImg: s.fmViewImg || '',
+      fmViewHasImg: !!(s.fmViewImg)
     };
   }
 
