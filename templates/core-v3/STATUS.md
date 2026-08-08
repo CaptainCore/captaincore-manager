@@ -1026,6 +1026,26 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   defense-in-depth, but that only takes effect on the next CLI server rebuild.
   Listing sort is numeric-aware (`localeCompare` with `{ numeric: true }`) so
   numbered directories order 1, 2 … 10, 11 instead of lexically.
+- **Activity group defaults to Timeline**: the Activity tab's leaves are
+  ordered Timeline → Logs → Scheduled (a group click lands on `leaves[0]`).
+  Timeline renders from already-loaded data; Logs needs a slow ssh fetch, so
+  defaulting there felt broken.
+- **Timeline file-diff chips + code-diff dialog**: attachment chips now show
+  `+N −N` stats and open a code-diff dialog (file sidebar with per-file stats,
+  hunk rendering with line numbers and red/green rows, stats footer — the
+  core.php pld dialog re-done in v3 style). Hunks come from the stored
+  process_log_file rows (`/captaincore-log` contract); the timeline REST
+  already shipped them.
+- **Timeline attach-a-diff form**: the composer and the row editor both carry
+  "+ Attach file diff" — path + original + updated content, hunks computed
+  client-side (`tlComputeHunks`: LCS on the trimmed middle, 2 context lines,
+  whole-block fallback for very large inputs). Attachments are removable in
+  the row editor; saves ride the existing process-logs REST (create accepts
+  `files`, update replaces the set). Server fix that ships with this:
+  `ProcessLog::assign_files` now accepts the read shape's `file_path` as well
+  as `path` — before that, ANY edit round-trip (v1's edit dialog included)
+  silently wiped the entry's attachments because the GET shape came back
+  without `path`.
 - **File manager image preview**: viewing an image (png/jpg/gif/webp/svg/ico/
   bmp/avif by extension) renders it inline in the view dialog instead of
   "Binary file — no preview". The remote script returns the WHOLE file for

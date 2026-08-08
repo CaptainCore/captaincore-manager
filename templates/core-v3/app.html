@@ -1281,8 +1281,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                    lists, links), not a single-line <input>. -->
               <div style="padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--rule)">
                 <textarea ref="{{ tlDraftRef }}" onInput="{{ onTlDraft }}" rows="2" placeholder="Add a timeline entry — what did you do, and why? Markdown supported." style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12.5px/1.6 var(--sans);padding:8px 10px;outline:none;resize:vertical;min-height:38px;max-height:280px"></textarea>
+                <sc-if value="{{ tlNewChipsShow }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+                    <sc-for list="{{ tlNewChips }}" as="fl" hint-placeholder-count="1">
+                      <span style="display:inline-flex;align-items:center;gap:5px;font:500 11px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ fl.name }}<span style="color:var(--ok)">{{ fl.plus }}</span><span style="color:var(--bad)">{{ fl.minus }}</span><span onClick="{{ fl.rm }}" title="Remove" style="cursor:pointer" style-hover="color:var(--bad)">✕</span></span>
+                    </sc-for>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ tlAtNewOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:8px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);padding:10px">
+                    <input ref="{{ tlAtPathRef }}" onInput="{{ onTlAtPath }}" placeholder="File path — e.g. wp-content/plugins/…/snippet.php" style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:7px 10px;outline:none">
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                      <textarea ref="{{ tlAtOrigRef }}" onInput="{{ onTlAtOrig }}" rows="6" placeholder="Original content (leave empty for a new file)" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 11.5px/1.6 var(--mono);padding:7px 10px;outline:none;resize:vertical"></textarea>
+                      <textarea ref="{{ tlAtPatchedRef }}" onInput="{{ onTlAtPatched }}" rows="6" placeholder="Updated content (leave empty for a deleted file)" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 11.5px/1.6 var(--mono);padding:7px 10px;outline:none;resize:vertical"></textarea>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                      <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">The diff is computed from the two versions.</span>
+                      <div style="flex:1"></div>
+                      <span onClick="{{ cancelTlAt }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                      <button onClick="{{ tlAtSubmit }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Attach</button>
+                    </div>
+                  </div>
+                </sc-if>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
                   <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">Markdown · ⌘⏎ to add</span>
+                  <span onClick="{{ openTlAtNew }}" style="font:500 11.5px var(--sans);color:var(--brand-ink);cursor:pointer">+ Attach file diff</span>
                   <div style="flex:1"></div>
                   <button onClick="{{ addTl }}" style="border:none;background:{{ tlAddBg }};color:white;font:600 12.5px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add entry</button>
                 </div>
@@ -1296,7 +1319,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                         <sc-if value="{{ t.filesShow }}" hint-placeholder-val="{{ false }}">
                           <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
                             <sc-for list="{{ t.files }}" as="fl" hint-placeholder-count="1">
-                              <span style="font:500 11px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ fl.name }}</span>
+                              <span onClick="{{ fl.open }}" title="View diff" style="display:inline-flex;align-items:center;gap:5px;font:500 11px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px;cursor:pointer" style-hover="background:var(--panel);color:var(--ink)">{{ fl.name }}<span style="color:var(--ok)">{{ fl.plus }}</span><span style="color:var(--bad)">{{ fl.minus }}</span></span>
                             </sc-for>
                           </span>
                         </sc-if>
@@ -1310,8 +1333,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ t.editing }}" hint-placeholder-val="{{ false }}">
                     <div style="padding:10px 16px;background:var(--panel)">
                       <textarea ref="{{ tlEditRef }}" onInput="{{ onTlEditText }}" rows="4" style="width:100%;box-sizing:border-box;border:1px solid var(--brand);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12.5px/1.6 var(--sans);padding:8px 10px;outline:none;resize:vertical;min-height:76px;max-height:340px"></textarea>
+                      <sc-if value="{{ tlEditChipsShow }}" hint-placeholder-val="{{ false }}">
+                        <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+                          <sc-for list="{{ tlEditChips }}" as="fl" hint-placeholder-count="1">
+                            <span style="display:inline-flex;align-items:center;gap:5px;font:500 11px var(--mono);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ fl.name }}<span style="color:var(--ok)">{{ fl.plus }}</span><span style="color:var(--bad)">{{ fl.minus }}</span><span onClick="{{ fl.rm }}" title="Remove" style="cursor:pointer" style-hover="color:var(--bad)">✕</span></span>
+                          </sc-for>
+                        </span>
+                      </sc-if>
+                      <sc-if value="{{ tlAtEditOpen }}" hint-placeholder-val="{{ false }}">
+                        <div style="margin-top:8px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);padding:10px">
+                          <input ref="{{ tlAtPathRef }}" onInput="{{ onTlAtPath }}" placeholder="File path — e.g. wp-content/plugins/…/snippet.php" style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:7px 10px;outline:none">
+                          <div style="display:flex;gap:8px;margin-top:8px">
+                            <textarea ref="{{ tlAtOrigRef }}" onInput="{{ onTlAtOrig }}" rows="6" placeholder="Original content (leave empty for a new file)" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 11.5px/1.6 var(--mono);padding:7px 10px;outline:none;resize:vertical"></textarea>
+                            <textarea ref="{{ tlAtPatchedRef }}" onInput="{{ onTlAtPatched }}" rows="6" placeholder="Updated content (leave empty for a deleted file)" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 11.5px/1.6 var(--mono);padding:7px 10px;outline:none;resize:vertical"></textarea>
+                          </div>
+                          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                            <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">The diff is computed from the two versions.</span>
+                            <div style="flex:1"></div>
+                            <span onClick="{{ cancelTlAt }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                            <button onClick="{{ tlAtSubmit }}" style="border:none;background:var(--brand);color:white;font:600 12px var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Attach</button>
+                          </div>
+                        </div>
+                      </sc-if>
                       <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
                         <span style="font:400 11.5px var(--sans);color:var(--ink-dim)">Markdown · ⌘⏎ to save</span>
+                        <span onClick="{{ openTlAtEdit }}" style="font:500 11.5px var(--sans);color:var(--brand-ink);cursor:pointer">+ Attach file diff</span>
                         <div style="flex:1"></div>
                         <span onClick="{{ t.cancelEdit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
                         <button onClick="{{ t.doneEdit }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save</button>
@@ -4197,6 +4243,54 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <img src="{{ fmViewImg }}" alt="" style="max-width:100%;height:auto;border-radius:6px">
           </div>
         </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Timeline code-diff dialog (attached file changes) ══ -->
+  <sc-if value="{{ plfShow }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePlf }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:1000px;max-width:100%;max-height:86vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 14px var(--mono)">{{ plfTitle }}</span>
+          <div style="flex:1"></div>
+          <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ plfCountLabel }}</span>
+          <span onClick="{{ closePlf }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="flex:none;width:230px;border-right:1px solid var(--rule);overflow:auto;background:var(--panel)">
+            <sc-for list="{{ plfList }}" as="pf" hint-placeholder-count="1">
+              <div onClick="{{ pf.select }}" style="padding:10px 14px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ pf.bg }}" style-hover="background:var(--panel-2)">
+                <span style="display:block;font:600 12.5px var(--mono);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pf.name }}</span>
+                <span style="display:block;font:400 11px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pf.dir }}</span>
+                <span style="display:block;font:500 11px var(--mono);margin-top:2px"><span style="color:var(--ok)">{{ pf.plus }}</span> <span style="color:var(--bad)">{{ pf.minus }}</span></span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <div style="flex:none;padding:10px 16px;border-bottom:1px solid var(--rule)">
+              <span style="display:block;font:400 11.5px var(--mono);color:var(--ink-dim);word-break:break-all">{{ plfPath }}</span>
+              <span style="display:block;font:400 11.5px var(--mono);color:var(--bad)">{{ plfOrig }}</span>
+              <span style="display:block;font:400 11.5px var(--mono);color:var(--ok)">{{ plfPatched }}</span>
+            </div>
+            <div style="flex:1;overflow:auto;background:var(--panel);padding:6px 0">
+              <sc-for list="{{ plfRows }}" as="dr" hint-placeholder-count="6">
+                <div style="display:flex;align-items:flex-start;background:{{ dr.bg }};font:400 12px/1.6 var(--mono)">
+                  <span style="flex:none;width:46px;text-align:right;padding:0 8px;color:var(--ink-dim);user-select:none">{{ dr.no }}</span>
+                  <span style="flex:none;width:14px;color:{{ dr.mFg }};user-select:none">{{ dr.m }}</span>
+                  <span style="flex:1;white-space:pre-wrap;word-break:break-word;color:{{ dr.fg }};padding-right:14px">{{ dr.text }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ plfEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:20px;font:400 12.5px var(--sans);color:var(--ink-dim)">No hunks recorded for this file.</div>
+              </sc-if>
+            </div>
+            <div style="flex:none;display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--rule)">
+              <span style="font:500 12px var(--mono);color:var(--bad)">{{ plfStatRemoved }}</span>
+              <span style="font:500 12px var(--mono);color:var(--ok)">{{ plfStatAdded }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </sc-if>

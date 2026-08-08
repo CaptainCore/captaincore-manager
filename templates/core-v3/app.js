@@ -1659,6 +1659,7 @@ class Component extends DCLogic {
       lmSetArch: () => { this.setState({ logMode: 'archive' }); if (real && this.loadLogsArchive) this.loadLogsArchive(); },
       logsLead: s.logMode === 'archive' ? 'Rotated server logs archived to long-term storage.' : 'Server log files for this environment.',
       ...(this.computeLogsArchive ? this.computeLogsArchive(real, s) : { laGroups: [], laRanges: [], laTypes: [], laLoading: false, laHasError: false, laEmpty: false, laListShow: true, laViewOpen: false, laViewLines: [] }),
+      ...(this.computeTlDiff ? this.computeTlDiff(real, s) : { plfShow: false, tlAtNewOpen: false, tlAtEditOpen: false, tlNewChipsShow: false, tlEditChipsShow: false }),
       tlRows: (real ? (real.timeline === null ? [{ uid: 0, text: 'Loading timeline…', who: 'System', when: '' }] : (real.timeline || [])) : (s.timeline || this.TIMELINE_INIT)).map(t => ({ ...t,
         init: t.who.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
         // Raw-HTML escape hatch: the DC runtime has no innerHTML binding, so
@@ -1667,13 +1668,22 @@ class Component extends DCLogic {
           const want = t.html || String(t.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           if (el._md !== want) { el._md = want; el.innerHTML = want; } },
         editing: s.tlEdit === t.uid, notEditing: s.tlEdit !== t.uid,
-        // Attached files (diffs the CLI logged alongside the entry).
-        files: (((t._raw && t._raw.files) || [])).map(f => ({ name: f.filename || f.name || 'file' })),
+        // Attached files (diffs logged alongside the entry) — clickable chips
+        // with +N/−N stats; clicking opens the code-diff dialog.
+        files: (((t._raw && t._raw.files) || [])).map((f, i) => ({
+          name: String(f.file_path || f.name || 'file').split('/').pop(),
+          plus: f.lines_added ? '+' + f.lines_added : '',
+          minus: f.lines_removed ? '−' + f.lines_removed : '',
+          open: () => this.setState({ plfUid: t.uid, plfIdx: i }) })),
         filesShow: !!((t._raw && t._raw.files) || []).length,
-        startEdit: () => this.setState({ tlEdit: t.uid, tlEditText: t.text }),
-        doneEdit: () => { if (real) { const v = this.state.tlEditText.trim(); if (v && v !== t.text) this.realTimelineEdit(real, t, v); this.setState({ tlEdit: 0 }); return; }
+        startEdit: () => this.setState({ tlEdit: t.uid, tlEditText: t.text,
+          tlEditFiles: (((t._raw && t._raw.files) || [])).map(f => this.tlFileToPayload(f)),
+          tlFilesDirty: false, tlAttachFor: 0 }),
+        doneEdit: () => { if (real) { const v = this.state.tlEditText.trim();
+          if (v && (v !== t.text || this.state.tlFilesDirty)) this.realTimelineEdit(real, t, v, this.state.tlEditFiles || []);
+          this.setState({ tlEdit: 0, tlAttachFor: 0 }); return; }
           this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).map(x => x.uid === st.tlEdit ? { ...x, text: st.tlEditText.trim() || x.text } : x), tlEdit: 0 })); },
-        cancelEdit: () => this.setState({ tlEdit: 0 }),
+        cancelEdit: () => this.setState({ tlEdit: 0, tlAttachFor: 0 }),
         del: () => { if (real) { this.realTimelineDelete(real, t); return; }
           this.setState(st => ({ timeline: (st.timeline || this.TIMELINE_INIT).filter(x => x.uid !== t.uid) })); } })),
       tlDraft: s.tlDraft, onTlDraft: e => this.setState({ tlDraft: e.target.value }),
@@ -1688,8 +1698,8 @@ class Component extends DCLogic {
         // Re-seed whenever a different row enters edit mode.
         if (el && el._forUid !== s.tlEdit) { el._forUid = s.tlEdit; el.value = this.state.tlEditText || ''; el.focus(); } },
       addTl: () => { const v = this.state.tlDraft.trim(); if (!v) return;
-        if (real) { this.realTimelineAdd(real, v);
-          this.setState({ tlDraft: '' });
+        if (real) { this.realTimelineAdd(real, v, this.state.tlNewFiles || []);
+          this.setState({ tlDraft: '', tlNewFiles: [], tlAttachFor: 0 });
           if (this._tlDraftEl) { this._tlDraftEl.value = ''; this._tlDraftEl.style.height = 'auto'; }
           return; }
         this.setState(st => ({ timeline: [{ uid: Date.now(), text: v, who: 'Austin Ginder', when: 'just now' }, ...(st.timeline || this.TIMELINE_INIT)], tlDraft: '' })); },
@@ -1851,7 +1861,9 @@ class Component extends DCLogic {
     // spoken instruction to customers, so it must stay one click and one word.
     { id: 'users',     label: 'Users',     leaves: [['users', 'Users']] },
     { id: 'history',   label: 'History',   leaves: [['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures']] },
-    { id: 'activity',  label: 'Activity',  leaves: [['logs', 'Logs'], ['timeline', 'Timeline'], ['scheduled', 'Scheduled']] }
+    // Timeline leads: it renders from already-loaded data, while Logs needs a
+    // slow ssh fetch — defaulting the Activity group to Logs felt broken.
+    { id: 'activity',  label: 'Activity',  leaves: [['timeline', 'Timeline'], ['logs', 'Logs'], ['scheduled', 'Scheduled']] }
   ];
   // 'addons' was the pre-grouping name for the plugins/themes pair — keep the
   // alias so links minted before the reorg still land somewhere sensible.

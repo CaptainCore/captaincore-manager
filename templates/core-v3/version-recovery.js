@@ -476,15 +476,21 @@ Object.assign(Component.prototype, {
     if (this._detail) { this._detail.timeline = undefined; this.loadTimeline(); }
   },
 
-  realTimelineAdd(real, text) {
-    this.api('/process-logs', { method: 'POST', body: { site_ids: [Number(real.siteId)], process_id: 0, description: text } })
+  realTimelineAdd(real, text, files) {
+    const body = { site_ids: [Number(real.siteId)], process_id: 0, description: text };
+    if (files && files.length) body.files = files;
+    this.api('/process-logs', { method: 'POST', body })
       .then(() => this.reloadTimeline())
       .catch(err => console.warn('timeline add failed', err));
   },
 
-  realTimelineEdit(real, row, text) {
+  realTimelineEdit(real, row, text, files) {
     this.api('/process-logs/' + row.uid).then(log => {
       log.description_raw = text;
+      // Always send the full attachment set in the assign_files input shape —
+      // the round-tripped GET shape uses file_path, and any UI adds/removals
+      // live in the passed list (seeded at startEdit).
+      log.files = (files || []).map(f => f.path ? f : this.tlFileToPayload(f));
       return this.api('/process-logs/' + row.uid, { method: 'POST', body: log });
     }).then(() => this.reloadTimeline())
       .catch(err => console.warn('timeline edit failed', err));
@@ -494,6 +500,162 @@ Object.assign(Component.prototype, {
     this.api('/process-logs/' + row.uid, { method: 'DELETE' })
       .then(() => this.reloadTimeline())
       .catch(err => console.warn('timeline delete failed', err));
+  },
+
+  // ── Timeline file diffs ───────────────────────────────────────
+  // Attachments are stored per process log as file rows with pre-computed
+  // hunks (line_start / context_before / removed / added / context_after —
+  // the /captaincore-log contract). The dialog below renders those hunks;
+  // the attach form computes them client-side from two pasted versions.
+
+  // Map a REST file row (file_path/hunks/…) to the assign_files input shape.
+  tlFileToPayload(f) {
+    return { path: f.file_path || f.path || '', change_type: f.change_type || 'modified',
+      hunks: f.hunks || [], lines_added: f.lines_added || 0, lines_removed: f.lines_removed || 0 };
+  },
+
+  // Line-diff two texts into the hunk format. LCS on the changed middle when
+  // affordable; one whole-block hunk for very large inputs. Each maximal run
+  // of changed lines becomes one hunk (the format can't interleave context
+  // inside a hunk), with up to 2 context lines each side.
+  tlComputeHunks(orig, patched) {
+    const split = t => { const v = String(t || '').replace(/\r\n/g, '\n'); return v === '' ? [] : v.split('\n'); };
+    const a = split(orig), b = split(patched);
+    let pre = 0;
+    while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+    let sufA = a.length, sufB = b.length;
+    while (sufA > pre && sufB > pre && a[sufA - 1] === b[sufB - 1]) { sufA--; sufB--; }
+    const midA = a.slice(pre, sufA), midB = b.slice(pre, sufB);
+    if (!midA.length && !midB.length) return [];
+    let ops;
+    if (midA.length * midB.length <= 250000) {
+      const m = midA.length, n = midB.length;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = m - 1; i >= 0; i--)
+        for (let j = n - 1; j >= 0; j--)
+          dp[i][j] = midA[i] === midB[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      ops = [];
+      let i = 0, j = 0;
+      while (i < m && j < n) {
+        if (midA[i] === midB[j]) { ops.push({ t: ' ', l: midA[i] }); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ t: '-', l: midA[i] }); i++; }
+        else { ops.push({ t: '+', l: midB[j] }); j++; }
+      }
+      while (i < m) ops.push({ t: '-', l: midA[i++] });
+      while (j < n) ops.push({ t: '+', l: midB[j++] });
+    } else {
+      ops = [...midA.map(l => ({ t: '-', l })), ...midB.map(l => ({ t: '+', l }))];
+    }
+    const full = [
+      ...a.slice(0, pre).map(l => ({ t: ' ', l })),
+      ...ops,
+      ...a.slice(sufA).map(l => ({ t: ' ', l }))
+    ];
+    const hunks = [];
+    let k = 0, oldLine = 1;
+    while (k < full.length) {
+      if (full[k].t === ' ') { k++; oldLine++; continue; }
+      let end = k;
+      while (end < full.length && full[end].t !== ' ') end++;
+      const removed = [], added = [];
+      for (let x = k; x < end; x++) (full[x].t === '-' ? removed : added).push(full[x].l);
+      const ctxBefore = [];
+      for (let x = k - 1; x >= 0 && ctxBefore.length < 2 && full[x].t === ' '; x--) ctxBefore.unshift(full[x].l);
+      const ctxAfter = [];
+      for (let x = end; x < full.length && ctxAfter.length < 2 && full[x].t === ' '; x++) ctxAfter.push(full[x].l);
+      hunks.push({ line_start: Math.max(1, oldLine - ctxBefore.length), context_before: ctxBefore,
+        removed, added, context_after: ctxAfter });
+      oldLine += removed.length;
+      k = end;
+    }
+    return hunks;
+  },
+
+  // Bindings for the code-diff dialog + the attach-a-diff form (spread into
+  // computeDetail's return). The form is shared: tlAttachFor is 'new' when
+  // opened from the composer, the row uid when opened from a row's editor.
+  computeTlDiff(real, s) {
+    const rows = real && Array.isArray(real.timeline) ? real.timeline : [];
+    const log = rows.find(t => t.uid === s.plfUid);
+    const files = log ? ((log._raw && log._raw.files) || []) : [];
+    const open = !!(s.plfUid && files.length);
+    const idx = Math.min(s.plfIdx || 0, Math.max(0, files.length - 1));
+    const cur = open ? files[idx] : null;
+    const nameOf = p => String(p || '').split('/').pop();
+    const dirOf = p => String(p || '').split('/').slice(0, -1).join('/');
+    const diffRows = [];
+    if (cur) (cur.hunks || []).forEach((h, hi) => {
+      if (hi) diffRows.push({ no: '', m: '', text: '⋯', bg: 'transparent', fg: 'var(--ink-dim)', mFg: 'var(--ink-dim)' });
+      const push = (m, no, text) => diffRows.push({
+        no: String(no), m, text: String(text),
+        bg: m === '-' ? 'var(--bad-soft)' : m === '+' ? 'var(--ok-soft)' : 'transparent',
+        fg: m === ' ' ? 'var(--ink-dim)' : 'var(--ink)',
+        mFg: m === '-' ? 'var(--bad)' : m === '+' ? 'var(--ok)' : 'var(--ink-dim)'
+      });
+      let oldLine = h.line_start || 1, newLine = h.line_start || 1;
+      (h.context_before || []).forEach(l => { push(' ', oldLine, l); oldLine++; newLine++; });
+      (h.removed || []).forEach(l => { push('-', oldLine, l); oldLine++; });
+      (h.added || []).forEach(l => { push('+', newLine, l); newLine++; });
+      (h.context_after || []).forEach(l => { push(' ', oldLine, l); oldLine++; newLine++; });
+    });
+    const chip = (f, rm) => ({ name: nameOf(f.path || f.file_path), plus: f.lines_added ? '+' + f.lines_added : '',
+      minus: f.lines_removed ? '−' + f.lines_removed : '', rm });
+    const pendingNew = s.tlNewFiles || [];
+    const pendingEdit = s.tlEditFiles || [];
+    const atKey = String(s.tlAttachFor || '');
+    const seedRef = el => { if (el && el._forKey !== atKey) { el._forKey = atKey; el.value = ''; } };
+    return {
+      plfShow: open,
+      closePlf: () => this.setState({ plfUid: 0 }),
+      plfTitle: cur ? 'code-diff — ' + nameOf(cur.file_path) : 'code-diff',
+      plfCountLabel: files.length + (files.length === 1 ? ' file' : ' files'),
+      plfList: files.map((f, i) => ({
+        name: nameOf(f.file_path), dir: dirOf(f.file_path),
+        plus: f.lines_added ? '+' + f.lines_added : '', minus: f.lines_removed ? '−' + f.lines_removed : '',
+        bg: i === idx ? 'var(--panel-2)' : 'transparent',
+        select: () => this.setState({ plfIdx: i })
+      })),
+      plfPath: cur ? 'File: ' + cur.file_path : '',
+      plfOrig: cur ? '--- ' + nameOf(cur.file_path) + ' (original)' : '',
+      plfPatched: cur ? '+++ ' + nameOf(cur.file_path) + ' (patched)' : '',
+      plfRows: diffRows,
+      plfEmpty: !!cur && !diffRows.length,
+      plfStatRemoved: cur && cur.lines_removed ? '− ' + cur.lines_removed + ' removed' : '',
+      plfStatAdded: cur && cur.lines_added ? '+ ' + cur.lines_added + ' added' : '',
+      // ── attach-a-diff form ──
+      tlAtNewOpen: atKey === 'new',
+      tlAtEditOpen: !!(atKey && atKey !== 'new'),
+      openTlAtNew: () => this.setState({ tlAttachFor: 'new', tlAtPath: '', tlAtOrig: '', tlAtPatched: '' }),
+      openTlAtEdit: () => this.setState({ tlAttachFor: s.tlEdit, tlAtPath: '', tlAtOrig: '', tlAtPatched: '' }),
+      cancelTlAt: () => this.setState({ tlAttachFor: 0 }),
+      onTlAtPath: e => this.setState({ tlAtPath: e.target.value }),
+      onTlAtOrig: e => this.setState({ tlAtOrig: e.target.value }),
+      onTlAtPatched: e => this.setState({ tlAtPatched: e.target.value }),
+      tlAtPathRef: seedRef, tlAtOrigRef: seedRef, tlAtPatchedRef: seedRef,
+      tlAtSubmit: () => {
+        const st = this.state;
+        const path = (st.tlAtPath || '').trim();
+        if (!path) { if (this.toast) this.toast('A file path is required.', { kind: 'error' }); return; }
+        const orig = st.tlAtOrig || '', patched = st.tlAtPatched || '';
+        const hunks = this.tlComputeHunks(orig, patched);
+        if (!hunks.length) { if (this.toast) this.toast('The two versions are identical — nothing to attach.', { kind: 'error' }); return; }
+        const file = {
+          path,
+          change_type: !orig.trim() ? 'added' : !patched.trim() ? 'removed' : 'modified',
+          hunks,
+          lines_added: hunks.reduce((n, h) => n + h.added.length, 0),
+          lines_removed: hunks.reduce((n, h) => n + h.removed.length, 0)
+        };
+        if (st.tlAttachFor === 'new') this.setState({ tlNewFiles: [...(st.tlNewFiles || []), file], tlAttachFor: 0 });
+        else this.setState({ tlEditFiles: [...(st.tlEditFiles || []), file], tlFilesDirty: true, tlAttachFor: 0 });
+      },
+      tlNewChips: pendingNew.map((f, i) => chip(f, () =>
+        this.setState(st => ({ tlNewFiles: (st.tlNewFiles || []).filter((_, x) => x !== i) })))),
+      tlNewChipsShow: !!pendingNew.length,
+      tlEditChips: pendingEdit.map((f, i) => chip(f, () =>
+        this.setState(st => ({ tlEditFiles: (st.tlEditFiles || []).filter((_, x) => x !== i), tlFilesDirty: true })))),
+      tlEditChipsShow: !!pendingEdit.length
+    };
   }
 
 });

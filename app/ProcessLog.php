@@ -115,6 +115,12 @@ class ProcessLog {
         foreach ( $files as $file ) {
             $file  = (array) $file;
             $path  = isset( $file['path'] ) ? (string) $file['path'] : '';
+            if ( $path === '' && isset( $file['file_path'] ) ) {
+                // Accept the GET/read shape too — editors round-trip the log
+                // (files carry file_path, not path), and without this every
+                // edit silently wiped the entry's attachments.
+                $path = (string) $file['file_path'];
+            }
             if ( $path === '' ) {
                 continue;
             }
