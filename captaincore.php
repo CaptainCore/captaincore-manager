@@ -642,6 +642,192 @@ function captaincore_send_newsletter_preview_ajax() {
 }
 add_action( 'wp_ajax_captaincore_send_newsletter_preview', 'captaincore_send_newsletter_preview_ajax' );
 
+/**
+ * Newsletter panel for Minn Admin (statusRoute editor panel): the meta box's
+ * status + manual sends, declaratively. Actions run the same Mailer paths as
+ * the ajax handler above.
+ */
+function captaincore_newsletter_panel_status( $post_id ) {
+    $post = get_post( $post_id );
+    if ( ! $post || 'post' !== $post->post_type ) {
+        return new WP_Error( 'not_a_post', 'Newsletter panel covers posts only.', [ 'status' => 404 ] );
+    }
+    $send_history   = get_post_meta( $post_id, '_captaincore_newsletter_sent', true );
+    $editor_history = get_post_meta( $post_id, '_captaincore_newsletter_sent_editors', true );
+    $subscribers    = count( get_users( [ 'role' => 'email_subscriber', 'fields' => 'ID' ] ) );
+    $editors        = count( get_users( [ 'role' => 'editor', 'fields' => 'ID' ] ) );
+    $current_user   = wp_get_current_user();
+    $action_route   = "captaincore/v1/newsletter/{$post_id}/action";
+
+    $sent = [];
+    if ( ! empty( $send_history ) ) {
+        $decoded = json_decode( $send_history, true );
+        if ( is_array( $decoded ) && isset( $decoded['sent_at'] ) ) {
+            $sent = [
+                'date'  => date_i18n( 'M j, Y g:i a', strtotime( $decoded['sent_at'] ) ),
+                'count' => (int) ( $decoded['recipient_count'] ?? 0 ),
+            ];
+        } else {
+            // Legacy format: a bare timestamp string.
+            $sent = [ 'date' => (string) $send_history, 'count' => 0 ];
+        }
+    }
+    $review = [];
+    if ( ! empty( $editor_history ) ) {
+        $decoded = json_decode( $editor_history, true );
+        if ( is_array( $decoded ) && isset( $decoded['sent_at'] ) ) {
+            $review = [
+                'date'  => date_i18n( 'M j, Y g:i a', strtotime( $decoded['sent_at'] ) ),
+                'count' => (int) ( $decoded['recipient_count'] ?? 0 ),
+            ];
+        }
+    }
+
+    $rows = [
+        $sent
+            ? [ 'label' => 'Status', 'value' => 'Sent', 'tone' => 'green', 'hint' => trim( $sent['date'] . ( $sent['count'] ? " · {$sent['count']} emails" : '' ) ) ]
+            : [ 'label' => 'Status', 'value' => 'Not sent', 'tone' => 'amber' ],
+        [ 'label' => 'Subscribers', 'value' => (string) $subscribers ],
+    ];
+    if ( $review ) {
+        $rows[] = [
+            'label' => 'Editor review',
+            'value' => $review['date'],
+            'hint'  => $review['count'] . ' editor' . ( 1 === $review['count'] ? '' : 's' ),
+        ];
+    }
+
+    $actions = [
+        [
+            'label' => 'Send preview to me',
+            'route' => $action_route,
+            'body'  => [ 'send_to' => 'preview' ],
+            'hint'  => 'Sends to: ' . $current_user->user_email,
+        ],
+    ];
+    if ( $editors ) {
+        $actions[] = [
+            'label' => "Send to editors ({$editors})",
+            'route' => $action_route,
+            'body'  => [ 'send_to' => 'editors' ],
+            'hint'  => 'Send preview to editors for review.',
+        ];
+    }
+    if ( $subscribers && 'publish' === $post->post_status ) {
+        $actions[] = [
+            'label'   => "Send to all subscribers ({$subscribers})",
+            'route'   => $action_route,
+            'body'    => [ 'send_to' => 'all' ],
+            'confirm' => "This sends the newsletter immediately to all {$subscribers} subscribers and cannot be undone.",
+            'danger'  => true,
+        ];
+    }
+    $actions[] = [
+        'label'  => 'Send to email',
+        'route'  => $action_route,
+        'body'   => [ 'send_to' => 'custom' ],
+        'fields' => [ [ 'key' => 'email', 'label' => 'Email address', 'type' => 'email' ] ],
+    ];
+
+    if ( $sent ) {
+        $summary = 'Sent ' . $sent['date'] . ( $sent['count'] ? " · {$sent['count']} emails" : '' );
+        $tone    = 'green';
+    } elseif ( $review ) {
+        $summary = "Editor review sent · {$subscribers} subscribers";
+        $tone    = 'amber';
+    } else {
+        $summary = "Not sent · {$subscribers} subscribers";
+        $tone    = 'amber';
+    }
+
+    $status = [
+        'summary' => $summary,
+        'tone'    => $tone,
+        'rows'    => $rows,
+        'actions' => $actions,
+    ];
+    if ( ! $sent && 'publish' !== $post->post_status ) {
+        $status['note'] = 'Publishing this post sends the newsletter to all subscribers automatically. Preview and editor sends are safe on drafts.';
+    }
+    return $status;
+}
+
+function captaincore_newsletter_panel_action( WP_REST_Request $request ) {
+    $post_id = (int) $request['id'];
+    $post    = get_post( $post_id );
+    if ( ! $post || 'post' !== $post->post_type ) {
+        return new WP_Error( 'not_a_post', 'Post not found.', [ 'status' => 404 ] );
+    }
+    $send_to = sanitize_text_field( $request['send_to'] ?? '' );
+
+    if ( 'preview' === $send_to ) {
+        $current_user = wp_get_current_user();
+        \CaptainCore\Mailer::send_new_post_notification( $post_id, $current_user );
+        $message = 'Preview sent to ' . $current_user->user_email;
+    } elseif ( 'custom' === $send_to ) {
+        $email = sanitize_email( $request['email'] ?? '' );
+        if ( empty( $email ) || ! is_email( $email ) ) {
+            return new WP_Error( 'bad_email', 'Please enter a valid email address.', [ 'status' => 400 ] );
+        }
+        $temp_user = (object) [ 'user_email' => $email, 'ID' => 0 ];
+        \CaptainCore\Mailer::send_new_post_notification( $post_id, $temp_user );
+        $message = 'Preview sent to ' . $email;
+    } elseif ( 'editors' === $send_to ) {
+        $editors = get_users( [ 'role' => 'editor' ] );
+        if ( empty( $editors ) ) {
+            return new WP_Error( 'no_editors', 'No editors found.', [ 'status' => 400 ] );
+        }
+        $emails = [];
+        foreach ( $editors as $user ) {
+            \CaptainCore\Mailer::send_new_post_notification( $post_id, $user, 'review' );
+            $emails[] = $user->user_email;
+        }
+        update_post_meta( $post_id, '_captaincore_newsletter_sent_editors', wp_json_encode( [
+            'sent_at'         => current_time( 'mysql' ),
+            'recipient_count' => count( $editors ),
+            'emails'          => $emails,
+        ] ) );
+        $message = 'Preview sent to ' . count( $editors ) . ' editor(s)';
+    } elseif ( 'all' === $send_to ) {
+        // The manual mass send stays publish-gated: mass-sending a draft would
+        // also suppress the automatic on-publish send (the sent meta
+        // short-circuits it).
+        if ( 'publish' !== $post->post_status ) {
+            return new WP_Error( 'not_published', 'Publish the post before sending to all subscribers.', [ 'status' => 400 ] );
+        }
+        $subscribers = get_users( [ 'role' => 'email_subscriber' ] );
+        if ( empty( $subscribers ) ) {
+            return new WP_Error( 'no_subscribers', 'No subscribers found.', [ 'status' => 400 ] );
+        }
+        foreach ( $subscribers as $user ) {
+            \CaptainCore\Mailer::send_new_post_notification( $post_id, $user );
+        }
+        update_post_meta( $post_id, '_captaincore_newsletter_sent', wp_json_encode( [
+            'sent_at'         => current_time( 'mysql' ),
+            'recipient_count' => count( $subscribers ),
+            'manual'          => true,
+        ] ) );
+        $message = 'Newsletter sent to ' . count( $subscribers ) . ' subscriber(s).';
+    } else {
+        return new WP_Error( 'bad_send_to', 'Invalid send option.', [ 'status' => 400 ] );
+    }
+
+    return [
+        'message' => $message,
+        'status'  => captaincore_newsletter_panel_status( $post_id ),
+    ];
+}
+
+add_filter( 'minn_admin_editor_panels', function ( $panels ) {
+    $panels['captaincore-newsletter'] = [
+        'label'       => 'Newsletter',
+        'sub'         => 'CaptainCore',
+        'cap'         => 'manage_options',
+        'statusRoute' => 'captaincore/v1/newsletter/{id}',
+    ];
+    return $panels;
+} );
+
 function captaincore_missive_func( WP_REST_Request $request ) {
 
 	$key        = $request->get_header('X-Hook-Signature');
@@ -6929,6 +7115,25 @@ function captaincore_session_anomalies_func( WP_REST_Request $request ) {
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
 
 function captaincore_register_rest_endpoints() {
+
+	// Minn Admin newsletter panel (status + send actions). Same
+	// manage_options gate as the meta box's manual-send section.
+	register_rest_route( 'captaincore/v1', '/newsletter/(?P<id>[\d]+)', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			return captaincore_newsletter_panel_status( (int) $request['id'] );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/newsletter/(?P<id>[\d]+)/action', [
+		'methods'             => 'POST',
+		'callback'            => 'captaincore_newsletter_panel_action',
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
 
 	register_rest_route( 'captaincore/v1', '/activity-logs', [
 		'methods'             => 'GET',
