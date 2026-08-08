@@ -81,8 +81,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
          rail keeps a fixed 216px so content slides out instead of squishing. -->
       <nav class="cc-rail" style="flex:none;width:{{ navW }};border-right:{{ navBorder }};background:var(--panel);display:flex;flex-direction:column;padding:14px {{ navPadX }};gap:2px;min-height:0;overflow:hidden;opacity:{{ navOpacity }};transition:width .25s ease,padding .25s ease,opacity .2s ease">
         <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px 16px;cursor:pointer">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));display:grid;place-items:center;flex:none">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 100 4 2 2 0 000-4zm0 4v14m0 0c-4.5 0-8-3-8.5-7L2 13m10 8c4.5 0 8-3 8.5-7l1.5-1M7 10h10"></path></svg>
+          <!-- Bare brand-ink anchor glyph — matches the anchor-theme lockup; no tile. -->
+          <span style="width:28px;height:28px;display:grid;place-items:center;flex:none;color:var(--brand-ink)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"></circle><path d="M12 6.5V21"></path><path d="M7.5 10h9"></path><path d="M4 14.5a8 8 0 0 0 16 0"></path><path d="M4 14.5h2.6M20 14.5h-2.6"></path></svg>
           </span>
           <span style="font:700 17px var(--sans);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Anchor Hosting</span>
         </div>

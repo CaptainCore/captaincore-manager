@@ -22,7 +22,8 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
 - **Fonts are bundled** (Hanken Grotesk + JetBrains Mono variable woff2 in
   `public/fonts/`, @font-face in `core-v3.php`). No Google Fonts requests; do not
   reintroduce external font links.
-- **Shell = Minn sidebar + slim topbar.** 240px sidebar: logo tile, ⌘K search button,
+- **Shell = Minn sidebar + slim topbar.** 240px sidebar: bare brand-ink anchor glyph
+  (matches the anchor-theme lockup — no tile), ⌘K search button,
   grouped nav (Workspace / Operate / Manage labels), user card pinned bottom
   (`goProfile`, shows `userName` + `userRole`). Topbar: `screenTitle` (route-mapped in
   the shell section of `app.js`) + jobs chip (`runningLabel`, amber, opens dock) +
