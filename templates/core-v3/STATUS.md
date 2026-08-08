@@ -1027,6 +1027,24 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   defense-in-depth, but that only takes effect on the next CLI server rebuild.
   Listing sort is numeric-aware (`localeCompare` with `{ numeric: true }`) so
   numbered directories order 1, 2 … 10, 11 instead of lexically.
+- **Mobile pass (≤760px)**: the layout is inline-styled, so responsiveness
+  lives in one media block in app.html plus a handful of structural classes:
+  `cc-page` (page wrappers, tighter padding), `cc-cols` (side-by-side content
+  grids stack to one column — home, site overview, captures split, security/
+  archives), `cc-tbl` (sites/users/domains/accounts tables scroll sideways
+  with a 680px floor instead of crushing columns), `cc-tabs` (pill bars
+  scroll instead of clipping), `cc-stack-sm` (attach-form textareas stack),
+  `cc-plf-body`/`cc-plf-side` (code-diff dialog stacks its file sidebar).
+  The rail becomes a fixed overlay drawer: phones boot with it closed
+  (`isMobile()` in app.js), picking a nav destination closes it, a `.cc-
+  backdrop` scrim behind it is the tap-to-close affordance (the overlay
+  covers the topbar toggle, so the scrim is load-bearing, found via mobile-
+  emulation Playwright), a phone toggle doesn't overwrite the desktop
+  localStorage preference, and the collapsed rail carries `pointer-events:
+  none` — mobile Chromium's compositor still hit-tests the zero-width
+  opacity-0 fixed layer and swallowed taps on the topbar toggle without it.
+  `cc-shell` upgrades 100vh→100dvh under @supports. Desktop is pixel-
+  unchanged (verified 1440px before/after).
 - **Activity group defaults to Timeline**: the Activity tab's leaves are
   ordered Timeline → Logs → Scheduled (a group click lands on `leaves[0]`).
   Timeline renders from already-loaded data; Logs needs a slow ssh fetch, so

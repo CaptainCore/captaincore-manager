@@ -1771,7 +1771,9 @@ class Component extends DCLogic {
     // Debug/test handle — lets DevTools and Playwright probes reach the
     // component instance (e.g. seed fake jobs to exercise the dock).
     window.CC = this;
-    try { if (localStorage.getItem('cc-nav-hidden') === '1') this.setState({ navHidden: true }); } catch (e) {}
+    // Phones start with the rail closed regardless of the stored preference —
+    // at ≤760px it renders as an overlay drawer (see the mobile CSS block).
+    try { if (localStorage.getItem('cc-nav-hidden') === '1' || this.isMobile()) this.setState({ navHidden: true }); } catch (e) {}
     this.onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ paletteOpen: !s.paletteOpen, palQuery: '', palIdx: 0 })); }
       else if (e.ctrlKey && e.key === '`') { e.preventDefault(); this.setState(s => ({ dockOpen: !s.dockOpen })); }
@@ -1915,7 +1917,9 @@ class Component extends DCLogic {
   toggleNav() {
     this.setState(st => {
       const v = !st.navHidden;
-      try { localStorage.setItem('cc-nav-hidden', v ? '1' : '0'); } catch (e) {}
+      // A phone toggle is a drawer open/close, not a preference — don't let it
+      // overwrite the desktop rail setting.
+      if (!this.isMobile()) { try { localStorage.setItem('cc-nav-hidden', v ? '1' : '0'); } catch (e) {} }
       return { navHidden: v };
     });
   }
@@ -1982,7 +1986,10 @@ class Component extends DCLogic {
   }
   applyBrand() { document.documentElement.style.setProperty('--brand', (window.CC_BOOT && window.CC_BOOT.brandColor) || this.props.brandColor || '#3b82c4'); }
 
-  go(route) { return () => this.setState({ route, paletteOpen: false, ctxMenu: null }); }
+  isMobile() { return (window.innerWidth || 0) <= 760; }
+
+  // On phones the rail is an overlay drawer, so picking a destination closes it.
+  go(route) { return () => this.setState({ route, paletteOpen: false, ctxMenu: null, ...(this.isMobile() ? { navHidden: true } : {}) }); }
 
   navItem(id, label, icon) {
     const active = this.state.route === id;
@@ -2210,6 +2217,12 @@ class Component extends DCLogic {
       navW: s.navHidden ? '0px' : '240px',
       navPadX: s.navHidden ? '0px' : '12px',
       navOpacity: s.navHidden ? '0' : '1',
+      // Collapsed = inert. Mobile Chromium's compositor still hit-tests the
+      // zero-width opacity-0 fixed rail, swallowing taps on the topbar toggle.
+      navPE: s.navHidden ? 'none' : 'auto',
+      // Scrim behind the mobile drawer (the overlay covers the topbar toggle,
+      // so tapping outside is the close affordance). Desktop CSS hides it.
+      navBackdrop: s.navHidden ? 'none' : 'block',
       navBorder: s.navHidden ? '0' : '1px solid var(--rule)',
       toggleNav: () => this.toggleNav(),
       railWidth: variant === 'slim' ? '56px' : '208px',
