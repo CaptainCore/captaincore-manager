@@ -1215,3 +1215,30 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   drops the removed account's role. NOTE for tests: `{{ x }}` interpolations
   render inside `<span class="sc-interp">` — anchor Playwright locators on
   that, not on bare text()/parent axes.
+
+### Pinned-chip context menu + illustrated thumbnail fallback (2026-08-11)
+- **One site context menu, five surfaces.** The six-entry menu (Open site ·
+  Login to WordPress · Pin/Unpin · Visit site · Open terminal · Copy domain)
+  moved out of computeList's row builder into `siteCtxEntries(x)` on the
+  Component class. Sites table rows, cards, list sections, the **pinned-strip
+  chips** (new — the ask) and the **home pinned rows** all build from it, so
+  the menu can't drift per surface. Home's pinned rows previously had a
+  3-entry subset; they now get the full menu including Pin/Unpin, whose label
+  flips off `pinnedIds()`. New site-ish rows should call `siteCtxEntries`
+  rather than inlining entries.
+- **Broken screenshots now fall back to an SVG illustration.** `hasThumb`
+  only proves a thumb URL could be BUILT from `screenshot_base`, so sites
+  whose capture 404s on the public bucket mounted an `<img>` that the browser
+  painted its own broken-image glyph into — on TOP of the monogram
+  placeholder (Austin caught this on prod: 3 of 25 visible rows). Fix is two
+  halves: (1) `thumbFallbackRef(el)` binds a native error/load listener via
+  `ref` (the DC runtime has no onError prop, same constraint as onDrop in
+  addons.js) and toggles `visibility` — NOT `display`, so a later successful
+  load can un-hide the same node across re-renders; (2) the placeholder under
+  it became a browser-window SVG (rounded frame + title bar + two dots) with
+  the site initials sitting in the window body. Present at all three sizes
+  (48×34 table, 130px card hero, 150×94 list env card), each with its own
+  viewBox so stroke weight stays even. Strokes/fills are `var(--ink-dim)` so
+  it themes automatically. Verified live: 3 broken table thumbs hidden and
+  illustrated, 4 in list view, cards view clean, dark mode correct, and the
+  pinned chip menu opened → Unpin removed the chip.

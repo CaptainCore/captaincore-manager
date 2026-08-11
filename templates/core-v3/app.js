@@ -879,6 +879,7 @@ class Component extends DCLogic {
           visits: e.visits ? Number(e.visits).toLocaleString() : '\u2014',
           storage: e.storage ? this.fmtStorage(e.storage) : '\u2014',
           shot, hasShot: !!shot,
+          shotRef: el => this.thumbFallbackRef(el),
           visit: (ev) => { ev.stopPropagation(); if (e.home_url) window.open(e.home_url, '_blank'); },
           manage: (ev) => { ev.stopPropagation(); this.openSite(x.id, en); },
           login: (ev) => { ev.stopPropagation(); if (this._hydrated) this.magicLogin(x.id, en.toLowerCase()); else this.runJob('magiclogin', x.name); } };
@@ -890,14 +891,8 @@ class Component extends DCLogic {
       check: s.sel[x.id] ? '✓' : '', checkBg: s.sel[x.id] ? 'var(--brand)' : 'var(--paper)',
       toggle: (e) => { e.stopPropagation(); this.setState(st => ({ sel: { ...st.sel, [x.id]: !st.sel[x.id] } })); },
       open: () => this.openSite(x.id),
-      ctx: (e) => this.openCtxMenu(e, [
-        { label: 'Open site', act: () => this.openSite(x.id) },
-        { label: 'Login to WordPress ↗', act: () => { if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); } },
-        { label: this.pinnedIds().indexOf(String(x.id)) === -1 ? 'Pin to top' : 'Unpin', act: () => this.togglePin(x.id) },
-        { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
-        { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
-        { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
-      ]),
+      ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(x)),
+      thumbRef: el => this.thumbFallbackRef(el),
       openTerm: (e) => { e.stopPropagation(); this.setState({ dockOpen: true }); } }; });
     const envCount = filtered.reduce((n, x) => n + (x.envs.includes('Staging') ? 2 : 1), 0);
     const allSel = filtered.length > 0 && selIds.length === filtered.length;
@@ -907,6 +902,7 @@ class Component extends DCLogic {
     const pinnedStrip = pinIds.map(id => byId[id]).filter(Boolean).map(x => { const [health, dot] = healthOf(x);
       return { id: x.id, name: x.name, dot,
         open: () => this.openSite(x.id),
+        ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(x)),
         unpin: (e) => { e.stopPropagation(); this.togglePin(x.id); } }; });
     return {
       pinnedShow: pinnedStrip.length > 0,
@@ -2076,6 +2072,34 @@ class Component extends DCLogic {
     });
   }
 
+  // ONE right-click menu definition for a fleet site, shared by every surface
+  // that shows one — Sites table rows, cards, list sections, the pinned strip
+  // chips and the home pinned rows. Menu and row can't drift (the Minn rule).
+  siteCtxEntries(x) {
+    return [
+      { label: 'Open site', act: () => this.openSite(x.id) },
+      { label: 'Login to WordPress ↗', act: () => { if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); } },
+      { label: this.pinnedIds().indexOf(String(x.id)) === -1 ? 'Pin to top' : 'Unpin', act: () => this.togglePin(x.id) },
+      { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
+      { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
+      { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
+    ];
+  }
+
+  // Screenshot thumbs 404 on the public bucket whenever a site has never been
+  // captured (or its stored base is stale). `hasThumb` only proves a URL could
+  // be BUILT, so the <img> still mounts and the browser paints its own broken
+  // -image glyph on top of the placeholder underneath. The DC runtime has no
+  // onError prop, so bind natively via ref and hide the img — visibility
+  // (not display) so a later successful load can un-hide the same node.
+  thumbFallbackRef(el) {
+    if (!el || el._ccThumbBound) return;
+    el._ccThumbBound = true;
+    el.addEventListener('error', () => { el.style.visibility = 'hidden'; });
+    el.addEventListener('load', () => { el.style.visibility = 'visible'; });
+    if (el.complete && el.naturalWidth === 0) el.style.visibility = 'hidden';
+  }
+
   pinnedIds() {
     if (!this._pinnedIds) {
       try { this._pinnedIds = JSON.parse(localStorage.getItem('cc-pinned-sites') || '[]'); } catch (e) { this._pinnedIds = []; }
@@ -2290,11 +2314,7 @@ class Component extends DCLogic {
       { id: 'wildflower', name: 'thewildflowerpantry.com', sub: '6.8.1 · backed up 6h ago', health: 'Healthy', dot: 'var(--ok)' },
       { id: 'lakeside', name: 'lakesideinn.com', sub: '6.8.1 · backed up 6h ago', health: 'Healthy', dot: 'var(--ok)' }
     ]).map(p => ({ ...p, mono: p.name.slice(0, 2).toUpperCase(), go: () => this.openSite(p.id),
-      ctx: (e) => this.openCtxMenu(e, [
-        { label: 'Open site', act: () => this.openSite(p.id) },
-        { label: 'Visit site ↗', act: () => window.open('https://' + p.name, '_blank') },
-        { label: 'Copy domain', act: () => this.ctxCopy(p.name, 'domain') }
-      ]) }));
+      ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(p)) }));
 
     const listVals = this.computeList(s, isOp);
     const detailVals = this.computeDetail(s);
