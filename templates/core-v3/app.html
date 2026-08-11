@@ -180,16 +180,16 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <span class="cc-sub" style="font:400 13px var(--sans);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);padding:3px 10px;border-radius:20px;white-space:nowrap;display:{{ screenSubDisplay }}">{{ screenSub }}</span>
       <div style="flex:1"></div>
       <sc-if value="{{ showUsers }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ openNewUser }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ Add user</button>
+        <button onClick="{{ openNewUser }}" style="border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ Add user</button>
       </sc-if>
       <sc-if value="{{ showDomains }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New domain</button>
+        <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New domain</button>
       </sc-if>
       <sc-if value="{{ showAccounts }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New account</button>
+        <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New account</button>
       </sc-if>
       <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New site</button>
+        <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New site</button>
       </sc-if>
       <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
         <div onClick="{{ openDock }}" style="display:flex;align-items:center;gap:7px;font:600 13px var(--sans);color:var(--warn);background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:9px;padding:6px 12px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--warn)">
@@ -224,7 +224,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-for list="{{ launcher }}" as="l" hint-placeholder-count="5">
               <div onClick="{{ l.go }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px 17px;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;transition:border-color .12s" style-hover="border-color:var(--brand)">
                 <div style="min-width:0">
-                  <div style="font:500 13.5px var(--sans);color:var(--ink-dim)">{{ l.label }}</div>
+                  <div style="font:500 14px var(--sans);color:var(--ink-dim)">{{ l.label }}</div>
                   <div style="font:800 26px/1.1 var(--sans);letter-spacing:-.8px;margin-top:8px;min-height:29px;color:var(--ink)"><sc-if value="{{ l.metaSkel }}" hint-placeholder-val="{{ false }}"><span class="cc-skel" style="display:inline-block;width:64px;height:22px;vertical-align:middle"></span></sc-if>{{ l.meta }}</div>
                   <div style="font:500 12.5px/1.45 var(--sans);color:var(--ink-dim);margin-top:6px">{{ l.desc }}</div>
                 </div>
@@ -277,7 +277,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font:600 10px var(--sans);display:grid;place-items:center">{{ ev.initials }}</span>
                     </sc-if>
                     <span style="min-width:0;flex:1">
-                      <span style="display:block;font:400 13.5px/1.5 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                      <span style="display:block;font:400 14px/1.5 var(--sans);color:var(--ink)">{{ ev.text }}</span>
                       <span style="display:flex;align-items:center;gap:7px;margin-top:2px">
                         <span style="font:500 11.5px var(--sans);color:var(--ink-dim)">{{ ev.user }}</span>
                         <sc-if value="{{ ev.type }}" hint-placeholder-val="{{ false }}">
@@ -413,7 +413,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px">
             <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-              <input value="{{ uq }}" onInput="{{ onUq }}" placeholder="Filter users…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
+              <input value="{{ uq }}" onInput="{{ onUq }}" placeholder="Filter users…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 14px var(--sans);width:100%">
             </div>
             <div style="flex:1"></div>
           </div>
@@ -456,7 +456,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-              <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Filter sites…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
+              <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Filter sites…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 14px var(--sans);width:100%">
             </div>
             <sc-for list="{{ facets }}" as="fc" hint-placeholder-count="2">
               <div style="position:relative">
@@ -757,7 +757,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-top:16px">
               <sc-for list="{{ statTiles }}" as="t" hint-placeholder-count="4">
                 <div onClick="{{ t.go }}" title="{{ t.tip }}" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s" style-hover="border-color:var(--brand)">
-                  <div style="display:flex;align-items:center;gap:7px;font:500 13.5px var(--sans);color:var(--ink-dim)">
+                  <div style="display:flex;align-items:center;gap:7px;font:500 14px var(--sans);color:var(--ink-dim)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="{{ t.icon }}"></path></svg>
                     <span>{{ t.k }}</span>
                   </div>
@@ -766,7 +766,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
               <div onClick="{{ openStats }}" title="Open full stats" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:10px" style-hover="border-color:var(--brand)">
-                <div style="font:500 13.5px var(--sans);color:var(--ink-dim)">Visits · 14d</div>
+                <div style="font:500 14px var(--sans);color:var(--ink-dim)">Visits · 14d</div>
                 <div style="flex:1;display:flex;align-items:flex-end;gap:3px;min-height:38px">
                   <sc-for list="{{ visitBars }}" as="b" hint-placeholder-count="14">
                     <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:3px 3px 2px 2px;min-height:3px"></div>
@@ -798,7 +798,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <sc-if value="{{ capTeaserShow }}" hint-placeholder-val="{{ false }}">
                   <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;display:flex;align-items:center;gap:9px">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
-                    <span style="font:600 13.5px var(--sans)">Visual captures</span>
+                    <span style="font:600 14px var(--sans)">Visual captures</span>
                     <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ capTeaserLabel }}</span>
                     <div style="flex:1"></div>
                     <span onClick="{{ goCaptures }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View history →</span>
@@ -995,7 +995,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ addons }}" as="a" hint-placeholder-count="6">
                 <div onContextMenu="{{ a.ctx }}" style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
                   <span style="flex:none;width:8px;height:8px;border-radius:50%;background:{{ a.dot }}" title="{{ a.statusLabel }}"></span>
-                  <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ a.name }}</span><span style="display:block;font:400 11.5px var(--mono);color:var(--ink-dim)">{{ a.slug }}</span></span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font:500 14px var(--sans)">{{ a.name }}</span><span style="display:block;font:400 11.5px var(--mono);color:var(--ink-dim)">{{ a.slug }}</span></span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ a.v }}</span>
                   <sc-if value="{{ a.upd }}" hint-placeholder-val="{{ false }}">
                     <span style="font:500 12px var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 9px">→ {{ a.latest }}</span>
@@ -1031,7 +1031,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;flex-wrap:wrap">
                     <span style="font:500 12px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ qk.hash }}</span>
                     <span style="font:500 11.5px var(--sans);background:{{ qk.kindBg }};border-radius:99px;padding:2px 9px">{{ qk.kind }}</span>
-                    <span style="font:500 13.5px var(--sans)">{{ qk.desc }}</span>
+                    <span style="font:500 14px var(--sans)">{{ qk.desc }}</span>
                     <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ qk.files }}</span>
                     <div style="flex:1"></div>
                     <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ qk.when }}</span>
@@ -1055,7 +1055,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="border-bottom:1px solid var(--rule)">
                   <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
                     <span style="font:500 12px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ b.id }}</span>
-                    <span style="font:500 13.5px var(--sans)">{{ b.when }}</span>
+                    <span style="font:500 14px var(--sans)">{{ b.when }}</span>
                     <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ b.size }}</span>
                     <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ b.files }}</span>
                     <div style="flex:1"></div>
@@ -1097,7 +1097,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ snapshots }}" as="sn" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                  <span style="font:500 13.5px var(--sans)">{{ sn.name }}</span>
+                  <span style="font:500 14px var(--sans)">{{ sn.name }}</span>
                   <span style="font:500 11.5px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ sn.id }}</span>
                   <span style="font:500 11.5px var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">{{ sn.filter }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ sn.size }}</span>
@@ -1124,7 +1124,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ ssCount }}</span>
             </div>
             <sc-if value="{{ ssEmpty }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">Nothing scheduled on this environment.</div>
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 14px var(--sans);color:var(--ink-dim)">Nothing scheduled on this environment.</div>
             </sc-if>
             <sc-for list="{{ ssRows }}" as="sr" hint-placeholder-count="3">
               <div onClick="{{ sr.edit }}" style="margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:12px 15px;display:flex;align-items:center;gap:13px;cursor:pointer" style-hover="border-color:var(--brand)">
@@ -1149,13 +1149,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ tabRegistry }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;font:400 13px var(--sans);color:var(--ink-dim)">Every installed component's content hash, matched against audits on <a href="https://wpregistry.io/" target="_blank" rel="noopener" style="color:var(--brand-ink);text-decoration:none">WP Registry</a>.</div>
             <sc-if value="{{ regLoading }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">Matching component hashes…</div>
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 14px var(--sans);color:var(--ink-dim)">Matching component hashes…</div>
             </sc-if>
             <sc-if value="{{ regErrShow }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:24px;font:400 13.5px var(--sans);color:var(--bad)">{{ regErr }}</div>
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:24px;font:400 14px var(--sans);color:var(--bad)">{{ regErr }}</div>
             </sc-if>
             <sc-if value="{{ regEmpty }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 13.5px var(--sans);color:var(--ink-dim)">No hashed components on this environment. Run a sync to populate hash data.</div>
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:40px;text-align:center;font:400 14px var(--sans);color:var(--ink-dim)">No hashed components on this environment. Run a sync to populate hash data.</div>
             </sc-if>
             <sc-if value="{{ regChipsShow }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px">
@@ -1185,7 +1185,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:{{ r.rowCursor }}" style-hover="background:var(--panel-2)">
                     <span style="flex:none;min-width:70px;text-align:center;font:600 11px var(--sans);color:{{ r.chipFg }};background:{{ r.chipBg }};border-radius:99px;padding:3px 9px">{{ r.label }}</span>
                     <span style="min-width:0;flex:1">
-                      <span style="display:block;font:500 13.5px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }} <span style="color:var(--ink-dim);font-weight:400">{{ r.version }}</span> <code style="font:400 11.5px var(--mono);color:var(--ink-dim)">{{ r.hash }}</code></span>
+                      <span style="display:block;font:500 14px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }} <span style="color:var(--ink-dim);font-weight:400">{{ r.version }}</span> <code style="font:400 11.5px var(--mono);color:var(--ink-dim)">{{ r.hash }}</code></span>
                       <sc-if value="{{ r.issueShow }}" hint-placeholder-val="{{ false }}">
                         <span style="display:block;font:400 12.5px/1.5 var(--sans);color:var(--ink-dim);margin-top:2px">{{ r.issue }}</span>
                       </sc-if>
@@ -1260,7 +1260,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ capHasSel }}" hint-placeholder-val="{{ false }}">
               <div class="cc-cols" style="display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;margin-top:12px;align-items:start">
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                  <div style="padding:11px 14px;border-bottom:1px solid var(--rule);font:600 13.5px var(--sans)">History</div>
+                  <div style="padding:11px 14px;border-bottom:1px solid var(--rule);font:600 14px var(--sans)">History</div>
                   <div style="max-height:600px;overflow-y:auto">
                     <sc-for list="{{ capRows }}" as="cp" hint-placeholder-count="6">
                       <div onClick="{{ cp.pick }}" style="padding:9px 14px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ cp.bg }}" style-hover="background:var(--panel-2)">
@@ -1339,7 +1339,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ t.notEditing }}" hint-placeholder-val="{{ true }}">
                     <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px">
                       <span style="flex:1;min-width:0">
-                        <span ref="{{ t.mdRef }}" class="cc-md" style="display:block;font:400 13.5px/1.55 var(--sans)"></span>
+                        <span ref="{{ t.mdRef }}" class="cc-md" style="display:block;font:400 14px/1.55 var(--sans)"></span>
                         <sc-if value="{{ t.filesShow }}" hint-placeholder-val="{{ false }}">
                           <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
                             <sc-for list="{{ t.files }}" as="fl" hint-placeholder-count="1">
@@ -1403,7 +1403,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ dUsers }}" as="u" hint-placeholder-count="3">
                 <div onContextMenu="{{ u.ctx }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)" style-hover="background:var(--panel-2)">
                   <span style="flex:none;width:30px;height:30px;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);display:grid;place-items:center;font:600 11px var(--sans)">{{ u.init }}</span>
-                  <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font:500 14px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
                   <span style="font:500 12px var(--sans);background:var(--panel-2);border-radius:99px;padding:3px 10px;color:var(--ink-dim)">{{ u.role }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim);width:64px;text-align:right">{{ u.last }}</span>
                   <button onClick="{{ u.magic }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Magic login</button>
@@ -1508,7 +1508,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-              <input value="{{ dq }}" onInput="{{ onDq }}" placeholder="Filter domains…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
+              <input value="{{ dq }}" onInput="{{ onDq }}" placeholder="Filter domains…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 14px var(--sans);width:100%">
             </div>
             <div style="flex:1"></div>
           </div>
@@ -1680,7 +1680,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Contacts</h2><span onClick="{{ openCtDlg }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit contacts</span></div>
                   <div style="padding:12px 16px">
-                    <div style="font:500 13.5px var(--sans)">{{ ctLine1 }}</div>
+                    <div style="font:500 14px var(--sans)">{{ ctLine1 }}</div>
                     <div style="font:400 12.5px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">{{ ctLine2 }}<br>{{ ctLine3 }}</div>
                     <div style="font:400 12px var(--sans);color:var(--ink-dim);margin-top:8px">Same contact for all 4 roles (registrant, admin, tech, billing).</div>
                   </div>
@@ -1833,7 +1833,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);width:250px;flex:none">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
-              <input value="{{ aq }}" onInput="{{ onAq }}" placeholder="Filter accounts…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 13.5px var(--sans);width:100%">
+              <input value="{{ aq }}" onInput="{{ onAq }}" placeholder="Filter accounts…" style="border:none;outline:none;background:transparent;color:var(--ink);font:400 14px var(--sans);width:100%">
             </div>
             <div style="flex:1"></div>
           </div>
@@ -1891,7 +1891,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ accUsers }}" as="u" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
                   <span style="flex:none;width:30px;height:30px;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);display:grid;place-items:center;font:600 11px var(--sans)">{{ u.init }}</span>
-                  <span style="flex:1;min-width:0"><span style="display:block;font:500 13.5px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font:500 14px var(--sans)">{{ u.n }}</span><span style="display:block;font:400 12px var(--mono);color:var(--ink-dim)">{{ u.e }}</span></span>
                   <span style="font:500 12px var(--sans);background:{{ u.lvlBg }};color:{{ u.lvlFg }};border-radius:99px;padding:3px 10px">{{ u.level }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim);width:60px;text-align:right">{{ u.last }}</span>
                   <sc-if value="{{ u.canSwitch }}" hint-placeholder-val="{{ true }}">
@@ -1957,7 +1957,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accSites }}" as="s" hint-placeholder-count="2">
                 <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
-                  <span style="flex:1;font:500 13.5px var(--sans)">{{ s.name }}</span>
+                  <span style="flex:1;font:500 14px var(--sans)">{{ s.name }}</span>
                   <span style="font:400 12.5px var(--mono);color:var(--ink-dim)">{{ s.envs }}</span>
                   <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ s.provider }}</span>
                   <span style="display:flex;align-items:center;gap:6px;font:500 12.5px var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ s.dot }}"></span>{{ s.health }}</span>
@@ -1970,7 +1970,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accDomains }}" as="d" hint-placeholder-count="1">
                 <div onClick="{{ d.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
-                  <span style="flex:1;font:500 13.5px var(--sans)">{{ d.name }}</span>
+                  <span style="flex:1;font:500 14px var(--sans)">{{ d.name }}</span>
                   <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ d.registrar }}</span>
                   <span style="font:400 12.5px var(--mono);color:{{ d.expFg }}">{{ d.expires }}</span>
                 </div>
@@ -2045,10 +2045,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ invoices }}" as="iv" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
                   <span onClick="{{ iv.view }}" style="font:500 13px var(--mono);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ iv.id }}</span>
-                  <span style="font:400 13.5px var(--sans)">{{ iv.items }}</span>
+                  <span style="font:400 14px var(--sans)">{{ iv.items }}</span>
                   <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ iv.date }}</span>
                   <div style="flex:1"></div>
-                  <span style="font:600 13.5px var(--mono)">{{ iv.amount }}</span>
+                  <span style="font:600 14px var(--mono)">{{ iv.amount }}</span>
                   <span style="font:500 12px var(--sans);background:{{ iv.stBg }};color:{{ iv.stFg }};border-radius:99px;padding:3px 10px">{{ iv.status }}</span>
                   <span onClick="{{ iv.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
                   <span onClick="{{ iv.pdf }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
@@ -2072,7 +2072,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ payMethods }}" as="pm" hint-placeholder-count="2">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="font:500 13.5px var(--mono)">{{ pm.label }}</span>
+                  <span style="font:500 14px var(--mono)">{{ pm.label }}</span>
                   <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ pm.sub }}</span>
                   <sc-if value="{{ pm.isPrimary }}" hint-placeholder-val="{{ false }}">
                     <span style="font:500 11.5px var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">Primary</span>
@@ -2097,7 +2097,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;max-width:520px">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Billing address</h2><span onClick="{{ openBillAddr }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></div>
               <div style="padding:14px 16px">
-                <div style="font:500 13.5px var(--sans)">{{ addrL1 }}</div>
+                <div style="font:500 14px var(--sans)">{{ addrL1 }}</div>
                 <div style="font:400 13px/1.6 var(--sans);color:var(--ink-dim);margin-top:3px">{{ addrL2 }}<br>{{ addrL3 }}<br>{{ addrL4 }}</div>
               </div>
             </div>
@@ -2132,7 +2132,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ invLines }}" as="li" hint-placeholder-count="2">
                 <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:flex-start">
                   <span style="flex:1;min-width:0">
-                    <span style="display:block;font:500 13.5px var(--sans)">{{ li.name }}</span>
+                    <span style="display:block;font:500 14px var(--sans)">{{ li.name }}</span>
                     <span style="display:block;font:400 12px/1.6 var(--mono);color:var(--ink-dim);white-space:pre-line;margin-top:2px">{{ li.desc }}</span>
                   </span>
                   <span style="width:40px;text-align:right;font:400 13px var(--mono)">{{ li.qty }}</span>
@@ -2167,7 +2167,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="border-bottom:1px solid var(--rule)">
                   <div onClick="{{ t.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:600 11px var(--sans);letter-spacing:.04em;background:{{ t.sevBg }};color:{{ t.sevFg }};border-radius:99px;padding:3px 10px;text-transform:uppercase">{{ t.sev }}</span>
-                    <span style="font:500 13.5px var(--sans)">{{ t.name }}</span>
+                    <span style="font:500 14px var(--sans)">{{ t.name }}</span>
                     <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ t.cve }}</span>
                     <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ t.siteCount }} sites</span>
                     <div style="flex:1"></div>
@@ -2220,7 +2220,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ coreFails }}" as="c" hint-placeholder-count="1">
                 <div style="border-bottom:1px solid var(--rule)">
                   <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
-                    <span style="font:500 13.5px var(--sans)">{{ c.site }}</span>
+                    <span style="font:500 14px var(--sans)">{{ c.site }}</span>
                     <span style="font:500 11.5px var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 9px">{{ c.mod }} modified</span>
                     <span style="font:500 11.5px var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ c.extra }} extra</span>
                     <div style="flex:1"></div>
@@ -2240,7 +2240,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ plugFails }}" as="c" hint-placeholder-count="1">
                 <div style="border-bottom:1px solid var(--rule)">
                   <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
-                    <span style="font:500 13.5px var(--sans)">{{ c.site }}</span>
+                    <span style="font:500 14px var(--sans)">{{ c.site }}</span>
                     <span style="font:500 12px var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ c.slug }}</span>
                     <sc-for list="{{ c.chips }}" as="ch" hint-placeholder-count="2">
                       <span style="font:500 11px var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 8px">{{ ch.f }}</span>
@@ -2330,7 +2330,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <sc-for list="{{ audRows }}" as="a" hint-placeholder-count="3">
               <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                <span style="font:500 13.5px var(--sans)">{{ a.site }}</span>
+                <span style="font:500 14px var(--sans)">{{ a.site }}</span>
                 <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ a.env }} · {{ a.types }}</span>
                 <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ a.when }}</span>
                 <div style="flex:1"></div>
@@ -2550,7 +2550,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ provRows }}" as="p" hint-placeholder-count="5">
                 <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="font:500 13.5px var(--sans);width:130px">{{ p.name }}</span>
+                  <span style="font:500 14px var(--sans);width:130px">{{ p.name }}</span>
                   <span style="display:flex;align-items:center;gap:6px;font:400 12.5px var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }}"></span>{{ p.sub }}</span>
                   <div style="flex:1"></div>
                   <span onClick="{{ p.verify }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">{{ p.action }}</span>
@@ -2616,7 +2616,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ recipeRows }}" as="r" hint-placeholder-count="4">
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="font:500 13.5px var(--sans)">{{ r.name }}</span>
+                  <span style="font:500 14px var(--sans)">{{ r.name }}</span>
                   <span style="font:500 11.5px var(--sans);background:{{ r.visBg }};color:var(--ink-dim);border-radius:99px;padding:2px 9px">{{ r.vis }}</span>
                   <sc-if value="{{ r.hasRuns }}" hint-placeholder-val="{{ true }}">
                     <span style="font:400 12px var(--mono);color:var(--ink-dim)">{{ r.runs }} runs</span>
@@ -2633,7 +2633,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ handRows }}" as="h" hint-placeholder-count="4">
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="font:500 13.5px var(--sans)">{{ h.name }}</span>
+                  <span style="font:500 14px var(--sans)">{{ h.name }}</span>
                   <span style="font:400 12px var(--sans);color:var(--ink-dim)">updated {{ h.updated }}</span>
                   <div style="flex:1"></div>
                   <span onClick="{{ h.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
@@ -2779,7 +2779,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="margin-top:18px;border:1px dashed var(--rule);border-radius:12px;padding:48px;display:grid;place-items:center;gap:8px;text-align:center">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="{{ stubIcon }}"></path></svg>
             <div style="font:500 14px var(--sans);color:var(--ink)">{{ stubTitle }} lands in a later slice</div>
-            <div style="font:400 13.5px/1.5 var(--sans);color:var(--ink-dim);max-width:400px">{{ stubDesc }}</div>
+            <div style="font:400 14px/1.5 var(--sans);color:var(--ink-dim);max-width:400px">{{ stubDesc }}</div>
           </div>
         </div>
       </sc-if>
@@ -2804,7 +2804,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ bulkShow }}" hint-placeholder-val="{{ false }}">
         <div style="flex:none;display:flex;flex-direction:column;padding:6px 8px;border-bottom:1px solid var(--rule)">
           <sc-for list="{{ bulkOps }}" as="b" hint-placeholder-count="1">
-            <div onClick="{{ b.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 13.5px var(--sans)" style-hover="background:var(--panel-2)">
+            <div onClick="{{ b.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 14px var(--sans)" style-hover="background:var(--panel-2)">
               <span style="width:8px;height:8px;border-radius:50%;background:{{ b.dot }};flex:none;animation:{{ b.dotAnim }}"></span>
               <span style="font-weight:600;flex:none">{{ b.label }}</span>
               <span style="font-size:12.5px;color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.sub }}</span>
@@ -2823,7 +2823,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ dockJobsShow }}" hint-placeholder-val="{{ true }}">
         <div style="flex:none;display:flex;flex-direction:column;padding:6px 8px;border-bottom:1px solid var(--rule);max-height:38vh;overflow-y:auto">
           <sc-for list="{{ dockJobs }}" as="j" hint-placeholder-count="3">
-            <div onClick="{{ j.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 13.5px var(--sans);background:{{ j.rowBg }}" style-hover="background:var(--panel-2)">
+            <div onClick="{{ j.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 14px var(--sans);background:{{ j.rowBg }}" style-hover="background:var(--panel-2)">
               <span style="width:8px;height:8px;border-radius:50%;background:{{ j.dot }};flex:none;animation:{{ j.dotAnim }}"></span>
               <span style="font-weight:600;flex:none">{{ j.label }}</span>
               <span style="font-size:12.5px;color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ j.target }}</span>
@@ -3100,7 +3100,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div onClick="{{ f.toggle }}" style="display:flex;align-items:center;gap:10px;padding:10px 13px;cursor:pointer" style-hover="background:var(--panel-2)">
                 <span style="flex:none;color:var(--ink-dim);font:400 11px var(--sans)">{{ f.arrow }}</span>
                 <span style="flex:none;font:600 11px var(--sans);color:{{ f.sevFg }};background:{{ f.sevBg }};border-radius:99px;padding:3px 9px">{{ f.sev }}</span>
-                <span style="font:500 13.5px var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.title }}</span>
+                <span style="font:500 14px var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.title }}</span>
                 <span style="margin-left:auto;flex:none;font:400 12px var(--sans);color:var(--ink-dim)">{{ f.type }}</span>
               </div>
               <sc-if value="{{ f.bodyShow }}" hint-placeholder-val="{{ false }}">
@@ -3149,7 +3149,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ bpClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="flex:1;overflow-y:auto;padding:16px 18px">
-          <div style="display:flex;align-items:center;justify-content:space-between;font:600 13.5px var(--sans)">
+          <div style="display:flex;align-items:center;justify-content:space-between;font:600 14px var(--sans)">
             <span>{{ bpCount }}</span>
             <span>{{ bpPct }}</span>
           </div>
@@ -3160,7 +3160,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-for list="{{ bpStats }}" as="st" hint-placeholder-count="6">
               <div>
                 <div style="font:500 11.5px var(--sans);color:var(--ink-dim)">{{ st.k }}</div>
-                <div style="font:600 13.5px var(--sans);color:{{ st.fg }};margin-top:2px;font-variant-numeric:tabular-nums">{{ st.v }}</div>
+                <div style="font:600 14px var(--sans);color:{{ st.fg }};margin-top:2px;font-variant-numeric:tabular-nums">{{ st.v }}</div>
               </div>
             </sc-for>
           </div>
@@ -3222,8 +3222,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </div>
         <sc-if value="{{ dlgNotDiff }}" hint-placeholder-val="{{ true }}">
           <div style="flex:none;display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:3px;margin:12px 18px 0;align-self:flex-start">
-            <span onClick="{{ setDlgComp }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgCompFg }};background:{{ dlgCompBg }}" style-hover="color:var(--ink)">Components</span>
-            <span onClick="{{ setDlgFiles }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ dlgFilesFg }};background:{{ dlgFilesBg }}" style-hover="color:var(--ink)">Changed files</span>
+            <span onClick="{{ setDlgComp }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ dlgCompFg }};background:{{ dlgCompBg }}" style-hover="color:var(--ink)">Components</span>
+            <span onClick="{{ setDlgFiles }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ dlgFilesFg }};background:{{ dlgFilesBg }}" style-hover="color:var(--ink)">Changed files</span>
           </div>
         </sc-if>
         <sc-if value="{{ dlgIsDiff }}" hint-placeholder-val="{{ false }}">
@@ -4501,7 +4501,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px">
                 <div style="font:600 22px var(--sans)">{{ bkSelTitle }}</div>
                 <div style="font:400 13px var(--mono);color:var(--ink-dim)">{{ bkSelSize }}</div>
-                <button onClick="{{ bkDownload }}" style="margin-top:14px;border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Download</button>
+                <button onClick="{{ bkDownload }}" style="margin-top:14px;border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Download</button>
                 <span onClick="{{ cancelSel }}" style="margin-top:6px;font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Cancel selection</span>
                 <span style="margin-top:12px;font:400 11.5px var(--sans);color:var(--ink-dim)">Packaged in the background and delivered by email.</span>
               </div>
@@ -4541,11 +4541,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeRb }}" style="cursor:pointer;color:var(--ink-dim);width:24px;height:24px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div onClick="{{ rbPickThis }}" style="padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
-          <div style="font:500 13.5px var(--sans)">This version</div>
+          <div style="font:500 14px var(--sans)">This version</div>
           <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:2px">{{ rbThisSub }}</div>
         </div>
         <div onClick="{{ rbPickPrev }}" style="padding:12px 16px;cursor:pointer" style-hover="background:var(--panel-2)">
-          <div style="font:500 13.5px var(--sans)">Previous version</div>
+          <div style="font:500 14px var(--sans)">Previous version</div>
           <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:2px">{{ rbPrevSub }}</div>
         </div>
       </div>
@@ -4592,10 +4592,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </div>
         <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:3px;margin:12px 18px 0;align-self:flex-start;flex:none">
           <sc-if value="{{ aaShowUpload }}" hint-placeholder-val="{{ true }}">
-            <span onClick="{{ setAaUpload }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaUpFg }};background:{{ aaUpBg }}" style-hover="color:var(--ink)">Upload</span>
+            <span onClick="{{ setAaUpload }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ aaUpFg }};background:{{ aaUpBg }}" style-hover="color:var(--ink)">Upload</span>
           </sc-if>
-          <span onClick="{{ setAaWporg }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaWpFg }};background:{{ aaWpBg }}" style-hover="color:var(--ink)">WordPress.org</span>
-          <span onClick="{{ setAaEnvato }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 13.5px var(--sans);color:{{ aaEnFg }};background:{{ aaEnBg }}" style-hover="color:var(--ink)">Envato</span>
+          <span onClick="{{ setAaWporg }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ aaWpFg }};background:{{ aaWpBg }}" style-hover="color:var(--ink)">WordPress.org</span>
+          <span onClick="{{ setAaEnvato }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ aaEnFg }};background:{{ aaEnBg }}" style-hover="color:var(--ink)">Envato</span>
         </div>
         <sc-if value="{{ aaTabUpload }}" hint-placeholder-val="{{ true }}">
           <div style="padding:18px;overflow-y:auto">
@@ -4778,14 +4778,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:13px">
           <div style="display:flex;gap:10px">
             <div style="flex:1"><div style="font:600 12.5px var(--sans);color:var(--ink-dim);margin-bottom:5px">First name</div>
-              <input value="{{ udFirst }}" onInput="{{ onUdFirst }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--sans);padding:0 11px;outline:none"></div>
+              <input value="{{ udFirst }}" onInput="{{ onUdFirst }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 14px var(--sans);padding:0 11px;outline:none"></div>
             <div style="flex:1"><div style="font:600 12.5px var(--sans);color:var(--ink-dim);margin-bottom:5px">Last name</div>
-              <input value="{{ udLast }}" onInput="{{ onUdLast }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--sans);padding:0 11px;outline:none"></div>
+              <input value="{{ udLast }}" onInput="{{ onUdLast }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 14px var(--sans);padding:0 11px;outline:none"></div>
           </div>
           <div><div style="font:600 12.5px var(--sans);color:var(--ink-dim);margin-bottom:5px">Email</div>
-            <input value="{{ udEmail }}" onInput="{{ onUdEmail }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--sans);padding:0 11px;outline:none"></div>
+            <input value="{{ udEmail }}" onInput="{{ onUdEmail }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 14px var(--sans);padding:0 11px;outline:none"></div>
           <div style="display:{{ udLoginDisplay }}"><div style="font:600 12.5px var(--sans);color:var(--ink-dim);margin-bottom:5px">Username</div>
-            <input value="{{ udLogin }}" onInput="{{ onUdLogin }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--mono);padding:0 11px;outline:none"></div>
+            <input value="{{ udLogin }}" onInput="{{ onUdLogin }}" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 14px var(--mono);padding:0 11px;outline:none"></div>
           <div>
             <div style="font:600 12.5px var(--sans);color:var(--ink-dim);margin-bottom:5px">Accounts</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
@@ -4794,7 +4794,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-for>
             </div>
             <div>
-              <input value="{{ udAcq }}" onInput="{{ onUdAcq }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 13.5px var(--sans);padding:0 11px;outline:none">
+              <input value="{{ udAcq }}" onInput="{{ onUdAcq }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 14px var(--sans);padding:0 11px;outline:none">
               <sc-if value="{{ udSuggestions.length }}" hint-placeholder-val="{{ false }}">
                 <!-- In-flow (not absolute): the dialog body scrolls, so an absolute
                      panel clips against it and collides with the footer. -->
@@ -4811,8 +4811,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-for>
         </div>
         <div style="flex:none;display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid var(--rule)">
-          <button onClick="{{ udClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink-dim);font:600 13.5px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2);color:var(--ink)">Cancel</button>
-          <button onClick="{{ udSubmit }}" style="border:none;background:var(--brand);color:white;font:600 13.5px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ udSubmitLabel }}</button>
+          <button onClick="{{ udClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink-dim);font:600 14px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2);color:var(--ink)">Cancel</button>
+          <button onClick="{{ udSubmit }}" style="border:none;background:var(--brand);color:white;font:600 14px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ udSubmitLabel }}</button>
         </div>
       </div>
     </div>
@@ -4823,7 +4823,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     <div onClick="{{ ctxClose }}" onContextMenu="{{ ctxCloseCtx }}" style="position:fixed;inset:0;z-index:95"></div>
     <div style="position:fixed;left:{{ ctxX }};top:{{ ctxY }};z-index:96;min-width:210px;background:var(--paper);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:5px;animation:ccpop .1s ease">
       <sc-for list="{{ ctxEntries }}" as="m" hint-placeholder-count="3">
-        <div onClick="{{ m.run }}" style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;color:{{ m.fg }};font:500 13.5px var(--sans);cursor:pointer;white-space:nowrap" style-hover="background:var(--panel-2)">{{ m.label }}</div>
+        <div onClick="{{ m.run }}" style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;color:{{ m.fg }};font:500 14px var(--sans);cursor:pointer;white-space:nowrap" style-hover="background:var(--panel-2)">{{ m.label }}</div>
       </sc-for>
     </div>
   </sc-if>
