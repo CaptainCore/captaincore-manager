@@ -3731,14 +3731,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ nsIsRequest }}" hint-placeholder-val="{{ false }}">
             <span style="font:400 12.5px/1.5 var(--sans);color:var(--ink-dim)">Request a site — we provision it, connect billing, and let you know when it's ready.</span>
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" placeholder="mynewsite.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
-            <div style="display:flex;align-items:flex-start;gap:12px"><span style="width:110px;padding-top:8px;font:500 12.5px var(--sans);color:var(--ink-dim)">Account</span>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Account</span>
               <div style="flex:1">
                 <div onClick="{{ ddToggleNsAcc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);flex:1">{{ nsAcc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
                 <sc-if value="{{ ddNsAccOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                  <!-- In-flow (not absolute): the dialog body scrolls, so an absolute
-                       panel clips against it and collides with the footer. -->
-                  <div style="position:relative;z-index:40;margin-top:6px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                  <!-- Fixed overlay anchored to the toggle (ddToggleAt): overlays the
+                       form without shifting it and escapes the dialog's overflow clip. -->
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
                     <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
                     <div style="max-height:150px;overflow-y:auto">
                       <sc-for list="{{ ddNsAccOpts }}" as="o" hint-placeholder-count="4">
@@ -3753,14 +3753,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <sc-if value="{{ nsIsKinsta }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" placeholder="mynewsite.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>
-            <div style="display:flex;align-items:flex-start;gap:12px"><span style="width:110px;padding-top:8px;font:500 12.5px var(--sans);color:var(--ink-dim)">Datacenter</span>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Datacenter</span>
               <div style="flex:1">
                 <div onClick="{{ ddToggleNsDc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);flex:1">{{ nsDc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
                 <sc-if value="{{ ddNsDcOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                  <!-- In-flow (not absolute): the dialog body scrolls, so an absolute
-                       panel clips against it and collides with the footer. -->
-                  <div style="position:relative;z-index:40;margin-top:6px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
                     <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search datacenters…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
                     <div style="max-height:150px;overflow-y:auto">
                       <sc-for list="{{ ddNsDcOpts }}" as="o" hint-placeholder-count="5">
@@ -3771,12 +3769,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </sc-if>
               </div>
             </div>
-            <div style="display:flex;align-items:flex-start;gap:12px"><span style="width:110px;padding-top:8px;font:500 12.5px var(--sans);color:var(--ink-dim)">Clone from</span>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Clone from</span>
               <div style="flex:1">
                 <div onClick="{{ ddToggleNsClone }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);flex:1">{{ nsClone }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
                 <sc-if value="{{ ddNsCloneOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                  <div style="position:relative;z-index:40;margin-top:6px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
                     <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search sites…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none;margin-bottom:4px">
                     <div style="max-height:150px;overflow-y:auto">
                       <sc-for list="{{ ddNsCloneOpts }}" as="o" hint-placeholder-count="4">

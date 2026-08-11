@@ -1137,17 +1137,23 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   the core server for prod to work.
 
 ### New-site dialog: Kinsta path round (2026-08-11)
-- **Default path is `kinsta`, labeled "New"** (was Request / "New on Kinsta").
+- **Default path is `kinsta`, labeled "New", listed FIRST** (was Request /
+  "New on Kinsta" second).
 - **Datacenter is a searchable autocomplete** over v1's full 26-region list
   (`NS_DATACENTERS` at the top of app.js, copied from core.php `datacenters`;
   default `Ashburn (US East)` = v1's `us-ashburn-1`). State holds the TITLE;
   map back to the region value via NS_DATACENTERS when the create call gets
   wired for real.
-- **Dialog dropdowns de-landlocked**: the Clone-from + Request-path Account
-  panels were position:absolute inside the scrolling dialog body (the clipping
-  trap already documented in the users-dialog note above). All three ns
-  dropdowns now render IN-FLOW with `position:relative;z-index:40` so the
-  fixed click-catcher still closes them without covering their options.
+- **Dialog dropdowns de-landlocked — third pattern, ANCHORED FIXED OVERLAY**
+  (`ddToggleAt(key, e)` in app.js): the panel is `position:fixed` at the
+  toggle's `getBoundingClientRect()` (state `ddRect` → `ddRectTop/Left/Width`
+  bindings), z-index 80 over the dialog's 70, catcher at 79. Why: absolute
+  panels clip against the scrolling dialog body (the users-dialog trap), and
+  in-flow panels (first fix attempt) push the form down — Austin wanted the
+  dropdown to overlay without shifting content AND overflow the dialog edge.
+  Fixed-anchored gives both; top is clamped to viewport-200px. Applied to all
+  three ns dropdowns (Datacenter, Clone-from, Request-path Account). New
+  dialog dropdowns should use `ddToggleAt` + the shared `ddRect*` bindings.
 - **v1 token-refresh flow ported** (`verifyNsProvider`/`connectNsProvider` in
   app.js): opening the dialog as an OPERATOR fires
   `GET /providers/1/verify` (provider 1 = the Kinsta row; v1 hardcodes the

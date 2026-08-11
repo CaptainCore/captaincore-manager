@@ -43,7 +43,7 @@ class Component extends DCLogic {
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
-    nsToken: '', nsVerify: 'ok',
+    nsToken: '', nsVerify: 'ok', ddRect: null,
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
@@ -992,7 +992,7 @@ class Component extends DCLogic {
       openNewSite: () => { this.setState({ nsOpen: true }); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
-      nsPaths: [['request', 'Request'], ['kinsta', 'New'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
+      nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
         bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
         go: () => this.setState({ nsPath: id }) })),
       nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta', nsIsImport: s.nsPath === 'import', nsIsManual: s.nsPath === 'manual',
@@ -1003,16 +1003,17 @@ class Component extends DCLogic {
       nsPass: s.nsPass, onNsPass: e => this.setState({ nsPass: e.target.value }),
       nsAcc: s.nsAcc,
       ddNsAccOpen: s.ddOpen === 'nsAcc',
-      ddToggleNsAcc: () => this.setState(st => ({ ddOpen: st.ddOpen === 'nsAcc' ? '' : 'nsAcc', ddQ: '' })),
+      ddToggleNsAcc: e => this.ddToggleAt('nsAcc', e),
       ddNsAccOpts: this.ddOpts(this.ACCOUNTS.map(a => a.name), s.nsAcc, 'nsAcc'),
       nsClone: s.nsClone,
       ddNsCloneOpen: s.ddOpen === 'nsClone',
-      ddToggleNsClone: () => this.setState(st => ({ ddOpen: st.ddOpen === 'nsClone' ? '' : 'nsClone', ddQ: '' })),
+      ddToggleNsClone: e => this.ddToggleAt('nsClone', e),
       ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.map(f => f.name)], s.nsClone, 'nsClone'),
       nsDc: s.nsDc,
       ddNsDcOpen: s.ddOpen === 'nsDc',
-      ddToggleNsDc: () => this.setState(st => ({ ddOpen: st.ddOpen === 'nsDc' ? '' : 'nsDc', ddQ: '' })),
+      ddToggleNsDc: e => this.ddToggleAt('nsDc', e),
       ddNsDcOpts: this.ddOpts(NS_DATACENTERS.map(d => d.title), s.nsDc, 'nsDc'),
+      ddRectTop: (s.ddRect || {}).top || 0, ddRectLeft: (s.ddRect || {}).left || 0, ddRectWidth: (s.ddRect || {}).width || 0,
       nsVerifyChecking: s.nsVerify === 'checking',
       nsVerifyOutdated: s.nsVerify === 'outdated',
       nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
@@ -1070,6 +1071,17 @@ class Component extends DCLogic {
       mark: label === cur ? '✓' : '',
       bg: label === cur ? 'var(--brand-soft)' : 'transparent',
       pick: () => this.setState({ [key]: label, ddOpen: '', ddQ: '' }) }));
+  }
+
+  // Dialog dropdowns: position:fixed panel anchored to the toggle's rect, so it
+  // overlays instead of pushing content and escapes the dialog's overflow clip
+  // (in-flow panels shift the form; absolute ones clip against the scrolling
+  // body). Clamped so the ~190px panel never renders past the viewport bottom.
+  ddToggleAt(key, e) {
+    const r = e.currentTarget.getBoundingClientRect();
+    this.setState(st => ({ ddOpen: st.ddOpen === key ? '' : key, ddQ: '',
+      ddRect: { top: Math.round(Math.min(r.bottom + 4, Math.max(10, window.innerHeight - 200))),
+        left: Math.round(r.left), width: Math.round(r.width) } }));
   }
 
   // v1 parity (showNewSiteKinsta): only administrators verify the Kinsta token
