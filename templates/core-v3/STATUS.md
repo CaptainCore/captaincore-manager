@@ -1135,3 +1135,31 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   navigation, file preview; traversal (`../../etc`) refused remotely. NOTE: the
   CLI half ships from the captaincore repo — the remote script must be pulled on
   the core server for prod to work.
+
+### New-site dialog: Kinsta path round (2026-08-11)
+- **Default path is `kinsta`, labeled "New"** (was Request / "New on Kinsta").
+- **Datacenter is a searchable autocomplete** over v1's full 26-region list
+  (`NS_DATACENTERS` at the top of app.js, copied from core.php `datacenters`;
+  default `Ashburn (US East)` = v1's `us-ashburn-1`). State holds the TITLE;
+  map back to the region value via NS_DATACENTERS when the create call gets
+  wired for real.
+- **Dialog dropdowns de-landlocked**: the Clone-from + Request-path Account
+  panels were position:absolute inside the scrolling dialog body (the clipping
+  trap already documented in the users-dialog note above). All three ns
+  dropdowns now render IN-FLOW with `position:relative;z-index:40` so the
+  fixed click-catcher still closes them without covering their options.
+- **v1 token-refresh flow ported** (`verifyNsProvider`/`connectNsProvider` in
+  app.js): opening the dialog as an OPERATOR fires
+  `GET /providers/1/verify` (provider 1 = the Kinsta row; v1 hardcodes the
+  same id) → "Verifying Kinsta connection…" line; a false/failed verify shows
+  the "Kinsta token outdated" panel (token input + Connect →
+  `POST /providers/1/connect`), and Create on Kinsta is dimmed + gated until
+  verified. Customers never fire the check and never see the prompt
+  (`verifyNsProvider(isOp)` short-circuits to 'ok', v1-parity with
+  showNewSiteKinsta). Verified live headless: default tab New, autocomplete
+  search→pick (Tokyo), clone list fully visible in-flow, real verify came
+  back false (~12s — the REST round-trip to Kinsta's API is that slow, same
+  as v1) and the outdated prompt rendered with the CTA gated. Connect was NOT
+  fired (would overwrite the stored provider token). Create still dispatches
+  the design-sample job — the real `POST /providers/kinsta/new-site` wiring
+  (plus name/domain split and account assignment) is still open.

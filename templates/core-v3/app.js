@@ -2,6 +2,27 @@
 // project "Anchor Hosting UI Revamp" (Anchor Home.dc.html); hand-maintained since.
 // Evaluated by the DC runtime (public/js/v3/support.js); companion mixins in
 // this directory extend Component.prototype after this class definition.
+
+// New-site dialog: v1's Kinsta datacenter list (core.php `datacenters`) and the
+// default Kinsta provider row (v1 hardcodes provider_id "1" the same way).
+const NS_KINSTA_PROVIDER = 1;
+const NS_DATACENTERS = [
+  ['us-ashburn-1', 'Ashburn (US East)'], ['us-chicago-1', 'Chicago (US Central)'],
+  ['us-phoenix-1', 'Phoenix (US West)'], ['us-sanjose-1', 'San Jose (US West)'],
+  ['ca-montreal-1', 'Montreal (CA East)'], ['ca-toronto-1', 'Toronto (CA East)'],
+  ['af-johannesburg-1', 'Johannesburg (ZA)'], ['ap-batam-1', 'Batam (ID)'],
+  ['ap-melbourne-1', 'Melbourne (AU)'], ['ap-mumbai-1', 'Mumbai (IN)'],
+  ['ap-osaka-1', 'Osaka (JP)'], ['ap-seoul-1', 'Seoul (KR)'],
+  ['ap-singapore-2', 'Singapore (SG)'], ['ap-sydney-1', 'Sydney (AU)'],
+  ['ap-tokyo-1', 'Tokyo (JP)'], ['eu-amsterdam-1', 'Amsterdam (NL)'],
+  ['eu-frankfurt-1', 'Frankfurt (DE)'], ['eu-madrid-1', 'Madrid (ES)'],
+  ['eu-milan-1', 'Milan (IT)'], ['eu-paris-1', 'Paris (FR)'],
+  ['eu-stockholm-1', 'Stockholm (SE)'], ['eu-zurich-1', 'Zurich (CH)'],
+  ['il-jerusalem-1', 'Jerusalem (IL)'], ['me-riyadh-1', 'Riyadh (SA)'],
+  ['sa-santiago-1', 'Santiago (CL)'], ['sa-saopaulo-1', 'Sao Paulo (BR)'],
+  ['uk-london-1', 'London (GB)']
+].map(([value, title]) => ({ value, title }));
+
 class Component extends DCLogic {
   state = {
     route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null,
@@ -20,8 +41,9 @@ class Component extends DCLogic {
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
     deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
-    nsOpen: false, nsPath: 'request', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
-    nsAcc: 'Bloom & Branch Floral', nsDc: 'US Central (Iowa)', nsClone: 'None (fresh install)',
+    nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
+    nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
+    nsToken: '', nsVerify: 'ok',
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
@@ -967,10 +989,10 @@ class Component extends DCLogic {
       toggleAll: () => this.setState({ sel: allSel ? {} : Object.fromEntries(filtered.map(x => [x.id, true])) }),
       bulkActions: ['Sync data', 'Update WP', 'Back up', 'Apply HTTPS', 'Scan errors'].map(label => ({ label,
         go: () => { this.runJob(label.toLowerCase().replace(/ /g, '-'), selIds.length + ' sites'); this.setState({ sel: {}, dockOpen: true }); } })),
-      openNewSite: () => this.setState({ nsOpen: true }),
+      openNewSite: () => { this.setState({ nsOpen: true }); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
-      nsPaths: [['request', 'Request'], ['kinsta', 'New on Kinsta'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
+      nsPaths: [['request', 'Request'], ['kinsta', 'New'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
         bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
         go: () => this.setState({ nsPath: id }) })),
       nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta', nsIsImport: s.nsPath === 'import', nsIsManual: s.nsPath === 'manual',
@@ -987,7 +1009,15 @@ class Component extends DCLogic {
       ddNsCloneOpen: s.ddOpen === 'nsClone',
       ddToggleNsClone: () => this.setState(st => ({ ddOpen: st.ddOpen === 'nsClone' ? '' : 'nsClone', ddQ: '' })),
       ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.map(f => f.name)], s.nsClone, 'nsClone'),
-      nsDcChips: ['US Central (Iowa)', 'US East (S. Carolina)', 'EU West (Belgium)'].map(l => chip(l, s.nsDc, 'nsDc')),
+      nsDc: s.nsDc,
+      ddNsDcOpen: s.ddOpen === 'nsDc',
+      ddToggleNsDc: () => this.setState(st => ({ ddOpen: st.ddOpen === 'nsDc' ? '' : 'nsDc', ddQ: '' })),
+      ddNsDcOpts: this.ddOpts(NS_DATACENTERS.map(d => d.title), s.nsDc, 'nsDc'),
+      nsVerifyChecking: s.nsVerify === 'checking',
+      nsVerifyOutdated: s.nsVerify === 'outdated',
+      nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
+      nsConnect: () => this.connectNsProvider(),
+      nsCtaDim: s.nsPath === 'kinsta' && s.nsVerify !== 'ok' ? '.5' : '1',
       nsProvChips: ['Kinsta', 'WP Engine', 'Rocket.net', 'GridPane'].map(l => chip(l, s.nsProv, 'nsProv')),
       nsEnvChips: ['Production only', 'Production + Staging'].map(l => chip(l, s.nsEnvs, 'nsEnvs')),
       nsRemote: [['clientsite-alpha.com', '1.2 GB'], ['clientsite-beta.com', '640 MB'], ['legacyshop.net', '3.8 GB']].map(([name, size]) => ({ name, size,
@@ -1001,7 +1031,7 @@ class Component extends DCLogic {
       nsCreate: () => { const st = this.state;
         const sel = Object.keys(st.nsImportSel).filter(k => st.nsImportSel[k]);
         if (st.nsPath === 'request') this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc);
-        else if (st.nsPath === 'kinsta') this.runJob('kinsta-new-site', (st.nsName || 'new site') + ' · ' + st.nsDc + (st.nsClone.startsWith('None') ? '' : ' · clone of ' + st.nsClone));
+        else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok') return; this.runJob('kinsta-new-site', (st.nsName || 'new site') + ' · ' + st.nsDc + (st.nsClone.startsWith('None') ? '' : ' · clone of ' + st.nsClone)); }
         else if (st.nsPath === 'import') { if (!sel.length) return; this.runJob('provider-import', sel.length + ' sites from ' + st.nsProv); }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, dockOpen: true }); },
@@ -1040,6 +1070,27 @@ class Component extends DCLogic {
       mark: label === cur ? '✓' : '',
       bg: label === cur ? 'var(--brand-soft)' : 'transparent',
       pick: () => this.setState({ [key]: label, ddOpen: '', ddQ: '' }) }));
+  }
+
+  // v1 parity (showNewSiteKinsta): only administrators verify the Kinsta token
+  // on dialog open; customers never see the check or the refresh prompt.
+  verifyNsProvider(isOp) {
+    if (!isOp || !this.api || !(window.CC_BOOT && window.CC_BOOT.nonce)) { this.setState({ nsVerify: 'ok' }); return; }
+    this.setState({ nsVerify: 'checking', nsToken: '' });
+    this.api('/providers/' + NS_KINSTA_PROVIDER + '/verify')
+      .then(ok => this.setState({ nsVerify: ok ? 'ok' : 'outdated' }))
+      .catch(() => this.setState({ nsVerify: 'outdated' }));
+  }
+
+  connectNsProvider() {
+    const token = this.state.nsToken.trim();
+    if (!token || !this.api) return;
+    this.setState({ nsVerify: 'checking' });
+    this.api('/providers/' + NS_KINSTA_PROVIDER + '/connect', { method: 'POST', body: { token } })
+      .then(ok => { this.setState({ nsVerify: ok ? 'ok' : 'outdated' });
+        this.toast(ok ? 'Kinsta connection verified' : 'Token rejected — check it and try again', { kind: ok ? 'success' : 'error' }); })
+      .catch(() => { this.setState({ nsVerify: 'outdated' });
+        this.toast('Token rejected — check it and try again', { kind: 'error' }); });
   }
 
   openDomain(id) {
