@@ -1168,4 +1168,20 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   as v1) and the outdated prompt rendered with the CTA gated. Connect was NOT
   fired (would overwrite the stored provider token). Create still dispatches
   the design-sample job — the real `POST /providers/kinsta/new-site` wiring
-  (plus name/domain split and account assignment) is still open.
+  (plus the name/domain split) is still open.
+- **Account/customer/billing assignment** (operator-only, v1's admin
+  `shared_with` section restyled to the site-detail Accounts-card language):
+  an Accounts row with an anchored-overlay account picker (search, excludes
+  already-assigned, capped 50); each assigned account renders as a row with
+  toggleable "Customer" (brand-soft) / "Billing" (ok-soft) chips — ONE of
+  each across rows, click again to clear, exactly v1's v-btn-toggle
+  semantics — plus a per-row ✕ that also clears that account's roles. State:
+  `nsShared` (account ids) + `nsCustomerId`/`nsBillingId`, reset on create;
+  feeds v1's `site.shared_with`/`customer_id`/`account_id` payload when the
+  create call gets wired. Customers never see the section (v1 gives them
+  billing/customer selects over their own accounts — not built yet, belongs
+  to the real-create round). Verified live headless: assign two accounts,
+  role chips exclusive + toggle-off, row remove keeps the dialog open and
+  drops the removed account's role. NOTE for tests: `{{ x }}` interpolations
+  render inside `<span class="sc-interp">` — anchor Playwright locators on
+  that, not on bare text()/parent axes.

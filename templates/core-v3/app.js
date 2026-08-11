@@ -44,6 +44,7 @@ class Component extends DCLogic {
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
     nsToken: '', nsVerify: 'ok', ddRect: null,
+    nsShared: [], nsCustomerId: '', nsBillingId: '',
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
@@ -1014,6 +1015,24 @@ class Component extends DCLogic {
       ddToggleNsDc: e => this.ddToggleAt('nsDc', e),
       ddNsDcOpts: this.ddOpts(NS_DATACENTERS.map(d => d.title), s.nsDc, 'nsDc'),
       ddRectTop: (s.ddRect || {}).top || 0, ddRectLeft: (s.ddRect || {}).left || 0, ddRectWidth: (s.ddRect || {}).width || 0,
+      // v1 parity (new-site dialog admin section): assign shared-access accounts,
+      // optionally marking ONE as customer contact and ONE as billing contact.
+      nsShowAccounts: isOp,
+      ddNsAcctsOpen: s.ddOpen === 'nsAccts',
+      ddToggleNsAccts: e => this.ddToggleAt('nsAccts', e),
+      ddNsAcctsOpts: (() => { const aq = s.ddQ.trim().toLowerCase();
+        return this.ACCOUNTS.filter(a => !s.nsShared.includes(a.id) && (!aq || a.name.toLowerCase().includes(aq))).slice(0, 50)
+          .map(a => ({ label: a.name, pick: () => this.setState(st => ({ nsShared: [...st.nsShared, a.id], ddOpen: '', ddQ: '' })) })); })(),
+      nsAcctRows: s.nsShared.map(id => { const a = this.ACCOUNTS.find(x => x.id === id) || { name: id };
+        const cust = s.nsCustomerId === id, bill = s.nsBillingId === id;
+        return { name: a.name,
+          custBg: cust ? 'var(--brand-soft)' : 'var(--panel-2)', custFg: cust ? 'var(--brand-ink)' : 'var(--ink-dim)',
+          billBg: bill ? 'var(--ok-soft)' : 'var(--panel-2)', billFg: bill ? 'var(--ok)' : 'var(--ink-dim)',
+          toggleCust: () => this.setState(st => ({ nsCustomerId: st.nsCustomerId === id ? '' : id })),
+          toggleBill: () => this.setState(st => ({ nsBillingId: st.nsBillingId === id ? '' : id })),
+          remove: () => this.setState(st => ({ nsShared: st.nsShared.filter(x => x !== id),
+            nsCustomerId: st.nsCustomerId === id ? '' : st.nsCustomerId,
+            nsBillingId: st.nsBillingId === id ? '' : st.nsBillingId })) }; }),
       nsVerifyChecking: s.nsVerify === 'checking',
       nsVerifyOutdated: s.nsVerify === 'outdated',
       nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
@@ -1035,7 +1054,7 @@ class Component extends DCLogic {
         else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok') return; this.runJob('kinsta-new-site', (st.nsName || 'new site') + ' · ' + st.nsDc + (st.nsClone.startsWith('None') ? '' : ' · clone of ' + st.nsClone)); }
         else if (st.nsPath === 'import') { if (!sel.length) return; this.runJob('provider-import', sel.length + ' sites from ' + st.nsProv); }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
-        this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, dockOpen: true }); },
+        this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, nsShared: [], nsCustomerId: '', nsBillingId: '', dockOpen: true }); },
       viewTable: s.view === 'table', viewCards: s.view === 'cards', viewList: s.view === 'list',
       tblBg: s.view === 'table' ? 'var(--panel-2)' : 'transparent', tblFg: s.view === 'table' ? 'var(--ink)' : 'var(--ink-dim)',
       crdBg: s.view === 'cards' ? 'var(--panel-2)' : 'transparent', crdFg: s.view === 'cards' ? 'var(--ink)' : 'var(--ink-dim)',

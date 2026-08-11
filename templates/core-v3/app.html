@@ -3785,6 +3785,33 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </sc-if>
               </div>
             </div>
+            <sc-if value="{{ nsShowAccounts }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Accounts</span>
+                <div style="flex:1">
+                  <div onClick="{{ ddToggleNsAccts }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);color:var(--ink-dim);flex:1">Assign accounts…</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                  <sc-if value="{{ ddNsAcctsOpen }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                    <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                      <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                      <div style="max-height:150px;overflow-y:auto">
+                        <sc-for list="{{ ddNsAcctsOpts }}" as="o" hint-placeholder-count="4">
+                          <div onClick="{{ o.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer" style-hover="background:var(--panel-2)"><span style="font:500 12.5px var(--sans)">{{ o.label }}</span></div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+              <sc-for list="{{ nsAcctRows }}" as="r" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;gap:8px;margin-left:122px;padding:7px 10px;border:1px solid var(--rule);border-radius:9px">
+                  <span style="flex:1;font:500 12.5px var(--sans)">{{ r.name }}</span>
+                  <span onClick="{{ r.toggleCust }}" style="padding:3px 10px;border-radius:99px;background:{{ r.custBg }};color:{{ r.custFg }};font:600 11px var(--sans);cursor:pointer">Customer</span>
+                  <span onClick="{{ r.toggleBill }}" style="padding:3px 10px;border-radius:99px;background:{{ r.billBg }};color:{{ r.billFg }};font:600 11px var(--sans);cursor:pointer">Billing</span>
+                  <span onClick="{{ r.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 12px var(--sans);padding:2px 4px" style-hover="color:var(--ink)">✕</span>
+                </div>
+              </sc-for>
+              <span style="margin-left:122px;font:400 11.5px var(--sans);color:var(--ink-dim)">Assigned accounts get shared access. If no customer account is set, the site is placed in a new account.</span>
+            </sc-if>
             <sc-if value="{{ nsVerifyChecking }}" hint-placeholder-val="{{ false }}">
               <span style="font:400 12px var(--sans);color:var(--ink-dim)">Verifying Kinsta connection…</span>
             </sc-if>
