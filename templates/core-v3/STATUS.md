@@ -1166,9 +1166,39 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   search→pick (Tokyo), clone list fully visible in-flow, real verify came
   back false (~12s — the REST round-trip to Kinsta's API is that slow, same
   as v1) and the outdated prompt rendered with the CTA gated. Connect was NOT
-  fired (would overwrite the stored provider token). Create still dispatches
-  the design-sample job — the real `POST /providers/kinsta/new-site` wiring
-  (plus the name/domain split) is still open.
+  fired (would overwrite the stored provider token).
+- **Create on Kinsta is REAL now** (`createKinstaSite` + `pollProviderActions`
+  in app.js; the earlier design-sample runJob is gone — Austin hit that on
+  prod: activity showed a fake job, DevTools showed no request). v1's
+  newKinstaSite verbatim: `POST /providers/kinsta/new-site { site: { name,
+  domain, clone_site_id, provider_id: "1", datacenter: <region value mapped
+  from the NS_DATACENTERS title>, shared_with: [{account_id}], account_id:
+  billing, customer_id } }`. Client pre-validates name 5–32 (server rules);
+  `{errors:[]}` responses render as bad-soft rows in the dialog; success
+  toasts, closes, resets. Added the missing **Domain field** (blank → falls
+  back to the site name; run() would otherwise mint `<name>.kinsta.cloud`).
+  **Clone-from now lists only Kinsta fleet sites with a provider_site_id**
+  (data.js keeps `providerSiteId` on FLEET) and sends that Kinsta UUID as
+  `clone_site_id` — v1's clone list for the default provider was actually
+  EMPTY (Kinsta::list_sites skips provider 1), so fleet-sourced ids are the
+  capability upgrade, same backend contract. Datacenter row hides while
+  cloning (clone ignores region, v1 parity). Customers opening the dialog
+  default their first account as billing (v1's showNewSiteKinsta).
+  **THE POLL IS THE ENGINE**: after the POST the BROWSER must drive the
+  ProviderAction chain — `GET /provider-actions/check` every 10s (flips a
+  finished Kinsta operation to "waiting"), then `GET …/{id}/run` executes
+  the next server step (create the CaptainCore Site w/ accounts → disable
+  edge caching → image optimization → final `site sync`). No polling = site
+  exists on Kinsta but never appears in CaptainCore. v3 polls after create
+  AND once on mount (4s, resumes chains orphaned by a reload); the loop
+  stops when the active list is empty; an action leaving the list after
+  run() toasts "created at Kinsta's <datacenter>" and rehydrates the fleet.
+  Verified live headless with ROUTE-INTERCEPTED provider endpoints (no real
+  Kinsta calls): client validation blocks short names with zero requests;
+  payload captured byte-correct incl. roles + Tokyo region + clone UUID
+  (2,685 cloneable fleet sites); server-error rows render; success closes +
+  toasts; check→run chain fires and the completion toast lands. NOT tested
+  against real Kinsta — the next real create on prod is the live test.
 - **Account/customer/billing assignment** (operator-only, v1's admin
   `shared_with` section restyled to the site-detail Accounts-card language):
   an Accounts row with an anchored-overlay account picker (search, excludes

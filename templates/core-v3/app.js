@@ -45,6 +45,7 @@ class Component extends DCLogic {
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
     nsToken: '', nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
+    nsDomain: '', nsErrors: [], nsBusy: false,
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
@@ -990,7 +991,10 @@ class Component extends DCLogic {
       toggleAll: () => this.setState({ sel: allSel ? {} : Object.fromEntries(filtered.map(x => [x.id, true])) }),
       bulkActions: ['Sync data', 'Update WP', 'Back up', 'Apply HTTPS', 'Scan errors'].map(label => ({ label,
         go: () => { this.runJob(label.toLowerCase().replace(/ /g, '-'), selIds.length + ' sites'); this.setState({ sel: {}, dockOpen: true }); } })),
-      openNewSite: () => { this.setState({ nsOpen: true }); this.verifyNsProvider(isOp); },
+      openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
+        // v1 parity (showNewSiteKinsta): customers default their first account as billing.
+        if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;
+        this.setState(patch); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
       nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
@@ -998,6 +1002,8 @@ class Component extends DCLogic {
         go: () => this.setState({ nsPath: id }) })),
       nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta', nsIsImport: s.nsPath === 'import', nsIsManual: s.nsPath === 'manual',
       nsName: s.nsName, onNsName: e => this.setState({ nsName: e.target.value }),
+      nsDomain: s.nsDomain, onNsDomain: e => this.setState({ nsDomain: e.target.value }),
+      nsErrors: s.nsErrors.map(text => ({ text })),
       nsNotes: s.nsNotes, onNsNotes: e => this.setState({ nsNotes: e.target.value }),
       nsAddr: s.nsAddr, onNsAddr: e => this.setState({ nsAddr: e.target.value }),
       nsUser: s.nsUser, onNsUser: e => this.setState({ nsUser: e.target.value }),
@@ -1009,8 +1015,12 @@ class Component extends DCLogic {
       nsClone: s.nsClone,
       ddNsCloneOpen: s.ddOpen === 'nsClone',
       ddToggleNsClone: e => this.ddToggleAt('nsClone', e),
-      ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.map(f => f.name)], s.nsClone, 'nsClone'),
+      // Clone sources must be Kinsta sites with a known provider_site_id — the
+      // clone API resolves source_env_id from sites/{clone_site_id}/environments.
+      ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.filter(f => f.provider === 'Kinsta' && f.providerSiteId).map(f => f.name)], s.nsClone, 'nsClone'),
       nsDc: s.nsDc,
+      // v1 parity: the clone API ignores region, so Datacenter hides while cloning.
+      nsShowDc: s.nsClone.startsWith('None'),
       ddNsDcOpen: s.ddOpen === 'nsDc',
       ddToggleNsDc: e => this.ddToggleAt('nsDc', e),
       ddNsDcOpts: this.ddOpts(NS_DATACENTERS.map(d => d.title), s.nsDc, 'nsDc'),
@@ -1037,7 +1047,7 @@ class Component extends DCLogic {
       nsVerifyOutdated: s.nsVerify === 'outdated',
       nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
       nsConnect: () => this.connectNsProvider(),
-      nsCtaDim: s.nsPath === 'kinsta' && s.nsVerify !== 'ok' ? '.5' : '1',
+      nsCtaDim: s.nsPath === 'kinsta' && (s.nsVerify !== 'ok' || s.nsBusy) ? '.5' : '1',
       nsProvChips: ['Kinsta', 'WP Engine', 'Rocket.net', 'GridPane'].map(l => chip(l, s.nsProv, 'nsProv')),
       nsEnvChips: ['Production only', 'Production + Staging'].map(l => chip(l, s.nsEnvs, 'nsEnvs')),
       nsRemote: [['clientsite-alpha.com', '1.2 GB'], ['clientsite-beta.com', '640 MB'], ['legacyshop.net', '3.8 GB']].map(([name, size]) => ({ name, size,
@@ -1045,13 +1055,13 @@ class Component extends DCLogic {
         toggle: () => this.setState(st => ({ nsImportSel: { ...st.nsImportSel, [name]: !st.nsImportSel[name] } })) })),
       nsBilling: (() => { const n = Object.keys(s.nsImportSel).filter(k => s.nsImportSel[k]).length;
         return n ? 'Billing preview: +$' + n * 45 + '/mo · Standard plan × ' + n : 'Select sites to see a billing preview.'; })(),
-      nsCta: { request: 'Request site', kinsta: 'Create on Kinsta',
+      nsCta: { request: 'Request site', kinsta: s.nsBusy ? 'Creating…' : 'Create on Kinsta',
         import: 'Import ' + Object.keys(s.nsImportSel).filter(k => s.nsImportSel[k]).length + ' sites',
         manual: 'Connect site' }[s.nsPath],
       nsCreate: () => { const st = this.state;
         const sel = Object.keys(st.nsImportSel).filter(k => st.nsImportSel[k]);
         if (st.nsPath === 'request') this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc);
-        else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok') return; this.runJob('kinsta-new-site', (st.nsName || 'new site') + ' · ' + st.nsDc + (st.nsClone.startsWith('None') ? '' : ' · clone of ' + st.nsClone)); }
+        else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
         else if (st.nsPath === 'import') { if (!sel.length) return; this.runJob('provider-import', sel.length + ' sites from ' + st.nsProv); }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, nsShared: [], nsCustomerId: '', nsBillingId: '', dockOpen: true }); },
@@ -1122,6 +1132,63 @@ class Component extends DCLogic {
         this.toast(ok ? 'Kinsta connection verified' : 'Token rejected — check it and try again', { kind: ok ? 'success' : 'error' }); })
       .catch(() => { this.setState({ nsVerify: 'outdated' });
         this.toast('Token rejected — check it and try again', { kind: 'error' }); });
+  }
+
+  // Real Kinsta site creation — v1's newKinstaSite payload verbatim:
+  // POST /providers/kinsta/new-site { site } → queues a ProviderAction and
+  // returns the Kinsta operation_id (or { errors: [] } from validation).
+  createKinstaSite() {
+    const st = this.state;
+    const name = st.nsName.trim();
+    const domain = st.nsDomain.trim() || name;
+    const errors = [];
+    if (name.length < 5 || name.length > 32) errors.push('Name must be between 5 and 32 characters in length');
+    if (errors.length) { this.setState({ nsErrors: errors }); return; }
+    const cloneSrc = st.nsClone.startsWith('None') ? null : this.FLEET.find(f => f.name === st.nsClone);
+    const site = {
+      name, domain,
+      clone_site_id: cloneSrc ? String(cloneSrc.providerSiteId) : '',
+      provider_id: String(NS_KINSTA_PROVIDER),
+      datacenter: (NS_DATACENTERS.find(d => d.title === st.nsDc) || {}).value || 'us-ashburn-1',
+      // run() reads shared_with via array_column(…, "account_id") — send objects.
+      shared_with: st.nsShared.map(id => ({ account_id: id })),
+      account_id: st.nsBillingId || '',
+      customer_id: st.nsCustomerId || ''
+    };
+    this.setState({ nsBusy: true, nsErrors: [] });
+    this.api('/providers/kinsta/new-site', { method: 'POST', body: { site } }).then(res => {
+      if (res && res.errors && res.errors.length) { this.setState({ nsErrors: res.errors, nsBusy: false }); return; }
+      this.toast(`Site ${name} is being created at Kinsta — it will appear in the fleet once provisioned`, { kind: 'success' });
+      this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsClone: 'None (fresh install)',
+        nsShared: [], nsCustomerId: '', nsBillingId: '' });
+      this.pollProviderActions();
+    }).catch(() => this.setState({ nsBusy: false, nsErrors: ['Request failed — try again'] }));
+  }
+
+  // v1 parity (checkProviderActions/runProviderActions): the BROWSER drives a
+  // queued provider action — /provider-actions/check every 10s flips finished
+  // Kinsta operations to "waiting", then GET …/{id}/run executes the next
+  // server-side step (create the CaptainCore site record w/ accounts, disable
+  // edge caching, image optimization, final sync). Without this poll the
+  // provisioning chain never advances. Runs sequentially; a "waiting" action
+  // that leaves the active list after run() is finished → toast + rehydrate.
+  pollProviderActions() {
+    if (!this.api || !(window.CC_BOOT && window.CC_BOOT.nonce)) return;
+    if (this._paTimer) { clearTimeout(this._paTimer); this._paTimer = null; }
+    this.api('/provider-actions/check').then(list => {
+      list = Array.isArray(list) ? list : [];
+      const chain = list.filter(a => a.status === 'waiting').reduce((p, a) => p.then(() =>
+        this.api('/provider-actions/' + a.provider_action_id + '/run').then(active => {
+          const act = a.action || {};
+          const still = (Array.isArray(active) ? active : []).some(x => x.provider_action_id === a.provider_action_id);
+          if (!still && act.command === 'new-site') {
+            const dcTitle = (NS_DATACENTERS.find(d => d.value === act.datacenter) || {}).title || act.datacenter;
+            this.toast(`New site ${act.name} created at Kinsta's ${dcTitle} datacenter`, { kind: 'success' });
+            if (this.hydrate) this.hydrate();
+          }
+        }).catch(() => {})), Promise.resolve());
+      chain.then(() => { if (list.length) this._paTimer = setTimeout(() => this.pollProviderActions(), 10000); });
+    }).catch(() => {});
   }
 
   openDomain(id) {
@@ -1849,7 +1916,10 @@ class Component extends DCLogic {
     this.applyBrand();
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
-    if (window.CC_BOOT) { this.setState({ jobs: [] }); this.initRouter(); }
+    if (window.CC_BOOT) { this.setState({ jobs: [] }); this.initRouter();
+      // Resume any provisioning chain orphaned by a reload (v1 polls on load too).
+      setTimeout(() => this.pollProviderActions(), 4000);
+    }
     // Debug/test handle — lets DevTools and Playwright probes reach the
     // component instance (e.g. seed fake jobs to exercise the dock).
     window.CC = this;
