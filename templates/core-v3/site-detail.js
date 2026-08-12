@@ -944,6 +944,79 @@ Object.assign(Component.prototype, {
     if (content === null) return [{ text: 'Loading ' + s.logFile + '…', ph: true }];
     if (content === undefined) return [{ text: bucket.files.length ? 'Select a log file.' : 'No log files found.', ph: true }];
     return content.split('\n').slice(-1000).map(text => ({ text }));
+  },
+
+  // ── Site removal (v1 parity) ────────────────────────────────────────────
+  // TWO different operations, deliberately not the same button:
+  //   REQUEST removal — anyone with access. POST /sites/{id}
+  //     { details: { removed: true|false } }. The server merges the flag,
+  //     emails the operators (Mailer::send_site_removal_request) and writes a
+  //     requested_removal / cancelled_removal ActivityLog row. Nothing is
+  //     destroyed; an operator takes the final backup, then deletes.
+  //   DELETE the site — ADMIN ONLY, and enforced server-side as of this round
+  //     (the route previously accepted any owner). Dispatches the CLI
+  //     `site delete` and marks the record inactive. Irreversible.
+
+  setSiteRemoved(next) {
+    const s = this.state;
+    const site = this.FLEET.find(x => x.id === s.siteId);
+    if (!site) return;
+    const tid = this.toast(next ? 'Requesting removal of ' + site.name + '…' : 'Cancelling removal request…', { kind: 'loading' });
+    this.api('/sites/' + site.id, { method: 'POST', body: { details: { removed: next } } })
+      .then(() => {
+        site.removed = next; // patch FLEET in place; no refetch of 2.9k sites
+        this.updateToast(tid, next
+          ? site.name + ' is marked for removal — an operator will follow up'
+          : 'Removal request cancelled for ' + site.name, { kind: 'success' });
+        this.setState({});
+      })
+      .catch(() => this.updateToast(tid, 'Could not update the removal request', { kind: 'error' }));
+  },
+
+  requestSiteRemoval() {
+    const site = this.FLEET.find(x => x.id === this.state.siteId);
+    if (!site) return;
+    if (!confirm('Mark ' + site.name + ' for removal?\n\nEvery environment will be removed once an operator processes the request. Nothing is deleted right now, and you can cancel until then.')) return;
+    this.setSiteRemoved(true);
+  },
+
+  cancelSiteRemoval() { this.setSiteRemoved(false); },
+
+  // Admin-only hard delete. Typed confirmation, not a plain OK — v1 used a
+  // bare confirm() for an irreversible fleet-wide destructive action.
+  deleteSiteHard() {
+    const s = this.state;
+    const site = this.FLEET.find(x => x.id === s.siteId);
+    if (!site) return;
+    const typed = prompt('DELETE ' + site.name + ' permanently?\n\nThis removes every environment at the host and cannot be undone.\nType the site name to confirm:');
+    if (typed == null) return;
+    if (typed.trim() !== site.name) { this.toast('Name did not match — nothing was deleted', { kind: 'error' }); return; }
+    const tid = this.toast('Deleting ' + site.name + '…', { kind: 'loading' });
+    this.api('/sites/' + site.id, { method: 'DELETE' })
+      .then(res => {
+        if (res && res.code) { this.updateToast(tid, res.message || 'Delete refused', { kind: 'error' }); return; }
+        this.FLEET = this.FLEET.filter(x => x.id !== site.id);
+        this.updateToast(tid, (res && res.message) || site.name + ' deleted', { kind: 'success' });
+        this._detail = null;
+        this.setState({ route: 'sites', siteId: null });
+      })
+      .catch(() => this.updateToast(tid, 'Could not delete ' + site.name, { kind: 'error' }));
+  },
+
+  computeRemoval(s, site, isOp) {
+    const marked = !!(site && site.removed);
+    return {
+      rmMarked: marked,
+      rmBannerText: site ? site.name + ' is marked for removal. Every environment will be removed once an operator processes the request.' : '',
+      rmCancel: () => this.cancelSiteRemoval(),
+      rmRequest: () => this.requestSiteRemoval(),
+      rmRequestShow: !marked,
+      // "Request deletion" for customers vs "Mark for removal" for operators —
+      // same call, but the operator is queueing their own work, not asking.
+      rmRequestLabel: isOp ? 'Mark for removal…' : 'Request site deletion…',
+      rmCanDelete: isOp,
+      rmDelete: () => this.deleteSiteHard()
+    };
   }
 
 });

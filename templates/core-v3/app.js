@@ -28,7 +28,7 @@ class Component extends DCLogic {
     route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null,
     palQuery: '', palIdx: 0, tick: 0,
     view: 'table', q: '', fProv: 'Any', fHealth: 'All', sel: {},
-    fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
+    fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
     capSel: '', capLimit: 60,
@@ -774,6 +774,7 @@ class Component extends DCLogic {
     withPlug.forEach(x => { const p = x.plugins[s.fPlugin]; verCnt[p.v] = (verCnt[p.v] || 0) + 1; statCnt[p.status] = (statCnt[p.status] || 0) + 1; });
     const conds = [];
     if (s.fUnassigned) conds.push(x => !!x.unassigned);
+    if (s.fRemoved) conds.push(x => !!x.removed);
     if (!inactive(s.fProv)) conds.push(x => x.provider === s.fProv);
     if (!inactive(s.fBackup)) conds.push(x => x.backup === s.fBackup);
     if (!inactive(s.fCore)) conds.push(x => x.core === s.fCore);
@@ -828,6 +829,7 @@ class Component extends DCLogic {
     ];
     const activeFacets = facetDefs.filter(d => !inactive(d.cur));
     const unassignedCnt = fleet.filter(x => x.unassigned).length;
+    const removedCnt = fleet.filter(x => x.removed).length;
     const labelCnt = {};
     fleet.forEach(x => { [...new Set(x.labels || [])].forEach(l => { if (l) labelCnt[l] = (labelCnt[l] || 0) + 1; }); });
     const chip = (label, cur, key) => ({ label,
@@ -860,6 +862,7 @@ class Component extends DCLogic {
     };
     const rows = sorted.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot,
       mono: (x.name || '?').slice(0, 2).toUpperCase(),
+      removedChip: !!x.removed,
       thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
       thumbLarge: thumbOf(x, 800), hasThumbLarge: !!thumbOf(x, 800),
       envChips: ((x.environmentsRaw && x.environmentsRaw.length)
@@ -936,7 +939,7 @@ class Component extends DCLogic {
       addFilterCatLabel: (facetDefs.find(d => d.id === s.ddCat) || {}).base || '',
       addFilterBack: () => this.setState({ ddCat: '', ddQ: '' }),
       addFilterOpts: s.ddCat ? (facetDefs.find(d => d.id === s.ddCat) || { opts: () => [] }).opts() : [],
-      opShow: activeFacets.length + (s.fUnassigned ? 1 : 0) >= 2,
+      opShow: activeFacets.length + (s.fUnassigned ? 1 : 0) + (s.fRemoved ? 1 : 0) >= 2,
       opChips: ['AND', 'OR'].map(label => ({ label,
         bg: s.fOp === label ? 'var(--panel-2)' : 'transparent',
         fg: s.fOp === label ? 'var(--ink)' : 'var(--ink-dim)',
@@ -952,8 +955,15 @@ class Component extends DCLogic {
         fg: s.fPlugIs === label ? 'var(--ink)' : 'var(--ink-dim)',
         go: () => { this.setState({ fPlugIs: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } })),
       clearPlugin: () => { this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddOpen: '', sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); },
-      hasLabels: Object.keys(labelCnt).length > 0 || (isOp && unassignedCnt > 0),
+      hasLabels: Object.keys(labelCnt).length > 0 || (isOp && (unassignedCnt > 0 || removedCnt > 0)),
       labelChips: [
+        // Pending-removal queue: operator-only pseudo-label, same shape as
+        // unassigned. This is how an operator finds sites awaiting deletion.
+        ...(isOp && removedCnt > 0 ? [{ label: 'removal requested', n: removedCnt,
+          bg: 'var(--bad-soft)', fg: 'var(--bad)',
+          icon: this.LABEL_ICONS['mdi-alert'] || this.LABEL_ICONS['mdi-tag'],
+          bd: s.fRemoved ? 'var(--bad)' : 'transparent',
+          go: () => this.setState(st => ({ fRemoved: !st.fRemoved, sitesPage: 1 })) }] : []),
         // Unassigned rides with the labels as an operator-only pseudo-label.
         ...(isOp && unassignedCnt > 0 ? [{ label: 'unassigned', n: unassignedCnt,
           bg: 'var(--warn-soft)', fg: 'var(--ink)',
@@ -981,7 +991,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       hasSel: selIds.length > 0, selCount: selIds.length,
       clearSel: () => this.setState({ sel: {} }),
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
@@ -1640,6 +1650,8 @@ class Component extends DCLogic {
       ...(real ? this.realStatVals(s, site) : (window.CC_BOOT ? this.emptyStatVals() : { statsNotice: false, statsNoticeText: '' })),
       // Performance monitor (performance.js) — guarded, later mixin.
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
+      // Site removal — request (any role) vs hard delete (operators only).
+      ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false }),
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
       dDomains: (real && real.domains
         ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))

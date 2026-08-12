@@ -621,7 +621,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       <img ref="{{ s.thumbRef }}" src="{{ s.thumb }}" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;background:var(--panel-2)">
                     </sc-if>
                   </span>
-                  <span style="min-width:0"><span style="display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ s.account }}</span></span>
+                  <span style="min-width:0"><span style="display:flex;align-items:center;gap:7px;min-width:0"><span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</span><sc-if value="{{ s.removedChip }}" hint-placeholder-val="{{ false }}"><span title="Marked for removal" style="flex:none;font:600 10px var(--sans);letter-spacing:.04em;text-transform:uppercase;background:var(--bad-soft);color:var(--bad);border-radius:5px;padding:2px 6px">Removal</span></sc-if></span><span style="display:block;font:400 12px var(--sans);color:var(--ink-dim)">{{ s.account }}</span></span>
                   <span style="display:flex;gap:5px;flex-wrap:wrap">
                     <sc-for list="{{ s.envChips }}" as="ec" hint-placeholder-count="2">
                       <span onClick="{{ ec.go }}" style="font:500 12px var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px;color:var(--ink-dim);cursor:pointer" style-hover="background:var(--brand-soft);color:var(--brand-ink)">{{ ec.label }}</span>
@@ -743,6 +743,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
+          <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:14px;border:1px solid var(--bad);background:var(--bad-soft);border-radius:11px;padding:12px 16px;flex-wrap:wrap">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+              <span style="flex:1;min-width:220px;font:500 13px var(--sans);color:var(--bad)">{{ rmBannerText }}</span>
+              <button onClick="{{ rmCancel }}" style="border:1px solid var(--bad);background:var(--paper);color:var(--bad);font:600 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer;flex:none" style-hover="filter:brightness(.97)">Cancel removal request</button>
+            </div>
+          </sc-if>
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="5">
               <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
@@ -862,7 +869,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ showPma }}" hint-placeholder-val="{{ true }}">
                     <span onClick="{{ openPma }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 9c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3Z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg>Open phpMyAdmin</span>
                   </sc-if>
-                  <span style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"></path></svg>Delete site…</span>
+                  <!-- Removal: customers can only REQUEST; the hard delete is
+                       operator-only in the UI and enforced server-side. -->
+                  <sc-if value="{{ rmRequestShow }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ rmRequest }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"></path></svg>{{ rmRequestLabel }}</span>
+                  </sc-if>
+                  <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ rmCancel }}" style="display:flex;align-items:center;gap:9px;font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 3v5h5"></path></svg>Cancel removal request</span>
+                  </sc-if>
+                  <sc-if value="{{ rmCanDelete }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ rmDelete }}" title="Administrators only — irreversible" style="display:flex;align-items:center;gap:9px;font:600 13px var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>Delete site permanently…</span>
+                  </sc-if>
                 </section>
               </div>
             </div>

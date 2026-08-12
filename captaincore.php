@@ -3635,6 +3635,15 @@ function captaincore_site_update_func( $request ) {
 function captaincore_site_delete_func( $request ) {
 	$site_id = $request['id'];
 
+	// Hard delete is ADMIN ONLY. verify_permissions() alone just proves the
+	// caller owns the site, which would let any customer destroy their own
+	// site (this dispatches the CLI `site delete`). Customers request removal
+	// instead — POST /sites/{id} { details: { removed: true } } — which queues
+	// it for an operator after the final backup.
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Only administrators can delete a site. Request removal instead.', [ 'status' => 403 ] );
+	}
+
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
 	}

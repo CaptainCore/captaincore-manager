@@ -31,7 +31,11 @@ Object.assign(Component.prototype, {
       // Raw fleet totals for the home "Fleet at a glance" card (the FLEET
       // records store display-formatted strings, so accumulate here).
       const totals = this._fleetTotals = { visits: 0, storage: 0, cores: {}, providers: {} };
-      this.FLEET = (Array.isArray(sites) ? sites : []).filter(x => !x.removed).map(x => {
+      // Sites marked for removal STAY in the fleet (v1 keeps them listed too).
+      // Filtering them out stranded the request: you could not open the site to
+      // cancel, and operators could not see the pending-removal queue. They
+      // carry `removed` instead and wear a chip + an operator-only filter.
+      this.FLEET = (Array.isArray(sites) ? sites : []).map(x => {
         totals.visits += Number(x.visits) || 0;
         totals.storage += parseInt(x.storage, 10) || 0;
         if (x.core) totals.cores[x.core] = (totals.cores[x.core] || 0) + 1;
@@ -50,6 +54,7 @@ Object.assign(Component.prototype, {
           backup: 'Direct',
           labels: (Array.isArray(x.labels) ? x.labels : []).map(l => typeof l === 'string' ? l : (l && (l.type || l.text)) || '').filter(Boolean),
           unassigned: !x.account_id || x.account_id == '0',
+          removed: !!x.removed,
           plugins: {}, home_url: x.home_url, screenshot: x.screenshot,
           environmentsRaw: x.environments || [] };
       });

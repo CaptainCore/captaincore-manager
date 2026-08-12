@@ -1291,3 +1291,50 @@ the `pm` prefix; `computePerf` is spread GUARDED into computeDetail.
   late — wait on the element in tests, never a fixed sleep. The SVG
   `points`/`y1` console warnings at first paint are the same benign
   pre-hydration parse noise as the existing `{{ n.icon }}` path warnings.
+
+### Site removal: request vs delete (2026-08-12)
+v3 had **none** of v1's removal flow, and `data.js` was FILTERING marked sites
+out of FLEET — so a marked site vanished entirely: the requester could not
+reach it to cancel, and operators had no pending-removal queue. Ported with a
+sharper split than v1, per Austin: customers may only REQUEST; operators may
+request, cancel, and hard-delete.
+
+- **SECURITY FIX (server-side).** `DELETE /sites/{id}` only ran
+  `captaincore_verify_permissions( $site_id )` — a SITE-ACCESS check, not an
+  admin check. v1 hid the button behind `role == 'administrator'` in markup
+  only, so **any customer owning a site could hard-delete it** (the callback
+  dispatches the CLI `site delete` and marks the record inactive).
+  `captaincore_site_delete_func` now returns 403 unless
+  `( new CaptainCore\User )->is_admin()`, checked BEFORE the ownership test.
+  Verified over real HTTP as a non-admin: 403 + "Only administrators can
+  delete a site. Request removal instead.", and the row survived. Plain
+  function — no classmap regen.
+- **Two operations, deliberately different affordances** (site-detail.js):
+  *Request* = `POST /sites/{id} { details: { removed: bool } }`, which the
+  server merges into details, emails operators
+  (`Mailer::send_site_removal_request`) and logs `requested_removal` /
+  `cancelled_removal`. Nothing is destroyed. *Delete* = `DELETE /sites/{id}`,
+  operator-only, irreversible. Labels differ by role — "Request site
+  deletion…" for customers, "Mark for removal…" for operators (an operator is
+  queueing their own work, not asking).
+- **Hard delete needs a TYPED site name**, not v1's bare `confirm()` — an
+  irreversible fleet action deserves more than a stray Return keypress.
+  Verified all three paths: wrong name → refused with a toast and zero
+  requests; dismissed prompt → nothing; exact name → one DELETE, FLEET row
+  dropped, routed back to the list.
+- **Marked sites stay in the fleet** (v1 lists them too). They wear a red
+  "Removal" chip in the Sites table, and operators get a `removal requested`
+  pseudo-label filter chip beside `unassigned` (state `fRemoved`, same shape,
+  cleared by Clear filters) — that chip IS the removal queue. Site detail
+  shows a bad-soft banner under the meta line with "Cancel removal request",
+  plus matching entries in the Overview Tools card. **Note the fleet count
+  rises** by however many sites are marked (17 locally) now that they are no
+  longer hidden.
+- Cancel is available to anyone with site access, matching v1's banner ("If
+  that was not your intentions then…") — a customer who mis-clicks should not
+  need to email support. Say the word to restrict it to operators.
+- Verified live as BOTH roles (real accounts, marking POSTs intercepted so no
+  operator emails or ActivityLog rows were written): operator sees mark +
+  cancel + permanent delete and the queue chip; customer sees only
+  "Request site deletion…", no delete link, no queue chip; banner appears and
+  clears on cancel for both. No page errors.
