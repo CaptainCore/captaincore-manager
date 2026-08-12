@@ -202,6 +202,54 @@ Object.assign(Component.prototype, {
     });
   },
 
+  // v1 parity: re-ask Mailgun to check the zone, then re-render the record
+  // panel from the fresh response (GET …/status?verify=true both triggers the
+  // check and returns the updated sending/receiving record sets).
+  verifyForwardingDns() {
+    const dom = this._domain;
+    if (!dom || dom.fwdVerifying) return;
+    dom.fwdVerifying = true; this.setState({});
+    const tid = this.toast('Checking DNS records with Mailgun…', { kind: 'loading' });
+    this.api('/domain/' + dom.domainId + '/email-forwarding/status?verify=true').then(st => {
+      if (this._domain !== dom) return;
+      dom.fwdVerifying = false;
+      dom.fwdStatus = st || null;
+      const active = st && st.state === 'active';
+      this.updateToast(tid, active ? 'Domain verified with Mailgun'
+        : 'Checked — some records are still pending. DNS can take up to 24 hours.',
+        { kind: active ? 'success' : 'info' });
+      this.setState({});
+    }).catch(() => {
+      if (this._domain !== dom) return;
+      dom.fwdVerifying = false;
+      this.updateToast(tid, 'Could not reach Mailgun to verify', { kind: 'error' });
+      this.setState({});
+    });
+  },
+
+  // The Constellix injection lives in Domain::activate_email_forwarding(), which
+  // the activate route runs — so re-running activation is how you (re)push the
+  // Mailgun records into an Anchor-managed zone. Needed when the zone was
+  // created AFTER forwarding was switched on, or when records were edited away.
+  injectForwardingDns() {
+    const dom = this._domain;
+    if (!dom) return;
+    if (!confirm('Add the Mailgun verification records to this domain’s Anchor DNS zone?\n\nExisting Mailgun TXT/CNAME/MX entries are updated in place.')) return;
+    const tid = this.toast('Adding records to the DNS zone…', { kind: 'loading' });
+    this.api('/domain/' + dom.domainId + '/activate-forward-email', { method: 'POST', body: {} }).then(res => {
+      if (this._domain !== dom) return;
+      if (res && res.code === 'mx_conflict') {
+        this.updateToast(tid, 'Existing MX records found', { kind: 'info' });
+        if (confirm('This domain already has MX records. Replace them with Mailgun’s forwarding MX records?')) this.activateForwarding(true);
+        return;
+      }
+      if (res && res.code) { this.updateToast(tid, res.message || 'Could not add the records', { kind: 'error' }); return; }
+      this.updateToast(tid, 'Records added — verifying with Mailgun…', { kind: 'success' });
+      this.loadDnsZone();
+      this.verifyForwardingDns();
+    }).catch(() => this.updateToast(tid, 'Could not add the records', { kind: 'error' }));
+  },
+
   activateForwarding(overwrite) {
     const dom = this._domain;
     if (!dom) return;
@@ -468,6 +516,40 @@ Object.assign(Component.prototype, {
       // zone exists — adding a forward before that just 400s.
       fwdActive, fwdInactive: !fwdActive, fwdLoading: dom.fwdLoading,
       fwdNotice: !!dom.fwdErr, fwdNoticeText: dom.fwdErr,
+      // ── Mailgun verification panel (v1 parity) ────────────────────────
+      // Mailgun reports every record it needs plus a per-record valid flag;
+      // until state === 'active' the domain cannot receive mail, so show the
+      // exact records with copy buttons rather than a bare "pending" chip.
+      ...(() => {
+        const st = dom.fwdStatus || null;
+        const verified = !!(st && st.state === 'active');
+        const rec = (r, withPriority) => ({
+          kind: r.record_type + ' record' + (withPriority && r.priority ? ' (Priority ' + r.priority + ')' : ''),
+          name: r.name || d.name, value: r.value || '',
+          hasName: !withPriority,
+          ok: r.valid === 'valid',
+          mark: r.valid === 'valid' ? '✓' : '✕',
+          markFg: r.valid === 'valid' ? 'var(--ok)' : 'var(--bad)',
+          copyName: () => this.ctxCopy(r.name || d.name, 'record name'),
+          copyValue: () => this.ctxCopy(r.value || '', 'record value')
+        });
+        const sending = (st && Array.isArray(st.sending_dns_records) ? st.sending_dns_records : []).map(r => rec(r, false));
+        const receiving = (st && Array.isArray(st.receiving_dns_records) ? st.receiving_dns_records : []).map(r => rec(r, true));
+        const anyRecords = sending.length > 0 || receiving.length > 0;
+        return {
+          fwdVerified: verified,
+          // Only nag when forwarding is on, Mailgun says not-active, and we
+          // actually have records to show.
+          fwdShowVerify: fwdActive && !verified && anyRecords,
+          fwdVerifying: !!dom.fwdVerifying,
+          fwdSendRecs: sending, fwdRecvRecs: receiving,
+          fwdHasSend: sending.length > 0, fwdHasRecv: receiving.length > 0,
+          fwdVerifyGo: () => this.verifyForwardingDns(),
+          // Auto-inject is only meaningful when the zone lives on Anchor DNS.
+          fwdCanInject: fwdActive && !verified && anyRecords && !dom.noZone && !dom.dnsLoading,
+          fwdInjectGo: () => this.injectForwardingDns()
+        };
+      })(),
       activateFwd: () => this.activateForwarding(false),
       addFwd: () => { const a = this.state.fwdAlias.trim(), t = this.state.fwdDest.trim();
         if (!a || !t || !fwdActive) return;

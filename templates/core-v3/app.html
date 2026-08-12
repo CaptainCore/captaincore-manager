@@ -1727,6 +1727,67 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ fwdNotice }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 12.5px var(--sans);color:var(--warn)">{{ fwdNoticeText }}</div>
             </sc-if>
+            <!-- Mailgun verification: until the domain verifies it cannot
+                 receive mail, so show the exact records + copy buttons. -->
+            <sc-if value="{{ fwdShowVerify }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;border:1px solid var(--warn);background:var(--warn-soft);border-radius:11px;padding:12px 15px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+                  <span style="font:600 13.5px var(--sans)">Domain not yet verified</span>
+                </div>
+                <div style="font:400 12.5px var(--sans);color:var(--ink-dim);margin-top:5px">Add these DNS records to verify the domain with Mailgun. DNS changes can take up to 24 hours to propagate.</div>
+              </div>
+              <sc-if value="{{ fwdHasSend }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:10px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <div style="padding:10px 16px;border-bottom:1px solid var(--rule);font:600 13px var(--sans)">Sending / verification records</div>
+                  <sc-for list="{{ fwdSendRecs }}" as="r" hint-placeholder-count="3">
+                    <div style="padding:10px 16px;border-bottom:1px solid var(--rule)">
+                      <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font:700 12px var(--sans);color:{{ r.markFg }};flex:none">{{ r.mark }}</span>
+                        <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">{{ r.kind }}</span>
+                      </div>
+                      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:6px">
+                        <span style="width:52px;flex:none;font:500 11.5px var(--sans);color:var(--ink-dim)">Name</span>
+                        <span style="flex:1;min-width:0;font:400 12px var(--mono);word-break:break-all">{{ r.name }}</span>
+                        <span onClick="{{ r.copyName }}" title="Copy name" style="flex:none;cursor:pointer;color:var(--ink-dim);font:500 11.5px var(--sans)" style-hover="color:var(--brand-ink)">Copy</span>
+                      </div>
+                      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:4px">
+                        <span style="width:52px;flex:none;font:500 11.5px var(--sans);color:var(--ink-dim)">Value</span>
+                        <span style="flex:1;min-width:0;font:400 12px var(--mono);word-break:break-all">{{ r.value }}</span>
+                        <span onClick="{{ r.copyValue }}" title="Copy value" style="flex:none;cursor:pointer;color:var(--ink-dim);font:500 11.5px var(--sans)" style-hover="color:var(--brand-ink)">Copy</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ fwdHasRecv }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:10px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <div style="padding:10px 16px;border-bottom:1px solid var(--rule);font:600 13px var(--sans)">Receiving records (MX)</div>
+                  <sc-for list="{{ fwdRecvRecs }}" as="r" hint-placeholder-count="2">
+                    <div style="padding:10px 16px;border-bottom:1px solid var(--rule)">
+                      <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font:700 12px var(--sans);color:{{ r.markFg }};flex:none">{{ r.mark }}</span>
+                        <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">{{ r.kind }}</span>
+                      </div>
+                      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:6px">
+                        <span style="width:52px;flex:none;font:500 11.5px var(--sans);color:var(--ink-dim)">Value</span>
+                        <span style="flex:1;min-width:0;font:400 12px var(--mono);word-break:break-all">{{ r.value }}</span>
+                        <span onClick="{{ r.copyValue }}" title="Copy value" style="flex:none;cursor:pointer;color:var(--ink-dim);font:500 11.5px var(--sans)" style-hover="color:var(--brand-ink)">Copy</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+                <button onClick="{{ fwdVerifyGo }}" style="border:none;background:var(--brand);color:white;font:600 12.5px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Verify DNS records</button>
+                <sc-if value="{{ fwdCanInject }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ fwdInjectGo }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Add records to Anchor DNS</button>
+                </sc-if>
+                <sc-if value="{{ fwdVerifying }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:400 12px var(--sans);color:var(--ink-dim)">Checking…</span>
+                </sc-if>
+              </div>
+            </sc-if>
             <sc-if value="{{ fwdActive }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ fwdRows }}" as="f" hint-placeholder-count="3">

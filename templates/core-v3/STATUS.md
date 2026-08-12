@@ -1338,3 +1338,47 @@ request, cancel, and hard-delete.
   cancel + permanent delete and the queue chip; customer sees only
   "Request site deletion…", no delete link, no queue chip; banner appears and
   clears on cancel for both. No page errors.
+
+### Stale site identity after Launch (2026-08-12)
+Launching a site swaps its `.kinsta.cloud` name for the real domain, but the
+site page kept showing the OLD name until a full browser reload. Cause: the
+header (`dName`), the Sites row, the ⌘K palette and every ctx menu read the
+**FLEET** record, which `hydrate()` builds ONCE — while the tools' `onFinish`
+(`_detail = null; loadSiteDetail(id)`) only refreshed `_detail`. Fix is one
+shared step, not a per-tool patch: `syncFleetFromDetail(detail)` in
+site-detail.js re-points the FLEET row at the authoritative record (name, site
+slug, provider, provider_site_id, removed, account, core/visits/storage) plus
+`environmentsRaw`/`home_url`/`envs` from the refreshed environment list, and
+`loadSiteDetail` calls it from BOTH fetch callbacks. Every refresh path already
+funnels through loadSiteDetail, so launch, migrate, rename, terminal sync and
+the tools dialogs all inherit it. Verified by renaming the row in the DB and
+firing the exact `onFinish` the launch tool runs: header, FLEET row and Sites
+list row all followed with no reload (DB restored after).
+
+### Mailgun forwarding verification (2026-08-12)
+v3 fetched `GET /domain/{id}/email-forwarding/status` but used only
+`has_mx_record` for a row label — it never showed WHICH records were missing,
+and had no re-check button, so an unverified domain was a dead end. Ported v1's
+panel (domains.js + app.html), no backend changes:
+
+- **Records panel** — "Domain not yet verified" callout, then Sending /
+  verification records (TXT/CNAME with Name + Value) and Receiving records (MX
+  with priority), each row carrying Mailgun's own `valid` flag as a green ✓ /
+  red ✕ and per-field Copy links (`ctxCopy`). Shown only when forwarding is
+  active, Mailgun says not-active, and records actually came back.
+- **Verify DNS records** → `GET …/status?verify=true`, which asks Mailgun to
+  re-check and returns the refreshed record set; toasts verified vs still
+  pending.
+- **Add records to Anchor DNS** → re-runs `POST …/activate-forward-email`.
+  The Constellix injection lives in `Domain::activate_email_forwarding()`, so
+  re-running activation is how you (re)push the records — needed when the DNS
+  zone was created AFTER forwarding was switched on, or records were edited
+  away. Hidden when the domain has no Anchor zone (`noZone`).
+- **Payload note:** `state` IS top-level on the status response (also mirrored
+  at `mailgun_domain.state`); the records are `sending_dns_records` /
+  `receiving_dns_records`. A verified domain (state `active`) correctly renders
+  no panel.
+- Verified live: real verified domain → no panel (correct); unverified fixture
+  → callout + 3 sending + 2 MX rows with mixed ✓/✕, 8 Copy links, both buttons,
+  and Verify firing exactly one `?verify=true` call. The DNS-writing inject was
+  intercepted and never fired in testing.
