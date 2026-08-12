@@ -31,15 +31,51 @@ Object.assign(Component.prototype, {
         logs: 'loadLogs', versions: 'loadQuicksaves', backups: 'loadBackups',
         snapshots: 'loadSnapshots', timeline: 'loadTimeline' }[this.state.siteTab];
       if (deferred && this[deferred]) setTimeout(() => this[deferred](), 0);
+      this.syncFleetFromDetail(detail);
       bump();
     }).catch(() => { detail.envs = []; bump(); });
     this.api('/sites/' + id + '/details').then(d => {
       detail.site = d && d.site; detail.account = d && d.account;
       detail.domains = (d && d.domains) || []; detail.sharedWith = (d && d.shared_with) || [];
+      this.syncFleetFromDetail(detail);
       bump();
     }).catch(() => bump());
     this.api('/sites/' + id + '/users').then(u => { detail.users = u || {}; bump(); }).catch(() => bump());
     this.loadTimeline();
+  },
+
+  // FLEET is built ONCE by hydrate(), but the site header, the Sites row, the
+  // ⌘K palette and every ctx menu read from it — so a server-side identity
+  // change (Launch swaps the .kinsta.cloud name for the real domain; migrate
+  // and rename do the same) left the OLD name on screen until a full browser
+  // reload, even though _detail had refreshed. Re-point the FLEET row at the
+  // authoritative record whenever the detail loads; every refresh path
+  // (tools, terminal sync, rename) already funnels through loadSiteDetail.
+  syncFleetFromDetail(detail) {
+    if (this._detail !== detail) return; // a newer site won the race
+    const src = detail.site;
+    if (!src) return;
+    const row = this.FLEET.find(x => x.id === String(src.site_id));
+    if (!row) return;
+    if (src.name) row.name = src.name;
+    if (src.site) row.site = src.site;
+    if (src.provider) row.provider = String(src.provider).replace(/\b[a-z]/g, c => c.toUpperCase());
+    row.providerSiteId = src.provider_site_id || '';
+    row.removed = !!src.removed;
+    row.unassigned = !src.account_id || src.account_id == '0';
+    const acc = (this.ACCOUNTS || []).find(a => a.id === String(src.account_id));
+    if (acc) row.account = acc.name;
+    if (src.core) row.core = src.core;
+    if (src.visits != null && src.visits !== '') row.visits = Number(src.visits).toLocaleString();
+    if (src.storage != null && src.storage !== '') row.storage = this.fmtStorage(src.storage);
+    // Environments carry the home_url the launch just rewrote.
+    if (Array.isArray(detail.envs) && detail.envs.length) {
+      row.environmentsRaw = detail.envs;
+      row.envs = detail.envs.map(e => e.environment === 'Production' ? 'Prod' : e.environment)
+        .filter(Boolean).join(' · ') || 'Prod';
+      const prod = detail.envs.find(e => e.environment === 'Production') || detail.envs[0];
+      if (prod && prod.home_url) row.home_url = prod.home_url;
+    }
   },
 
   currentEnv(real, s) {
