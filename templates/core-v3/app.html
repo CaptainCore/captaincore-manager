@@ -971,19 +971,20 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </sc-for>
               </section>
             </div>
-            <sc-if value="{{ statsShowPerf }}" hint-placeholder-val="{{ true }}">
-              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>
-                  <h2 style="margin:0;font:600 14px var(--sans)">Performance monitor</h2>
-                  <span style="font:400 12px var(--sans);color:var(--ink-dim)">On · checks every 5 min</span>
+            <sc-if value="{{ pmCardShow }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <span onClick="{{ pmToggle }}" style="width:34px;height:20px;border-radius:99px;background:{{ pmSwitchBg }};display:flex;align-items:center;padding:2px;justify-content:{{ pmSwitchJust }};cursor:pointer;flex:none;transition:background .15s"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                <div style="min-width:0">
+                  <div style="font:600 14px var(--sans)">Performance monitor</div>
+                  <div style="font:400 12px var(--sans);color:var(--ink-dim)">{{ pmStatusText }}</div>
                 </div>
-                <sc-for list="{{ perfRows }}" as="r" hint-placeholder-count="3">
-                  <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)">
-                    <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
-                    <span style="font:400 12.5px var(--mono)">{{ r.v }}</span>
-                  </div>
-                </sc-for>
+                <div style="flex:1"></div>
+                <sc-if value="{{ pmEnabled }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ pmOpenBtn }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 15l3.5-4 3 3L20 7"></path></svg>
+                    View performance monitor
+                  </button>
+                </sc-if>
               </div>
             </sc-if>
           </sc-if>
@@ -3716,6 +3717,104 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeEp }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ epSave }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ epSaveLabel }}</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Performance Monitor (fullscreen) ══
+       Charts are inline SVG: fixed viewBox + preserveAspectRatio="none" so the
+       plot stretches to the card, vector-effect="non-scaling-stroke" so lines
+       stay hairline at any width. Axis text is HTML around the plot — text
+       inside a stretched SVG would stretch with it. -->
+  <sc-if value="{{ pmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:90;background:var(--canvas);display:flex;flex-direction:column;animation:ccfade .15s ease">
+      <div style="flex:none;display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--rule);background:var(--paper);flex-wrap:wrap">
+        <span onClick="{{ pmClose }}" title="Close" style="cursor:pointer;color:var(--ink-dim);width:28px;height:28px;display:grid;place-items:center;border-radius:7px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        <span style="font:600 14px var(--sans)">Performance Monitor</span>
+        <span style="font:400 13px var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pmTitle }}</span>
+        <div style="flex:1"></div>
+        <div style="display:flex;gap:3px;border:1px solid var(--rule);border-radius:10px;padding:3px;background:var(--paper)">
+          <sc-for list="{{ pmRanges }}" as="r" hint-placeholder-count="6">
+            <span onClick="{{ r.go }}" style="padding:4px 11px;border-radius:7px;background:{{ r.bg }};color:{{ r.fg }};font:600 12px var(--sans);cursor:pointer">{{ r.label }}</span>
+          </sc-for>
+        </div>
+        <span onClick="{{ pmRefresh }}" title="Refresh" style="cursor:pointer;color:var(--ink-dim);width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:8px;flex:none" style-hover="border-color:var(--brand);color:var(--ink)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"></path></svg>
+        </span>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 18px 24px">
+        <sc-if value="{{ pmLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:60px 0;font:400 13px var(--sans);color:var(--ink-dim)">Loading performance samples…</div>
+        </sc-if>
+        <sc-if value="{{ pmHasError }}" hint-placeholder-val="{{ false }}">
+          <div style="max-width:560px;margin:40px auto;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:24px;text-align:center;font:400 13px var(--sans);color:var(--ink-dim)">{{ pmError }}</div>
+        </sc-if>
+        <sc-if value="{{ pmHasData }}" hint-placeholder-val="{{ true }}">
+          <div style="text-align:center;font:400 12.5px var(--mono);color:var(--ink-dim);margin-bottom:14px">{{ pmSubtitle }}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+            <sc-for list="{{ pmTiles }}" as="t" hint-placeholder-count="7">
+              <div style="border:1px solid var(--rule);border-radius:11px;background:var(--paper);padding:11px 14px">
+                <div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div>
+                <div style="font:700 22px var(--mono);color:{{ t.c }};margin-top:3px">{{ t.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;height:18px;margin-bottom:6px">
+            <sc-if value="{{ pmHoverShow }}" hint-placeholder-val="{{ false }}">
+              <span style="font:500 12px var(--mono);color:var(--ink-dim)">{{ pmHoverStamp }}</span>
+            </sc-if>
+          </div>
+          <!-- 2×2 (v1's layout): min(100%,620px) keeps two columns on a desktop
+               and collapses to one on a phone without a media query. -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,620px),1fr));gap:12px">
+            <sc-for list="{{ pmCharts }}" as="c" hint-placeholder-count="4">
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px 10px">
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+                  <h3 style="margin:0;font:600 13.5px var(--mono);color:{{ c.color }}">{{ c.title }}</h3>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ c.hoverShow }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:600 13px var(--mono);color:{{ c.color }}">{{ c.hoverVal }}</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <div style="flex:none;width:44px;height:200px;position:relative">
+                    <sc-for list="{{ c.yTicks }}" as="y" hint-placeholder-count="5">
+                      <span style="position:absolute;right:0;top:{{ y.gy }}px;transform:translateY(-50%);font:400 10px var(--mono);color:var(--ink-dim)">{{ y.v }}</span>
+                    </sc-for>
+                  </div>
+                  <div onMouseMove="{{ pmMove }}" onMouseLeave="{{ pmLeave }}" style="flex:1;position:relative;height:200px;cursor:crosshair">
+                    <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="width:100%;height:200px;display:block;overflow:visible">
+                      <g stroke="var(--rule)" stroke-width="1" vector-effect="non-scaling-stroke">
+                        <line x1="0" y1="0" x2="1000" y2="0"></line>
+                        <line x1="0" y1="50" x2="1000" y2="50"></line>
+                        <line x1="0" y1="100" x2="1000" y2="100"></line>
+                        <line x1="0" y1="150" x2="1000" y2="150"></line>
+                        <line x1="0" y1="200" x2="1000" y2="200"></line>
+                      </g>
+                      <polygon points="{{ c.area }}" fill="{{ c.color }}" opacity=".13"></polygon>
+                      <polyline points="{{ c.line }}" fill="none" stroke="{{ c.color }}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>
+                      <sc-if value="{{ c.ceilingShow }}" hint-placeholder-val="{{ false }}">
+                        <line x1="0" y1="{{ c.ceilingY }}" x2="1000" y2="{{ c.ceilingY }}" stroke="#e53935" stroke-width="1.2" stroke-dasharray="6 5" opacity=".8" vector-effect="non-scaling-stroke"></line>
+                      </sc-if>
+                    </svg>
+                    <sc-if value="{{ c.hoverShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;top:0;bottom:0;left:{{ c.hoverX }};width:1px;background:var(--ink-dim);opacity:.45;pointer-events:none"></span>
+                      <span style="position:absolute;left:{{ c.hoverX }};top:{{ c.hoverY }};width:7px;height:7px;border-radius:50%;background:{{ c.color }};transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 0 2px var(--paper)"></span>
+                    </sc-if>
+                    <sc-if value="{{ c.ceilingShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;right:3px;top:{{ c.ceilingY }}px;transform:translateY(-130%);font:600 9.5px var(--mono);color:#e53935;pointer-events:none">{{ c.ceilingLabel }}</span>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-left:52px;margin-top:6px">
+                  <sc-for list="{{ pmXLabels }}" as="x" hint-placeholder-count="5">
+                    <span style="font:400 10px var(--mono);color:var(--ink-dim)">{{ x.t }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>

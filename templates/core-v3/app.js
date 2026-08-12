@@ -46,6 +46,7 @@ class Component extends DCLogic {
     nsToken: '', nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
     nsDomain: '', nsErrors: [], nsBusy: false,
+    pmOpen: false, pmHours: 24, pmLoading: false, pmError: '', pmHover: -1,
     nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
@@ -1637,6 +1638,8 @@ class Component extends DCLogic {
       visitBars: [35, 42, 38, 55, 48, 60, 52, 45, 66, 58, 72, 64, 80, 74].map((h, i) => ({ h,
         bg: i === 13 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' })),
       ...(real ? this.realStatVals(s, site) : (window.CC_BOOT ? this.emptyStatVals() : { statsNotice: false, statsNoticeText: '' })),
+      // Performance monitor (performance.js) — guarded, later mixin.
+      ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
       dDomains: (real && real.domains
         ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))

@@ -1242,3 +1242,52 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   it themes automatically. Verified live: 3 broken table thumbs hidden and
   illustrated, 4 in list view, cards view clean, dark mode correct, and the
   pinned chip menu opened → Unpin removed the chip.
+
+### Performance Monitor (2026-08-12)
+v1 parity for the Stats-tab toggle + the fullscreen monitor, on the two
+EXISTING site-scoped routes — **no backend changes**:
+`POST /sites/{id}/{env}/performance-monitor {enabled}` (CLI activate/
+deactivate) and `GET …/performance-monitor?format=raw[&hours=N]` →
+`{samples:[{time,db,load,code,resp,workers,max_workers}], max_workers}`.
+New mixin **`performance.js`** (registered last in `$v3_scripts`); bindings use
+the `pm` prefix; `computePerf` is spread GUARDED into computeDetail.
+
+- **Stats-tab card** replaces the design's fake `perfRows` placeholder: a
+  Minn switch + status line + "View performance monitor". The enabled flag
+  lives in the environment's `details.performance_monitor_enabled` (parsed
+  defensively — object today, could be a JSON string on old rows, same as
+  v1). Toggling flips `details` locally first so the switch doesn't lag the
+  CLI round-trip, and rolls back if the POST fails. No role gate (the route
+  is site-scoped), matching v1.
+- **Sampling cadence is 30 SECONDS, not 5 minutes** (Austin caught the wrong
+  copy). Confirmed twice: the CLI sizes its tail as `hours * 120 * 2` lines
+  (`cmd/performance-monitor.go`), and consecutive sample stamps measure
+  exactly 30s apart — a 1H fetch returns exactly 120 samples.
+- **Charts are inline SVG — v3 vendors no Chart.js** (v1 uses Chart.js + the
+  zoom plugin). The pattern that makes an SVG chart fill a fluid card without
+  distorting: fixed `viewBox="0 0 1000 200"` + `preserveAspectRatio="none"`
+  so the plot stretches, plus `vector-effect="non-scaling-stroke"` on every
+  stroked element so lines stay hairline at any width. Axis text is HTML
+  positioned AROUND the plot — text inside a stretched SVG stretches too.
+  Reuse this for any future v3 line chart.
+- **Downsampling keeps the bucket MAX, not the average** (`pmReduce`, capped
+  at 900 points): this dashboard exists to show spikes — a 120/120 worker pin,
+  a 10s response — and averaging is exactly what hides them. The KPI tiles are
+  computed from the FULL sample array, so Avg/Peak stay exact regardless.
+- **Synced crosshair without a chart library**: one mousemove stores a 0–1
+  position in `pmHover`, and each chart resolves its own nearest point from
+  it — so hovering any chart moves the crosshair + dot + value readout on all
+  four, with one shared timestamp above the grid (v1's Chart.js crosshair
+  plugin, ~10 lines). Ranges 1H/24H/3D/7D/14D/ALL + refresh. **Dropped v1's
+  "reset zoom"** — there is no zoom plugin to reset; drag-to-zoom is the
+  obvious future add.
+- Verified live on a real monitored environment: card + 30s copy, toggle
+  off/on (POST intercepted — a real one dispatches a CLI activate), 524
+  samples over 24H, 7 KPI tiles, 2×2 charts with the `16 max` worker ceiling
+  line, synced hover readouts across all four, 1H range → 120 samples, close,
+  and dark mode. No page errors.
+- **Local-dev gotcha:** `GET /sites/{id}/environments` takes ~50s on
+  anchor.localhost, so the Stats card (which needs `_detail.envs`) appears
+  late — wait on the element in tests, never a fixed sleep. The SVG
+  `points`/`y1` console warnings at first paint are the same benign
+  pre-hydration parse noise as the existing `{{ n.icon }}` path warnings.
