@@ -4055,19 +4055,48 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <span style="font:400 12px var(--sans);color:var(--ink-dim)">Kinsta verifies the deployment and connects the site token automatically.</span>
           </sc-if>
           <sc-if value="{{ nsIsImport }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 12.5px/1.5 var(--sans);color:var(--ink-dim)">Connect sites that already exist at a provider you're connected to. Sites already in the fleet are skipped.</span>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Provider</span>
-              <sc-for list="{{ nsProvChips }}" as="c" hint-placeholder-count="4"><span onClick="{{ c.go }}" style="padding:5px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">{{ c.label }}</span></sc-for>
+              <sc-for list="{{ nsProvRows }}" as="c" hint-placeholder-count="2"><span onClick="{{ c.go }}" style="padding:5px 11px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 12px var(--sans);cursor:pointer">{{ c.label }}</span></sc-for>
+              <sc-if value="{{ nsProvEmpty }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 12px var(--sans);color:var(--ink-dim)">No connected provider can list remote sites. Add one under Settings → Providers.</span>
+              </sc-if>
             </div>
-            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Account</span>
+              <div style="flex:1">
+                <div onClick="{{ ddToggleNsImpAcc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 12.5px var(--sans);flex:1">{{ nsImportAccName }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                <sc-if value="{{ ddNsImpAccOpen }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                    <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                    <div style="max-height:150px;overflow-y:auto">
+                      <sc-for list="{{ ddNsImpAccOpts }}" as="o" hint-placeholder-count="4">
+                        <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 12.5px var(--sans)">{{ o.label }}</span></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Search</span>
+              <input value="{{ nsRemoteQ }}" onInput="{{ onNsRemoteQ }}" placeholder="Filter remote sites…" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none">
+            </div>
+            <span style="font:400 12px var(--sans);color:var(--ink-dim)">{{ nsRemoteCount }}</span>
+            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto">
               <sc-for list="{{ nsRemote }}" as="rm" hint-placeholder-count="3">
-                <div onClick="{{ rm.toggle }}" style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                <div onClick="{{ rm.toggle }}" style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);cursor:pointer;opacity:{{ rm.op }}" style-hover="background:var(--panel-2)">
                   <span style="width:15px;height:15px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ rm.checkBg }};color:white;font:600 9px var(--sans);flex:none">{{ rm.check }}</span>
                   <span style="flex:1;font:400 12.5px var(--mono)">{{ rm.name }}</span>
-                  <span style="font:400 11.5px var(--mono);color:var(--ink-dim)">{{ rm.size }}</span>
+                  <span style="font:400 11.5px var(--mono);color:{{ rm.sizeFg }}">{{ rm.size }}</span>
                 </div>
               </sc-for>
+              <sc-if value="{{ nsRemoteLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 13px;font:400 12.5px var(--sans);color:var(--ink-dim)">Loading sites from the provider…</div>
+              </sc-if>
+              <sc-if value="{{ nsRemoteEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 13px;font:400 12.5px var(--sans);color:var(--ink-dim)">No matching sites at this provider.</div>
+              </sc-if>
             </div>
-            <span style="font:500 12.5px var(--sans);color:var(--brand-ink)">{{ nsBilling }}</span>
           </sc-if>
           <sc-if value="{{ nsIsManual }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" placeholder="mysite.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none"></div>

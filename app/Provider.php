@@ -92,6 +92,11 @@ class Provider {
             if ( ! empty( $provider->credentials ) ) {
                 $provider->credentials = json_decode( $provider->credentials );
             }
+            // Which rows the "Import from provider" flow can offer. Most
+            // providers here are email/DNS/analytics integrations with no
+            // notion of a remote site to import.
+            $class_name = "CaptainCore\Providers\\" . ucfirst( (string) $provider->provider );
+            $provider->supports_import = class_exists( $class_name ) && method_exists( $class_name, 'fetch_remote_sites' );
         }
         return $providers;
     }

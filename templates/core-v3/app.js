@@ -47,7 +47,8 @@ class Component extends DCLogic {
     nsShared: [], nsCustomerId: '', nsBillingId: '',
     nsDomain: '', nsErrors: [], nsBusy: false,
     pmOpen: false, pmHours: 24, pmLoading: false, pmError: '', pmHover: -1,
-    nsProv: 'Kinsta', nsEnvs: 'Production only', nsImportSel: {},
+    nsEnvs: 'Production only', nsImportSel: {},
+    nsProvId: '', nsRemoteQ: '', nsImportAcc: '',
     ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
     dnsEdit: 0, dnsEN: '', dnsEV: '', dnsETtl: '',
@@ -1004,10 +1005,14 @@ class Component extends DCLogic {
         this.setState(patch); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
-      nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']].map(([id, label]) => ({ label,
-        bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
-        go: () => this.setState({ nsPath: id }) })),
-      nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta', nsIsImport: s.nsPath === 'import', nsIsManual: s.nsPath === 'manual',
+      // Import is operator-only — it assigns sites to accounts and bills them.
+      nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']]
+        .filter(([id]) => id !== 'import' || isOp)
+        .map(([id, label]) => ({ label,
+          bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
+          go: () => { this.setState({ nsPath: id }); if (id === 'import') setTimeout(() => this.primeImport(), 0); } })),
+      nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta',
+      nsIsImport: s.nsPath === 'import' && isOp, nsIsManual: s.nsPath === 'manual',
       nsName: s.nsName, onNsName: e => this.setState({ nsName: e.target.value }),
       nsDomain: s.nsDomain, onNsDomain: e => this.setState({ nsDomain: e.target.value }),
       nsErrors: s.nsErrors.map(text => ({ text })),
@@ -1055,21 +1060,14 @@ class Component extends DCLogic {
       nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
       nsConnect: () => this.connectNsProvider(),
       nsCtaDim: s.nsPath === 'kinsta' && (s.nsVerify !== 'ok' || s.nsBusy) ? '.5' : '1',
-      nsProvChips: ['Kinsta', 'WP Engine', 'Rocket.net', 'GridPane'].map(l => chip(l, s.nsProv, 'nsProv')),
       nsEnvChips: ['Production only', 'Production + Staging'].map(l => chip(l, s.nsEnvs, 'nsEnvs')),
-      nsRemote: [['clientsite-alpha.com', '1.2 GB'], ['clientsite-beta.com', '640 MB'], ['legacyshop.net', '3.8 GB']].map(([name, size]) => ({ name, size,
-        check: s.nsImportSel[name] ? '✓' : '', checkBg: s.nsImportSel[name] ? 'var(--brand)' : 'var(--paper)',
-        toggle: () => this.setState(st => ({ nsImportSel: { ...st.nsImportSel, [name]: !st.nsImportSel[name] } })) })),
-      nsBilling: (() => { const n = Object.keys(s.nsImportSel).filter(k => s.nsImportSel[k]).length;
-        return n ? 'Billing preview: +$' + n * 45 + '/mo · Standard plan × ' + n : 'Select sites to see a billing preview.'; })(),
       nsCta: { request: 'Request site', kinsta: s.nsBusy ? 'Creating…' : 'Create on Kinsta',
-        import: 'Import ' + Object.keys(s.nsImportSel).filter(k => s.nsImportSel[k]).length + ' sites',
-        manual: 'Connect site' }[s.nsPath],
+        import: this.nsImportCta(s), manual: 'Connect site' }[s.nsPath],
+      ...this.computeNsImport(s, isOp),
       nsCreate: () => { const st = this.state;
-        const sel = Object.keys(st.nsImportSel).filter(k => st.nsImportSel[k]);
         if (st.nsPath === 'request') this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc);
         else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
-        else if (st.nsPath === 'import') { if (!sel.length) return; this.runJob('provider-import', sel.length + ' sites from ' + st.nsProv); }
+        else if (st.nsPath === 'import') { this.importProviderSites(); return; }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, nsShared: [], nsCustomerId: '', nsBillingId: '', dockOpen: true }); },
       viewTable: s.view === 'table', viewCards: s.view === 'cards', viewList: s.view === 'list',
@@ -1118,6 +1116,135 @@ class Component extends DCLogic {
     this.setState(st => ({ ddOpen: st.ddOpen === key ? '' : key, ddQ: '',
       ddRect: { top: Math.round(Math.min(r.bottom + 4, Math.max(10, window.innerHeight - 200))),
         left: Math.round(r.left), width: Math.round(r.width) } }));
+  }
+
+  // ── New site → "Import from provider" ─────────────────────────
+  // Connect sites that ALREADY EXIST at a provider CaptainCore is already
+  // connected to. Two real endpoints do the work:
+  //   GET  /providers/{id}/remote-sites  → [{remote_id,name,label,status,…}]
+  //   POST /providers/{id}/import        → { sites, account_id }
+  // The remote-site objects are handed BACK verbatim on import: import_sites()
+  // forwards each one to the provider's enrich_imported_site(), which reads
+  // provider-specific fields (GridPane needs server_ip + system_user_id) that
+  // a trimmed {remote_id,name} payload would drop.
+  // Fired from the tab switch and the provider chips — never from compute*,
+  // which runs during render and must not kick setState.
+  primeImport() {
+    if (!this.api || !(window.CC_BOOT && window.CC_BOOT.nonce)) return;
+    if (this._nsProviders === undefined) {
+      this._nsProviders = null; // loading
+      this.api('/providers').then(list => {
+        this._nsProviders = (Array.isArray(list) ? list : []).filter(p => p.supports_import);
+        const first = this._nsProviders[0];
+        if (first && !this.state.nsProvId) this.setState({ nsProvId: String(first.provider_id) });
+        else this.setState({ tick: this.state.tick });
+        if (first) this.loadRemoteSites(this.state.nsProvId || String(first.provider_id));
+      }).catch(() => { this._nsProviders = []; this.setState({ tick: this.state.tick }); });
+      return;
+    }
+    if (this.state.nsProvId) this.loadRemoteSites(this.state.nsProvId);
+  }
+
+  loadRemoteSites(providerId) {
+    this._nsRemote = this._nsRemote || {};
+    if (this._nsRemote[providerId] !== undefined) return;
+    this._nsRemote[providerId] = null; // loading
+    this.api('/providers/' + providerId + '/remote-sites').then(list => {
+      this._nsRemote[providerId] = Array.isArray(list) ? list : [];
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { this._nsRemote[providerId] = []; this.setState({ tick: this.state.tick }); });
+  }
+
+  nsImportSelected() {
+    const s = this.state;
+    const rows = (this._nsRemote && this._nsRemote[s.nsProvId]) || [];
+    return rows.filter(r => s.nsImportSel[String(r.remote_id)]);
+  }
+
+  nsImportCta(s) {
+    if (s.nsBusy) return 'Importing…';
+    const n = this.nsImportSelected().length;
+    return n ? 'Import ' + n + ' site' + (n === 1 ? '' : 's') : 'Import sites';
+  }
+
+  importProviderSites() {
+    const s = this.state;
+    const sites = this.nsImportSelected();
+    if (!sites.length || s.nsBusy) return;
+    if (!s.nsImportAcc) { this.toast('Pick an account for the imported sites', { kind: 'error' }); return; }
+    this.setState({ nsBusy: true });
+    this.api('/providers/' + s.nsProvId + '/import', { method: 'POST',
+      body: { sites, account_id: s.nsImportAcc } }).then(res => {
+      this.setState({ nsBusy: false });
+      if (!res || res.code || !res.success) { this.toast((res && res.message) || 'Import failed', { kind: 'error' }); return; }
+      this.toast(res.message, { kind: res.imported ? 'success' : 'info' });
+      // Imported rows only carry a name until `site sync-batch` (queued by
+      // import_sites) reports back, but they belong in the fleet immediately.
+      this._nsRemote = {};
+      this.setState({ nsOpen: false, nsImportSel: {} });
+      if (this.hydrate) this.hydrate();
+    }).catch(() => { this.setState({ nsBusy: false }); this.toast('Import failed', { kind: 'error' }); });
+  }
+
+  computeNsImport(s, isOp) {
+    // Operator-only: importing assigns sites to accounts and bills them.
+    if (!isOp) return { nsImportShow: false, nsProvRows: [], nsRemote: [], nsImportAccName: '' };
+    const providers = this._nsProviders;
+    const list = Array.isArray(providers) ? providers : [];
+    const provId = s.nsProvId || (list[0] && String(list[0].provider_id)) || '';
+    const rows = (this._nsRemote && this._nsRemote[provId]);
+    const loading = providers === null || rows === null;
+    // Anything already in the fleet under this provider's site id can't be
+    // imported twice — import_sites() skips them, so say so up front.
+    const connected = new Set(this.FLEET.map(f => String(f.providerSiteId)).filter(Boolean));
+    const q = (s.nsRemoteQ || '').trim().toLowerCase();
+    const all = Array.isArray(rows) ? rows : [];
+    const matched = q ? all.filter(r => String(r.name || '').toLowerCase().includes(q)) : all;
+    const CAP = 60;
+    const selCount = this.nsImportSelected().length;
+    const acc = this.ACCOUNTS.find(a => a.id === String(s.nsImportAcc));
+    return {
+      nsImportShow: true,
+      nsProvRows: list.map(p => ({
+        label: p.name,
+        bg: String(p.provider_id) === String(provId) ? 'var(--brand-soft)' : 'var(--paper)',
+        fg: String(p.provider_id) === String(provId) ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        bd: String(p.provider_id) === String(provId) ? 'var(--brand)' : 'var(--rule)',
+        go: () => { this.setState({ nsProvId: String(p.provider_id), nsImportSel: {}, nsRemoteQ: '' });
+          setTimeout(() => this.loadRemoteSites(String(p.provider_id)), 0); }
+      })),
+      nsProvEmpty: !loading && list.length === 0,
+      nsRemoteLoading: loading,
+      nsRemoteQ: s.nsRemoteQ || '', onNsRemoteQ: e => this.setState({ nsRemoteQ: e.target.value }),
+      nsRemote: matched.slice(0, CAP).map(r => {
+        const id = String(r.remote_id);
+        const already = connected.has(id);
+        const on = !!s.nsImportSel[id];
+        return {
+          name: r.name || r.label || id,
+          size: already ? 'Already connected' : (r.status || ''),
+          sizeFg: already ? 'var(--ok)' : 'var(--ink-dim)',
+          op: already ? '.45' : '1',
+          check: already ? '✓' : on ? '✓' : '',
+          checkBg: already ? 'var(--ok)' : on ? 'var(--brand)' : 'var(--paper)',
+          toggle: () => { if (already) return;
+            this.setState(st => ({ nsImportSel: { ...st.nsImportSel, [id]: !st.nsImportSel[id] } })); }
+        };
+      }),
+      nsRemoteEmpty: !loading && matched.length === 0,
+      nsRemoteCount: loading ? 'Loading sites…'
+        : matched.length + ' site' + (matched.length === 1 ? '' : 's')
+          + (matched.length > CAP ? ' · showing first ' + CAP + ', search to narrow' : '')
+          + (selCount ? ' · ' + selCount + ' selected' : ''),
+      nsImportAccName: acc ? acc.name : 'Pick an account…',
+      ddNsImpAccOpen: s.ddOpen === 'nsImpAcc',
+      ddToggleNsImpAcc: e => this.ddToggleAt('nsImpAcc', e),
+      ddNsImpAccOpts: (() => { const aq = this.state.ddQ.trim().toLowerCase();
+        return this.ACCOUNTS.filter(a => !aq || a.name.toLowerCase().includes(aq)).slice(0, 50)
+          .map(a => ({ label: a.name, mark: String(s.nsImportAcc) === a.id ? '✓' : '',
+            bg: String(s.nsImportAcc) === a.id ? 'var(--brand-soft)' : 'transparent',
+            pick: () => this.setState({ nsImportAcc: a.id, ddOpen: '', ddQ: '' }) })); })()
+    };
   }
 
   // v1 parity (showNewSiteKinsta): only administrators verify the Kinsta token

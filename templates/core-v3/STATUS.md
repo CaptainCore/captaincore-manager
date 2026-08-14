@@ -1477,3 +1477,49 @@ to one from v3 — the Deploy card's "Pull production → staging" silently
   Kinsta lookup that correctly answered `none` for a site with no remote
   staging, and `connected` for one that had an unlinked staging — reverted
   after).
+
+### New site → "Import from provider" is real now (2026-08-13)
+The Import tab was still design-sample: three hardcoded fake domains, provider
+chips that were four literal strings, a fabricated "+$45/mo" billing preview,
+and a CTA that fired `runJob('provider-import', …)` — a fake job, no request.
+Both backend routes already existed and are now wired end to end.
+
+- **Provider chips are the real connected providers**, by NAME not by type —
+  a fleet can have two Kinsta rows (different companies/API tokens), and the
+  hardcoded chips couldn't express that. `Provider::all()` gained a
+  **`supports_import`** flag (`method_exists($class, 'fetch_remote_sites')`);
+  only Kinsta and GridPane implement it today, so the email/DNS/analytics
+  provider rows never show up. The flag is additive on `GET /providers`;
+  settings.js ignores it.
+- **`GET /providers/{id}/remote-sites`** fills the list (~8s and 716 rows for
+  one of the connected Kinsta providers, so: an explicit loading row, a search
+  box, and a **60-row render cap** with a "search to narrow" note — the Sites
+  list learned the same lesson about thousands of rows janking a re-render).
+- **Rows already in the fleet render dimmed with a green check and "Already
+  connected"** and refuse selection. `import_sites()` skips them by
+  `provider_site_id` anyway; this says so before you click.
+- **`POST /providers/{id}/import { sites, account_id }`.** The selected
+  **remote-site objects are sent back VERBATIM** — `import_sites()` forwards
+  each one to the provider's `enrich_imported_site()`, which reads
+  provider-specific fields (GridPane needs `server_ip` + `system_user_id`), so
+  a trimmed `{remote_id, name}` payload would silently import sites with no
+  SFTP details. Account is required client-side (the server takes
+  `intval($request['account_id'])`, so a missing one would quietly import
+  everything into account 0).
+- **The Import tab is now operator-only** — it assigns sites to accounts and
+  bills them. Customers don't see the tab at all.
+- **Fetches are kicked from the tab switch and the provider chips
+  (`primeImport`), never from `computeNsImport`** — compute\* runs during
+  render, and a setState from there is a React no-no. This is the pattern for
+  any future lazy dialog data.
+- Verified live headless with only the write intercepted (`/providers` and
+  `/remote-sites` hit the real backend and the real provider API): both
+  provider chips render by name; the loading row shows during the ~4s fetch;
+  716 rows with the cap note; search narrows to 19 matches with connected vs
+  importable correctly split; selecting two flips the CTA to "Import 2 sites";
+  clicking Import with no account picked is refused with a toast and fires
+  ZERO requests; after picking an account the POST body carries the two full
+  remote-site objects (`remote_id`/`name`/`label`/`slug`/`status`) plus
+  `account_id`, and the success message toasts. The route itself was also
+  exercised server-side with an empty `sites` array (200,
+  `{success, imported:0, skipped:0, message}`) — no real import was run.
