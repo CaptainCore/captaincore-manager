@@ -22,6 +22,14 @@ Object.assign(Component.prototype, {
     return n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : Math.round(n / 1048576) + ' MB';
   },
 
+  // Stat-tile count for a lazily fetched list. undefined = never requested,
+  // null = in flight (both render as an ellipsis); an empty array is a real
+  // zero and must not fall through to a placeholder.
+  statCount(list) {
+    if (!Array.isArray(list)) return '…';
+    return Number(list.length).toLocaleString();
+  },
+
   hydrate() {
     const boot = window.CC_BOOT;
     if (!boot || !boot.nonce) return;

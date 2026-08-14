@@ -1382,3 +1382,32 @@ panel (domains.js + app.html), no backend changes:
   → callout + 3 sending + 2 MX rows with mixed ✓/✕, 8 Copy links, both buttons,
   and Verify firing exactly one `?verify=true` call. The DNS-writing inject was
   intercepted and never fired in testing.
+
+### Overview stat tiles: real backup + version counts (2026-08-13)
+- **The Backups and Versions tiles sat at an em-dash forever.** Both read
+  `real.backups` / `real.qs`, which are lazy — only the History tabs ever
+  filled them — so the Overview showed `—` unless you'd already visited the
+  tab and come back. `loadOverviewCounts()` (site-detail.js) now prefetches
+  both once the environment list resolves, and again on every environment
+  switch. Cost is small: `backup list` answers off a cached `list.json` on the
+  daemon (**~1.1s for a 2,126-snapshot repo**, measured against prod site 84),
+  and quicksaves is a plain DB read.
+- **`real.backups ? … : '—'` swallowed a legitimate zero.** New
+  `statCount(list)` (data.js) is the shared tile formatter: not-an-array →
+  `…` (undefined = never requested, null = in flight), otherwise a
+  locale-formatted length. A repo with no snapshots now reads `0`.
+- **The tile's subtitle carries the long-term story** — `since Oct 2020`,
+  computed from the OLDEST snapshot in the list rather than the newest, which
+  is the retention window operators actually want off the Overview. Falls back
+  to `nightly + PITR` before the fetch lands. Don't trust list order for this:
+  `Site::backups()` usorts with a bool comparator (newest-first only by
+  accident), and the times carry mixed offsets (`Z` and `-04:00`), so the min
+  is computed with `Date.parse`, not a string compare.
+- **Both loaders are now environment-keyed** (`backupsEnv` / `qsEnv`). The old
+  `!== undefined` guard alone meant a Production list stayed on screen — and
+  in the tile — after switching to Staging. Both also bail if the detail
+  changed under them mid-flight.
+- Verified live headless on site 84: one intercepted `/backups` call carrying
+  a 2,126-row fixture (mixed `Z`/`-04:00` offsets, oldest Oct 2020) rendered
+  **Backups 2,126 / since Oct 2020**; the Versions tile rendered `…` while its
+  fetch was still open and `584` once it landed.

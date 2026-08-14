@@ -31,6 +31,11 @@ Object.assign(Component.prototype, {
         logs: 'loadLogs', versions: 'loadQuicksaves', backups: 'loadBackups',
         snapshots: 'loadSnapshots', timeline: 'loadTimeline' }[this.state.siteTab];
       if (deferred && this[deferred]) setTimeout(() => this[deferred](), 0);
+      // Overview stat tiles (Backups / Versions) read the same lists the
+      // History tabs do. Without a prefetch they sat at an em-dash until you
+      // visited those tabs; both fetches are cheap (cached list.json / a DB
+      // read), so kick them here and let the tiles fill in.
+      setTimeout(() => this.loadOverviewCounts(), 0);
       this.syncFleetFromDetail(detail);
       bump();
     }).catch(() => { detail.envs = []; bump(); });
@@ -78,6 +83,16 @@ Object.assign(Component.prototype, {
     }
   },
 
+  // Backups + quicksaves for the Overview stat tiles. Both loaders are
+  // environment-keyed and self-guarding, so this is safe to call on detail
+  // load and again on every environment switch.
+  loadOverviewCounts() {
+    const real = this._detail;
+    if (!real || !real.envs || !real.envs.length) return;
+    if (this.loadBackups) this.loadBackups();
+    if (this.loadQuicksaves) this.loadQuicksaves();
+  },
+
   currentEnv(real, s) {
     if (!real || !real.envs) return null;
     return real.envs.find(e => e.environment === s.env) || real.envs[0] || null;
@@ -92,6 +107,7 @@ Object.assign(Component.prototype, {
     if (real && this.state.siteTab === 'registry') setTimeout(() => this.loadRegistry(), 0);
     if (real && this.state.siteTab === 'stats') setTimeout(() => this.loadStats(), 0);
     if (real && this.state.siteTab === 'captures') setTimeout(() => this.loadCaptures(), 0);
+    if (real) setTimeout(() => this.loadOverviewCounts(), 0);
   },
 
   // ── Overview ──────────────────────────────────────────────────

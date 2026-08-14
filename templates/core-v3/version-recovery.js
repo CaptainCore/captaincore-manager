@@ -82,17 +82,23 @@ Object.assign(Component.prototype, {
   },
 
   // ── Quicksaves (Versions tab) ─────────────────────────────────
+  // Keyed by environment: the old `qs !== undefined` guard alone meant the
+  // Production list stayed on screen (and in the Versions stat tile) after a
+  // switch to Staging.
   loadQuicksaves() {
     const real = this._detail;
-    if (!real || real.qs !== undefined) return;
-    real.qs = null; // loading
+    if (!real) return;
     const env = this.state.env;
+    if (real.qs !== undefined && real.qsEnv === env) return;
+    real.qs = null; // loading
+    real.qsEnv = env;
     const bump = () => this.setState({ tick: this.state.tick });
     const q = '?site_id=' + real.siteId + '&environment=' + encodeURIComponent(env);
     Promise.all([
       this.api('/quicksaves/' + q).catch(() => []),
       this.api('/update-logs/' + q).catch(() => [])
     ]).then(([qs, logs]) => {
+      if (this._detail !== real || real.qsEnv !== env) return;
       const updatesByHash = {};
       (Array.isArray(logs) ? logs : []).forEach(l => {
         if (l && l.hash_after) updatesByHash[l.hash_after] = l;
@@ -251,20 +257,44 @@ Object.assign(Component.prototype, {
   },
 
   // ── Restic backups ────────────────────────────────────────────
+  // Also feeds the Overview "Backups" stat tile, which is why the overview
+  // prefetches this: the daemon answers off a cached list.json (~1s for a
+  // 2,000-snapshot repo), so the count + retention start are cheap enough to
+  // show without opening the tab. Keyed by environment like loadQuicksaves.
   loadBackups() {
     const real = this._detail;
-    if (!real || real.backups !== undefined) return;
+    if (!real) return;
+    const env = this.state.env;
+    if (real.backups !== undefined && real.backupsEnv === env) return;
     real.backups = null;
-    this.api('/site/' + real.siteId + '/' + this.state.env.toLowerCase() + '/backups')
+    real.backupsEnv = env;
+    real.backupsSince = '';
+    this.api('/site/' + real.siteId + '/' + env.toLowerCase() + '/backups')
       .then(rows => {
-        real.backups = (Array.isArray(rows) ? rows : []).map(b => ({
+        if (this._detail !== real || real.backupsEnv !== env) return;
+        const list = Array.isArray(rows) ? rows : [];
+        real.backups = list.map(b => ({
           id: b.id, idShort: String(b.id || '').slice(0, 8),
           when: b.time ? new Date(b.time).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '',
           size: '', files: '', _raw: b
         }));
+        // Retention start = the oldest snapshot still in the repo. Scan for the
+        // min rather than trusting list order (Site::backups usorts with a bool
+        // comparator, so the ordering is newest-first only by accident) and
+        // parse with Date — the times carry mixed offsets (Z and -04:00), so a
+        // string compare would pick the wrong one.
+        let oldest = 0;
+        list.forEach(b => {
+          const t = b && b.time ? Date.parse(b.time) : NaN;
+          if (!isNaN(t) && (oldest === 0 || t < oldest)) oldest = t;
+        });
+        real.backupsSince = oldest ? new Date(oldest).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '';
         this.setState({ tick: this.state.tick });
       })
-      .catch(() => { real.backups = []; this.setState({ tick: this.state.tick }); });
+      .catch(() => {
+        if (this._detail !== real || real.backupsEnv !== env) return;
+        real.backups = []; this.setState({ tick: this.state.tick });
+      });
   },
 
   loadBackupTree(backupId) {

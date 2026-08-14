@@ -1606,8 +1606,13 @@ class Component extends DCLogic {
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
-        { k: 'Backups', v: real ? (real.backups ? String(real.backups.length) : '—') : '1,284', delta: 'nightly + PITR', deltaFg: 'var(--ink-dim)', act: 'backups', icon: 'M21 8v13H3V8 M1 3h22v5H1 M10 12h4' },
-        { k: 'Versions', v: real ? (real.qs ? String(real.qs.length) : '—') : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions', icon: 'M6 3v12 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a9 9 0 0 1-9 9' },
+        // Counts come from the overview prefetch (loadOverviewCounts). Until it
+        // lands the tile shows an ellipsis, not the old permanent em-dash —
+        // and an empty list is a real zero, which `real.backups ? …` swallowed.
+        { k: 'Backups', v: real ? this.statCount(real.backups) : '1,284',
+          delta: real && real.backupsSince ? 'since ' + real.backupsSince : 'nightly + PITR',
+          deltaFg: 'var(--ink-dim)', act: 'backups', icon: 'M21 8v13H3V8 M1 3h22v5H1 M10 12h4' },
+        { k: 'Versions', v: real ? this.statCount(real.qs) : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions', icon: 'M6 3v12 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a9 9 0 0 1-9 9' },
         { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3' }
       ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => this.goSiteTab(t.act) })),
       openStats: () => this.goSiteTab('stats'),
