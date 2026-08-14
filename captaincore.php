@@ -103,7 +103,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
  * ------------------------------------------------------------------------- */
 
 function captaincore_failed_notify( $order_id, $old_status, $new_status ){
-	echo "Woocommerce  $order_id, $old_status, $new_status ";
     if ( $new_status == 'failed' and $old_status != "failed" ){
 		$order      = wc_get_order( $order_id );
 		$account_id = $order->get_meta( "captaincore_account_id" );
