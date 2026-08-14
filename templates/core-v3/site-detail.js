@@ -483,7 +483,7 @@ Object.assign(Component.prototype, {
     const real = this._detail;
     if (!real || !real.site) return;
     this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '' };
-    this.setState({ edsOpen: true, edsSaving: false });
+    this.setState({ edsOpen: true, edsSaving: false, edsEnvBusy: '' });
     if (this._esKeys === undefined) {
       this._esKeys = null; // loading
       this.api('/keys/').then(list => { this._esKeys = Array.isArray(list) ? list : []; this.setState({ tick: this.state.tick }); })
@@ -533,18 +533,139 @@ Object.assign(Component.prototype, {
         bg: String(d.key || '') === String(k.key_id || '') ? 'var(--brand-soft)' : 'transparent',
         pick: () => { this._es.key = k.key_id; this.setState({ tick: this.state.tick }); } })),
       edsSaveLabel: s.edsSaving ? 'Saving…' : 'Save changes',
-      edsSave: () => this.saveEditSite()
+      edsSave: () => this.saveEditSite(),
+      ...this.computeEditSiteEnvs(real, s)
     };
   },
 
-  openEnvEdit() {
+  // ── Edit site → Environments section ──────────────────────────
+  // Three ways to end up with a Staging row, in the order an operator should
+  // reach for them:
+  //   1. Create staging  — POST /providers/{p}/deploy-to-staging. Provisions
+  //      it AT the host (Kinsta clones live → staging) and queues a
+  //      ProviderAction whose last step calls connect_staging() for us. The
+  //      browser must poll or the chain never advances.
+  //   2. Link staging    — POST /sites/{id}/environments/connect. The staging
+  //      already exists at the host; we only missed the record. Reports
+  //      'none' (nothing to link) / 'exists' / 'skipped' rather than erroring.
+  //   3. Add manually    — POST /sites/{id}/environments. Connection details
+  //      typed in, for providers with no API for any of this.
+  computeEditSiteEnvs(real, s) {
+    const site = (real && real.site) || {};
+    const envs = (real && real.envs) || [];
+    const provider = String(site.provider || '');
+    const provLabel = (this.ES_PROVIDERS.find(([v]) => v === provider) || [null, provider])[1] || provider;
+    const hasStaging = envs.some(e => e.environment === 'Staging');
+    // Provider automation needs a live link to a host-side site record.
+    const linked = !!provider && !!site.provider_site_id;
+    const busy = s.edsEnvBusy || '';
+    return {
+      edsEnvRows: envs.map(e => ({
+        label: e.environment,
+        sub: [e.address, e.port].filter(Boolean).join(':') || 'no connection details',
+        subFg: e.address ? 'var(--ink-dim)' : 'var(--bad)',
+        edit: () => this.openEnvEdit(e.environment_id)
+      })),
+      edsEnvEmpty: envs.length === 0,
+      // Reconcile address/port/user/password/web-root from the provider.
+      edsPullShow: linked,
+      edsPullLabel: busy === 'sync' ? 'Pulling…' : 'Pull from ' + provLabel,
+      edsPull: () => this.pullEnvFromProvider(),
+      edsStagingShow: !hasStaging,
+      edsStagingNote: linked
+        ? 'No staging environment. Create one at ' + provLabel + ', link one that already exists there, or add the connection by hand.'
+        : 'No staging environment. Add its connection details by hand.',
+      edsCreateStagingShow: linked,
+      edsCreateStagingLabel: busy === 'create' ? 'Creating…' : 'Create staging at ' + provLabel,
+      edsCreateStaging: () => this.createProviderStaging(),
+      edsLinkStagingShow: linked,
+      edsLinkStagingLabel: busy === 'link' ? 'Linking…' : 'Link existing staging',
+      edsLinkStaging: () => this.linkProviderStaging(),
+      edsAddStaging: () => this.openEnvNew('Staging')
+    };
+  },
+
+  // Pull live connection details from the provider onto the local rows.
+  // The route answers with { status, message, changes[], environments? }.
+  pullEnvFromProvider() {
     const real = this._detail;
-    const env = this.currentEnv(real, this.state);
+    if (!real || this.state.edsEnvBusy) return;
+    this.setState({ edsEnvBusy: 'sync' });
+    this.api('/sites/' + real.siteId + '/remote-sync', { method: 'POST', body: {} }).then(res => {
+      this.setState({ edsEnvBusy: '' });
+      if (!res || res.code) { this.toast((res && res.message) || 'Could not reach the provider', { kind: 'error' }); return; }
+      if (Array.isArray(res.environments) && this._detail === real) real.envs = res.environments;
+      const n = Array.isArray(res.changes) ? res.changes.length : 0;
+      this.toast(res.message || (n ? n + ' field(s) updated' : 'Already in sync'),
+        { kind: res.status === 'error' ? 'error' : res.status === 'updated' ? 'success' : 'info' });
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { this.setState({ edsEnvBusy: '' }); this.toast('Could not reach the provider', { kind: 'error' }); });
+  },
+
+  linkProviderStaging() {
+    const real = this._detail;
+    if (!real || this.state.edsEnvBusy) return;
+    this.setState({ edsEnvBusy: 'link' });
+    this.api('/sites/' + real.siteId + '/environments/connect', { method: 'POST', body: { environment: 'Staging' } }).then(res => {
+      this.setState({ edsEnvBusy: '' });
+      if (!res || res.code) { this.toast((res && res.message) || 'Could not link staging', { kind: 'error' }); return; }
+      if (res.status !== 'connected') { this.toast(res.message || 'Nothing to link', { kind: 'info' }); return; }
+      this.toast('Staging environment connected', { kind: 'success' });
+      this.reloadSiteDetail();
+    }).catch(() => { this.setState({ edsEnvBusy: '' }); this.toast('Could not link staging', { kind: 'error' }); });
+  },
+
+  // Kinsta clones live → staging server-side; the response is an operation id,
+  // not a finished environment. pollProviderActions drives the rest of the
+  // chain (its last step links the new environment) and toasts on completion.
+  createProviderStaging() {
+    const real = this._detail;
+    if (!real || !real.site || this.state.edsEnvBusy) return;
+    const provider = real.site.provider;
+    const name = real.site.name || 'this site';
+    if (!confirm('Create a staging environment for ' + name + ' at ' + provider + '?\n\nThe host copies production into a new staging environment. This can take several minutes.')) return;
+    this.setState({ edsEnvBusy: 'create' });
+    this.api('/providers/' + provider + '/deploy-to-staging', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
+      this.setState({ edsEnvBusy: '' });
+      if (!res || res.code || res === false) { this.toast((res && res.message) || 'Could not start the staging build', { kind: 'error' }); return; }
+      this.toast('Staging environment is being created — it will appear here once the host finishes', { kind: 'success' });
+      this.setState({ edsOpen: false });
+      if (this.pollProviderActions) this.pollProviderActions();
+    }).catch(() => { this.setState({ edsEnvBusy: '' }); this.toast('Could not start the staging build', { kind: 'error' }); });
+  },
+
+  // Force a fresh detail load (loadSiteDetail short-circuits on a matching id).
+  reloadSiteDetail() {
+    const real = this._detail;
+    if (!real) return;
+    const id = real.siteId;
+    this._detail = null;
+    this.loadSiteDetail(id);
+  },
+
+  // environmentId targets a specific row (the Edit site dialog's Environments
+  // list); omitted, it edits whichever environment the header is showing.
+  openEnvEdit(environmentId) {
+    const real = this._detail;
+    const env = environmentId
+      ? ((real && real.envs) || []).find(e => String(e.environment_id) === String(environmentId))
+      : this.currentEnv(real, this.state);
     if (!real || !env || !env.environment_id) return;
     this._ee = { environment_id: env.environment_id, envName: env.environment,
       address: env.address || '', home_directory: env.home_directory || '',
       username: env.username || '', password: env.password || '',
       protocol: env.protocol || 'sftp', port: env.port || '' };
+    this.setState({ eeOpen: true, eeSaving: false });
+  },
+
+  // Same dialog, create mode: a draft with no environment_id, which saveEnvEdit
+  // POSTs instead of PUTs. "Preload from Production" is the fast path here.
+  openEnvNew(name) {
+    const real = this._detail;
+    if (!real) return;
+    this._ee = { environment_id: '', envName: name || 'Staging',
+      address: '', home_directory: '', username: '', password: '',
+      protocol: 'sftp', port: '' };
     this.setState({ eeOpen: true, eeSaving: false });
   },
 
@@ -569,10 +690,11 @@ Object.assign(Component.prototype, {
 
   saveEnvEdit() {
     const real = this._detail, d = this._ee || {}, s = this.state;
-    if (!real || !d.environment_id || s.eeSaving) return;
+    if (!real || s.eeSaving) return;
     this.setState({ eeSaving: true });
     const body = { address: d.address, home_directory: d.home_directory, username: d.username,
       password: d.password, protocol: d.protocol, port: d.port };
+    if (!d.environment_id) { this.createEnvRecord(body); return; }
     this.api('/sites/' + real.siteId + '/environments/' + d.environment_id, { method: 'PUT', body }).then(res => {
       if (!res || res.code) {
         this.setState({ eeSaving: false });
@@ -587,6 +709,21 @@ Object.assign(Component.prototype, {
       this.toast(d.envName + ' connection settings saved', { kind: 'success' });
       this.realSync(real, s);
     }).catch(() => { this.setState({ eeSaving: false }); this.toast('Could not save environment', { kind: 'error' }); });
+  },
+
+  createEnvRecord(body) {
+    const real = this._detail, d = this._ee || {};
+    this.api('/sites/' + real.siteId + '/environments', { method: 'POST',
+      body: Object.assign({ environment: d.envName }, body) }).then(res => {
+      if (!res || res.code || !res.environment_id) {
+        this.setState({ eeSaving: false });
+        this.toast((res && res.message) || 'Could not add environment', { kind: 'error' });
+        return;
+      }
+      this.setState({ eeOpen: false, eeSaving: false });
+      this.toast(d.envName + ' environment added', { kind: 'success' });
+      this.reloadSiteDetail();
+    }).catch(() => { this.setState({ eeSaving: false }); this.toast('Could not add environment', { kind: 'error' }); });
   },
 
   deleteEnvRecord() {
@@ -606,11 +743,12 @@ Object.assign(Component.prototype, {
   computeEnvEdit(real, s) {
     const d = this._ee || {};
     const isStaging = !!d.envName && d.envName !== 'Production';
+    const isNew = !d.environment_id;
     return {
       eeOpen: !!s.eeOpen,
       eeOpenDlg: () => this.openEnvEdit(),
       closeEe: () => this.setState({ eeOpen: false }),
-      eeTitle: 'Edit ' + (d.envName || '') + ' connection',
+      eeTitle: (isNew ? 'Add ' : 'Edit ') + (d.envName || '') + ' connection',
       eeAddress: d.address || '', onEeAddress: e => { this._ee.address = e.target.value; },
       eeHome: d.home_directory || '', onEeHome: e => { this._ee.home_directory = e.target.value; },
       eeUser: d.username || '', onEeUser: e => { this._ee.username = e.target.value; },
@@ -622,9 +760,9 @@ Object.assign(Component.prototype, {
         go: () => { this._ee.protocol = p; this.setState({ tick: this.state.tick }); } })),
       eePreloadShow: isStaging && !!real,
       eePreload: () => this.eePreloadApply(),
-      eeDeleteShow: isStaging,
+      eeDeleteShow: isStaging && !isNew,
       eeDelete: () => this.deleteEnvRecord(),
-      eeSaveLabel: s.eeSaving ? 'Saving…' : 'Save changes',
+      eeSaveLabel: s.eeSaving ? 'Saving…' : isNew ? 'Add environment' : 'Save changes',
       eeSave: () => this.saveEnvEdit()
     };
   },

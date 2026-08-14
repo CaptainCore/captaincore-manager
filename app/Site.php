@@ -1201,6 +1201,125 @@ class Site {
         return array_column( $environment_id, "environment_id" )[0];
     }
 
+    /**
+     * Insert a new environment record for this site (Staging, Development, …).
+     *
+     * Connection-only: this records how CaptainCore reaches an environment
+     * that already exists at the host. It never provisions anything — see
+     * Provider::deploy_to_staging() for the "make me a staging at Kinsta" path.
+     *
+     * Every column in wp_captaincore_environments is written explicitly so a
+     * partial payload can't leave the row with NULLs that break the CLI's
+     * rclone/ssh config generation.
+     *
+     * @param array $fields Connection fields, keyed as the DB columns.
+     * @return array|\WP_Error
+     */
+    public function create_environment( $fields = [] ) {
+        $site = ( new Sites )->get( $this->site_id );
+        if ( empty( $site ) ) {
+            return new \WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+        }
+
+        $name = trim( (string) ( $fields['environment'] ?? '' ) );
+        if ( $name === '' ) {
+            return new \WP_Error( 'missing_environment', 'Environment name is required', [ 'status' => 400 ] );
+        }
+        // Production is created with the site; a second one would give the CLI
+        // two rows to choose from for the same site-environment pair.
+        foreach ( ( new Environments )->where( [ "site_id" => $this->site_id ] ) as $existing ) {
+            if ( strcasecmp( $existing->environment, $name ) === 0 ) {
+                return new \WP_Error( 'duplicate_environment', "A {$existing->environment} environment already exists for this site", [ 'status' => 409 ] );
+            }
+        }
+
+        $time_now    = date( "Y-m-d H:i:s" );
+        $protocol    = in_array( $fields['protocol'] ?? '', [ 'sftp', 'ssh', 'ftp' ], true ) ? $fields['protocol'] : 'sftp';
+        $environment = [
+            'site_id'                 => $this->site_id,
+            'created_at'              => $time_now,
+            'updated_at'              => $time_now,
+            'environment'             => $name,
+            'address'                 => (string) ( $fields['address'] ?? '' ),
+            'username'                => (string) ( $fields['username'] ?? '' ),
+            'password'                => (string) ( $fields['password'] ?? '' ),
+            'protocol'                => $protocol,
+            'port'                    => preg_replace( '/[^0-9]/', '', (string) ( $fields['port'] ?? '' ) ),
+            'home_directory'          => (string) ( $fields['home_directory'] ?? '' ),
+            'database_username'       => (string) ( $fields['database_username'] ?? '' ),
+            'database_password'       => (string) ( $fields['database_password'] ?? '' ),
+            'offload_enabled'         => '',
+            'offload_access_key'      => '',
+            'offload_secret_key'      => '',
+            'offload_bucket'          => '',
+            'offload_path'            => '',
+            'monitor_enabled'         => 0,
+            'updates_enabled'         => 1,
+            'updates_exclude_plugins' => '',
+            'updates_exclude_themes'  => '',
+        ];
+        $environment_id = ( new Environments )->insert( $environment );
+
+        Sites::update_environments_cache( $this->site_id );
+        ActivityLog::log( 'created', 'site', $this->site_id, $site->name, "Added {$name} environment for {$site->name}", [], $site->customer_id ? $site->customer_id : null );
+
+        // Hand the new connection to the CLI so its ssh/rclone configs exist
+        // before anyone tries to sync or deploy against it.
+        Run::CLI( "site sync {$this->site_id}", true );
+
+        return [
+            'response'       => "Added {$name} environment",
+            'environment_id' => $environment_id,
+        ];
+    }
+
+    /**
+     * Link an environment that already exists at the hosting provider but has
+     * no record here — the "staging exists at Kinsta, CaptainCore never saw
+     * it" case.
+     *
+     * Dispatches to the provider class's connect_staging(); providers that
+     * don't implement it report 'skipped' rather than erroring so the UI can
+     * fall back to the manual add.
+     *
+     * @param string $environment Environment label to link (only Staging today).
+     * @return array|\WP_Error
+     */
+    public function connect_provider_environment( $environment = 'Staging' ) {
+        $site = ( new Sites )->get( $this->site_id );
+        if ( empty( $site ) ) {
+            return new \WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+        }
+        if ( $environment !== 'Staging' ) {
+            return new \WP_Error( 'unsupported_environment', 'Only the Staging environment can be linked from a provider', [ 'status' => 400 ] );
+        }
+        if ( empty( $site->provider ) ) {
+            return [ 'status' => 'skipped', 'message' => 'Site has no provider configured' ];
+        }
+        $provider_class = 'CaptainCore\\Providers\\' . ucfirst( $site->provider );
+        if ( ! class_exists( $provider_class ) || ! method_exists( $provider_class, 'connect_staging' ) ) {
+            return [ 'status' => 'skipped', 'message' => ucfirst( $site->provider ) . " can't link staging automatically — add it manually" ];
+        }
+        if ( empty( $site->provider_site_id ) ) {
+            return [ 'status' => 'skipped', 'message' => "This site isn't linked to a {$site->provider} site yet" ];
+        }
+        if ( in_array( 'Staging', array_column( ( new Environments )->where( [ "site_id" => $this->site_id ] ), 'environment' ), true ) ) {
+            return [ 'status' => 'exists', 'message' => 'A Staging environment is already connected' ];
+        }
+
+        $provider_class::connect_staging( $this->site_id );
+        // connect_staging() is a no-op when the provider has no staging to
+        // link, so confirm against the table rather than trusting a return.
+        $connected = in_array( 'Staging', array_column( ( new Environments )->where( [ "site_id" => $this->site_id ] ), 'environment' ), true );
+        if ( ! $connected ) {
+            return [ 'status' => 'none', 'message' => "No staging environment found at " . ucfirst( $site->provider ) ];
+        }
+
+        Sites::update_environments_cache( $this->site_id );
+        ActivityLog::log( 'created', 'site', $this->site_id, $site->name, "Linked existing {$site->provider} staging environment for {$site->name}", [], $site->customer_id ? $site->customer_id : null );
+        return [ 'status' => 'connected', 'message' => 'Staging environment connected' ];
+    }
+
     public function fetch_phpmyadmin() {
 
         $site = ( new Sites )->get( $this->site_id );

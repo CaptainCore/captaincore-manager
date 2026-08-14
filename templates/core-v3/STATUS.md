@@ -1411,3 +1411,69 @@ panel (domains.js + app.html), no backend changes:
   a 2,126-row fixture (mixed `Z`/`-04:00` offsets, oldest Oct 2020) rendered
   **Backups 2,126 / since Oct 2020**; the Versions tile rendered `…` while its
   fetch was still open and `584` once it landed.
+
+### Edit site: environments, and three ways to get a staging (2026-08-13)
+The Edit site dialog was identity-only (name / provider / SSH key), and the
+environment editor was reachable only for whichever environment the header
+happened to be showing. A site with no Staging record had **no path at all**
+to one from v3 — the Deploy card's "Pull production → staging" silently
+`return`s when `realPush` can't find both environments.
+
+- **Environments section in the Edit site dialog.** One row per environment
+  (label + `address:port`, red when there are no connection details), each
+  opening the existing connection dialog via `openEnvEdit(environment_id)` —
+  which now takes a target instead of always editing `currentEnv`. The
+  connection dialog renders over the site dialog on DOM order alone (both
+  z-index 70, it comes later in app.html), so closing it returns you to the
+  site dialog.
+- **Pull from <provider>** → `POST /sites/{id}/remote-sync`, the same
+  `Site::remote_sync()` the throttled `wp captaincore provider-sync` sweep
+  uses. Reconciles address/port/user/password/web-root from the host. The
+  route already existed; it now also accepts `dry_run` and echoes back the
+  reconciled `environments` so the dialog repaints without a second fetch.
+- **Three ways to get a Staging row**, shown only when there isn't one:
+  1. **Create staging at <provider>** → `POST /providers/{p}/deploy-to-staging`
+     (existing route). Kinsta clones live → staging server-side; the response
+     is an operation id, not an environment. `pollProviderActions` now also
+     handles `deploy-to-staging`: on completion it toasts and reloads the open
+     site detail, because that chain's last server step calls
+     `connect_staging()` and the detail in the browser is stale.
+  2. **Link existing staging** → **NEW** `POST /sites/{id}/environments/connect`
+     → `Site::connect_provider_environment()`. For staging that already exists
+     at the host but was never recorded here. Reports `connected` / `none` /
+     `exists` / `skipped` rather than erroring, and confirms against the
+     environments table instead of trusting `connect_staging()`'s return (it's
+     a silent no-op when there's nothing to link).
+  3. **Add manually…** → **NEW** `POST /sites/{id}/environments` →
+     `Site::create_environment()`. Reuses the connection dialog in create mode
+     (a draft with no `environment_id`; save POSTs instead of PUTs, the title
+     reads "Add … connection", the delete link is hidden). "Preload from
+     Production" works here, which is the whole point of it.
+- **Backend guards.** `create_environment()` writes every column explicitly
+  (a partial payload leaving NULLs breaks the CLI's rclone/ssh config
+  generation), rejects a duplicate environment name with a 409, refreshes the
+  sites-table environments cache, and kicks a background `site sync` so the
+  CLI has configs for the new connection before anyone deploys against it.
+  Passwords are taken raw, matching the PUT handler — `sanitize_text_field`
+  mangles legitimate characters.
+- **Two bugs found on the way.** The environment DELETE handler never
+  refreshed the environments cache, so a deleted environment kept showing in
+  the fleet listing. And `Kinsta::connect_staging()` warned and looped over
+  null for a stale `provider_site_id` (site deleted or moved between Kinsta
+  companies), or with no Production row to copy credentials from — both now
+  bail early.
+- Verified live headless on site 84 with every writing endpoint intercepted:
+  section renders with the Production row + all three staging actions;
+  "Add manually…" → preload → save posts
+  `{environment:"Staging", address, home_directory, username, password,
+  protocol:"sftp", port}`; "Link existing staging" posts
+  `{environment:"Staging"}` and a `none` reply renders the info toast;
+  "Pull from Kinsta" posts to `remote-sync` and toasts the change count;
+  the Production row opens "Edit Production connection" **without** a delete
+  link; "Create staging at Kinsta" posts
+  `/providers/kinsta/deploy-to-staging {site_id}`. Server-side the create,
+  duplicate-409, link, and delete paths were exercised through
+  `rest_do_request` against the local DB copy (including a real read-only
+  Kinsta lookup that correctly answered `none` for a site with no remote
+  staging, and `connected` for one that had an unlinked staging — reverted
+  after).

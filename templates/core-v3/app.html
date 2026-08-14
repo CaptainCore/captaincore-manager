@@ -3556,6 +3556,44 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-for>
             </div>
           </div>
+          <!-- Environments: connection rows + the three ways to get a staging -->
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="font:500 12px var(--sans);color:var(--ink-dim)">Environments</span>
+              <div style="flex:1"></div>
+              <sc-if value="{{ edsPullShow }}" hint-placeholder-val="{{ true }}">
+                <span onClick="{{ edsPull }}" title="Refresh address, port, user, password and web root from the host" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ edsPullLabel }}</span>
+              </sc-if>
+            </div>
+            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+              <sc-for list="{{ edsEnvRows }}" as="en" hint-placeholder-count="2">
+                <div onClick="{{ en.edit }}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                  <span style="min-width:0;flex:1">
+                    <span style="display:block;font:500 13px var(--sans)">{{ en.label }}</span>
+                    <span style="display:block;font:400 11.5px var(--mono);color:{{ en.subFg }}">{{ en.sub }}</span>
+                  </span>
+                  <span style="font:500 12px var(--sans);color:var(--brand-ink)">Edit</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ edsEnvEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 12px;font:400 12.5px var(--sans);color:var(--ink-dim)">Loading environments…</div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ edsStagingShow }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:9px;display:flex;flex-direction:column;gap:8px">
+                <span style="font:400 11.5px/1.5 var(--sans);color:var(--ink-dim)">{{ edsStagingNote }}</span>
+                <div style="display:flex;gap:7px;flex-wrap:wrap">
+                  <sc-if value="{{ edsCreateStagingShow }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ edsCreateStaging }}" style="font:500 12px var(--sans);color:var(--brand-ink);background:var(--brand-soft);border-radius:99px;padding:5px 12px;cursor:pointer" style-hover="filter:brightness(.97)">{{ edsCreateStagingLabel }}</span>
+                  </sc-if>
+                  <sc-if value="{{ edsLinkStagingShow }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ edsLinkStaging }}" style="font:500 12px var(--sans);color:var(--ink);border:1px solid var(--rule);border-radius:99px;padding:5px 12px;cursor:pointer" style-hover="background:var(--panel-2)">{{ edsLinkStagingLabel }}</span>
+                  </sc-if>
+                  <span onClick="{{ edsAddStaging }}" style="font:500 12px var(--sans);color:var(--ink);border:1px solid var(--rule);border-radius:99px;padding:5px 12px;cursor:pointer" style-hover="background:var(--panel-2)">Add manually…</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
         </div>
         <div style="flex:none;display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--rule)">
           <button onClick="{{ closeEds }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 13px var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>

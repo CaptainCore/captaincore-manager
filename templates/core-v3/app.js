@@ -1193,6 +1193,12 @@ class Component extends DCLogic {
             this.toast(`New site ${act.name} created at Kinsta's ${dcTitle} datacenter`, { kind: 'success' });
             if (this.hydrate) this.hydrate();
           }
+          // The deploy-to-staging chain's last step links the new environment
+          // server-side (connect_staging), so the open site detail is stale.
+          if (!still && act.command === 'deploy-to-staging') {
+            this.toast(`Staging environment ready for ${act.name}`, { kind: 'success' });
+            if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
+          }
         }).catch(() => {})), Promise.resolve());
       chain.then(() => { if (list.length) this._paTimer = setTimeout(() => this.pollProviderActions(), 10000); });
     }).catch(() => {});

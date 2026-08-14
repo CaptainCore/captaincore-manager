@@ -334,13 +334,27 @@ class Kinsta {
         if ( empty( $site->provider_site_id ) ) {
             return;
         }
+        $production_environment = null;
         foreach( $environments as $environment ) {
             if ( $environment->environment == "Production" ) {
                 $production_environment = $environment;
             }
         }
+        // The staging row inherits its SFTP user/password/home from Production
+        // (Kinsta shares one credential set across a site's environments), so
+        // there is nothing to copy without it.
+        if ( empty( $production_environment ) ) {
+            return;
+        }
         $time_now        = date("Y-m-d H:i:s");
         $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
+
+        // A stale provider_site_id (site deleted or moved between Kinsta
+        // companies) answers without a `site` key — bail rather than warn and
+        // foreach over null.
+        if ( empty( $response->site->environments ) ) {
+            return;
+        }
 
         foreach( $response->site->environments as $kinsta_environment ) {
             if ( $kinsta_environment->name == "staging" ) {

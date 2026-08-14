@@ -2792,6 +2792,50 @@ function captaincore_site_environment_update_func( WP_REST_Request $request ) {
 	return [ 'response' => 'Successfully updated environment' ];
 }
 
+function captaincore_site_environment_create_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) ) {
+		return new WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+	}
+	// Passwords are taken raw — sanitize_text_field mangles legitimate
+	// characters — matching captaincore_site_environment_update_func.
+	$fields = [];
+	foreach ( [ 'environment', 'address', 'home_directory', 'username', 'database_username', 'protocol', 'port' ] as $field ) {
+		$fields[ $field ] = sanitize_text_field( (string) $request->get_param( $field ) );
+	}
+	foreach ( [ 'password', 'database_password' ] as $field ) {
+		$fields[ $field ] = (string) $request->get_param( $field );
+	}
+	$result = ( new CaptainCore\Site( $site_id ) )->create_environment( $fields );
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	return $result + [ 'environments' => ( new CaptainCore\Site( $site_id ) )->environments() ];
+}
+
+/**
+ * Link a staging environment that already exists at the hosting provider.
+ * Distinct from POST /providers/{provider}/deploy-to-staging, which CREATES
+ * one (and kicks a ProviderAction chain the browser has to poll).
+ */
+function captaincore_site_environment_connect_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+	$current = ( new CaptainCore\Sites )->get( $site_id );
+	if ( empty( $current ) ) {
+		return new WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+	}
+	$environment = sanitize_text_field( (string) $request->get_param( 'environment' ) );
+	$result      = ( new CaptainCore\Site( $site_id ) )->connect_provider_environment( $environment ? $environment : 'Staging' );
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	if ( $result['status'] === 'connected' ) {
+		$result['environments'] = ( new CaptainCore\Site( $site_id ) )->environments();
+	}
+	return $result;
+}
+
 function captaincore_site_environment_delete_func( WP_REST_Request $request ) {
 	$site_id = intval( $request['id'] );
 	$env_id  = intval( $request['environment_id'] );
@@ -2805,6 +2849,9 @@ function captaincore_site_environment_delete_func( WP_REST_Request $request ) {
 		return new WP_Error( 'protected', 'The Production environment can not be deleted', [ 'status' => 400 ] );
 	}
 	( new CaptainCore\Environments )->delete( $env_id );
+	// The sites table carries a denormalized environments cache that the fleet
+	// listing reads; without this the deleted environment kept showing there.
+	CaptainCore\Sites::update_environments_cache( $site_id );
 	CaptainCore\ActivityLog::log( 'deleted', 'site', $site_id, $current->name, "Deleted {$environment->environment} environment record for {$current->name}", [], $current->customer_id ? $current->customer_id : null );
 	return [ 'response' => 'Successfully deleted environment' ];
 }
@@ -5640,7 +5687,15 @@ function captaincore_site_remote_sync_func( $request ) {
 		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
 	}
 
-	$result = ( new CaptainCore\Site( $site_id ) )->remote_sync();
+	// dry_run diffs without writing — the edit dialog uses it to preview what
+	// the provider would change before an operator commits.
+	$dry_run = filter_var( $request->get_param( 'dry_run' ), FILTER_VALIDATE_BOOLEAN );
+	$result  = ( new CaptainCore\Site( $site_id ) )->remote_sync( $dry_run );
+	// Hand back the reconciled rows so the caller can repaint without a
+	// second round trip.
+	if ( ! $dry_run && ! empty( $result['status'] ) && $result['status'] === 'updated' ) {
+		$result['environments'] = ( new CaptainCore\Site( $site_id ) )->environments();
+	}
 	return rest_ensure_response( $result );
 }
 
@@ -9896,6 +9951,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/identity', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_site_identity_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_environment_create_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments/connect', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_environment_connect_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
