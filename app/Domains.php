@@ -104,17 +104,132 @@ class Domains extends DB {
         if ( ! in_array( $domain_id, $this->domains ) ) {
             return [ "errors" => "Permission denied." ];
         }
+
         $domain = self::get( $domain_id );
-		if ( $domain->remote_id  ) {
-			Remote\Constellix::delete( "domains/{$domain->remote_id}" );
-		}
-        if ( $domain->provider_id  ) {
-			( new Domain( $domain_id ) )->renew_off();
-		}
+        if ( empty( $domain ) || empty( $domain->name ) ) {
+            return [ "errors" => "Domain not found." ];
+        }
+
+        $details  = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+        if ( ! is_object( $details ) ) {
+            $details = (object) [];
+        }
+        $removed  = [];
+        $warnings = [];
+
+        // Mailgun sending zone (typically mg.example.com) — distinct from the
+        // apex forwarding domain, so tear it down first.
+        $sending_zone = ! empty( $details->mailgun_zone ) ? $details->mailgun_zone : null;
+        if ( ! empty( $details->mailgun_id ) && $sending_zone ) {
+            $result = self::delete_mailgun_zone( $sending_zone );
+            if ( $result === true ) {
+                $removed[] = 'mailgun';
+            } else {
+                $warnings[] = "Mailgun sending zone: {$result}";
+            }
+        }
+
+        // Email forwarding lives on the apex Mailgun domain. Skip a second
+        // API call if sending was configured on the same zone.
+        if ( ! empty( $details->mailgun_forwarding_id ) ) {
+            if ( $sending_zone && strtolower( $sending_zone ) === strtolower( $domain->name ) ) {
+                $removed[] = 'email_forwarding';
+            } else {
+                $result = self::delete_mailgun_zone( $domain->name );
+                if ( $result === true ) {
+                    $removed[] = 'email_forwarding';
+                } else {
+                    $warnings[] = "Email forwarding: {$result}";
+                }
+            }
+        }
+
+        if ( ! empty( $domain->remote_id ) ) {
+            $response  = Remote\Constellix::delete( "domains/{$domain->remote_id}" );
+            $dns_error = self::constellix_delete_error( $response );
+            if ( $dns_error === null ) {
+                $removed[] = 'dns_zone';
+            } else {
+                $warnings[] = "DNS zone: {$dns_error}";
+            }
+        }
+
+        // Existing v1 behavior: turn off Hover auto-renew. Does not cancel
+        // the registrar registration. renew_off() still echoes a debug dump,
+        // so swallow stdout to keep the REST body intact.
+        if ( ! empty( $domain->provider_id ) ) {
+            ob_start();
+            ( new Domain( $domain_id ) )->renew_off();
+            ob_end_clean();
+        }
+
+        $pivots     = ( new AccountDomain() )->where( [ "domain_id" => $domain_id ] );
+        $account_id = $pivots[0]->account_id ?? null;
+        foreach ( $pivots as $pivot ) {
+            ( new AccountDomain() )->delete( $pivot->account_domain_id );
+        }
+
         self::delete( $domain_id );
-        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $domain_id ] ), "account_id" );
-        ActivityLog::log( 'deleted', 'domain', $domain_id, $domain->name, "Deleted domain {$domain->name}", [], $domain_account_ids[0] ?? null );
-        return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
+
+        $suffix = empty( $removed ) ? '' : ' (also removed: ' . implode( ', ', $removed ) . ')';
+        ActivityLog::log( 'deleted', 'domain', $domain_id, $domain->name, "Deleted domain {$domain->name}{$suffix}", [
+            'removed'  => $removed,
+            'warnings' => $warnings,
+        ], $account_id );
+
+        return [
+            "domain_id" => (int) $domain_id,
+            "message"   => "Deleted domain {$domain->name}",
+            "removed"   => $removed,
+            "warnings"  => $warnings,
+        ];
+    }
+
+    /**
+     * Delete a Mailgun domain. "Already gone" is success so a retry of
+     * domain delete doesn't get stuck on a half-removed zone.
+     *
+     * @return true|string True on success, otherwise the error message.
+     */
+    private static function delete_mailgun_zone( $zone ) {
+        if ( empty( $zone ) ) {
+            return true;
+        }
+
+        $response = Remote\Mailgun::delete( "v3/domains/{$zone}" );
+        if ( is_object( $response ) && ! empty( $response->errors ) ) {
+            return is_array( $response->errors ) ? implode( ', ', $response->errors ) : (string) $response->errors;
+        }
+
+        if ( isset( $response->message ) ) {
+            $ok = [
+                'Domain not found',
+                'Domain will be deleted in the background',
+                'Domain has been deleted',
+            ];
+            if ( ! in_array( $response->message, $ok, true ) ) {
+                return $response->message;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return string|null Error text, or null when the zone is gone.
+     */
+    private static function constellix_delete_error( $response ) {
+        if ( is_string( $response ) && $response !== '' ) {
+            return $response;
+        }
+        if ( is_object( $response ) && ! empty( $response->errors ) ) {
+            $errors = (array) $response->errors;
+            $first  = (string) reset( $errors );
+            if ( $first !== '' && strpos( $first, 'Domain not found' ) === false ) {
+                return implode( ', ', $errors );
+            }
+        }
+        return null;
     }
 
     public function get_domain( $host ) {

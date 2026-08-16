@@ -1403,7 +1403,8 @@ class Component extends DCLogic {
         ctx: (e) => this.openCtxMenu(e, [
           { label: 'Open domain', act: () => this.openDomain(d.id) },
           { label: 'Visit site ↗', act: () => window.open('https://' + d.name, '_blank') },
-          { label: 'Copy domain', act: () => this.ctxCopy(d.name, 'domain') }
+          { label: 'Copy domain', act: () => this.ctxCopy(d.name, 'domain') },
+          ...(isOp ? [{ label: 'Delete domain…', danger: true, act: () => this.deleteDomain(d.id, d.name) }] : [])
         ]) }))
     };
   }
@@ -1444,6 +1445,7 @@ class Component extends DCLogic {
       zoneShowDns: false, zoneShowFwd: false, zoneShowSend: false,
       zoneDnsLabel: 'Delete DNS zone', zoneFwdLabel: 'Delete email forwarding', zoneSendLabel: 'Delete sending zone',
       zoneDelDns: () => {}, zoneDelFwd: () => {}, zoneDelSend: () => {},
+      domShowDelete: false, domDelete: () => {}, domDeleteLabel: 'Delete domain…',
       dnsRows, dnsDirty: s.dnsDirty, dnsT: s.dnsT, dnsN: s.dnsN, dnsV: s.dnsV,
       dnsEN: s.dnsEN, onDnsEN: e => this.setState({ dnsEN: e.target.value }),
       dnsEV: s.dnsEV, onDnsEV: e => this.setState({ dnsEV: e.target.value }),

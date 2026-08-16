@@ -19,6 +19,7 @@
 //   GET  /domain/{id}/mailgun · POST /mailgun/setup {domain} · POST /mailgun/verify · GET /mailgun/events
 //   GET  /domain/{id}/mailgun/usage?period=day|month|year → { totals:{sent,delivered,failed,delivery_rate},
 //        series:[{time,label,sent,received,delivered,failed}] } (Mailgun stats/total, 10-min transient)
+//   DELETE /domains/{id} — domain record + linked DNS / forwarding / Mailgun zones
 // Known contract gaps (STATUS.md): no expiry/auto-renew anywhere; /domains/ list has no account names.
 // DNS edits stage locally (design behavior) and commit per-record on Save.
 
@@ -163,8 +164,61 @@ Object.assign(Component.prototype, {
       zoneSendLabel: busy === 'sending' ? 'Deleting…' : 'Delete sending zone',
       zoneDelDns:  () => this.deleteZone('dns'),
       zoneDelFwd:  () => this.deleteZone('forward'),
-      zoneDelSend: () => this.deleteZone('sending')
+      zoneDelSend: () => this.deleteZone('sending'),
+      // Domain delete is the record itself (v1's deleteDomain). Cascades to
+      // the linked DNS / forwarding / sending zones when they exist.
+      domShowDelete: isOp,
+      domDeleteLabel: busy === 'domain' ? 'Deleting…' : 'Delete domain…',
+      domDelete: () => this.deleteDomain(dom.domainId, d.name, {
+        dns: !dom.noZone && !dom.dnsLoading,
+        forward: fwdActive,
+        sending: !!details.mailgun_id
+      })
     };
+  },
+
+  // DELETE /domains/{id} — removes the CaptainCore record and any linked
+  // DNS zone, Mailgun forwarding (apex), and Mailgun sending zone. Does not
+  // cancel a registrar registration. extras is optional: when we already
+  // know which linked services exist (detail page), the confirm names them.
+  deleteDomain(id, name, extras) {
+    if (!id) return;
+    const bits = [];
+    if (extras) {
+      if (extras.dns) bits.push('the DNS zone');
+      if (extras.forward) bits.push('email forwarding');
+      if (extras.sending) bits.push('the Mailgun sending zone');
+    }
+    const cascade = bits.length
+      ? 'This also deletes ' + (bits.length === 1 ? bits[0] : bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1]) + '.'
+      : 'This also deletes the linked DNS zone, email forwarding, and Mailgun sending zone if they exist.';
+    if (!confirm('Delete domain ' + name + '?\n\n' + cascade + '\n\nThe registrar registration is not cancelled. This cannot be undone.')) return;
+    if (!this._hydrated) {
+      this.DOMAINS = (this.DOMAINS || []).filter(d => String(d.id) !== String(id));
+      this.setState(st => ({
+        domList: (st.domList || []).filter(d => String(d.id) !== String(id)),
+        route: 'domains', domainId: null, zoneBusy: ''
+      }));
+      return;
+    }
+    this.setState({ zoneBusy: 'domain' });
+    this.api('/domains/' + id, { method: 'DELETE' }).then(res => {
+      if (res && res.code) {
+        this.setState({ zoneBusy: '' });
+        if (this.toast) this.toast(res.message || 'Could not delete the domain.', { kind: 'error' });
+        return;
+      }
+      this.DOMAINS = (this.DOMAINS || []).filter(d => String(d.id) !== String(id));
+      this._domain = null;
+      if (this.toast) this.toast((res && res.message) || ('Deleted ' + name + '.'), { kind: 'success' });
+      this.setState(st => ({
+        domList: st.domList ? st.domList.filter(d => String(d.id) !== String(id)) : st.domList,
+        route: 'domains', domainId: null, zoneBusy: ''
+      }));
+    }).catch(() => {
+      this.setState({ zoneBusy: '' });
+      if (this.toast) this.toast('Could not delete the domain.', { kind: 'error' });
+    });
   },
 
   exportZoneReal(name) {

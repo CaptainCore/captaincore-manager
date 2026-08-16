@@ -791,10 +791,11 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   mock (invoice due, report ready) belongs to the Billing and Reports slices.
 - **Domains slice leftovers.** Not wired: forwarding
   logs pager, domain→account assignment (admin `PUT /domains/{id}/account`),
-  update-site-link, domain delete, DNS-zone delete. Wired but not live-toggled
+  update-site-link. Wired but not live-toggled
   (registrar writes on real domains): lock/privacy toggles, contacts save,
   nameservers save. Domains list still can't show account or expiry columns
-  (list payload carries neither).
+  (list payload carries neither). Domain delete + per-tab zone teardown
+  are DONE — see the domain-delete section below.
 - **Stats tab leftovers.** The "Performance monitor" card is design-only (no v1
   endpoint exists — needs a backend before it can be real). Multi-tracker sites
   (v1 shows a tracker autocomplete when `fathom_analytics.length > 1`) always use
@@ -1523,3 +1524,36 @@ Both backend routes already existed and are now wired end to end.
   `account_id`, and the success message toasts. The route itself was also
   exercised server-side with an empty `sites` array (200,
   `{success, imported:0, skipped:0, message}`) — no real import was run.
+
+### Domain delete (2026-08-16)
+v3 could tear down the three *zones* (DNS / forwarding / sending) but not the
+domain record itself — leftover from the Domains slice. `DELETE /domains/{id}`
+already existed (v1's deleteDomain); it only dropped the Constellix zone and
+the local row, and it looked up account links *after* deleting the row so the
+activity log never got an account_id.
+
+`Domains::delete_domain()` now cascades, then removes the local record:
+
+| Linked service | When | Remote call |
+|---|---|---|
+| Mailgun sending | `details.mailgun_id` + `mailgun_zone` | `DELETE v3/domains/{mailgun_zone}` |
+| Email forwarding | `details.mailgun_forwarding_id` | `DELETE v3/domains/{apex}` (skipped if sending already used the same zone) |
+| DNS zone | `remote_id` | Constellix `DELETE domains/{remote_id}` |
+| Account links | any pivot rows | `captaincore_account_domain` |
+
+Remote "already gone" responses are treated as success so a retry doesn't
+stick. Other remote errors land in `warnings[]` and the local row is still
+removed (the operator's intent is to drop it from CaptainCore). Registrar
+registration is **not** cancelled; Hover auto-renew still turns off (v1
+behavior), with `renew_off()`'s leftover echo swallowed so it can't corrupt
+the REST body.
+
+UI (operator-only, matching account delete + zone teardown): **Delete
+domain…** on the domain-detail header, plus a danger entry on the list
+context menu. Confirm names whichever linked services the open detail
+actually has. Success drops the row from `DOMAINS`, toasts, and routes
+back to the list.
+
+v1 customers who already had the button keep working — the route is still
+`captaincore_permission_check` + `Domains::verify()`, not admin-only. The
+handler now maps `{errors}` to a 403/404 `WP_Error` instead of a 200.

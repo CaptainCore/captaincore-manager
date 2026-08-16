@@ -463,6 +463,7 @@ POST /domains
 ```
 DELETE /domains/{domain_id}
 ```
+Removes the domain record and, if present, the linked DNS zone (Constellix), email forwarding (Mailgun apex), and Mailgun sending zone. Registrar registration is not cancelled. Also removes account↔domain links.
 
 ### Update domain account (admin)
 ```

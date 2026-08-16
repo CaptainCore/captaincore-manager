@@ -1895,6 +1895,10 @@ function captaincore_domains_create_func( WP_REST_Request $request ) {
 
 function captaincore_domains_delete_func( WP_REST_Request $request ) {
 	$response = ( new CaptainCore\Domains )->delete_domain( $request['id'] );
+	if ( ! empty( $response['errors'] ) ) {
+		$status = $response['errors'] === 'Domain not found.' ? 404 : 403;
+		return new WP_Error( 'domain_delete_failed', $response['errors'], [ 'status' => $status ] );
+	}
 	return $response;
 }
 

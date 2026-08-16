@@ -1565,8 +1565,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ showDomain }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:24px 32px 120px;animation:ccfade .25s ease">
           <span onClick="{{ domBack }}" style="font:500 12.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Domains</span>
-          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:10px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ domName }}</h1>
+            <div style="flex:1"></div>
+            <sc-if value="{{ domShowDelete }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ domDelete }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--bad-soft)">{{ domDeleteLabel }}</button>
+            </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ domStatus }}</div>
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
