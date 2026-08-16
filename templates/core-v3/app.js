@@ -435,6 +435,7 @@ class Component extends DCLogic {
       // Edit plan is a live-data (operator) feature — inert in the DC editor,
       // realAccountVals overrides with the working implementation.
       accShowEditPlan: true, openEditPlan: () => {}, epOpen: false,
+      epRenewalA: true, epRenewalB: false, epRenewalClearShow: false, epRenewalNone: false, epRenewalClear: () => {},
       accActivity: this.ACC_ACTIVITY,
       ...(this._hydrated ? this.realAccountVals(s) : {})
     };

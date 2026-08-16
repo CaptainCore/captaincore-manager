@@ -3739,8 +3739,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <div style="display:flex;align-items:center;gap:12px">
             <span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim);flex:none">Next renewal</span>
-            <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none;color-scheme:light dark">
+            <div style="flex:1;min-width:0">
+              <sc-if value="{{ epRenewalA }}" hint-placeholder-val="{{ true }}">
+                <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="width:100%;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none;color-scheme:light dark;box-sizing:border-box">
+              </sc-if>
+              <sc-if value="{{ epRenewalB }}" hint-placeholder-val="{{ false }}">
+                <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="width:100%;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--mono);padding:0 9px;outline:none;color-scheme:light dark;box-sizing:border-box">
+              </sc-if>
+            </div>
+            <sc-if value="{{ epRenewalClearShow }}" hint-placeholder-val="{{ true }}">
+              <span onClick="{{ epRenewalClear }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;flex:none">Clear</span>
+            </sc-if>
           </div>
+          <sc-if value="{{ epRenewalNone }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 11.5px var(--sans);color:var(--ink-dim);margin-top:-6px">none — account inactive</span>
+          </sc-if>
           <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
             <span style="display:flex;align-items:center;gap:8px">
               <span onClick="{{ epAutoPayFlip }}" style="width:34px;height:20px;border-radius:99px;background:{{ epAutoPayBg }};display:flex;align-items:center;padding:2px;justify-content:{{ epAutoPayJust }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>

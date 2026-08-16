@@ -597,6 +597,16 @@ site; only their dialogs and payload construction were exercised.
   with an explicit "+N more" (never a silent truncation), and the dialog got
   `max-height:82vh` + a scrolling body since the preview can now be tall.
 
+### Edit plan: next renewal can be cleared (2026-08-16)
+Empty `next_renewal` is how accounts are deactivated — `Accounts::update_plan()`
+already persisted `""`, and the renewal cron / `User::subscriptions()` skip a
+blank date. v1's text field could be deleted; v3's `datetime-local` picker
+cannot be emptied from the keyboard. A **Clear** link now sits beside the
+picker (same treatment as billing user) and remounts the input (DC binds
+`value` like `defaultValue`, so a state-only write would leave the old date
+on screen). An empty picker shows "none — account inactive". Cancel leaves
+the stored date alone; Save writes `""`.
+
 ### Edit plan: billing user can be cleared (2026-08-03)
 The picker was select-only — once a billing user was set there was no way back
 to "none". Clicking the SELECTED row now toggles it off, and a **Clear** link

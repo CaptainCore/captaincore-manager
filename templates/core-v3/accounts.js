@@ -32,7 +32,7 @@ Object.assign(Component.prototype, {
     if (Array.isArray(d.price)) d.price = '';
     d.auto_pay = d.auto_pay === true || d.auto_pay === 'true';
     d.auto_switch = d.auto_switch === true || d.auto_switch === 'true';
-    this._ep = d; this._epMsg = ''; this._epSaving = false;
+    this._ep = d; this._epMsg = ''; this._epSaving = false; this._epRenewalGen = 0;
     if (!this._epPlans) {
       const custom = { name: 'Custom', interval: '12', price: '', limits: { visits: '', storage: '', sites: '' } };
       this.api('/configurations/').then(cfg => {
@@ -95,7 +95,16 @@ Object.assign(Component.prototype, {
       epBillClear: () => mut(x => { x.billing_user_id = 0; }),
       epBillNone: !Number(ep.billing_user_id),
       // datetime-local wants "YYYY-MM-DDTHH:MM:SS"; the API stores "YYYY-MM-DD HH:MM:SS".
+      // Native pickers can't be emptied, and clearing is how accounts are
+      // deactivated (Accounts::update_plan + the renewal cron both treat
+      // empty next_renewal as inactive). Clear remounts the input because
+      // the DC runtime binds value like defaultValue.
       epRenewal: (ep.next_renewal || '').replace(' ', 'T'),
+      epRenewalA: (this._epRenewalGen || 0) % 2 === 0,
+      epRenewalB: (this._epRenewalGen || 0) % 2 === 1,
+      epRenewalClearShow: !!(ep.next_renewal || '').trim(),
+      epRenewalNone: !(ep.next_renewal || '').trim(),
+      epRenewalClear: () => mut(x => { x.next_renewal = ''; this._epRenewalGen = (this._epRenewalGen || 0) + 1; }),
       onEpRenewal: e => mut(x => {
         const v = e.target.value || '';
         x.next_renewal = v ? (v.replace('T', ' ') + (v.length === 16 ? ':00' : '')) : '';
