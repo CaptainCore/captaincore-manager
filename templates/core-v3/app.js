@@ -1516,6 +1516,7 @@ class Component extends DCLogic {
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgActive: true, mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
       regShowRenew: true, regShowAuto: true,
+      domHasAccounts: false, domAccounts: [],
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };
   }

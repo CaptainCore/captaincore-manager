@@ -515,10 +515,15 @@ Object.assign(Component.prototype, {
       t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
         + (ev.recipient ? ' → ' + ev.recipient : '') }));
+    const accs = (info.accounts || []).filter(a => a && (a.account_id || a.name));
     return {
       domTabs: lazyTabs,
-      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · No registrar connected')
-        + ((info.accounts || []).length ? ' · ' + info.accounts.map(a => a.name).join(', ') : ''),
+      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · No registrar connected'),
+      domHasAccounts: accs.length > 0,
+      domAccounts: accs.map(a => ({
+        name: this.decodeHtml(a.name),
+        open: () => this.openAccount(String(a.account_id))
+      })),
       dnsRows,
       dnsNotice: !!dnsNote, dnsNoticeText: dnsNote,
       dnsShowActivate: dom.noZone && !dom.dnsLoading,

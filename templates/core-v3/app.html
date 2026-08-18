@@ -1581,6 +1581,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
           </div>
           <div style="font:400 13px var(--sans);color:var(--ink-dim);margin-top:6px">{{ domStatus }}</div>
+          <sc-if value="{{ domHasAccounts }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+              <span style="font:400 13px var(--sans);color:var(--ink-dim)">Account</span>
+              <sc-for list="{{ domAccounts }}" as="a" hint-placeholder-count="1">
+                <span onClick="{{ a.open }}" style="font:500 13px var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ a.name }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ domTabs }}" as="t" hint-placeholder-count="4">
               <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 14px var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>

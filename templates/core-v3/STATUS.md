@@ -802,7 +802,8 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   mock (invoice due, report ready) belongs to the Billing and Reports slices.
 - **Domains slice leftovers.** Not wired: forwarding
   logs pager, domain→account assignment (admin `PUT /domains/{id}/account`),
-  update-site-link. Wired but not live-toggled
+  update-site-link. Domain detail now links the owning account (v1's
+  Shared With cards). Wired but not live-toggled
   (registrar writes on real domains): lock/privacy toggles, contacts save,
   nameservers save. Domains list still can't show account or expiry columns
   (list payload carries neither). Domain delete + per-tab zone teardown
@@ -1576,6 +1577,12 @@ affordance: the whole row is the hit target (`cursor:pointer`, hover
 Copy mark still flips to `Copied ✓`. Password rows keep a Show/Hide
 control (stopPropagation) so reveal is no longer tied to clicking the
 masked value.
+
+### Domain detail links its account (2026-08-18)
+`GET /domain/{id}` already returns `accounts[]` (v1's Shared With cards).
+The names were jammed into the status line as plain text, so there was
+no way to open the account. They now render under the title as
+clickable brand-ink links (`openAccount`). Status stays DNS + registrar.
 
 ### Account names decode WP entities (2026-08-18)
 Site Overview → Accounts card (and the Accounts list/detail) showed
