@@ -491,8 +491,9 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   in the helmet so rows slide out of the clip instead of squishing. `showRail`
   still computes but nothing consumes it.
 - **Credentials passwords are masked** (site Overview): any row whose key matches
-  /password/i renders `••••` with click-to-reveal; Copy always copies the real
-  value. Reveal state is keyed `siteId|env|key` so switching sites/envs re-masks.
+  /password/i renders `••••`; a Show/Hide control toggles reveal. Clicking
+  anywhere on the row copies the real value. Reveal state is keyed
+  `siteId|env|key` so switching sites/envs re-masks.
 - **Edit plan → Next renewal is a real date picker** (`<input type="datetime-local"
   step="1">`). The API stores `YYYY-MM-DD HH:MM:SS` and the input wants a `T`
   separator — accounts.js converts both ways (and appends `:00` when the browser
@@ -1567,3 +1568,11 @@ back to the list.
 v1 customers who already had the button keep working — the route is still
 `captaincore_permission_check` + `Domains::verify()`, not admin-only. The
 handler now maps `{errors}` to a 403/404 `WP_Error` instead of a 200.
+
+### Overview rows copy on click (2026-08-18)
+Credentials and Environment rows on site Overview share the Domains-row
+affordance: the whole row is the hit target (`cursor:pointer`, hover
+`--panel-2` + `--brand-ink`). Click copies the field value; the existing
+Copy mark still flips to `Copied ✓`. Password rows keep a Show/Hide
+control (stopPropagation) so reveal is no longer tied to clicking the
+masked value.

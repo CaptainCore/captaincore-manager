@@ -1544,20 +1544,27 @@ class Component extends DCLogic {
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
     const segBg = l => s.env === l ? 'var(--panel-2)' : 'transparent';
     const segFg = l => s.env === l ? 'var(--ink)' : 'var(--ink-dim)';
+    const copyField = (key, value) => {
+      try { navigator.clipboard.writeText(String(value == null ? '' : value)); } catch (e) {}
+      this.setState({ copied: key }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400);
+    };
     const mkCopy = ([k, v]) => {
-      // Passwords render masked; clicking the value toggles reveal. Copy
-      // always copies the real value. Reveal state is keyed per site + env so
-      // switching sites never carries a revealed password along.
+      // Passwords render masked; Show/Hide toggles reveal. Clicking anywhere
+      // on the row copies the real value (same hit-target as domain rows).
+      // Reveal state is keyed per site + env so switching sites never carries
+      // a revealed password along.
       const rk = s.siteId + '|' + s.env + '|' + k;
-      const masked = /password/i.test(k) && !(s.credShow || {})[rk];
-      return { k, v: masked ? '••••••••••••••' : v,
-        vCursor: /password/i.test(k) ? 'pointer' : 'text',
-        vTitle: /password/i.test(k) ? (masked ? 'Click to reveal' : 'Click to hide') : '',
-        vToggle: () => { if (!/password/i.test(k)) return;
+      const isPass = /password/i.test(k);
+      const masked = isPass && !(s.credShow || {})[rk];
+      return { k, v: masked ? '••••••••••••••' : v, isPass,
+        vTitle: masked ? 'Show password' : 'Hide password',
+        revealMark: masked ? 'Show' : 'Hide',
+        vToggle: (e) => { if (e && e.stopPropagation) e.stopPropagation();
+          if (!isPass) return;
           this.setState(st => ({ credShow: { ...(st.credShow || {}), [rk]: !(st.credShow || {})[rk] } })); },
         mark: s.copied === k ? 'Copied ✓' : 'Copy',
-        copy: () => { try { navigator.clipboard.writeText(v); } catch (e) {}
-          this.setState({ copied: k }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); } };
+        copyTitle: s.copied === k ? 'Copied' : 'Copy ' + k,
+        copy: () => copyField(k, v) };
     };
     const credRows = (real ? this.realCredPairs(real, s) : [
       ['Site URL', 'https://' + host], ['WP admin', 'https://' + host + '/wp-admin'],
@@ -1793,7 +1800,11 @@ class Component extends DCLogic {
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
       ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false }),
-      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({ k, v })),
+      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({
+        k, v,
+        copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
+        copy: () => copyField('env:' + k, v)
+      })),
       dDomains: (real && real.domains
         ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))
         : [site.name, 'www.' + site.name].map(name => ({ name, did: '' })))

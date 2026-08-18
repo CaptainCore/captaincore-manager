@@ -792,10 +792,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Credentials</h2><div style="flex:1"></div><sc-if value="{{ edsShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ eeOpenDlg }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Edit</span></sc-if></div>
                 <sc-for list="{{ credRows }}" as="c" hint-placeholder-count="7">
-                  <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)">
+                  <div onClick="{{ c.copy }}" title="{{ c.copyTitle }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">
                     <span style="flex:none;width:110px;font:500 12px var(--sans);color:var(--ink-dim)">{{ c.k }}</span>
-                    <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:1;min-width:0;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:{{ c.vCursor }}">{{ c.v }}</span>
-                    <span onClick="{{ c.copy }}" style="flex:none;font:500 11.5px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="border-color:var(--brand)">{{ c.mark }}</span>
+                    <span style="flex:1;min-width:0;font:400 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.v }}</span>
+                    <sc-if value="{{ c.isPass }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:none;font:500 11.5px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">{{ c.revealMark }}</span>
+                    </sc-if>
+                    <span style="flex:none;font:500 11.5px var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px">{{ c.mark }}</span>
                   </div>
                 </sc-for>
               </section>
@@ -803,7 +806,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 14px var(--sans)">Environment</h2></div>
                   <sc-for list="{{ envRows }}" as="r" hint-placeholder-count="5">
-                    <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule)">
+                    <div onClick="{{ r.copy }}" title="{{ r.copyTitle }}" style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">
                       <span style="font:500 12.5px var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
                       <span style="font:400 12.5px var(--mono)">{{ r.v }}</span>
                     </div>
