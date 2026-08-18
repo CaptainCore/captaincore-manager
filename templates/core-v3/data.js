@@ -34,7 +34,7 @@ Object.assign(Component.prototype, {
     const boot = window.CC_BOOT;
     if (!boot || !boot.nonce) return;
     Promise.all([this.api('/sites/'), this.api('/accounts/'), this.api('/domains/')]).then(([sites, accounts, domains]) => {
-      const accName = {}; (Array.isArray(accounts) ? accounts : []).forEach(a => { accName[a.account_id] = a.name; });
+      const accName = {}; (Array.isArray(accounts) ? accounts : []).forEach(a => { accName[a.account_id] = this.decodeHtml(a.name); });
       this.LABEL_META = {};
       // Raw fleet totals for the home "Fleet at a glance" card (the FLEET
       // records store display-formatted strings, so accumulate here).
@@ -66,7 +66,7 @@ Object.assign(Component.prototype, {
           plugins: {}, home_url: x.home_url, screenshot: x.screenshot,
           environmentsRaw: x.environments || [] };
       });
-      this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: a.name,
+      this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: this.decodeHtml(a.name),
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
         domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true,
         due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));

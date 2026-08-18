@@ -1811,7 +1811,7 @@ class Component extends DCLogic {
         .map(d => ({ ...d, open: () => { if (d.did) this.openDomain(d.did); } })),
       dGoDomains: () => this.setState({ route: 'domains' }),
       sharedRows: (real && real.sharedWith
-        ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: a.name, accId: String(a.account_id),
+        ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: this.decodeHtml(a.name), accId: String(a.account_id),
             isCust: !!(real.site && String(real.site.customer_id) === String(a.account_id)),
             isBill: !!(real.site && String(real.site.account_id) === String(a.account_id)) })),
            ...(s.shared || [])]
@@ -2372,6 +2372,17 @@ class Component extends DCLogic {
         : String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' });
       return r * cur.d;
     });
+  }
+
+  // WP kses/ent2ncr stores "&" as &#038;. Interpolated text then shows the
+  // entity literally. Decode before putting names on screen.
+  decodeHtml(s) {
+    if (s == null) return '';
+    const t = String(s);
+    if (!/[<&>]|&#/.test(t)) return t;
+    const el = document.createElement('textarea');
+    el.innerHTML = t;
+    return el.value;
   }
 
   ctxCopy(text, label) {

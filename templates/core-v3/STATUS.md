@@ -1577,6 +1577,12 @@ Copy mark still flips to `Copied ✓`. Password rows keep a Show/Hide
 control (stopPropagation) so reveal is no longer tied to clicking the
 masked value.
 
+### Account names decode WP entities (2026-08-18)
+Site Overview → Accounts card (and the Accounts list/detail) showed
+`&#038;` literally because WordPress stores `&` as that entity and the
+interpolated text then escaped the ampersand. `decodeHtml()` runs at
+hydrate / shared-with / account-detail so the name renders as `&`.
+
 ### Theme: System / Light / Dark (2026-08-18)
 Topbar theme button matches Minn Admin. Preference is `light` | `dark` |
 `system` in `captaincore-theme`. Click still flips light ↔ dark (from

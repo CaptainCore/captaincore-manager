@@ -156,7 +156,7 @@ Object.assign(Component.prototype, {
   // Refetch /accounts/ into this.ACCOUNTS (mirrors data.js hydrate mapping).
   reloadAccounts() {
     return this.api('/accounts/').then(accounts => {
-      this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: a.name,
+      this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: this.decodeHtml(a.name),
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
         domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true,
         due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));
@@ -255,7 +255,7 @@ Object.assign(Component.prototype, {
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
     return {
-      accName: a.name || (acc.loading ? 'Loading…' : 'Account'),
+      accName: this.decodeHtml(a.name) || (acc.loading ? 'Loading…' : 'Account'),
       accMeta: [plan.name, (metrics.users || 0) + ' users', (metrics.sites || 0) + ' sites',
         (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
         + (acc.err ? ' · ' + acc.err : ''),
@@ -266,7 +266,7 @@ Object.assign(Component.prototype, {
       // CLI's background "account delete" cleanup.
       accShowDelete: (window.CC_BOOT || {}).dcRole === 'operator',
       accDelete: () => {
-        if (!confirm('Delete account "' + (a.name || '') + '"? This cannot be undone.')) return;
+        if (!confirm('Delete account "' + (this.decodeHtml(a.name) || '') + '"? This cannot be undone.')) return;
         this.api('/accounts/' + acc.accountId, { method: 'DELETE' }).then(() => {
           this.ACCOUNTS = this.ACCOUNTS.filter(x => x.id !== String(acc.accountId));
           this._account = null;
