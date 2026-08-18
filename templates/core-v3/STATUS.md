@@ -1576,3 +1576,14 @@ affordance: the whole row is the hit target (`cursor:pointer`, hover
 Copy mark still flips to `Copied ✓`. Password rows keep a Show/Hide
 control (stopPropagation) so reveal is no longer tied to clicking the
 masked value.
+
+### Theme: System / Light / Dark (2026-08-18)
+Topbar theme button matches Minn Admin. Preference is `light` | `dark` |
+`system` in `captaincore-theme`. Click still flips light ↔ dark (from
+System it locks the opposite of the current OS paint). Right-click opens
+the existing ctx menu: System, Light, Dark, with a check + brand-ink on
+the current pick. System follows `prefers-color-scheme` live. First visit
+(no stored key) persists System; existing light/dark locks are left
+alone. Icon shows the preference (half-circle / sun / moon), not the
+next-toggle glyph. A head pre-paint script in `core-v3.php` applies the
+resolved surface before first paint.

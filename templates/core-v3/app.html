@@ -203,8 +203,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--canvas)"></span>
         </sc-if>
       </div>
-      <div onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+      <div onClick="{{ toggleTheme }}" onContextMenu="{{ themeMenu }}" title="{{ themeTitle }}" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+        <sc-if value="{{ themeIsSystem }}" hint-placeholder-val="{{ false }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke-width="0"></path></svg>
+        </sc-if>
+        <sc-if value="{{ themeNotSystem }}" hint-placeholder-val="{{ true }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+        </sc-if>
       </div>
     </header>
     <main style="flex:1;overflow-y:auto;min-width:0">

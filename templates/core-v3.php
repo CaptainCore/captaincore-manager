@@ -101,6 +101,17 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo esc_html( $configurations->name ); ?></title>
+<script>
+try {
+	var stored = localStorage.getItem('captaincore-theme');
+	if (!stored) { localStorage.setItem('captaincore-theme', 'system'); stored = 'system'; }
+	var paint = stored;
+	if (stored !== 'light' && stored !== 'dark') {
+		paint = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+	}
+	document.documentElement.setAttribute('data-theme', paint);
+} catch (e) {}
+</script>
 <?php captaincore_header_content_extracted(); ?>
 <style>
 /* Bundled variable fonts (Minn Admin design language) — no external font requests. */

@@ -2073,9 +2073,16 @@ class Component extends DCLogic {
 
   componentDidMount() {
     const saved = localStorage.getItem('captaincore-theme');
-    const theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    this.setState({ theme });
-    this.applyTheme(theme);
+    const pref = (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    if (!saved) try { localStorage.setItem('captaincore-theme', 'system'); } catch (e) {}
+    this.setState({ theme: pref });
+    this.applyTheme(pref);
+    try {
+      this._themeMq = window.matchMedia('(prefers-color-scheme: dark)');
+      this._onThemeMq = () => { if (this.themePref() === 'system') this.applyTheme('system'); };
+      if (this._themeMq.addEventListener) this._themeMq.addEventListener('change', this._onThemeMq);
+      else if (this._themeMq.addListener) this._themeMq.addListener(this._onThemeMq);
+    } catch (e) {}
     this.applyBrand();
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
@@ -2112,7 +2119,13 @@ class Component extends DCLogic {
         ? (j.pct >= 100 ? { ...j, state: 'done', right: 'just now', pct: 100 } : { ...j, pct: Math.min(100, j.pct + 3 + Math.random() * 7) })
         : j) })), 1800);
   }
-  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); if (this._bulkTimer) clearInterval(this._bulkTimer); }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); if (this._bulkTimer) clearInterval(this._bulkTimer);
+    if (this._themeMq && this._onThemeMq) {
+      if (this._themeMq.removeEventListener) this._themeMq.removeEventListener('change', this._onThemeMq);
+      else if (this._themeMq.removeListener) this._themeMq.removeListener(this._onThemeMq);
+    }
+  }
   componentDidUpdate() {
     this.applyBrand();
     if (this._routerReady) this.syncUrl();
@@ -2143,7 +2156,44 @@ class Component extends DCLogic {
     this._ddCatWas = this.state.ddCat;
   }
 
-  applyTheme(t) { document.documentElement.dataset.theme = t; }
+  osTheme() {
+    try { return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    catch (e) { return 'light'; }
+  }
+
+  themePref() {
+    const t = this.state.theme;
+    return (t === 'light' || t === 'dark' || t === 'system') ? t : 'system';
+  }
+
+  applyTheme(pref) {
+    const p = (pref === 'light' || pref === 'dark' || pref === 'system') ? pref : this.themePref();
+    document.documentElement.dataset.theme = p === 'system' ? this.osTheme() : p;
+  }
+
+  setThemePref(pref) {
+    const p = (pref === 'light' || pref === 'dark') ? pref : 'system';
+    try { localStorage.setItem('captaincore-theme', p); } catch (e) {}
+    this.setState({ theme: p });
+    this.applyTheme(p);
+  }
+
+  toggleTheme() {
+    // Click is light ↔ dark only. System stays a right-click pick. From
+    // System, flip whatever the OS is showing now and lock that.
+    const now = this.themePref() === 'system' ? this.osTheme() : this.themePref();
+    this.setThemePref(now === 'light' ? 'dark' : 'light');
+  }
+
+  openThemeMenu(e) {
+    const cur = this.themePref();
+    const mark = (id, label) => (cur === id ? '✓ ' : '') + label;
+    this.openCtxMenu(e, [
+      { label: mark('system', 'System'), active: cur === 'system', act: () => this.setThemePref('system') },
+      { label: mark('light', 'Light'), active: cur === 'light', act: () => this.setThemePref('light') },
+      { label: mark('dark', 'Dark'), active: cur === 'dark', act: () => this.setThemePref('dark') }
+    ]);
+  }
 
   // Timeline composer submits, shared by the buttons and the ⌘⏎ handler.
   submitTlDraft() {
@@ -2617,17 +2667,23 @@ class Component extends DCLogic {
       // picker already only lists their FLEET.
       termShow: true,
       paletteOpen: s.paletteOpen, palQuery: s.palQuery, palResults,
-      themeIcon: (s.theme === 'dark')
+      themePref: this.themePref(),
+      themeIsSystem: this.themePref() === 'system',
+      themeNotSystem: this.themePref() !== 'system',
+      themeIcon: this.themePref() === 'light'
         ? 'M12 4V2m0 20v-2M4 12H2m20 0h-2M5.6 5.6 4.2 4.2m15.6 15.6-1.4-1.4m0-12.8 1.4-1.4M4.2 19.8l1.4-1.4M12 7a5 5 0 100 10 5 5 0 000-10z'
         : 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
-      toggleTheme: () => { const t = this.state.theme === 'dark' ? 'light' : 'dark'; this.setState({ theme: t }); this.applyTheme(t); localStorage.setItem('captaincore-theme', t); },
+      themeTitle: 'Theme: ' + ({ system: 'System', light: 'Light', dark: 'Dark' }[this.themePref()] || 'System')
+        + ' (click to switch light and dark, right-click for options)',
+      toggleTheme: () => this.toggleTheme(),
+      themeMenu: (e) => this.openThemeMenu(e),
       toasts: this.toastVals(),
       goHome: this.go('home'), goSites: this.go('sites'), goActivity: this.go('activity'),
       ctxOpen: !!s.ctxMenu,
       ctxX: s.ctxMenu ? s.ctxMenu.x + 'px' : '0px',
       ctxY: s.ctxMenu ? s.ctxMenu.y + 'px' : '0px',
       ctxEntries: (s.ctxMenu ? s.ctxMenu.entries : []).map(en => ({
-        label: en.label, fg: en.danger ? 'var(--bad)' : 'var(--ink)',
+        label: en.label, fg: en.danger ? 'var(--bad)' : en.active ? 'var(--brand-ink)' : 'var(--ink)',
         run: () => { this.closeCtxMenu(); en.act(); } })),
       ctxClose: () => this.closeCtxMenu(),
       ctxCloseCtx: (e) => { e.preventDefault(); this.closeCtxMenu(); },
