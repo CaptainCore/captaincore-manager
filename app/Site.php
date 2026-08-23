@@ -1383,6 +1383,7 @@ class Site {
         // Fetch relating environments
         $site         = Sites::get( $this->site_id );
         $environments = Environments::fetch_environments( $this->site_id );
+        $is_admin     = ( new User )->is_admin();
         $upload_uri   = rtrim( (string) get_option( 'options_remote_upload_uri' ), '/' );
        
         foreach ( $environments as $environment ) {
@@ -1481,6 +1482,15 @@ class Site {
                 unset( $scheduled_script->user_id );
             }
             $environment->scheduled_scripts = $scheduled_scripts;
+
+            // token is the shared secret the magic-login handshake signs with,
+            // so it is server-only - nothing in the interface reads it from
+            // here. The offload keys are object-storage credentials that only
+            // the administrator environment editor needs.
+            unset( $environment->token );
+            if ( ! $is_admin ) {
+                unset( $environment->offload_access_key, $environment->offload_secret_key );
+            }
         }
 
         return $environments;
