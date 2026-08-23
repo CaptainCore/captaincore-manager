@@ -102,7 +102,7 @@ class ProcessLog {
      * @param array $files            Array of file objects/arrays: path, change_type, hunks[], site_id?
      * @param int   $default_site_id  Site ID applied when a file doesn't specify one.
      */
-    public function assign_files( $files = [], $default_site_id = null ) {
+    public function assign_files( $files = [], $default_site_id = null, $allowed_site_ids = [] ) {
         $process_log_file = new ProcessLogFile();
         foreach ( $process_log_file->where( [ "process_log_id" => $this->process_log_id ] ) as $existing ) {
             $process_log_file->delete( $existing->process_log_file_id );
@@ -150,6 +150,13 @@ class ProcessLog {
             $site_id     = array_key_exists( 'site_id', $file ) && $file['site_id'] !== null && $file['site_id'] !== ''
                 ? (int) $file['site_id']
                 : ( $default_site_id !== null ? (int) $default_site_id : null );
+            // Each file carries its own site_id, which was written as supplied -
+            // the caller's own sites were verified, this was not. Fall back to
+            // the entry's own site when it names one outside that set.
+            if ( $site_id !== null && ! empty( $allowed_site_ids )
+                && ! in_array( $site_id, array_map( 'intval', (array) $allowed_site_ids ), true ) ) {
+                $site_id = $default_site_id !== null ? (int) $default_site_id : null;
+            }
             $process_log_file->insert( [
                 'process_log_id' => $this->process_log_id,
                 'site_id'        => $site_id,

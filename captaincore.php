@@ -1582,6 +1582,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 	$process_log        = (object) $request->get_json_params();
 	$site_ids           = array_column( $process_log->websites, 'site_id' );
+
+	// The permission callback authorizes the id in the route. Writing the one
+	// from the body instead meant a caller could authorize against a log they
+	// own and edit a different one.
+	$process_log_id = intval( $request['id'] );
+	if ( ! empty( $process_log->process_log_id ) && (int) $process_log->process_log_id !== $process_log_id ) {
+		return new WP_Error( 'id_mismatch', 'Log id does not match the route.', [ 'status' => 400 ] );
+	}
 	$process_log_update = [
 		'process_id'   => $process_log->process_id,
 		'user_id'      => get_current_user_id(),
@@ -1594,11 +1602,11 @@ function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 		$process_log_update['created_at']   = $process_log->created_at_raw;
 		$process_log_update['completed_at'] = $process_log->created_at_raw;
 	}
-	( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log->process_log_id ] );
-	( new CaptainCore\ProcessLog( $process_log->process_log_id) )->assign_sites( $site_ids );
+	( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log_id ] );
+	( new CaptainCore\ProcessLog( $process_log_id ) )->assign_sites( $site_ids );
 	if ( isset( $process_log->files ) && is_array( $process_log->files ) ) {
 		$default_site_id = ! empty( $site_ids ) ? (int) $site_ids[0] : null;
-		( new CaptainCore\ProcessLog( $process_log->process_log_id ) )->assign_files( $process_log->files, $default_site_id );
+		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_files( $process_log->files, $default_site_id, $site_ids );
 	}
 	$timelines = [];
 	foreach ( $site_ids as $site_id ) {
@@ -1643,7 +1651,7 @@ function captaincore_process_logs_create_func( WP_REST_Request $request ) {
 	}
 	if ( ! empty( $files ) && is_array( $files ) ) {
 		$default_site_id = ! empty( $site_ids ) ? (int) $site_ids[0] : null;
-		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_files( $files, $default_site_id );
+		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_files( $files, $default_site_id, $site_ids );
 	}
 	$timelines = [];
 	foreach ( (array) $site_ids as $site_id ) {
@@ -7503,6 +7511,9 @@ function captaincore_register_rest_endpoints() {
 				// Check if user is admin or owns the log entry
 				$user        = new CaptainCore\User();
 				$existing_log = ( new CaptainCore\ProcessLogs )->get( $request['id'] );
+				if ( empty( $existing_log ) ) {
+					return new WP_Error( 'not_found', 'Log entry not found.', [ 'status' => 404 ] );
+				}
 				if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
 					return new WP_Error( 'permission_denied', 'You can only edit your own log entries.', [ 'status' => 403 ] );
 				}
