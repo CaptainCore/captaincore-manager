@@ -1277,6 +1277,18 @@ class Kinsta {
         // Get the apex domain
         $apex_domain = ( new \CaptainCore\Domains )->get_domain( $domain_name );
 
+        // The zone below is chosen by matching that apex against every zone the
+        // fleet hosts, which says nothing about who owns it. Writing the
+        // verification records into a zone the caller does not hold would
+        // publish them in another tenant's authoritative DNS and let their
+        // hostname verify against this environment. The hostname itself is not
+        // checked when it is added, so the check belongs here.
+        $domain_rows = ( new \CaptainCore\Domains )->where( [ "name" => $apex_domain ] );
+        $domain_row  = ! empty( $domain_rows ) ? $domain_rows[0] : null;
+        if ( empty( $domain_row->domain_id ) || ! ( new \CaptainCore\Domains )->verify( $domain_row->domain_id ) ) {
+            return;
+        }
+
         // Look up Constellix zone
         $constellix_domains = \CaptainCore\Remote\Constellix::all( 'domains' );
         if ( empty( $constellix_domains ) ) {
