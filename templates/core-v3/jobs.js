@@ -106,7 +106,7 @@ Object.assign(Component.prototype, {
     this.setState(st => ({ jobs: st.jobs.map(j => j.id === id ? { ...j, ...(typeof patch === 'function' ? patch(j) : patch) } : j) }));
   },
 
-  JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave',
+  JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave', 'new-site': 'Provision site',
     'create-user': 'Create user', 'delete-user': 'Delete user',
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
     'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy' },

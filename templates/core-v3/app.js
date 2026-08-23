@@ -671,15 +671,20 @@ class Component extends DCLogic {
   }
 
   computeSettings(s) {
-    const tabs = [['branding', 'Branding'], ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']].map(([id, label]) => ({ label,
-      fg: s.setTab === id ? 'var(--ink)' : 'var(--ink-dim)',
-      bg: s.setTab === id ? 'var(--panel-2)' : 'transparent',
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
+    // Branding is operator-only (the save route PUT /configurations/global is
+    // admin-gated server-side; the controls hide too). Customers landing on the
+    // default 'branding' tab fall through to Providers.
+    const tab = (!isOp && s.setTab === 'branding') ? 'providers' : s.setTab;
+    const tabs = [...(isOp ? [['branding', 'Branding']] : []), ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']].map(([id, label]) => ({ label,
+      fg: tab === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: tab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ setTab: id }) }));
     const keys = s.sshKeys || this.KEYS_INIT;
     return {
       setTabs: tabs,
-      setTabBrand: s.setTab === 'branding', setTabProv: s.setTab === 'providers', setTabDef: s.setTab === 'defaults',
-      setTabKeys: s.setTab === 'keys', setTabCook: s.setTab === 'cookbook', setTabHand: s.setTab === 'handbook',
+      setTabBrand: isOp && tab === 'branding', setTabProv: tab === 'providers', setTabDef: tab === 'defaults',
+      setTabKeys: tab === 'keys', setTabCook: tab === 'cookbook', setTabHand: tab === 'handbook',
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
       brandSwatches: [['primary', '#3b82c4'], ['success', '#22a06b'], ['warning', '#d9a406'], ['error', '#d94a3d'], ['accent', '#7c5cff']].map(([k, c]) => ({ k, c, on: () => {} })),
       brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
@@ -717,6 +722,9 @@ class Component extends DCLogic {
       onRecipeTitle: () => {}, onRecipeContent: () => {}, recipePublicBg: 'var(--rule)', recipePublicJust: 'flex-start',
       toggleRecipePublic: () => {}, newRecipe: () => {}, closeRecipeDlg: () => {}, saveRecipe: () => {}, deleteRecipe: () => {},
       procDlgOpen: false, procDlgName: '', procDlgBody: '', closeProcDlg: () => {},
+      procEditOpen: false, procName: '', procTime: '', procQty: '', procRepeatLabel: 'As needed', procRepeatOpen: false,
+      procRepeatToggle: () => {}, procRepeatOpts: [], procDescRef: () => {}, onProcDesc: () => {},
+      onProcName: () => {}, onProcTime: () => {}, onProcQty: () => {}, closeProcEdit: () => {}, saveProcess: () => {},
       defDlgOpen: false, defEmail: '', defTimezone: '', onDefEmail: () => {}, onDefTimezone: () => {},
       openDefaults: () => {}, closeDefaults: () => {}, saveDefaults: () => {},
       defRecipeChips: [], defUserRows: [], addDefUser: () => {},
@@ -1108,6 +1116,34 @@ class Component extends DCLogic {
       pick: () => this.setState({ [key]: label, ddOpen: '', ddQ: '' }) }));
   }
 
+  // The Escape close-everything patch: every modal dialog's open flag — or the
+  // state key its open flag DERIVES from (qsDialog→qsDialogOpen, bpPid→bpOpen,
+  // esId→esOpen, plfUid→plfShow, deployConfirm→depOpen, rgHash→rgOpen,
+  // toolDlg→th/tl/tm/tnOpen). A NEW dialog must add its key here or Escape
+  // won't cancel it. Closing is always a cancel — no dialog saves on close.
+  closeAllDialogs() {
+    return {
+      paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
+      ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
+      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false,
+      bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
+      // Settings
+      provDlgOpen: false, recipeDlgOpen: false, defDlgOpen: false, procDlgOpen: false, procEditOpen: false,
+      // Terminal schedule + public-recipe confirm
+      schedOpen: false, crRecipe: 0,
+      // Profile / billing
+      sessModalOpen: false, billAddrOpen: false, cardDlgOpen: false, achDlgOpen: false, verifyDlgOpen: false,
+      // Site detail
+      nsuOpen: false, dsuOpen: false, asgOpen: false, edsOpen: false, eeOpen: false,
+      aaOpen: false, shareDlgOpen: false, udOpen: false, fmViewOpen: false,
+      pmOpen: false, plfUid: 0, esId: 0,
+      // Reports / accounts / domains
+      repPreviewOpen: false, schedEditOpen: false, transferOpen: false,
+      mgSuppOpen: false, mgDeployOpen: false,
+      ctxMenu: null
+    };
+  }
+
   // Dialog dropdowns: position:fixed panel anchored to the toggle's rect, so it
   // overlays instead of pushing content and escapes the dialog's overflow clip
   // (in-flow panels shift the form; absolute ones clip against the scrolling
@@ -1296,6 +1332,15 @@ class Component extends DCLogic {
       this.toast(`Site ${name} is being created at Kinsta — it will appear in the fleet once provisioned`, { kind: 'success' });
       this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsClone: 'None (fresh install)',
         nsShared: [], nsCustomerId: '', nsBillingId: '' });
+      // Progress tracking: a manual dock job (no daemon token — finished by
+      // nsProgressDone) that pollProviderActions streams provisioning steps
+      // into. expand opens the console so the remote API progress is visible.
+      const jobId = this.startJob({ label: 'new-site', target: name + ' · Kinsta ' + st.nsDc, command: 'new-site', expand: true });
+      const job = this._jobObjs[jobId];
+      job.stream.push('Kinsta accepted the request' + (site.clone_site_id ? ' — cloning from ' + st.nsClone : '') + '.');
+      job.stream.push('Waiting for the Kinsta operation to start…');
+      this._nsJobs = this._nsJobs || {};
+      this._nsJobs[name] = jobId;
       this.pollProviderActions();
     }).catch(() => this.setState({ nsBusy: false, nsErrors: ['Request failed — try again'] }));
   }
@@ -1312,13 +1357,24 @@ class Component extends DCLogic {
     if (this._paTimer) { clearTimeout(this._paTimer); this._paTimer = null; }
     this.api('/provider-actions/check').then(list => {
       list = Array.isArray(list) ? list : [];
+      // Console progress for new-site chains: one dock-job line per state
+      // change, and a wrap-up for any tracked chain that left the queue.
+      const nsRows = list.filter(a => (a.action || {}).command === 'new-site');
+      nsRows.forEach(a => this.nsProgress(a));
+      const nsNames = new Set(nsRows.map(a => (a.action || {}).name));
+      Object.keys(this._nsJobs || {}).forEach(n => { if (!nsNames.has(n)) this.nsProgressGone(n); });
       const chain = list.filter(a => a.status === 'waiting').reduce((p, a) => p.then(() =>
         this.api('/provider-actions/' + a.provider_action_id + '/run').then(active => {
           const act = a.action || {};
-          const still = (Array.isArray(active) ? active : []).some(x => x.provider_action_id === a.provider_action_id);
+          const activeList = Array.isArray(active) ? active : [];
+          const still = activeList.some(x => x.provider_action_id === a.provider_action_id);
+          // run() advanced the chain — report the fresh step right away
+          // instead of waiting out the next 10s poll.
+          activeList.filter(x => (x.action || {}).command === 'new-site').forEach(x => this.nsProgress(x));
           if (!still && act.command === 'new-site') {
             const dcTitle = (NS_DATACENTERS.find(d => d.value === act.datacenter) || {}).title || act.datacenter;
             this.toast(`New site ${act.name} created at Kinsta's ${dcTitle} datacenter`, { kind: 'success' });
+            this.nsProgressDone(act.name, dcTitle);
             if (this.hydrate) this.hydrate();
           }
           // The deploy-to-staging chain's last step links the new environment
@@ -1330,6 +1386,60 @@ class Component extends DCLogic {
         }).catch(() => {})), Promise.resolve());
       chain.then(() => { if (list.length) this._paTimer = setTimeout(() => this.pollProviderActions(), 10000); });
     }).catch(() => {});
+  }
+
+  // ── New-site provisioning progress (console) ──────────────────
+  // One dock-job line per state change of the provider-action chain. Jobs are
+  // keyed by site name on this._nsJobs (createKinstaSite seeds one; a chain
+  // resumed after a reload recreates its row here, mini-mode). The action's
+  // `step` field names the remote API call currently being tracked.
+  nsProgress(a) {
+    const act = a.action || {};
+    const name = act.name || 'site';
+    this._nsJobs = this._nsJobs || {};
+    this._jobObjs = this._jobObjs || {};
+    let jobId = this._nsJobs[name];
+    let job = jobId && this._jobObjs[jobId];
+    if (!job) {
+      jobId = this.startJob({ label: 'new-site', target: name + ' · Kinsta', command: 'new-site' });
+      job = this._jobObjs[jobId];
+      this._nsJobs[name] = jobId;
+      job.stream.push('Resumed tracking — provisioning already underway.');
+    }
+    const key = (a.status || '') + '|' + (act.step || '') + '|' + (a.provider_key || '');
+    if (job._paKey === key) return; // nothing changed since the last poll
+    job._paKey = key;
+    if (a.status === 'started') {
+      const labels = {
+        '': 'Kinsta is building the WordPress install (operation ' + (a.provider_key || 'queued') + ')…',
+        disable_edge_caching: 'Site record created in CaptainCore — disabling edge caching at Kinsta…',
+        set_image_optimization: 'Enabling lossless image optimization at Kinsta…'
+      };
+      job.stream.push(labels[act.step || ''] || ('Waiting on Kinsta operation ' + (a.provider_key || '') + '…'));
+    }
+    if (a.status === 'waiting') job.stream.push('✓ Kinsta operation complete — running the next provisioning step…');
+    this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 6) + 8) }));
+  }
+
+  nsProgressDone(name, dcTitle) {
+    const jobId = (this._nsJobs || {})[name];
+    const job = jobId && this._jobObjs ? this._jobObjs[jobId] : null;
+    delete (this._nsJobs || {})[name];
+    if (!job) return;
+    job.stream.push('✓ ' + name + " provisioned at Kinsta's " + dcTitle + ' datacenter. Site data sync is running in the background.');
+    this.finishJob(job, 'done');
+  }
+
+  // The action left the queue without this browser running its final step —
+  // another session finished it, or the server marked it failed after repeated
+  // provider errors. Say so rather than leaving the job spinning forever.
+  nsProgressGone(name) {
+    const jobId = (this._nsJobs || {})[name];
+    const job = jobId && this._jobObjs ? this._jobObjs[jobId] : null;
+    delete (this._nsJobs || {})[name];
+    if (!job) return;
+    job.stream.push('The provisioning action left the queue (finished elsewhere or marked failed by the server). Check Sites for ' + name + '.');
+    this.finishJob(job, 'done');
   }
 
   openDomain(id) {
@@ -2106,7 +2216,14 @@ class Component extends DCLogic {
       // the terminal is open, so this only fires on the Timeline tab).
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlEditEl) { e.preventDefault(); this.submitTlEdit(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlDraftEl) { e.preventDefault(); this.submitTlDraft(); }
-      else if (e.key === 'Escape') { if (this.state.rbComp) this.setState({ rbComp: '' }); else this.setState({ paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '', ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '' }); }
+      // Escape peels one layer at a time: rollback sub-dialog → open dropdown →
+      // context menu → every dialog (closeAllDialogs).
+      else if (e.key === 'Escape') {
+        if (this.state.rbComp) this.setState({ rbComp: '' });
+        else if (this.state.ddOpen) this.setState({ ddOpen: '', ddQ: '' });
+        else if (this.state.ctxMenu) this.setState({ ctxMenu: null });
+        else this.setState(this.closeAllDialogs());
+      }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
       else if (this.state.paletteOpen && e.key === 'Enter') { const r = this.filteredPal(this.state.palQuery)[this.state.palIdx]; if (r) this.runPal(r); }

@@ -3,8 +3,9 @@
 //   · target picker (@) — search + checkbox multi-select over every fleet
 //     environment (FLEET[].environmentsRaw carries environment_id/home_url);
 //     with nothing selected it falls back to the open site's current env.
-//   · cookbook (book icon) — GET /recipes once, search, click inserts the
-//     recipe content into the input for review (v3 never auto-runs).
+//   · cookbook (book icon) — GET /recipes once, search. A PRIVATE recipe
+//     inserts its content into the input for review; a PUBLIC (system) recipe
+//     opens a Run confirm instead — its code is never shown (v1 parity).
 //   · multiline auto-growing textarea — Enter = newline, ⌘⏎ = run. The DC
 //     runtime binds value like defaultValue, so the run path clears the
 //     textarea through this._termEl directly.
@@ -137,6 +138,42 @@ Object.assign(Component.prototype, {
     }
   },
 
+  // Public (system) recipes never land in the input — picking one opens a
+  // confirm naming the recipe + targets, and Run dispatches the stored content
+  // directly (v1 parity: v1 runs public recipes immediately behind a confirm).
+  // Private recipes keep the insert-for-review behavior.
+  confirmRecipeRun(r) {
+    if (!this._hydrated) return;
+    if (!this.resolveTermTargets().length) {
+      this.setState({ tpOpen: true, cookOpen: false });
+      this.toast('Pick target environments first', { kind: 'info' });
+      return;
+    }
+    this.setState({ crRecipe: r.recipe_id, cookOpen: false, cookQ: '' });
+  },
+
+  // termRun's dispatch path minus the textarea: same session model, same
+  // POST /run/code, but the scrollback echoes the recipe NAME, not its code.
+  runRecipeNow() {
+    const r = (this._recipes || []).find(x => String(x.recipe_id) === String(this.state.crRecipe));
+    this.setState({ crRecipe: 0 });
+    if (!r || !this._hydrated) return;
+    const targets = this.resolveTermTargets();
+    if (!targets.length) { this.setState({ tpOpen: true }); return; }
+    const where = targets.length === 1 ? targets[0].label : targets.length + ' environments';
+    const sessionKey = targets.map(t => String(t.id)).sort().join(',');
+    const title = r.title || 'recipe';
+    const target = (title.length > 42 ? title.slice(0, 42) + '…' : title) + ' · ' + where;
+    const dispatch = () => this.api('/run/code', { method: 'POST',
+      body: { environments: targets.map(t => Number(t.id) || t.id), code: r.content || '' } });
+    const echo = '[recipe] ' + title;
+    const session = this.sessionJobFor(sessionKey);
+    if (session) { this.runInSession(session, { cmd: echo, target, dispatch }); return; }
+    const id = this.startJob({ label: 'run', expand: true, session: sessionKey, where, target, command: 'run', dispatch });
+    const job = this._jobObjs && this._jobObjs[id];
+    if (job) job.stream.push('$ ' + echo);
+  },
+
   computeTermVals(s) {
     const targets = this._hydrated ? this.resolveTermTargets() : [];
     const selSet = new Set(s.termSel || []);
@@ -157,7 +194,8 @@ Object.assign(Component.prototype, {
     const cookResults = (cq ? recipes.filter(r => (r.title || '').toLowerCase().includes(cq)) : recipes)
       .slice(0, 60).map(r => ({ ...r,
         sub: r.public == 1 ? 'public recipe' : 'private',
-        pick: () => this.insertRecipe(r) }));
+        pick: () => r.public == 1 ? this.confirmRecipeRun(r) : this.insertRecipe(r) }));
+    const crRecipe = s.crRecipe ? recipes.find(x => String(x.recipe_id) === String(s.crRecipe)) : null;
     return {
       termCmd: s.termCmd || '',
       // The textarea has no value binding (the DC runtime treats value like
@@ -217,12 +255,23 @@ Object.assign(Component.prototype, {
       tpCount: selSet.size + ' selected',
       tpResults,
       cookOpen: s.cookOpen, cookQ: s.cookQ || '',
+      // Autofocus the search on popup open. The flag lives on the DOM node
+      // (same trick as termRef's _seeded): re-renders re-invoke the ref with
+      // the SAME node and must not steal focus back mid-typing; a fresh open
+      // mounts a fresh node and focuses again.
+      cookQRef: (el) => { if (el && !el._focused) { el._focused = true; el.focus(); } },
       cookToggle: () => { this.setState(st => ({ cookOpen: !st.cookOpen, tpOpen: false, cookQ: '' })); this.loadRecipes(); },
       cookClose: () => this.setState({ cookOpen: false }),
       onCookQ: e => this.setState({ cookQ: e.target.value }),
       cookResults,
       cookEmpty: !recipes.length && !this._recipesLoading,
-      cookLoading: !!this._recipesLoading
+      cookLoading: !!this._recipesLoading,
+      // Public-recipe run confirm
+      crOpen: !!crRecipe,
+      crTitle: crRecipe ? (crRecipe.title || 'recipe') : '',
+      crTargets: targets.length === 1 ? targets[0].label : targets.length + ' environments',
+      crClose: () => this.setState({ crRecipe: 0 }),
+      crGo: () => this.runRecipeNow()
     };
   }
 

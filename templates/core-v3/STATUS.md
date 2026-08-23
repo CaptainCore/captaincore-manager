@@ -766,7 +766,6 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   editing are DONE — see the Edit-site section above.)
 - **Domains**: Mailgun "View all logs →" pager. (Deploy-to-site and suppressions
   are DONE — see the Sending-tab parity section below.)
-- **Handbook**: process Edit (`PUT /processes/{id}` proxies to the CLI dispatch server).
 - Gated-off-on-real: "Access as" (User Switching plugin — no per-user REST route),
   provider Import wizard, archive Delete (no v1 route).
 
@@ -817,8 +816,7 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
 ### Known nits
 - `/sites` list records carry no theme/plugin/update data, so those Sites-list filters
   render empty until wired to `/filters/sites`.
-- Terminal: v1's extras not yet ported — save-input-as-recipe, schedule-command, and
-  fullscreen mode. Public recipes insert (v1 runs them immediately with a confirm).
+- Terminal: v1's extras not yet ported — save-input-as-recipe and fullscreen mode.
   Fleet envs without a cached `environment_id` (stale sync) don't appear in the @ picker.
 
 ### 2026-07-16 evening round
@@ -1589,6 +1587,52 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 `&#038;` literally because WordPress stores `&` as that entity and the
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
+
+### UX round: dialogs, cookbook, defaults, handbook, new-site progress (2026-08-22)
+Seven fixes from a screenshot review, all verified live headless (28 checks):
+
+- **Branding is operator-only.** `computeSettings` derives isOp and drops the
+  Branding tab + pane for customers (a customer sitting on the default
+  'branding' state falls through to Providers). The save route was already
+  admin-gated server-side; this closes the UI side.
+- **Escape cancels every dialog.** New `closeAllDialogs()` on the Component
+  class holds the one canonical patch — every modal's open flag or the state
+  key its flag DERIVES from (qsDialog, bpPid, esId, plfUid, deployConfirm,
+  rgHash, toolDlg…). **A new dialog must add its key there** or Escape won't
+  cancel it. Escape peels one layer at a time: rollback sub-dialog → open
+  `ddOpen` dropdown → context menu → all dialogs, so Esc inside a dialog's
+  dropdown closes just the dropdown (verified).
+- **Cookbook popup autofocuses its search** (`cookQRef`, focus flag on the DOM
+  node so re-renders can't steal focus mid-typing — the termRef trick).
+- **Public recipes never reveal their code.** Picking a public recipe in the
+  terminal cookbook opens a Run-recipe confirm (recipe + target set named)
+  instead of inserting; Run dispatches the stored content through the normal
+  session job path and the scrollback echoes `$ [recipe] <title>`, not the
+  code (v1 ran public recipes behind a confirm; private recipes still insert
+  for review). The admin Settings › Cookbook tab is unchanged — editors see
+  code there anyway.
+- **Site defaults default-users editor**: added the missing Last-name input,
+  and Role became a pick list (v1's roles vocabulary — lowercase value,
+  capitalized label, `WP_ROLES` in settings.js) using the anchored-fixed
+  `ddToggleAt` dropdown pattern, one `defRole{i}` key per row.
+- **New-site provisioning streams progress into the console.** Create on
+  Kinsta starts a manual dock job (expand) and `pollProviderActions` pushes
+  one line per provider-action state change (`nsProgress`, deduped via a
+  status|step|operation key on the job): building WP install (operation id) →
+  site record created / disabling edge caching → image optimization →
+  `✓ provisioned at <datacenter>` + finishJob. A chain resumed after a reload
+  recreates its row mini-mode ("Resumed tracking…"); a chain that leaves the
+  queue without this browser running its final step ends with an honest
+  wrap-up line (`nsProgressGone`) instead of spinning forever. Jobs keyed by
+  site name on `this._nsJobs`.
+- **Handbook rows are fully clickable and editable.** Row click opens the
+  viewer (hover affordance); a per-row Edit link (stopPropagation) opens the
+  new Edit-process dialog — v1's exact contract: `GET /processes/{id}/raw`
+  seeds name / time estimate / repeat (fixed `PROC_REPEAT` vocabulary) /
+  quantity / markdown description (textarea seeded via ref keyed by
+  process_id), and Save PUTs the raw object back with edits applied, so
+  role/created_at/user_id ride through untouched. **Roles have no picker yet**
+  — the `captaincore_process_roles` vocabulary has no REST surface.
 
 ### Theme: System / Light / Dark (2026-08-18)
 Topbar theme button matches Minn Admin. Preference is `light` | `dark` |

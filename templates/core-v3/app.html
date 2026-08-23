@@ -2738,10 +2738,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ setTabHand }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ handRows }}" as="h" hint-placeholder-count="4">
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule)">
+                <div onClick="{{ h.view }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="font:500 14px var(--sans)">{{ h.name }}</span>
                   <span style="font:400 12px var(--sans);color:var(--ink-dim)">updated {{ h.updated }}</span>
                   <div style="flex:1"></div>
+                  <span onClick="{{ h.edit }}" style="font:500 12px var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Edit</span>
                   <span onClick="{{ h.view }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
                 </div>
               </sc-for>
@@ -2982,7 +2983,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div onClick="{{ cookClose }}" style="position:fixed;inset:0;z-index:64"></div>
               <div style="position:absolute;bottom:calc(100% + 10px);right:10px;z-index:65;width:360px;background:var(--paper);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .12s ease">
                 <div style="padding:10px 10px 8px;border-bottom:1px solid var(--rule)">
-                  <input value="{{ cookQ }}" onInput="{{ onCookQ }}" placeholder="Search cookbook…" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px var(--mono);padding:0 10px;outline:none">
+                  <input ref="{{ cookQRef }}" value="{{ cookQ }}" onInput="{{ onCookQ }}" placeholder="Search cookbook…" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 12.5px var(--mono);padding:0 10px;outline:none">
                 </div>
                 <div style="max-height:250px;overflow-y:auto;padding:4px">
                   <sc-if value="{{ cookLoading }}" hint-placeholder-val="{{ false }}">
@@ -3085,6 +3086,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
           <button onClick="{{ schedClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
           <button onClick="{{ schedConfirm }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ schedLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Run public recipe confirm (terminal.js) — the recipe's code is never shown ══ -->
+  <sc-if value="{{ crOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ crClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:75;display:flex;justify-content:center;align-items:flex-start;padding:16vh 20px">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--rule);font:700 15px var(--sans)">Run recipe</div>
+        <div style="padding:16px 18px">
+          <div style="font:400 13px/1.6 var(--sans)">Run <b>{{ crTitle }}</b> on <b>{{ crTargets }}</b>?</div>
+          <div style="font:400 12px/1.6 var(--sans);color:var(--ink-dim);margin-top:7px">This is a system recipe — it runs as stored and its output streams to the console below.</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ crClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
+          <button onClick="{{ crGo }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Run</button>
         </div>
       </div>
     </div>
@@ -4355,6 +4373,49 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
 
+  <!-- ══ Handbook process edit dialog (v1 parity: /processes/{id}/raw → PUT) ══ -->
+  <sc-if value="{{ procEditOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeProcEdit }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:680px;max-width:calc(100vw - 40px);max-height:86vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper);z-index:1">
+          <span style="font:600 15px var(--sans)">Edit process</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeProcEdit }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Name</span><input value="{{ procName }}" onInput="{{ onProcName }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 13px var(--sans);padding:0 9px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:110px;font:500 12.5px var(--sans);color:var(--ink-dim)">Time estimate</span>
+            <input value="{{ procTime }}" onInput="{{ onProcTime }}" placeholder="15 minutes" style="width:130px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
+            <span style="font:500 12.5px var(--sans);color:var(--ink-dim);margin-left:8px">Repeat</span>
+            <div style="width:130px">
+              <div onClick="{{ procRepeatToggle }}" style="display:flex;align-items:center;gap:6px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 9px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:400 12.5px var(--sans);flex:1">{{ procRepeatLabel }}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <sc-if value="{{ procRepeatOpen }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <sc-for list="{{ procRepeatOpts }}" as="o" hint-placeholder-count="5">
+                    <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 12.5px var(--sans)">{{ o.label }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <span style="font:500 12.5px var(--sans);color:var(--ink-dim);margin-left:8px">Quantity</span>
+            <input value="{{ procQty }}" onInput="{{ onProcQty }}" placeholder="2" style="width:60px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12.5px var(--sans);padding:0 9px;outline:none">
+          </div>
+          <div>
+            <div style="font:500 12px var(--sans);color:var(--ink-dim);margin-bottom:6px">Description <span style="font-weight:400">· Markdown enabled</span></div>
+            <textarea ref="{{ procDescRef }}" onInput="{{ onProcDesc }}" rows="14" spellcheck="false" style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 12.5px/1.6 var(--mono);padding:10px 12px;outline:none;resize:vertical;min-height:200px"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);position:sticky;bottom:0;background:var(--paper)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeProcEdit }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveProcess }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save process</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Site defaults edit dialog ══ -->
   <sc-if value="{{ defDlgOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeDefaults }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
@@ -4383,7 +4444,16 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <input value="{{ u.username }}" onInput="{{ u.onUsername }}" placeholder="username" style="width:120px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none">
                 <input value="{{ u.email }}" onInput="{{ u.onEmail }}" placeholder="email" style="flex:1;min-width:120px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--mono);padding:0 8px;outline:none">
                 <input value="{{ u.first_name }}" onInput="{{ u.onFirst }}" placeholder="first" style="width:80px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none">
-                <input value="{{ u.role }}" onInput="{{ u.onRole }}" placeholder="role" style="width:110px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none">
+                <input value="{{ u.last_name }}" onInput="{{ u.onLast }}" placeholder="last" style="width:80px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 12px var(--sans);padding:0 8px;outline:none">
+                <div onClick="{{ u.roleToggle }}" style="display:flex;align-items:center;gap:6px;width:110px;box-sizing:border-box;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 8px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:400 12px var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.roleLabel }}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                <sc-if value="{{ u.roleOpen }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                    <sc-for list="{{ u.roleOpts }}" as="o" hint-placeholder-count="5">
+                      <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 11px var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 12.5px var(--sans)">{{ o.label }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
                 <span onClick="{{ u.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 13px var(--sans)" style-hover="color:var(--bad)">✕</span>
               </div>
             </sc-for>

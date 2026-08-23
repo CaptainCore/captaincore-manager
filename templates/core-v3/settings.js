@@ -82,7 +82,8 @@ Object.assign(Component.prototype, {
       edit: () => this.openRecipe(r) }));
     const handRows = set.processes.map(h => ({ name: h.name, updated: (h.updated_at || '').slice(0, 10),
       view: () => this.setState({ procDlgOpen: true, procDlgName: h.name,
-        procDlgBody: this.processBodyHtml(h) }) }));
+        procDlgBody: this.processBodyHtml(h) }),
+      edit: (ev) => { ev.stopPropagation(); this.openProcessEdit(h); } }));
     return {
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
       brandSwatches, brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
@@ -103,6 +104,24 @@ Object.assign(Component.prototype, {
       // handbook viewer
       procDlgOpen: s.procDlgOpen, procDlgName: s.procDlgName, procDlgBody: s.procDlgBody,
       closeProcDlg: () => this.setState({ procDlgOpen: false }),
+      // handbook editor (v1 parity: raw fetch → PUT the raw object back).
+      // The description textarea seeds through a ref keyed by process_id — the
+      // DC runtime binds value like defaultValue (the timeline-composer rule).
+      procEditOpen: !!s.procEditOpen,
+      procName: s.procName, onProcName: e => this.setState({ procName: e.target.value }),
+      procTime: s.procTime, onProcTime: e => this.setState({ procTime: e.target.value }),
+      procQty: s.procQty, onProcQty: e => this.setState({ procQty: e.target.value }),
+      procRepeatLabel: (this.PROC_REPEAT.find(r => r[0] === s.procRepeat) || this.PROC_REPEAT[0])[1],
+      procRepeatOpen: s.ddOpen === 'procRepeat',
+      procRepeatToggle: e => this.ddToggleAt('procRepeat', e),
+      procRepeatOpts: this.PROC_REPEAT.map(([val, label]) => ({ label, mark: s.procRepeat === val ? '✓' : '',
+        bg: s.procRepeat === val ? 'var(--brand-soft)' : 'transparent',
+        pick: () => this.setState({ procRepeat: val, ddOpen: '', ddQ: '' }) })),
+      procDescRef: el => { const id = String((this._procEdit || {}).process_id || '');
+        if (el && el._forId !== id) { el._forId = id; el.value = this.state.procDesc || ''; } },
+      onProcDesc: e => this.setState({ procDesc: e.target.value }),
+      closeProcEdit: () => this.setState({ procEditOpen: false }),
+      saveProcess: () => this.saveProcessReal(),
       // site defaults editor (email/timezone + default recipes + default users)
       defDlgOpen: s.defDlgOpen, defEmail: s.defEmail, defTimezone: s.defTimezone,
       onDefEmail: e => this.setState({ defEmail: e.target.value }),
@@ -118,9 +137,19 @@ Object.assign(Component.prototype, {
           toggle: () => this.setState(st => { const id = String(r.recipe_id); const cur = st.defRecipes || [];
             return { defRecipes: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] }; }) }; }),
       defUserRows: (s.defUsers || []).map((u, i) => { const set2 = (k, v) => this.setState(st => ({ defUsers: (st.defUsers || []).map((x, j) => j === i ? { ...x, [k]: v } : x) }));
-        return { username: u.username || '', email: u.email || '', first_name: u.first_name || '', last_name: u.last_name || '', role: u.role || 'administrator',
+        // Role is a pick list (v1's role select: lowercase value, capitalized
+        // label), anchored-fixed per the dialog-dropdown rule (ddToggleAt).
+        const role = u.role || 'administrator';
+        const ddKey = 'defRole' + i;
+        return { username: u.username || '', email: u.email || '', first_name: u.first_name || '', last_name: u.last_name || '', role,
           onUsername: e => set2('username', e.target.value), onEmail: e => set2('email', e.target.value),
-          onFirst: e => set2('first_name', e.target.value), onLast: e => set2('last_name', e.target.value), onRole: e => set2('role', e.target.value),
+          onFirst: e => set2('first_name', e.target.value), onLast: e => set2('last_name', e.target.value),
+          roleLabel: (this.WP_ROLES.find(r => r[0] === role) || [null, role])[1],
+          roleOpen: s.ddOpen === ddKey,
+          roleToggle: e => this.ddToggleAt(ddKey, e),
+          roleOpts: this.WP_ROLES.map(([val, label]) => ({ label, mark: role === val ? '✓' : '',
+            bg: role === val ? 'var(--brand-soft)' : 'transparent',
+            pick: () => { set2('role', val); this.setState({ ddOpen: '', ddQ: '' }); } })),
           remove: () => this.setState(st => ({ defUsers: (st.defUsers || []).filter((_, j) => j !== i) })) }; }),
       addDefUser: () => this.setState(st => ({ defUsers: [...(st.defUsers || []), { username: '', email: '', first_name: '', last_name: '', role: 'administrator' }] })),
       // provider add/edit
@@ -129,6 +158,47 @@ Object.assign(Component.prototype, {
       ...this.providerDialogVals(s, reload)
     };
   },
+
+  // v1's fixed repeat vocabulary (core.php Edit Process dialog).
+  PROC_REPEAT: [
+    ['as-needed', 'As needed'], ['1-daily', 'Daily'], ['2-weekly', 'Weekly'],
+    ['3-monthly', 'Monthly'], ['4-yearly', 'Yearly']
+  ],
+
+  // Fetch the RAW process row (markdown description, repeat keys, role_id) and
+  // send it back whole on save with the edited fields applied — v1's contract.
+  // Roles ride through untouched: the role vocabulary (captaincore_process_roles)
+  // has no REST surface, so v3 doesn't offer a role picker yet.
+  openProcessEdit(h) {
+    this.api('/processes/' + h.process_id + '/raw').then(p => {
+      if (!p || !p.process_id) { this.toast('Could not load process', { kind: 'error' }); return; }
+      this._procEdit = p;
+      this.setState({ procEditOpen: true, procDlgOpen: false, procName: p.name || '',
+        procTime: p.time_estimate || '', procRepeat: p.repeat_interval || 'as-needed',
+        procQty: p.repeat_quantity || '', procDesc: p.description || '' });
+    }).catch(() => this.toast('Could not load process', { kind: 'error' }));
+  },
+
+  saveProcessReal() {
+    const p = this._procEdit;
+    if (!p) return;
+    const name = (this.state.procName || '').trim();
+    if (!name) { this.toast('Name is required', { kind: 'error' }); return; }
+    const body = { ...p, name, time_estimate: this.state.procTime || '',
+      repeat_interval: this.state.procRepeat || 'as-needed',
+      repeat_quantity: this.state.procQty || '', description: this.state.procDesc || '' };
+    this.setState({ procEditOpen: false });
+    const tid = this.toast('Saving process…', { kind: 'loading' });
+    this.api('/processes/' + p.process_id, { method: 'PUT', body })
+      .then(() => { this.updateToast(tid, 'Process saved', { kind: 'success' }); this.loadSettings(true); })
+      .catch(() => this.updateToast(tid, 'Save failed', { kind: 'error' }));
+  },
+
+  // v1's roles list (core.php): stored value lowercase, displayed capitalized.
+  WP_ROLES: [
+    ['subscriber', 'Subscriber'], ['contributor', 'Contributor'], ['author', 'Author'],
+    ['editor', 'Editor'], ['administrator', 'Administrator']
+  ],
 
   PROVIDER_TYPES: [
     ['kinsta', 'Hosting - Kinsta'], ['wpengine', 'Hosting - WP Engine'], ['rocketdotnet', 'Hosting - Rocket.net'],
