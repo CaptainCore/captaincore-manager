@@ -762,9 +762,14 @@ class Component extends DCLogic {
       tfaCode: s.tfaCode, onTfaCode: e => this.setState({ tfaCode: e.target.value }),
       tfaActivate: () => { if (this.state.tfaCode.trim().length === 6) this.setState({ tfa: 'on' }); },
       tfaDisable: () => this.setState({ tfa: 'off' }),
-      appPwShown: !!s.appPw, appPw: s.appPw,
-      appPwBtn: s.appPw ? 'Rotate' : 'Generate',
-      genAppPw: () => this.setState({ appPw: 'ccpw_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6) }),
+      appPwShown: !!s.appPw, appPw: s.appPw, appPwName: 'Sample password',
+      apRows: [
+        { name: 'CaptainCore CLI', meta: 'created Dec 16, 2025 · last used Feb 7', revoke: () => {} },
+        { name: 'Coding agent', meta: 'created Feb 19 · never used', revoke: () => {} }
+      ],
+      apLoading: false, apEmpty: false, apName: s.apName || '', onApName: e => this.setState({ apName: e.target.value }),
+      apNameRef: () => {},
+      apCreate: () => this.setState({ appPw: 'ccpw_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6), appPwName: this.state.apName || 'New password' }),
       appPwMark: s.copied === 'apppw' ? 'Copied ✓' : 'Copy',
       copyAppPw: () => { try { navigator.clipboard.writeText(this.state.appPw); } catch (e) {}
         this.setState({ copied: 'apppw' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },

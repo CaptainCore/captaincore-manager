@@ -1594,6 +1594,22 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Profile: managed application-password listing (2026-08-23)
+The single fixed-name "Application password · Generate/Rotate" card became a
+full management listing (Minn Admin's AI-Access card): every WP application
+password with name + "created <date> · last used <date>/never used"
+(`fmtApDate` — year only when not current), per-row **Revoke** (confirm),
+and a name input + **+ New password** footer. Create reveals the plaintext
+ONCE in a brand-soft row (name + mono password + Copy + shown-once warning);
+it never comes back. Backend: `User::list_application_passwords/
+create_named_application_password/revoke_application_password` (existing
+class — no classmap regen) behind new self-scoped plural routes
+`GET|POST /me/application-passwords` + `DELETE …/{uuid}`; the singular
+fixed-name routes stay for the legacy dashboard. Verified live end-to-end:
+6 real rows listed, created a named password, its plaintext authenticated
+via HTTP Basic (200 on /wp/v2/users/me), row showed "never used", revoke
+removed it and the credential stopped authenticating (401); no leftovers.
+
 ### Per-user legacy-dashboard preference (2026-08-23)
 Users can opt back into the old interface per user, from either side:
 

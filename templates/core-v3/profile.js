@@ -34,9 +34,10 @@ Object.assign(Component.prototype, {
       const list = (res && res.sessions) || (Array.isArray(res) ? res : []);
       if (Array.isArray(list)) { this._prof.sessions = list; this.setState({}); }
     }).catch(() => {});
-    if (!this._prof.appPassword) this.api('/me/application-password').then(res => {
-      if (res && (res.created || res.uuid)) { this._prof.appPassword = { created: res.created, uuid: res.uuid }; this.setState({}); }
-    }).catch(() => {});
+    if (!this._appPws) this.api('/me/application-passwords').then(res => {
+      this._appPws = Array.isArray(res) ? res : [];
+      this.setState({});
+    }).catch(() => { this._appPws = []; this.setState({}); });
   },
 
   saveProfileReal() {
@@ -76,12 +77,39 @@ Object.assign(Component.prototype, {
     this.api('/me/tfa_deactivate').then(() => { this._prof.tfaEnabled = false; this.setState({ tfa: 'off' }); }).catch(() => {});
   },
 
-  appPwGenReal() {
-    const has = this._prof && this._prof.appPassword;
-    const path = has ? '/me/application-password/rotate' : '/me/application-password';
-    this.api(path, { method: 'POST', body: {} }).then(res => {
-      if (res && res.password) { this._prof.appPassword = { created: res.created }; this.setState({ appPw: res.password }); }
-    }).catch(() => {});
+  // ── Application passwords (managed list, Minn Admin parity) ──
+  // GET/POST /me/application-passwords + DELETE …/{uuid}. The plaintext
+  // password exists only in the create response — the reveal row shows it
+  // once and it never comes back.
+  apCreateReal() {
+    const name = (this.state.apName || '').trim();
+    this.api('/me/application-passwords', { method: 'POST', body: { name } }).then(res => {
+      if (res && res.error) { this.toast(res.error, { kind: 'error' }); return; }
+      if (!res || !res.password) { this.toast('Could not create the password', { kind: 'error' }); return; }
+      this._appPws = [...(this._appPws || []), { uuid: res.uuid, name: res.name, created: res.created, last_used: null }];
+      this.setState({ appPw: res.password, appPwName: res.name, apName: '' });
+      if (this._apNameEl) this._apNameEl.value = '';
+    }).catch(() => this.toast('Could not create the password', { kind: 'error' }));
+  },
+
+  apRevokeReal(p) {
+    if (!confirm('Revoke "' + p.name + '"? Anything authenticating with it stops working immediately.')) return;
+    this.api('/me/application-passwords/' + p.uuid, { method: 'DELETE' }).then(res => {
+      if (res && res.error) { this.toast(res.error, { kind: 'error' }); return; }
+      this._appPws = (this._appPws || []).filter(x => x.uuid !== p.uuid);
+      this.setState({});
+      this.toast('Application password revoked', { kind: 'success' });
+    }).catch(() => this.toast('Could not revoke the password', { kind: 'error' }));
+  },
+
+  // "Dec 16, 2025" for other years, "Feb 19" for this one (Minn's format).
+  fmtApDate(ts) {
+    const n = parseInt(ts, 10);
+    if (!n) return '';
+    const d = new Date(n * 1000);
+    const opts = { month: 'short', day: 'numeric' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString([], opts);
   },
 
   fmtLoginAt(v) {
@@ -215,12 +243,19 @@ Object.assign(Component.prototype, {
       tfaCode: s.tfaCode, onTfaCode: e => this.setState({ tfaCode: e.target.value }),
       tfaActivate: () => this.tfaActivateReal(),
       tfaDisable: () => this.tfaDisableReal(),
-      appPwShown: !!s.appPw, appPw: s.appPw,
-      appPwBtn: (this._prof.appPassword || s.appPw) ? 'Rotate' : 'Generate',
-      genAppPw: () => this.appPwGenReal(),
+      appPwShown: !!s.appPw, appPw: s.appPw, appPwName: s.appPwName || '',
       appPwMark: s.copied === 'apppw' ? 'Copied ✓' : 'Copy',
       copyAppPw: () => { try { navigator.clipboard.writeText(this.state.appPw); } catch (e) {}
         this.setState({ copied: 'apppw' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
+      apRows: (this._appPws || []).map(p => ({
+        name: p.name,
+        meta: 'created ' + this.fmtApDate(p.created) + ' · ' + (p.last_used ? 'last used ' + this.fmtApDate(p.last_used) : 'never used'),
+        revoke: () => this.apRevokeReal(p) })),
+      apLoading: !Array.isArray(this._appPws),
+      apEmpty: Array.isArray(this._appPws) && !this._appPws.length,
+      apName: s.apName || '', onApName: e => this.setState({ apName: e.target.value }),
+      apNameRef: el => { this._apNameEl = el; },
+      apCreate: () => this.apCreateReal(),
       ...(function (self) {
         const all = self.sessionRows();
         const CAP = 5;

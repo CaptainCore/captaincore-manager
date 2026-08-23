@@ -8286,6 +8286,49 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Plural routes: full per-user password management (new-UI Profile card).
+	// The singular fixed-name routes above stay for the legacy dashboard.
+	register_rest_route(
+		'captaincore/v1', '/me/application-passwords', [
+			'methods'             => 'GET',
+			'callback'            => function () {
+				return ( new CaptainCore\User )->list_application_passwords();
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/application-passwords', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$result = ( new CaptainCore\User )->create_named_application_password( (string) $request->get_param( 'name' ) );
+				if ( is_wp_error( $result ) ) {
+					return new WP_REST_Response( [ 'error' => $result->get_error_message() ], 400 );
+				}
+				return $result;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/application-passwords/(?P<uuid>[a-fA-F0-9-]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$result = ( new CaptainCore\User )->revoke_application_password( $request['uuid'] );
+				if ( is_wp_error( $result ) ) {
+					return new WP_REST_Response( [ 'error' => $result->get_error_message() ], 400 );
+				}
+				return $result;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/me/application-password', [
 			'methods'             => 'DELETE',

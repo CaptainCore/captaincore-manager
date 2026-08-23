@@ -2887,18 +2887,36 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)">
-              <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Application password</h2>
-              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">for the CaptainCore CLI</span>
-              <div style="flex:1"></div>
-              <button onClick="{{ genAppPw }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">{{ appPwBtn }}</button>
+              <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Application passwords</h2>
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">revocable credentials for the API and CLI — HTTP Basic auth</span>
             </div>
+            <sc-if value="{{ apLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading…</div>
+            </sc-if>
+            <sc-if value="{{ apEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No application passwords yet — create one below.</div>
+            </sc-if>
+            <sc-for list="{{ apRows }}" as="ap" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:500 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ap.name }}</span>
+                  <span style="display:block;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ ap.meta }}</span>
+                </span>
+                <button onClick="{{ ap.revoke }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer;flex:none" style-hover="border-color:var(--bad);color:var(--bad)">Revoke</button>
+              </div>
+            </sc-for>
             <sc-if value="{{ appPwShown }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--brand-soft);flex-wrap:wrap">
+                <span style="font:500 var(--fs-125) var(--sans);flex:none">{{ appPwName }}</span>
                 <span style="font:500 var(--fs-13) var(--mono);background:var(--panel-2);border-radius:7px;padding:6px 12px">{{ appPw }}</span>
                 <span onClick="{{ copyAppPw }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">{{ appPwMark }}</span>
                 <span style="font:400 var(--fs-12) var(--sans);color:var(--warn)">Shown once — copy it now.</span>
               </div>
             </sc-if>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+              <input ref="{{ apNameRef }}" onInput="{{ onApName }}" placeholder="Name — e.g. CaptainCore CLI, coding agent" style="flex:1;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
+              <button onClick="{{ apCreate }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">+ New password</button>
+            </div>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">

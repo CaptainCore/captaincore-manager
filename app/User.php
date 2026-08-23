@@ -1722,6 +1722,47 @@ class User {
         ];
     }
 
+    // Full per-user application-password management (the Minn Admin AI-Access
+    // card contract). The single fixed-name helpers below remain for the
+    // legacy dashboard's Generate/Rotate flow.
+    public function list_application_passwords() {
+        $user_id   = get_current_user_id();
+        $passwords = \WP_Application_Passwords::get_user_application_passwords( $user_id );
+        $items     = [];
+        foreach ( $passwords as $password ) {
+            $items[] = [
+                'uuid'      => $password['uuid'],
+                'name'      => $password['name'],
+                'created'   => $password['created'],
+                'last_used' => ! empty( $password['last_used'] ) ? $password['last_used'] : null,
+            ];
+        }
+        usort( $items, function ( $a, $b ) { return $a['created'] <=> $b['created']; } );
+        return $items;
+    }
+
+    public function create_named_application_password( $name = '' ) {
+        $user_id = get_current_user_id();
+        $name    = sanitize_text_field( $name );
+        if ( $name === '' ) {
+            $name = get_bloginfo( 'name' ) . ' API';
+        }
+        $result = \WP_Application_Passwords::create_new_application_password( $user_id, [ 'name' => $name ] );
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return [ 'password' => $result[0], 'uuid' => $result[1]['uuid'], 'name' => $name, 'created' => time() ];
+    }
+
+    public function revoke_application_password( $uuid ) {
+        $user_id = get_current_user_id();
+        $result  = \WP_Application_Passwords::delete_application_password( $user_id, (string) $uuid );
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return [ 'success' => true ];
+    }
+
     public function get_application_password() {
         $user_id  = get_current_user_id();
         $name     = get_bloginfo( 'name' ) . ' API';
