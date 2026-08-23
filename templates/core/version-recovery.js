@@ -66,7 +66,7 @@ Object.assign(Component.prototype, {
       capPages: sel ? (Array.isArray(sel.pages) ? sel.pages : []).map(p => ({
         name: p.name || '/',
         url: p.image_url || '',
-        open: () => { if (p.image_url) window.open(p.image_url, '_blank'); },
+        open: () => { if (p.image_url) this.safeOpen(p.image_url); },
         // Older captures can be pruned from remote storage — swap the broken
         // image for a quiet note instead of the browser's broken-image icon.
         err: (e) => { const el = e.target; if (el._swapped) return; el._swapped = true; el.style.display = 'none';

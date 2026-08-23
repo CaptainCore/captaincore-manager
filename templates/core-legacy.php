@@ -5,7 +5,7 @@ if ( ! function_exists('is_plugin_active') ) {
 ?><!DOCTYPE html>
 <html>
 <head>
-  <title><?php echo CaptainCore\Configurations::get()->name; ?> - Account</title>
+  <title><?php echo esc_html( CaptainCore\Configurations::get()->name ); ?> - Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta name="description" content="Manage your sites, billing, and account details.">
   <meta charset="utf-8">
@@ -13242,13 +13242,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "title" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
 wc_states = <?php echo json_encode( array_merge( WC()->countries->get_allowed_country_states(), WC()->countries->get_shipping_country_states() ) ); ?>;
 wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_locale() ); ?>;
-stripe = Stripe('<?php echo ( new WC_Gateway_Stripe )->publishable_key; ?>');
+stripe = Stripe(<?php echo wp_json_encode( ( new WC_Gateway_Stripe )->publishable_key ); ?>);
 <?php } else { ?>
 wc_countries = []
 wc_states = []
 stripe = ""
 <?php } ?>
-(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= CaptainCore\Configurations::get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
+(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?php echo rawurlencode( (string) CaptainCore\Configurations::get()->intercom_embed_id ); ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
 const captainCoreColors = <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>;
 
 const { createApp, ref, computed, reactive } = Vue;
@@ -13790,7 +13790,7 @@ const app = createApp({
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
 		legacy_ui: <?php echo get_user_meta( get_current_user_id(), 'captaincore_legacy_ui', true ) ? 'true' : 'false'; ?>,
-		process_roles: <?php echo ( ! empty( get_option('captaincore_process_roles') ) ? get_option('captaincore_process_roles') : "[]" ); ?>,
+		process_roles: <?php echo wp_json_encode( json_decode( (string) get_option('captaincore_process_roles') ) ?: [] ); ?>,
 		shared_with: [],
 		new_key: { show: false, title: "", key: "" },
 		new_key_user: { show: false, title: "", key: "" },
@@ -26543,7 +26543,7 @@ app.mount('#app');
 <script type='text/javascript' src='/wp-content/plugins/arve-pro/build/main.js'></script>
 <script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/build/main.js'></script>
 <?php } ?>
-<?php if ( current_user_can( 'administrator' ) && isset( $_GET['faker'] ) ) { ?>
+<?php if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG && current_user_can( 'manage_options' ) && isset( $_GET['faker'] ) ) { ?>
 <script src="<?php echo plugin_dir_url( __DIR__ ); ?>public/faker.js"></script>
 <?php } ?>
 </body>

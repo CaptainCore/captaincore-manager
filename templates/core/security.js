@@ -88,7 +88,7 @@ Object.assign(Component.prototype, {
         notes: (tr.notes || []).map(n => ({ who: 'Note', when: (n.date || '').slice(0, 16), text: n.note })),
         addNote: () => this.noteThreat(t),
         openTerm: () => this.threatToTerminal(t),
-        getPatch: () => { if (t.patch && t.patch.download_url) window.open(t.patch.download_url, '_blank'); },
+        getPatch: () => { if (t.patch && t.patch.download_url) this.safeOpen(t.patch.download_url); },
         markInv: () => this.trackThreat(t, 'investigating'),
         markRes: () => this.resolveThreat(t)
       };
@@ -154,7 +154,7 @@ Object.assign(Component.prototype, {
     accessibility_audit: 'Accessibility', debug_report: 'Debug', incident_report: 'Incident' },
 
   openAuditReport(a) {
-    if (a.report_url) { window.open(a.report_url, '_blank'); return; }
+    if (a.report_url) { this.safeOpen(a.report_url); return; }
     const boot = window.CC_BOOT || {};
     fetch(boot.restRoot + 'captaincore/v1/site-audits/' + a.site_audit_id + '/html', { headers: { 'X-WP-Nonce': boot.nonce } })
       .then(r => r.text()).then(html => {

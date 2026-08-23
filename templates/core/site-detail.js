@@ -158,8 +158,8 @@ Object.assign(Component.prototype, {
     const tid = this.toast('Signing in' + who + '…', { kind: 'loading' });
     const path = '/sites/' + siteId + '/' + envLower + '/magiclogin' + (user && user.ID ? '/' + user.ID : '');
     this.api(path).then(url => {
-      if (typeof url === 'string' && url.indexOf('http') === 0) {
-        window.open(url.trim());
+      if (typeof url === 'string' && /^https?:\/\//i.test(url.trim())) {
+        this.safeOpen(url.trim());
         this.updateToast(tid, 'Opened WordPress admin', { kind: 'success' });
       } else { console.warn('magiclogin unexpected response', url); this.updateToast(tid, 'Could not sign in', { kind: 'error' }); }
     }).catch(err => { console.warn('magiclogin failed', err); this.updateToast(tid, 'Could not sign in', { kind: 'error' }); });
@@ -321,8 +321,8 @@ Object.assign(Component.prototype, {
   realPhpMyAdmin(real, s) {
     const tid = this.toast('Opening phpMyAdmin…', { kind: 'loading' });
     this.api('/sites/' + real.siteId + '/' + s.env.toLowerCase() + '/phpmyadmin').then(url => {
-      if (typeof url === 'string' && url.indexOf('http') === 0) {
-        window.open(url.trim());
+      if (typeof url === 'string' && /^https?:\/\//i.test(url.trim())) {
+        this.safeOpen(url.trim());
         this.updateToast(tid, 'phpMyAdmin opened', { kind: 'success' });
       } else {
         this.updateToast(tid, 'phpMyAdmin not available', { kind: 'error' });
@@ -958,7 +958,7 @@ Object.assign(Component.prototype, {
     const tid = this.toast('Preparing download…', { kind: 'loading' });
     this.api('/site/' + real.siteId + '/' + env + '/logs-archive/download?file=' + encodeURIComponent(name)).then(res => {
       if (res && res.link) {
-        window.open(String(res.link).trim());
+        this.safeOpen(String(res.link).trim());
         this.updateToast(tid, 'Download link opened' + (res.expires_in ? ' — valid for ' + res.expires_in : ''), { kind: 'success' });
       } else {
         this.updateToast(tid, (res && res.error) || 'Could not create a download link', { kind: 'error' });

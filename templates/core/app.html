@@ -2730,7 +2730,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="flex:1;display:grid;place-items:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Generating preview…</div>
             </sc-if>
             <sc-if value="{{ repPreviewReady }}" hint-placeholder-val="{{ true }}">
-              <iframe srcdoc="{{ repPreviewHtml }}" style="flex:1;width:100%;border:none;background:white"></iframe>
+              <iframe srcdoc="{{ repPreviewHtml }}" sandbox="" style="flex:1;width:100%;border:none;background:white"></iframe>
             </sc-if>
           </div>
         </div>
@@ -4618,7 +4618,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="flex:1"></div>
           <span onClick="{{ closeProcDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <iframe srcdoc="{{ procDlgBody }}" style="flex:1;width:100%;border:none;background:white"></iframe>
+        <iframe srcdoc="{{ procDlgBody }}" sandbox="" style="flex:1;width:100%;border:none;background:white"></iframe>
       </div>
     </div>
   </sc-if>

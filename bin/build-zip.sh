@@ -61,6 +61,7 @@ zip -r -q -X "$OUT" "$NAME" \
 	-x "$NAME/user-account-security-plan.md" \
 	-x "$NAME/templates/core/STATUS.md" \
 	-x "$NAME/templates/core/V1-PLAN.md" \
+	-x "$NAME/public/faker.js" \
 	-x "*.DS_Store"
 
 # Assert rather than trust: a silently fattened zip is invisible until someone

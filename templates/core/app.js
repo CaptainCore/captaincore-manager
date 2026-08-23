@@ -331,6 +331,16 @@ class Component extends DCLogic {
     { label: 'ACH ··6789', sub: 'Chase · verified via micro-deposits' }
   ];
 
+  // Open a URL that came from stored or remote data. window.open() with a
+  // javascript: URL runs in a document that inherits this origin, so the scheme
+  // is checked rather than assumed; noopener severs window.opener, which is what
+  // would otherwise expose CC_BOOT to the opened document.
+  safeOpen(url) {
+    const s = String(url || '');
+    if (!/^https?:\/\//i.test(s)) return null;
+    return window.open(s, '_blank', 'noopener');
+  }
+
   openAccount(id) {
     this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false,
       accInvites: [{ uid: 1, e: 'bookkeeper@ledgerly.com', level: 'Domains only', sent: 'Jul 10' }],
@@ -923,7 +933,7 @@ class Component extends DCLogic {
           storage: e.storage ? this.fmtStorage(e.storage) : '\u2014',
           shot, hasShot: !!shot,
           shotRef: el => this.thumbFallbackRef(el),
-          visit: (ev) => { ev.stopPropagation(); if (e.home_url) window.open(e.home_url, '_blank'); },
+          visit: (ev) => { ev.stopPropagation(); if (e.home_url) this.safeOpen(e.home_url); },
           manage: (ev) => { ev.stopPropagation(); this.openSite(x.id, en); },
           login: (ev) => { ev.stopPropagation(); if (this._hydrated) this.magicLogin(x.id, en.toLowerCase()); else this.runJob('magiclogin', x.name); } };
       }),
@@ -2117,7 +2127,7 @@ class Component extends DCLogic {
         copyLink: () => { try { navigator.clipboard.writeText(sn._real ? sn._url : 'https://' + site.name + '/snapshot/' + sn.id); } catch (e) {}
           this.setState({ copied: sn.id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
         regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
-        doDl: () => sn._real ? window.open(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
+        doDl: () => sn._real ? this.safeOpen(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
       ...(this.computeRegistry ? this.computeRegistry(real, s) : { regGroups: [], regChips: [], rgOpen: false }),
       ...(this.computeTools ? this.computeTools(real, s) : { siteTools: [], thOpen: false, tlOpen: false, tmOpen: false, tnOpen: false }),
