@@ -273,6 +273,15 @@ function captaincore_subscription_signup() {
         return;
     }
 
+    // The confirmation link is emailed to the submitted address, so possession of
+    // it is the proof here. The pair still has to be guessed rather than known,
+    // though - entry ids are sequential - so cap how fast that can be tried.
+    $throttle_key = 'cc_subsignup_' . md5( CaptainCore\GeoIP::client_ip() );
+    if ( (int) get_transient( $throttle_key ) >= 20 ) {
+        wp_die( "<p style='text-align:center'>Too many attempts. Try again later.</p>", "Manage subscription" );
+    }
+    set_transient( $throttle_key, (int) get_transient( $throttle_key ) + 1, 900 );
+
     $entry   = GFAPI::get_entry( absint( $_GET['entry_id'] ) );
     $form_id = $entry['form_id'] ?? null;
 
@@ -290,11 +299,18 @@ function captaincore_subscription_signup() {
 
     // Create user if needed
     if ( ! $user ) {
+        // Without an explicit password the account is stored with a hash of the
+        // empty string. wp_authenticate() rejects an empty password, so it is
+        // not a way in today, but it should not be one tomorrow either.
         $user_id = wp_insert_user( [
             'user_login' => $email,
             'user_email' => $email,
+            'user_pass'  => wp_generate_password( 24, true, true ),
             'role'       => 'email_subscriber',
         ] );
+        if ( is_wp_error( $user_id ) ) {
+            wp_die( "<p style='text-align:center'>Could not complete the subscription.</p>", "Manage subscription" );
+        }
         $user = get_user_by( 'ID', $user_id );
     }
 
