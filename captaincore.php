@@ -76,9 +76,39 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-manager-update
  * WP-CLI callers.
  */
 function captaincore_maybe_upgrade_db() {
-	ob_start();
-	CaptainCore\DB::upgrade();
-	ob_end_clean();
+	// admin_init runs before the authentication check in admin-ajax.php and
+	// admin-post.php, so this needs a gate of its own - otherwise an
+	// unauthenticated request triggers the migration pass, and concurrent
+	// requests all run it at once against the same tables.
+	if ( wp_doing_ajax() || wp_doing_cron() || ! is_user_logged_in() ) {
+		return;
+	}
+	if ( ! current_user_can( is_multisite() ? 'manage_network' : 'manage_options' ) ) {
+		return;
+	}
+	if ( (int) get_site_option( 'captaincore_db_version' ) >= CaptainCore\DB::REQUIRED_VERSION ) {
+		return;
+	}
+	// add_site_option only succeeds when the option does not exist, so exactly
+	// one request takes the lock. A stale lock is reclaimed after 15 minutes so
+	// a fatal mid-migration cannot wedge upgrades permanently.
+	if ( ! add_site_option( 'captaincore_db_upgrade_lock', time() ) ) {
+		$lock_started = (int) get_site_option( 'captaincore_db_upgrade_lock' );
+		if ( $lock_started && ( time() - $lock_started ) < 15 * MINUTE_IN_SECONDS ) {
+			return;
+		}
+		update_site_option( 'captaincore_db_upgrade_lock', time() );
+	}
+	try {
+		ob_start();
+		$result = CaptainCore\DB::upgrade();
+		ob_end_clean();
+		if ( is_string( $result ) && $result !== '' ) {
+			error_log( 'CaptainCore schema upgrade reported: ' . $result );
+		}
+	} finally {
+		delete_site_option( 'captaincore_db_upgrade_lock' );
+	}
 }
 add_action( 'admin_init', 'captaincore_maybe_upgrade_db' );
 

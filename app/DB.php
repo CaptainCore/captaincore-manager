@@ -4,6 +4,9 @@ namespace CaptainCore;
 
 class DB {
 
+    /** Schema level this build expects. Bump when a migration is added. */
+    const REQUIRED_VERSION = 51;
+
     private static function _table() {
         global $wpdb;
         $tablename = explode( '\\', get_called_class(), 2 );
@@ -777,7 +780,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "51";
+        $required_version = self::REQUIRED_VERSION;
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
