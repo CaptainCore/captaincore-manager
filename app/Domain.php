@@ -93,8 +93,12 @@ class Domain {
 
 		}
 
-		// Search API for domain ID
-        if ( ! empty( $constellix_all_domains->data ) ) {
+		// Search API for domain ID. Adopting a zone that already exists is the
+        // same privileged act as the "already exists" recovery further down, so
+        // it takes the same flag - without it a caller could claim any zone the
+        // fleet hosts simply by adding a domain row with that name, and then
+        // read and write its records through /dns/{id}.
+        if ( $link_existing && ! empty( $constellix_all_domains->data ) ) {
             foreach ( $constellix_all_domains->data as $item ) {
                 if ( $domain->name == $item->name ) {
                     $remote_id = $item->id;

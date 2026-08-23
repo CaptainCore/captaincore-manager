@@ -150,7 +150,10 @@ class Domains extends DB {
             if ( $dns_error === null ) {
                 $removed[] = 'dns_zone';
             } else {
-                $warnings[] = "DNS zone: {$dns_error}";
+                // Deleting the row while the zone is still live loses track of a
+                // zone that is still answering queries, and a zone nothing points
+                // at can then be claimed by whoever next adds that domain name.
+                return [ "errors" => [ "Could not remove the DNS zone: {$dns_error}. The domain has been left in place." ] ];
             }
         }
 
