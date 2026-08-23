@@ -1,9 +1,17 @@
-<script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.15/dist/vuetify.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.15/dist/vuetify.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+<?php
+// This page holds a live wp_rest nonce, so anything executing here can drive the
+// admin-gated routes. These come from third-party CDNs, which the rest of the
+// plugin does not rely on - the account UI serves its libraries locally - so
+// each one is pinned to an exact version and checked against a subresource
+// integrity hash. @mdi/font was on a floating 5.x range and axios had no version
+// at all, meaning the bytes could change without a change here.
+?>
+<script src="https://unpkg.com/qs@6.5.2/dist/qs.js" integrity="sha384-noC2iIGrYM6eJL+IBlYYNC0PIRyVH1bd9devHL0w6xO2CMM8A+xxKTfylsIS3a6b" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/axios@1.19.0/dist/axios.min.js" integrity="sha384-Pv+e3/1mh9OFEtc+8HN8zptpUVh+IpZ9Gi43dKH8jkibjckMfQ1fsETUYG1Qdwdb" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js" integrity="sha384-Sn2JSwaWbMx5CCyudCHwrWyeaYh2SB8aLP+O0vHDVlgEBN2y0LXSHlxZqWlYcy50" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.15/dist/vuetify.min.js" integrity="sha384-61RV2ev+tpukB84nIoWoYi3WdsVHkQz9eiRDeYwxSPKDlYTVYGhKpsspfpot9H6t" crossorigin="anonymous"></script>
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.15/dist/vuetify.min.css" rel="stylesheet" integrity="sha384-maoelXxZzb7N3091ovquEulyTgmdgWpmhrvmlOi5CqbGput5YCQJ1syU1C/vPpgX" crossorigin="anonymous">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/css/materialdesignicons.min.css" rel="stylesheet" integrity="sha384-kXCE8Tlo8eDlJdLjfNasjLDUTPO56LHJRXxPOIRAgeAjnT08vds9p4SF9Q4tuTD+" crossorigin="anonymous">
 
 <style>
 [v-cloak] > * {
