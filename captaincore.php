@@ -3771,7 +3771,20 @@ function captaincore_site_update_func( $request ) {
 
 	$site    = CaptainCore\Sites::get( $site_id );
 	$details = empty( $site->details ) ? (object) [] : json_decode( $site->details );
-	
+
+	// Every key of the submitted object used to be copied onto the stored
+	// details, so a caller could set fields this route was never meant to
+	// expose - details.mailgun, for instance, is later interpolated into a
+	// Mailgun API path, and its own route is administrator-gated. Both
+	// interfaces send only the removal flag through here.
+	$writable_details = [ 'removed' ];
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		$updated_details = array_intersect_key(
+			(array) $updated_details,
+			array_flip( $writable_details )
+		);
+	}
+
 	foreach ( $updated_details as $field => $value ) {
 		$details->$field = $value;
 		
