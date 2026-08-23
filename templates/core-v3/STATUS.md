@@ -1599,9 +1599,10 @@ The three paginated lists (Sites / Domains / Accounts) moved onto ONE shared
 footer builder — `pagerVals(prefix, stateKey, …)` + `pageSize()`/
 `setPageSize()` in app.js — so they can't drift:
 
-- **Default is 100 rows/page** (was 25), with a **Per page 25 / 50 / 100 / 250**
-  segmented pill in the footer. One preference for all three lists, persisted
-  in localStorage `cc-page-size`; changing it resets every list to page 1.
+- **Per page 25 / 50 / 100 / 250** segmented pill in the footer (default 25 —
+  briefly shipped as 100, walked back same day per Austin). One preference for
+  all three lists, persisted in localStorage `cc-page-size`; changing it
+  resets every list to page 1.
 - **Range label**: `1–100 of 2,941 sites · page 1 of 30` (locale-formatted)
   instead of "Page 1 of 118".
 - **Page changes scroll the main pane back to the top** (`mainRef` →
