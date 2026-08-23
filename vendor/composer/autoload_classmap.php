@@ -185,6 +185,7 @@ return array(
     'CaptainCore\\Remote\\Kinsta' => $baseDir . '/app/Remote/Kinsta.php',
     'CaptainCore\\Remote\\Mailgun' => $baseDir . '/app/Remote/Mailgun.php',
     'CaptainCore\\Remote\\Missive' => $baseDir . '/app/Remote/Missive.php',
+    'CaptainCore\\Remote\\Rocketdotnet' => $baseDir . '/app/Remote/Rocketdotnet.php',
     'CaptainCore\\Remote\\Spaceship' => $baseDir . '/app/Remote/Spaceship.php',
     'CaptainCore\\Report' => $baseDir . '/app/Report.php',
     'CaptainCore\\ResticCacheCLI' => $baseDir . '/app/ResticCacheCLI.php',

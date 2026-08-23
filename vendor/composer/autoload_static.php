@@ -311,6 +311,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Remote\\Kinsta' => __DIR__ . '/../..' . '/app/Remote/Kinsta.php',
         'CaptainCore\\Remote\\Mailgun' => __DIR__ . '/../..' . '/app/Remote/Mailgun.php',
         'CaptainCore\\Remote\\Missive' => __DIR__ . '/../..' . '/app/Remote/Missive.php',
+        'CaptainCore\\Remote\\Rocketdotnet' => __DIR__ . '/../..' . '/app/Remote/Rocketdotnet.php',
         'CaptainCore\\Remote\\Spaceship' => __DIR__ . '/../..' . '/app/Remote/Spaceship.php',
         'CaptainCore\\Report' => __DIR__ . '/../..' . '/app/Report.php',
         'CaptainCore\\ResticCacheCLI' => __DIR__ . '/../..' . '/app/ResticCacheCLI.php',
