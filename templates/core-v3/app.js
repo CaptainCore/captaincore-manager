@@ -386,6 +386,9 @@ class Component extends DCLogic {
     const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
     return {
       accName: acc.name,
+      accCanRename: true, accRenaming: false, accNotRenaming: true,
+      accStartRename: () => {}, accRenameRef: () => {}, onAccRename: () => {},
+      accRenameKey: () => {}, accRenameCancel: () => {}, accRenameSave: () => {},
       accMeta: acc.plan + ' · ' + acc.users + ' users · ' + acc.sites + ' sites · ' + acc.domains + ' domain' + (acc.domains > 1 ? 's' : ''),
       accBack: () => this.setState({ route: 'accounts' }),
       accTabs: tabs,
@@ -1200,7 +1203,7 @@ class Component extends DCLogic {
       aaOpen: false, shareDlgOpen: false, udOpen: false, fmViewOpen: false,
       pmOpen: false, plfUid: 0, esId: 0,
       // Reports / accounts / domains
-      repPreviewOpen: false, schedEditOpen: false, transferOpen: false,
+      repPreviewOpen: false, schedEditOpen: false, transferOpen: false, accRename: false,
       mgSuppOpen: false, mgDeployOpen: false,
       ctxMenu: null
     };

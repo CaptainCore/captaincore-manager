@@ -147,7 +147,7 @@ Object.assign(Component.prototype, {
   },
 
   openAccount(id) {
-    this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false,
+    this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false, accRename: false,
       accInvites: this._hydrated ? [] : [{ uid: 1, e: 'bookkeeper@ledgerly.com', level: 'Domains only', sent: 'Jul 10' }],
       trusted: this._hydrated ? [] : this.TRUSTED.map(t => ({ ...t })), invEmail: '', invLevel: 'Full access' });
     if (this._hydrated) this.loadAccountDetail(id);
@@ -192,6 +192,23 @@ Object.assign(Component.prototype, {
         level: this.ACC_LEVEL_LABELS[iv.level] || iv.level || 'Full access',
         sent: (iv.created_at || '').slice(0, 10) })) });
     }).catch(() => { if (this._account === acc) { acc.loading = false; acc.err = 'Could not load account.'; this.setState({}); } });
+  },
+
+  renameAccount(acc, a, plan, reload) {
+    const name = (this.state.accRenameVal || '').trim();
+    if (!name || name === (this.decodeHtml(a.name) || '')) { this.setState({ accRename: false }); return; }
+    const tid = this.toast('Renaming account…', { kind: 'loading' });
+    // billing_user_id rides along for v1 payload parity (the hardened route
+    // only writes supplied keys either way).
+    const body = { account: { name, ...(plan.billing_user_id ? { billing_user_id: plan.billing_user_id } : {}) } };
+    this.api('/accounts/' + acc.accountId, { method: 'PUT', body }).then(res => {
+      if (res && res.code) { this.updateToast(tid, res.message || 'Rename failed', { kind: 'error' }); return; }
+      this.updateToast(tid, 'Account renamed', { kind: 'success' });
+      const row = this.ACCOUNTS.find(x => x.id === String(acc.accountId));
+      if (row) row.name = name;
+      this.setState({ accRename: false });
+      reload();
+    }).catch(() => this.updateToast(tid, 'Rename failed', { kind: 'error' }));
   },
 
   // Transfer ownership: pick a non-owner member → PUT their level to
@@ -254,8 +271,23 @@ Object.assign(Component.prototype, {
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    const doRename = () => this.renameAccount(acc, a, plan, reload);
     return {
       accName: this.decodeHtml(a.name) || (acc.loading ? 'Loading…' : 'Account'),
+      // Inline rename (pencil beside the name). Route: PUT /accounts/{id}
+      // {account:{name}} — owner/admin gated server-side (verify_account_owner);
+      // the UI gate mirrors it. Input seeds via ref (DC binds value like
+      // defaultValue), keyed by account id so switching accounts re-seeds.
+      accCanRename: !!a.account_id && (isOp || !!d.owner || d.level === 'full-billing'),
+      accRenaming: !!s.accRename, accNotRenaming: !s.accRename,
+      accStartRename: () => this.setState({ accRename: true, accRenameVal: this.decodeHtml(a.name) || '' }),
+      accRenameRef: el => { if (el && el._forId !== String(acc.accountId)) { el._forId = String(acc.accountId);
+        el.value = this.decodeHtml(a.name) || ''; el.focus(); el.select(); } },
+      onAccRename: e => this.setState({ accRenameVal: e.target.value }),
+      accRenameKey: e => { if (e.key === 'Enter') { e.preventDefault(); doRename(); } },
+      accRenameCancel: () => this.setState({ accRename: false }),
+      accRenameSave: doRename,
       accMeta: [plan.name, (metrics.users || 0) + ' users', (metrics.sites || 0) + ' sites',
         (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
         + (acc.err ? ' · ' + acc.err : ''),

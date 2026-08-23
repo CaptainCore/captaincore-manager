@@ -2032,7 +2032,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:24px 32px 120px;animation:ccfade .25s ease">
           <span onClick="{{ accBack }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Accounts</span>
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
-            <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
+            <sc-if value="{{ accNotRenaming }}" hint-placeholder-val="{{ true }}">
+              <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ accName }}</h1>
+              <sc-if value="{{ accCanRename }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ accStartRename }}" title="Rename account" style="cursor:pointer;color:var(--ink-dim);width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:8px" style-hover="color:var(--brand-ink);border-color:var(--brand)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></span>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ accRenaming }}" hint-placeholder-val="{{ false }}">
+              <input ref="{{ accRenameRef }}" onInput="{{ onAccRename }}" onKeyDown="{{ accRenameKey }}" style="font:600 22px var(--sans);letter-spacing:-.02em;height:44px;min-width:340px;border:1px solid var(--brand);border-radius:9px;background:var(--paper);color:var(--ink);padding:0 12px;outline:none">
+              <button onClick="{{ accRenameSave }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save</button>
+              <span onClick="{{ accRenameCancel }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+            </sc-if>
             <div style="flex:1"></div>
             <sc-if value="{{ accShowDelete }}" hint-placeholder-val="{{ false }}">
               <button onClick="{{ accDelete }}" style="border:1px solid color-mix(in srgb,var(--bad) 35%,transparent);background:transparent;color:var(--bad);font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--bad-soft)">Delete account…</button>

@@ -1594,6 +1594,21 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Account detail: inline rename (2026-08-23)
+Pencil beside the account name (shown to operators and the account owner,
+matching the route's `verify_account_owner` gate) swaps the h1 for an inline
+editor — Enter/Save commits, Esc/Cancel backs out (`accRename` is in
+closeAllDialogs; openAccount resets it). Save PUTs the EXISTING
+`/accounts/{id}` route, which was **hardened to partial-safe writes**: it
+used to write `billing_user_id` unconditionally, so a name-only payload
+would have nulled the billing user (v1 always sent both — v3 still sends it
+when set, for parity). Renames trim, the header + hydrated ACCOUNTS row
+patch immediately, then the detail reloads. Data quirk hit while testing:
+account 3900's stored name began with whitespace (" \tsquarepegengr.com")
+— renames normalize that now. Verified live: pencil → seeded/focused/
+selected editor → Esc cancel → Enter rename persisted to header, list row
+and DB → restored.
+
 ### Profile: first/last name fields (2026-08-23)
 The profile card gained a "Name" row (First + Last inputs sharing the row,
 above Display name), seeded from `CC_BOOT.profFirst/profLast` (raw user meta

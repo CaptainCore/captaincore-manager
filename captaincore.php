@@ -2125,8 +2125,19 @@ function captaincore_accounts_update_func( WP_REST_Request $request ) {
 	if ( ! $user->verify_account_owner( $account_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ), "billing_user_id" => $account->billing_user_id ], [ "account_id" => $account_id ] );
-	( new CaptainCore\Account( $account_id ) )->sync();
+	// Partial-safe: only write the keys the payload carries — a name-only
+	// rename must not null out billing_user_id (v1 always sends both).
+	$update = [];
+	if ( isset( $account->name ) && trim( (string) $account->name ) !== '' ) {
+		$update['name'] = trim( $account->name );
+	}
+	if ( isset( $account->billing_user_id ) ) {
+		$update['billing_user_id'] = $account->billing_user_id;
+	}
+	if ( ! empty( $update ) ) {
+		( new CaptainCore\Accounts )->update( $update, [ "account_id" => $account_id ] );
+		( new CaptainCore\Account( $account_id ) )->sync();
+	}
 	return $account;
 }
 
