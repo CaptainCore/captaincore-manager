@@ -582,6 +582,11 @@ Object.assign(Component.prototype, {
       })),
       dnsRows,
       dnsNotice: !!dnsNote, dnsNoticeText: dnsNote,
+      // Loading affordance: spinner in the notice bar + shimmer skeleton rows
+      // in the (otherwise empty) records card while the zone fetch runs.
+      dnsSpin: !!(dom.dnsLoading || dom.saving),
+      dnsSkelShow: !!dom.dnsLoading && !(s.dnsRecs || []).length,
+      dnsSkelRows: [{}, {}, {}, {}, {}],
       dnsShowActivate: dom.noZone && !dom.dnsLoading,
       activateZone: () => this.activateDnsZone(),
       // Operator zone management — create is the existing per-tab Activate

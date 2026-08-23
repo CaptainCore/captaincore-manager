@@ -1624,6 +1624,7 @@ class Component extends DCLogic {
       dnsEditDone: () => this.setState(st => ({ dnsRecs: st.dnsRecs.map(x => x.uid === st.dnsEdit ? { ...x, name: st.dnsEN.trim() || '@', value: st.dnsEV.trim() || x.value, ttl: st.dnsETtl.trim() || '3600' } : x), dnsEdit: 0, dnsDirty: true })),
       dnsEditCancel: () => this.setState({ dnsEdit: 0, dnsESubs: null }),
       dnsEIsMulti: false, dnsEIsSingle: true, dnsESubRows: [], dnsEAddSub: () => {},
+      dnsSpin: false, dnsSkelShow: false, dnsSkelRows: [],
       openZoneDlg: () => this.setState({ zoneOpen: true, zoneText: '' }),
       closeZone: () => this.setState({ zoneOpen: false }),
       zoneOpen: s.zoneOpen,

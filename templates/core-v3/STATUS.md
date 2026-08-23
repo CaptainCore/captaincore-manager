@@ -1594,6 +1594,13 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### DNS loading affordance (2026-08-23)
+While the zone fetch runs, the DNS tab shows a spinner beside the existing
+"Loading DNS records…" notice AND five `.cc-skel` shimmer rows inside the
+otherwise-empty records card (`dnsSpin` — also on while saving —
+`dnsSkelShow`/`dnsSkelRows` in domains.js). Verified with a stalled fetch:
+loading state renders mid-stall, everything clears when the rows land.
+
 ### DNS sub-record editor + rename trim (2026-08-23)
 - **DNS records edit as structured sub-values** (legacy-editor parity).
   `dnsRowFromApi` keeps the joined display string but now also carries

@@ -1649,6 +1649,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <sc-if value="{{ dnsNotice }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
+                <sc-if value="{{ dnsSpin }}" hint-placeholder-val="{{ false }}">
+                  <span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--brand);animation:ccspin .7s linear infinite;flex:none"></span>
+                </sc-if>
                 <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ dnsNoticeText }}</span>
                 <sc-if value="{{ dnsShowActivate }}" hint-placeholder-val="{{ false }}">
                   <button onClick="{{ activateZone }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Activate DNS zone</button>
@@ -1656,6 +1659,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
             </sc-if>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+              <sc-if value="{{ dnsSkelShow }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ dnsSkelRows }}" as="sk" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                    <span class="cc-skel" style="width:58px;height:18px;flex:none"></span>
+                    <span class="cc-skel" style="width:120px;height:13px;flex:none"></span>
+                    <span class="cc-skel" style="width:46%;height:13px"></span>
+                    <div style="flex:1"></div>
+                    <span class="cc-skel" style="width:36px;height:12px"></span>
+                  </div>
+                </sc-for>
+              </sc-if>
               <sc-for list="{{ dnsRows }}" as="r" hint-placeholder-count="7">
                 <div style="border-bottom:1px solid var(--rule)">
                   <sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
