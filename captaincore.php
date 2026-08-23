@@ -3360,8 +3360,16 @@ function captaincore_usage_breakdown_func( WP_REST_Request $request ) {
 	if ( ! captaincore_verify_permissions( $post_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
 	}
-	$site            = ( new CaptainCore\Site( $post_id ) )->get();
-	$account         = new CaptainCore\Account( $site->account_id, true );
+	$site = ( new CaptainCore\Site( $post_id ) )->get();
+
+	// Verifying the site is not the same as verifying its account - the two can
+	// belong to different tenants - and the second argument here skips the check
+	// the Account constructor would otherwise make.
+	if ( empty( $site->account_id ) || ! ( new CaptainCore\User )->verify_accounts( [ $site->account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
+	$account = new CaptainCore\Account( $site->account_id, true );
 	return $account->usage_breakdown();
 }
 

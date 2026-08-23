@@ -1141,9 +1141,22 @@ class Site {
         $results = [
             'account_id' => $site->account_id,
             'name'       => empty( $account->name ) ? "" : $account->name,
-            'plan'       => $plan,
-            'defaults'   => empty( $account->defaults ) ? "" : json_decode( $account->defaults ),
         ];
+
+        // A site reaches this method through the owning account, the customer
+        // account or a share, so this account is often not the caller's. The
+        // commercial record - price, addons, credits, billing owner - follows
+        // account membership and the tier's own plan permission, which is what
+        // tier_permissions() already expresses for the billing screens.
+        $user  = new User;
+        $level = $user->account_level( $site->account_id );
+        if ( $level !== false ) {
+            $perms = User::tier_permissions( $level );
+            $results['defaults'] = empty( $account->defaults ) ? "" : json_decode( $account->defaults );
+            if ( ! empty( $perms['plan'] ) ) {
+                $results['plan'] = $plan;
+            }
+        }
         return $results;
     }
 

@@ -278,9 +278,15 @@ class User {
         if ( self::is_admin() ) {
             return true;
         }
-        $ids = self::accounts();
+        // An empty or malformed scope has to mean "no", not "nothing to check".
+        // This answers for roughly two hundred routes, so a caller that forwards
+        // a request array would otherwise be granted by sending nothing at all.
+        if ( ! is_array( $account_ids ) || empty( $account_ids ) ) {
+            return false;
+        }
+        $ids = array_map( 'intval', (array) self::accounts() );
         foreach( $account_ids as $account_id ) {
-            if ( ! in_array( $account_id, $ids ) ) {
+            if ( ! is_scalar( $account_id ) || ! in_array( (int) $account_id, $ids, true ) ) {
                 return false;
             }
         }
