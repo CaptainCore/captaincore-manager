@@ -31,6 +31,24 @@ OUT="$PARENT/captaincore-manager.zip"
 
 command -v zip >/dev/null || { echo "zip is required" >&2; exit 1; }
 
+# The version lives in three places and the self-updater compares it against the
+# manifest, so a build whose header disagrees with its own manifest either offers
+# an update forever or never offers one. Fail the build rather than ship that.
+header_version="$( sed -n 's/^ \* Version:[[:space:]]*\(.*\)$/\1/p' "$ROOT/captaincore.php" | head -1 | tr -d '[:space:]' )"
+const_version="$( sed -n "s/^define( 'CAPTAINCORE_VERSION', '\(.*\)' );$/\1/p" "$ROOT/captaincore.php" | head -1 )"
+manifest_version="$( sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/manifest.json" | head -1 )"
+
+[ -n "$header_version" ] || { echo "FAIL: could not read the plugin header version" >&2; exit 1; }
+if [ "$header_version" != "$const_version" ] || [ "$header_version" != "$manifest_version" ]; then
+	echo "FAIL: version mismatch — header=$header_version CAPTAINCORE_VERSION=$const_version manifest=$manifest_version" >&2
+	exit 1
+fi
+if ! grep -q "/v${header_version}/" "$ROOT/manifest.json"; then
+	echo "FAIL: manifest download_url does not point at the v${header_version} release asset" >&2
+	exit 1
+fi
+echo "Version $header_version consistent across header, constant and manifest."
+
 rm -f "$OUT"
 cd "$PARENT"
 zip -r -q -X "$OUT" "$NAME" \
