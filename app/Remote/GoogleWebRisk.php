@@ -56,7 +56,6 @@ class GoogleWebRisk {
 
 		// Build query parameters
 		$query_params = [
-			'key' => GOOGLE_WEB_RISK_API_KEY,
 			'uri' => $uri,
 		];
 
@@ -73,6 +72,7 @@ class GoogleWebRisk {
 			[
 				'timeout' => 30,
 				'headers' => [
+					'X-Goog-Api-Key' => GOOGLE_WEB_RISK_API_KEY,
 					'Accept' => 'application/json',
 				],
 			]
@@ -170,7 +170,6 @@ class GoogleWebRisk {
 
 		// Build query parameters
 		$query_params = [
-			'key'        => GOOGLE_WEB_RISK_API_KEY,
 			'hashPrefix' => base64_encode( $hash_prefix ),
 		];
 
@@ -187,6 +186,7 @@ class GoogleWebRisk {
 			[
 				'timeout' => 30,
 				'headers' => [
+					'X-Goog-Api-Key' => GOOGLE_WEB_RISK_API_KEY,
 					'Accept' => 'application/json',
 				],
 			]

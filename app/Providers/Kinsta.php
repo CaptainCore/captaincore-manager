@@ -305,7 +305,7 @@ class Kinsta {
             "is_subdomain_multisite" => false,
             "install_mode"           => "new",
             "admin_email"            => get_option( 'admin_email' ),
-            "admin_password"         => substr ( str_shuffle( "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 16 ),
+            "admin_password"         => wp_generate_password( 24, true, true ),
             "admin_user"             => $username,
             "is_multisite"           => false,
             "site_title"             => $site->name,

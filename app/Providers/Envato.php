@@ -37,7 +37,7 @@ class Envato {
         $themes   = [];
         foreach( $providers as $provider ) {
             $details = empty( $provider->details ) ? (object) [] : json_decode( $provider->details );
-            foreach( $details->themes as $theme ) {
+            foreach( ( $details->themes ?? [] ) as $theme ) {
                 $themes[] = $theme->item;
             }
         }
@@ -51,7 +51,7 @@ class Envato {
         $plugins   = [];
         foreach( $providers as $provider ) {
             $details = empty( $provider->details ) ? (object) [] : json_decode( $provider->details );
-            foreach( $details->plugins as $plugin ) {
+            foreach( ( $details->plugins ?? [] ) as $plugin ) {
                 $plugins[] = $plugin->item;
             }
         }
@@ -197,7 +197,7 @@ class Envato {
                     $token = $credential->value;
                 }
             }
-            foreach( $details->themes as $theme ) {
+            foreach( ( $details->themes ?? [] ) as $theme ) {
                 if ( $theme->item->id == $theme_id ) {
                     $api_request = "https://api.envato.com/v3/market/buyer/download?purchase_code={$theme->code}";
                     $response    = wp_remote_get( $api_request, [
@@ -229,7 +229,7 @@ class Envato {
                     $token = $credential->value;
                 }
             }
-            foreach( $details->plugins as $plugin ) {
+            foreach( ( $details->plugins ?? [] ) as $plugin ) {
                 if ( $plugin->item->id == $plugin_id ) {
                     $api_request = "https://api.envato.com/v3/market/buyer/download?purchase_code={$plugin->code}";
                     $response    = wp_remote_get( $api_request, [

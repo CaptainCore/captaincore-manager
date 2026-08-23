@@ -15,10 +15,6 @@ class Kinsta {
         return self::$api_key ?? \CaptainCore\Providers\Kinsta::credentials("api");
     }
 
-    public static function showApiKey() {
-        return self::getApiKey();
-    }
-
     /**
      * Endpoints are built by interpolating stored ids into an API path, so a
      * value carrying path or query syntax would steer the request to another
