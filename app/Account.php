@@ -271,7 +271,6 @@ class Account {
 
     public function process_logs() {
         global $wpdb;
-        $Parsedown          = new \Parsedown();
         $site_ids           = array_column( self::sites(), "site_id" );
         $fetch_process_logs = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
 
@@ -326,7 +325,7 @@ class Account {
             $item->created_at      = strtotime( $item->created_at );
             $item->name            = $result->name;
             $item->description_raw = $item->description;
-            $item->description     = $Parsedown->text( $item->description );
+            $item->description     = captaincore_markdown( $item->description );
 
             if ( ! isset( $author_cache[ $item->user_id ] ) ) {
                 $author_cache[ $item->user_id ] = [

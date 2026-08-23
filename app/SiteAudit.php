@@ -391,11 +391,10 @@ class SiteAudit {
             $section_renderers['timeline'] = function() use ( $audit, &$section_num ) {
                 $out = $this->render_section( ++$section_num, 'Attack Timeline', 'Reconstructed attacker activity based on logs, file timestamps, and user events.', 'c8' );
                 $out .= "  <div class=\"card\">\n    <ul class=\"timeline\">\n";
-                $pd = new \Parsedown();
                 foreach ( $audit->timeline_events as $event ) {
                     $type_class = esc_attr( $event->type ?? '' );
                     $timestamp  = esc_html( $event->timestamp ?? '' );
-                    $desc       = $pd->text( $event->description ?? '' );
+                    $desc       = captaincore_markdown( $event->description ?? '' );
                     $out .= "      <li class=\"{$type_class}\">\n";
                     $out .= "        <div class=\"time\">{$timestamp}</div>\n";
                     $out .= "        <div class=\"desc\">{$desc}</div>\n";
@@ -412,7 +411,7 @@ class SiteAudit {
                 $key = sanitize_title( $section->title ?? "section-{$i}" );
                 $section_renderers[ $key ] = function() use ( $section, $i, $colors, &$section_num ) {
                     $title = esc_html( $section->title ?? 'Additional Information' );
-                    $desc  = ( new \Parsedown() )->line( $section->description ?? '' );
+                    $desc  = captaincore_markdown( $section->description ?? '', true );
                     $color = $colors[ $i % 8 ];
                     $out   = $this->render_section( ++$section_num, $title, $desc, $color );
                     $out  .= $this->render_section_content( $section->content ?? [] );
@@ -574,7 +573,7 @@ class SiteAudit {
 
                     case 'callout':
                         $variant = esc_attr( $ev->variant ?? 'blue' );
-                        $html .= "    <div class=\"callout {$variant}\">" . ( new \Parsedown() )->text( $ev->content ?? '' ) . "</div>\n";
+                        $html .= "    <div class=\"callout {$variant}\">" . captaincore_markdown( $ev->content ?? '' ) . "</div>\n";
                         break;
 
                     case 'diff':
@@ -777,7 +776,7 @@ class SiteAudit {
 
                 case 'callout':
                     $variant = esc_attr( $block->variant ?? 'blue' );
-                    $html .= "    <div class=\"callout {$variant}\">" . ( new \Parsedown() )->text( $block->content ?? '' ) . "</div>\n";
+                    $html .= "    <div class=\"callout {$variant}\">" . captaincore_markdown( $block->content ?? '' ) . "</div>\n";
                     break;
 
                 case 'code':

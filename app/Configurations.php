@@ -80,8 +80,7 @@ class Configurations {
 			$configurations->intercom_secret_key = "";
         }
         if ( isset( $configurations->dns_introduction ) ) {
-            $Parsedown = new \Parsedown();
-			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
+			$configurations->dns_introduction_html = captaincore_markdown( $configurations->dns_introduction );
         }
         if ( $configurations->scheduled_tasks ) {
 			foreach ( $configurations->scheduled_tasks as $task ) {

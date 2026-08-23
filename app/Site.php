@@ -1815,7 +1815,6 @@ class Site {
 
     public function process_logs() {
         global $wpdb;
-        $Parsedown    = new \Parsedown();
         $process_logs = [];
         $results      = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $this->site_id ] );
         if ( empty( $results ) ) {
@@ -1864,7 +1863,7 @@ class Site {
             $item->created_at      = strtotime( $item->created_at );
             $item->name            = $result->name;
             $item->description_raw = $item->description;
-            $item->description     = $Parsedown->text( $item->description );
+            $item->description     = captaincore_markdown( $item->description );
             $item->author          = get_the_author_meta( 'display_name', $item->user_id );
             $item->author_avatar   = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp";
             $item->files           = $files_by_log[ (int) $item->process_log_id ] ?? [];

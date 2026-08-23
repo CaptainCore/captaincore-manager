@@ -21,7 +21,7 @@ class Process {
             "name"            => $process->name,
             "repeat_quantity" => $process->repeat_quantity,
             "repeat"          => $process_repeat->{"$process->repeat_interval"},
-            "description"     => ( new \Parsedown )->text( $description ),
+            "description"     => captaincore_markdown( $description ),
             "roles"           => $process_roles[$key]->name,
             "time_estimate"   => $process->time_estimate,
 

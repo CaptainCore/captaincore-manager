@@ -52,7 +52,6 @@ class ProcessLog {
     }
 
     public function get() {
-        $Parsedown             = new \Parsedown();
         $process_log           = new ProcessLogs();
         $item                  = $process_log->get( $this->process_log_id );
         if ( ! $item ) {
@@ -63,7 +62,7 @@ class ProcessLog {
         $item->created_at_raw  = $item->created_at;
         $item->created_at      = strtotime( $item->created_at );
         $item->description_raw = $item->description;
-        $item->description     = $Parsedown->text( $item->description );
+        $item->description     = captaincore_markdown( $item->description );
         $item->author          = get_the_author_meta( 'display_name', $item->user_id );
         $item->author_avatar   = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp";
         $item->websites        = ( new ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $this->process_log_id ] );

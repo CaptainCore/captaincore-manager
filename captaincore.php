@@ -922,6 +922,27 @@ function captaincore_missive_func( WP_REST_Request $request ) {
  * Returns the CLI token, auto-generating and storing one in wp_options if needed.
  * Backward compatible: if CAPTAINCORE_CLI_TOKEN is defined, that value is used.
  */
+/**
+ * Render Markdown for display.
+ *
+ * Some of these inputs are customer-writable (process-log descriptions, site
+ * timeline entries) and the rendered HTML is injected into the dashboard, so
+ * the result is filtered through wp_kses_post(). That keeps the formatting
+ * these fields legitimately use - strong, code, lists, tables - while dropping
+ * event-handler attributes, script elements and javascript: URLs.
+ *
+ * @param string $text   Markdown source.
+ * @param bool   $inline Render as a single line instead of a block.
+ * @return string
+ */
+function captaincore_markdown( $text, $inline = false ) {
+	$parsedown = new \Parsedown();
+	$html      = $inline
+		? $parsedown->line( (string) $text )
+		: $parsedown->text( (string) $text );
+	return wp_kses_post( $html );
+}
+
 function captaincore_get_cli_token() {
 	if ( defined( 'CAPTAINCORE_CLI_TOKEN' ) ) {
 		return CAPTAINCORE_CLI_TOKEN;
@@ -8396,7 +8417,7 @@ function captaincore_register_rest_endpoints() {
 				$markdown = str_replace( '{your-site}', wp_parse_url( home_url(), PHP_URL_HOST ), $markdown );
 				$format   = $request->get_param( 'format' );
 				if ( $format === 'html' ) {
-					return [ 'html' => ( new \Parsedown() )->text( $markdown ) ];
+					return [ 'html' => captaincore_markdown( $markdown ) ];
 				}
 				// Raw markdown download
 				header( 'Content-Type: text/markdown; charset=UTF-8' );
