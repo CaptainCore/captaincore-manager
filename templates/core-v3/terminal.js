@@ -255,11 +255,7 @@ Object.assign(Component.prototype, {
       tpCount: selSet.size + ' selected',
       tpResults,
       cookOpen: s.cookOpen, cookQ: s.cookQ || '',
-      // Autofocus the search on popup open. The flag lives on the DOM node
-      // (same trick as termRef's _seeded): re-renders re-invoke the ref with
-      // the SAME node and must not steal focus back mid-typing; a fresh open
-      // mounts a fresh node and focuses again.
-      cookQRef: (el) => { if (el && !el._focused) { el._focused = true; el.focus(); } },
+      // Search autofocus rides the shared leadFocusRef (app.js) in the markup.
       cookToggle: () => { this.setState(st => ({ cookOpen: !st.cookOpen, tpOpen: false, cookQ: '' })); this.loadRecipes(); },
       cookClose: () => this.setState({ cookOpen: false }),
       onCookQ: e => this.setState({ cookQ: e.target.value }),

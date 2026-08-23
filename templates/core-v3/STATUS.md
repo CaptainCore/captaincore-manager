@@ -1594,6 +1594,26 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Leading-input autofocus + Archives filter (2026-08-23)
+- **`leadFocusRef`** (app.js, beside `ddClose`): the one focus-on-mount ref for
+  a screen's LEADING search/filter input. Flag lives on the DOM node so
+  re-renders can't steal focus mid-typing; an sc-if remount (entering the
+  route/tab) focuses again. **Skipped on phones** (keyboard pop). Wired on:
+  Users / Sites / Domains / Accounts / Archives toolbars, terminal target
+  picker + cookbook popovers (cookQRef retired into it), push-to-other and
+  assign-account dialogs, Add plugin/theme wp.org + Envato tab searches, and
+  the New-site Import tab filter. The two dialogs' dead raw `autofocus`
+  attributes were dropped (that attribute only fires on document load — the
+  reason the palette needed its componentDidUpdate focus, which still handles
+  the `ddOpen` popovers). New list screens put this ref on their toolbar input.
+- **Archives page gained the standard toolbar filter** ("Filter archives…",
+  matches name or yyyy-mm-dd date, "N of total" count line, no-match empty
+  state naming the query) **plus a 500-row render cap** — the store is 5,000+
+  rows and rendering all of them janks every re-render (the remote-sites
+  lesson); the cap is announced in the count line, never silent.
+- Verified live headless (12 checks) incl. focus surviving typed re-renders
+  and mobile emulation skipping autofocus.
+
 ### v3 is the default + standalone login page (2026-08-22)
 The rename Austin asked for: `templates/core.php` (old Vue app) →
 `templates/core-legacy.php`, `templates/core-v3.php` → `templates/core.php`

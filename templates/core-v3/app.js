@@ -652,6 +652,7 @@ class Component extends DCLogic {
     const list = s.archList || this.ARCH_INIT;
     return {
       archTotal: list.length + ' archives · 8.9 GB on Backblaze B2',
+      archQ: s.archQ || '', onArchQ: e => this.setState({ archQ: e.target.value }),
       archUrl: s.archUrl, onArchUrl: e => this.setState({ archUrl: e.target.value, archErr: false }),
       archBd: s.archErr ? 'var(--bad)' : 'var(--rule)', archErr: s.archErr,
       storeArch: () => { const u = this.state.archUrl.trim();
@@ -2821,6 +2822,14 @@ class Component extends DCLogic {
       openPalette: () => this.setState({ paletteOpen: true, palQuery: '', palIdx: 0 }),
       closePalette: () => this.setState({ paletteOpen: false }),
       ddClose: () => this.setState({ ddOpen: '', ddQ: '' }),
+      // Focus-on-mount ref for a screen's LEADING search/filter input (Users →
+      // "Filter users…", Sites → "Filter sites…", dialog pickers, …). The flag
+      // lives on the DOM node (the cookbook-search pattern): re-renders hand
+      // back the same node and must not steal focus mid-typing; an sc-if
+      // remount — entering the route/tab — makes a fresh node and focuses
+      // again. Skipped on phones, where autofocus pops the keyboard over the
+      // page. New list screens should put this ref on their toolbar search.
+      leadFocusRef: el => { if (el && !el._focused && !this.isMobile()) { el._focused = true; el.focus(); } },
       ddQ: s.ddQ, onDdQ: e => this.setState({ ddQ: e.target.value }),
       stopProp: (e) => e.stopPropagation(),
       onPalInput: (e) => this.setState({ palQuery: e.target.value, palIdx: 0 })

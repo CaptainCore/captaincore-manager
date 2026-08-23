@@ -58,7 +58,15 @@ Object.assign(Component.prototype, {
     const list = raw.filter(a => !a.IsDir && /\.zip$/i.test(a.Name || a.Path || ''))
       .sort((a, b) => String(b.ModTime || '').localeCompare(String(a.ModTime || '')));
     const totalBytes = list.reduce((n, a) => n + (parseInt(a.Size, 10) || 0), 0);
-    const archRows = list.map((a, i) => ({
+    // Toolbar filter (name or yyyy-mm-dd date), and a render cap — the full
+    // store is 5,000+ rows, which janks every re-render (the remote-sites
+    // lesson). The cap is announced in the count line, never silent.
+    const nq = (s.archQ || '').trim().toLowerCase();
+    const matched = nq
+      ? list.filter(a => ((a.Name || a.Path || '') + ' ' + String(a.ModTime || '').slice(0, 10)).toLowerCase().includes(nq))
+      : list;
+    const CAP = 500;
+    const archRows = matched.slice(0, CAP).map((a, i) => ({
       name: a.Name || a.Path,
       size: this.fmtStorage(a.Size),
       mod: (a.ModTime || '').slice(0, 10),
@@ -67,9 +75,13 @@ Object.assign(Component.prototype, {
       share: () => this.shareArchive(a.Path || a.Name, 'arch' + i),
       del: () => {}
     }));
+    const totalLabel = list.length + ' archive' + (list.length === 1 ? '' : 's') + ' · ' + this.fmtStorage(totalBytes) + ' on Backblaze B2';
     return {
-      archTotal: list.length + ' archive' + (list.length === 1 ? '' : 's') + ' · ' + this.fmtStorage(totalBytes) + ' on Backblaze B2',
-      archRows, archEmpty: !archRows.length, archEmptyText: 'No archives stored yet.',
+      archTotal: (nq ? matched.length + ' of ' + totalLabel : totalLabel)
+        + (matched.length > CAP ? ' · showing first ' + CAP + ' — filter to narrow' : ''),
+      archRows, archEmpty: !archRows.length,
+      archEmptyText: nq ? 'No archives match "' + (s.archQ || '').trim() + '".' : 'No archives stored yet.',
+      archQ: s.archQ || '', onArchQ: e => this.setState({ archQ: e.target.value }),
       storeArch: () => this.storeArchive(),
       archStoreMsg: s.archStoreMsg || '', archHasStoreMsg: !!(s.archStoreMsg || '')
     };
