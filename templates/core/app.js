@@ -354,9 +354,13 @@ class Component extends DCLogic {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
     const pageNum = Math.min(Math.max(1, s.accPage || 1), totalPages);
     const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
+    // Shimmer rows while hydrating (same gate as sitesSkel).
+    const accSkel = !!window.CC_BOOT && !this._hydrated;
+    const accLabel = accSkel ? 'Loading accounts…' : filtered.length + ' accounts';
     return {
-      accCount: filtered.length + ' accounts',
-      ...(s.route === 'accounts' ? { screenSub: filtered.length + ' accounts', screenSubDisplay: 'inline-block' } : {}),
+      accSkelRows: accSkel ? Array.from({ length: 6 }, () => ({})) : [],
+      accCount: accLabel,
+      ...(s.route === 'accounts' ? { screenSub: accLabel, screenSubDisplay: 'inline-block' } : {}),
       ...this.pagerVals('acc', 'accPage', filtered.length, pageNum, totalPages, 'accounts'),
       aq: s.aq, onAq: e => this.setState({ aq: e.target.value, accPage: 1 }),
       accCols: this.mkSortCols('accSort', ACC_COLS),
@@ -1537,10 +1541,13 @@ class Component extends DCLogic {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
     const pageNum = Math.min(Math.max(1, s.domPage || 1), totalPages);
     const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
+    // Shimmer rows while hydrating (same gate as sitesSkel).
+    const domSkel = !!window.CC_BOOT && !this._hydrated;
     return {
-      domCount: filtered.length + ' domains',
+      domSkelRows: domSkel ? Array.from({ length: 6 }, () => ({})) : [],
+      domCount: domSkel ? 'Loading domains…' : filtered.length + ' domains',
       ...this.pagerVals('dom', 'domPage', filtered.length, pageNum, totalPages, 'domains'),
-      ...(s.route === 'domains' ? { screenSub: filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
+      ...(s.route === 'domains' ? { screenSub: domSkel ? 'Loading domains…' : filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
       dq: s.dq, onDq: e => this.setState({ dq: e.target.value, domPage: 1 }),
       openNewDomain: () => this.setState({ ndOpen: true }),
       closeNd: () => this.setState({ ndOpen: false }),

@@ -1836,7 +1836,9 @@ Pre-hydration the sites screen showed an empty table and "0 sites · 0
 environments". Now `sitesSkel` (same `booted && !_hydrated` gate as homeSkel)
 drives 6 shimmer rows per view via `sitesSkelRows` (empty array once hydrated,
 so the markup self-hides) and the count chip reads "Loading fleet…". All three
-views (table / cards / list) have matching skeleton markup. PAGE_SIZES moved
+views (table / cards / list) have matching skeleton markup. Same treatment on
+Domains and Accounts (`domSkelRows` / `accSkelRows`, "Loading domains…" /
+"Loading accounts…" chips, verified live the same way). PAGE_SIZES moved
 25/50/100/250 → 24/48/96/240 (divisible by 12 so the auto-fill card grid fills
 its rows at 2/3/4/6 columns; a stored legacy size falls back to 24). Verified
 live headless with REST responses held 8s: skeletons + chip in all three
