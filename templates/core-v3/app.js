@@ -27,7 +27,10 @@ class Component extends DCLogic {
   state = {
     route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null,
     palQuery: '', palIdx: 0, tick: 0,
-    view: 'table', q: '', fProv: 'Any', fHealth: 'All', sel: {},
+    // Sites view (Table/Cards/List) boots from the user's stored default
+    // (right-click the view toggle to set it).
+    view: (() => { try { const v = localStorage.getItem('cc-sites-view'); return ['table', 'cards', 'list'].includes(v) ? v : 'table'; } catch (e) { return 'table'; } })(),
+    q: '', fProv: 'Any', fHealth: 'All', sel: {},
     fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
@@ -1089,6 +1092,7 @@ class Component extends DCLogic {
       lstBg: s.view === 'list' ? 'var(--panel-2)' : 'transparent', lstFg: s.view === 'list' ? 'var(--ink)' : 'var(--ink-dim)',
       setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
       setViewList: () => this.setState({ view: 'list' }),
+      viewCtx: (e) => this.openSitesViewMenu(e),
       listRows: rows,
       siteCols: this.mkSortCols('sitesSort', SITE_COLS)
     };
@@ -2357,6 +2361,19 @@ class Component extends DCLogic {
     // System, flip whatever the OS is showing now and lock that.
     const now = this.themePref() === 'system' ? this.osTheme() : this.themePref();
     this.setThemePref(now === 'light' ? 'dark' : 'light');
+  }
+
+  // Right-click on the Sites view toggle: pick which view /sites opens in
+  // (persisted per browser; the theme-toggle ctx-menu pattern). Picking also
+  // switches to that view immediately.
+  openSitesViewMenu(e) {
+    let cur = 'table';
+    try { cur = localStorage.getItem('cc-sites-view') || 'table'; } catch (err) {}
+    const mark = (id, label) => (cur === id ? '✓ ' : '') + label;
+    this.openCtxMenu(e, [['table', 'Table'], ['cards', 'Cards'], ['list', 'List']].map(([id, label]) => ({
+      label: mark(id, 'Default: ' + label), active: cur === id,
+      act: () => { try { localStorage.setItem('cc-sites-view', id); } catch (err) {} this.setState({ view: id }); }
+    })));
   }
 
   openThemeMenu(e) {

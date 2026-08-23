@@ -586,7 +586,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span onClick="{{ clearFilters }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
             </sc-if>
             <div style="flex:1"></div>
-            <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;flex:none">
+            <div onContextMenu="{{ viewCtx }}" title="Right-click to set your default view" class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;flex:none">
               <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>
               <span onClick="{{ setViewCards }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ crdBg }};color:{{ crdFg }}">Cards</span>
               <span onClick="{{ setViewList }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ lstBg }};color:{{ lstFg }}">List</span>

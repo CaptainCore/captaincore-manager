@@ -1594,6 +1594,13 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Sites view: right-click default (2026-08-23)
+Right-clicking the Table/Cards/List toggle opens a ctx menu (theme-toggle
+pattern: `openSitesViewMenu`, ✓ on the current pick) — "Default: Table /
+Cards / List". Picking stores `cc-sites-view` and switches immediately;
+`state.view` boots from the stored value. Verified live: pick → applied +
+stored, reload boots into Cards, check mark follows, restored to Table.
+
 ### Type scale tokenized + bumped (2026-08-23)
 "Font size overall still feels too small" — the structural answer, not
 another spot-bump: font sizes were the one thing the token system never
