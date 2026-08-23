@@ -242,7 +242,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-img :src='item.icons["1x"]' contain></v-img>
 									</v-avatar>
 									<div>
-										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-subtitle-2 font-weight-bold" style="line-height: 1.2;">{{ decodeEntities( item.name ) }}</div>
 										<div class="text-caption text-medium-emphasis mt-1">Version {{ item.version }}</div>
 									</div>
 								</div>
@@ -284,7 +284,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
 									</v-avatar>
 									<div>
-										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-subtitle-2 font-weight-bold" style="line-height: 1.2;">{{ decodeEntities( item.name ) }}</div>
 										<div class="text-caption text-medium-emphasis mt-1">ID: {{ item.id }}</div>
 									</div>
 								</div>
@@ -393,7 +393,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-card border flat height="100%" class="d-flex flex-column">
 								<v-img :src="item.screenshot_url" height="150" cover></v-img>
 								<div class="pa-3">
-									<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+									<div class="text-subtitle-2 font-weight-bold" style="line-height: 1.2;">{{ decodeEntities( item.name ) }}</div>
 									<div class="text-caption text-medium-emphasis mt-1">Version {{ item.version }}</div>
 								</div>
 								<v-spacer></v-spacer>
@@ -434,7 +434,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
 									</v-avatar>
 									<div>
-										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-subtitle-2 font-weight-bold" style="line-height: 1.2;">{{ decodeEntities( item.name ) }}</div>
 										<div class="text-caption text-medium-emphasis mt-1">ID: {{ item.id }}</div>
 									</div>
 								</div>
@@ -2257,8 +2257,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</template>
 							<template v-else>
 							<div>
-								<v-list-item-title v-html="item.raw.name"></v-list-item-title>
-								<v-list-item-subtitle v-html="item.raw.repeat_interval + ' - ' + item.raw.roles"></v-list-item-subtitle>
+								<v-list-item-title>{{ item.raw.name }}</v-list-item-title>
+								<v-list-item-subtitle>{{ item.raw.repeat_interval + ' - ' + item.raw.roles }}</v-list-item-subtitle>
 							</div>
 							</template>
 						</v-list-item>
@@ -2307,8 +2307,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</template>
 							<template v-else>
 							<div>
-								<v-list-item-title v-html="item.raw.name"></v-list-item-title>
-								<v-list-item-subtitle v-html="item.raw.repeat_interval + ' - ' + item.raw.roles"></v-list-item-subtitle>
+								<v-list-item-title>{{ item.raw.name }}</v-list-item-title>
+								<v-list-item-subtitle>{{ item.raw.repeat_interval + ' - ' + item.raw.roles }}</v-list-item-subtitle>
 							</div>
 							</template>
 						</v-list-item>
@@ -5157,7 +5157,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="12" md="4">
 							<v-card :href="`${configurations.path}accounts/${account.account_id}`" @click.prevent="goToPath( '/accounts/' + account.account_id )" density="compact" flat border="thin" rounded="xl">
 								<v-card-title class="text-body-1 d-flex align-center">
-									<span v-html="account.name" class="text-truncate overflow-hidden d-inline-block"></span>
+									<span class="text-truncate overflow-hidden d-inline-block">{{ account.name }}</span>
 									<v-spacer></v-spacer>
 									<div class="d-flex align-center flex-shrink-0">
 									<v-tooltip location="bottom">
@@ -5187,7 +5187,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col v-for="domain in dialog_site.site.domains" :key="domain.domain_id" cols="12" md="4">
 							<v-card :href=`${configurations.path}domains/${domain.domain_id}` @click.prevent="goToPath( '/domains/' + domain.domain_id )" density="compact" flat border="thin" rounded="xl">
 								<v-card-title class="text-body-1">
-									<span v-html="domain.name"></span>
+									<span>{{ domain.name }}</span>
 								</v-card-title>
 							</v-card>
 						</v-col>
@@ -5486,7 +5486,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-list-subheader>Themes</v-list-subheader>
 					<v-data-table v-model="dialog_site.environment_selected.themes_selected" :headers="header_themes" :items="dialog_site.environment_selected.themes" :loading="dialog_site.site.loading_themes" :items-per-page="-1" :items-per-page-options="[{'title':'All','value':-1}]" item-value="name" show-select hide-default-footer>
 					<template v-slot:item.title="{ item }">
-						<div v-html="item.title"></div>
+						<div>{{ item.title }}</div>
 					</template>
 					<template v-slot:item.status="{ item }">
 						<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
@@ -7054,7 +7054,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-row density="compact" v-if="dialog_edit_site.site.shared_with && dialog_edit_site.site.shared_with.length > 0" class="mt-3">
 						<v-col v-for="account in dialog_edit_site.site.shared_with" :key="account.account_id" cols="4">
 							<v-card>
-							<v-card-title v-html="account.name"></v-card-title>
+							<v-card-title>{{ account.name }}</v-card-title>
 							<v-card-actions>
 								<v-tooltip location="top">
 								<template v-slot:activator="{ props }">
@@ -12320,7 +12320,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-overlay>
 			<v-card tile v-else>
 				<v-toolbar light flat>
-					<v-toolbar-title>Account <strong><span v-html="new_invite.account.name"></span></strong> contains:</v-toolbar-title>
+					<v-toolbar-title>Account <strong><span>{{ new_invite.account.name }}</span></strong> contains:</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 					</v-toolbar-items>
@@ -12395,7 +12395,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-col v-for="account in dialog_domain.accounts" :key="account.account_id" cols="12" md="4">
 				<v-card :href="role == 'administrator' ? `${configurations.path}accounts/${account.account_id}` : null" @click.prevent="role == 'administrator' ? goToPath( '/accounts/' + account.account_id ) : null" :disabled="role != 'administrator'" :ripple="role == 'administrator'" density="compact" flat border="thin" rounded="xl">
 					<v-card-title class="text-body-1">
-						<span v-html="account.name"></span>
+						<span>{{ account.name }}</span>
 					</v-card-title>
 					<v-card-subtitle class="mb-3">Account #{{ account.account_id }}</v-card-subtitle>
 				</v-card>
@@ -15017,6 +15017,13 @@ const app = createApp({
 		},
 	},
 	methods: {
+		// wordpress.org returns plugin and theme names with HTML entities in them.
+		decodeEntities( str ) {
+			if ( ! str || str.indexOf( '&' ) === -1 ) { return str || ''; }
+			const el = this._decodeEl = this._decodeEl || document.createElement( 'textarea' );
+			el.innerHTML = str;
+			return el.value;
+		},
 		fetchBulkProgress() {
 			if ( this.role !== 'administrator' ) return;
 			axios.get( '/wp-json/captaincore/v1/progress', { headers: { 'X-WP-Nonce': this.wp_nonce } })
