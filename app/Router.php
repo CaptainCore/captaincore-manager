@@ -157,14 +157,21 @@ class Router {
                         if ( $order_key === $key && $customer_id ) {
                             $user = get_user_by( 'id', $customer_id );
                             if ( $user ) {
+                                // An order key never expires, is not single use, and is
+                                // emailed with every invoice and renewal notice, so it is
+                                // not proof of anything a second factor was meant to add.
+                                // An account that has enrolled goes through the login
+                                // screen instead of being signed in from the link.
+                                if ( get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ) {
+                                    $config = Configurations::fetch();
+                                    $path   = isset( $config->path ) ? '/' . trim( $config->path, '/' ) . '/' : '/account/';
+                                    wp_redirect( home_url( $path . 'billing/' . $order_id ) );
+                                    exit;
+                                }
+
                                 // Login User
                                 wp_set_current_user( $user->ID, $user->user_login );
                                 wp_set_auth_cookie( $user->ID );
-
-                                // The invoice link is emailed to the order's customer;
-                                // clicking it proves mailbox possession, so trust the
-                                // current location without a separate email verify.
-                                TrustedLogins::trust_current_request( (int) $user->ID, 'invoice_magic' );
 
                                 // Fetch configurations to get the correct billing path
                                 $config = Configurations::fetch();

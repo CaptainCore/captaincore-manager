@@ -206,9 +206,12 @@ class GeoIP {
             'lookup_ok' => false,
         ];
 
-        // Private / loopback ranges are treated as trusted-local.
-        $host = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '';
-        if ( $host === 'localhost' || preg_match( '/(^|[\.])(localhost|test|local)(:\d+)?$/', $host ) || ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+        // Private / loopback ranges are treated as trusted-local. The hostname
+        // used to count too, but HTTP_HOST is supplied by the client and this
+        // value decides whether the new-location check runs at all, so the
+        // address is the only thing consulted. Development environments are
+        // already covered by the private-range test below.
+        if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
             $base['is_local']  = true;
             $base['lookup_ok'] = true;
             return $base;
