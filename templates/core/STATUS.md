@@ -74,7 +74,7 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   Production env's base, falls back to any env with one; data.js keeps `site`
   slug on FLEET records). Table rows carry a 48px thumb column, cards a 130px
   hero image; both fall back to a two-letter monogram placeholder when no
-  screenshot exists. Card action is "Login to WordPress" now (shared
+  screenshot exists. Card action is "WP Login" (label shortened 2026-08-23; shared
   `magicLogin(siteId, envLower, user)` in site-detail.js — realMagicLogin
   delegates to it; production env from the list, runJob sample fallback in
   design mode). The card Terminal chip is gone (terminal = topbar/⌃`/palette).
