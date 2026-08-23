@@ -66,6 +66,22 @@ require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/Parsedown.php';
 require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-manager-updater.php';
 
+/**
+ * Run any pending database migrations automatically. DB::upgrade() self-gates
+ * on the captaincore_db_version site option, so this costs a single option
+ * read when the schema is current. Hooked to admin_init rather than the
+ * upgrader hooks because after a plugin update the OLD code is still loaded
+ * in memory; the new schema definition only exists on the request AFTER the
+ * update completes. Output-buffered because upgrade() echoes its result for
+ * WP-CLI callers.
+ */
+function captaincore_maybe_upgrade_db() {
+	ob_start();
+	CaptainCore\DB::upgrade();
+	ob_end_clean();
+}
+add_action( 'admin_init', 'captaincore_maybe_upgrade_db' );
+
 function captaincore_cron_run() {
 	CaptainCore\Accounts::auto_switch_plans();
     CaptainCore\Accounts::process_renewals();
