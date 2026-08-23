@@ -7190,7 +7190,7 @@ function captaincore_quicksaves_func( $request ) {
 function captaincore_activity_logs_func( WP_REST_Request $request ) {
 	$filters  = [];
 	$page     = intval( $request->get_param( 'page' ) ?: 1 );
-	$per_page = intval( $request->get_param( 'per_page' ) ?: 50 );
+	$per_page = min( 200, max( 1, intval( $request->get_param( 'per_page' ) ?: 50 ) ) );
 
 	foreach ( [ 'action', 'entity_type', 'user_id', 'date_from', 'date_to' ] as $key ) {
 		$val = $request->get_param( $key );
@@ -7209,6 +7209,9 @@ function captaincore_activity_logs_func( WP_REST_Request $request ) {
 		$account_ids = ( new CaptainCore\User )->accounts();
 		if ( ! empty( $account_id ) && ! in_array( intval( $account_id ), $account_ids ) ) {
 			return new WP_Error( 'forbidden', 'Access denied.', [ 'status' => 403 ] );
+		}
+		if ( empty( $account_ids ) ) {
+			return [ 'items' => [], 'total' => 0, 'page' => $page, 'per_page' => $per_page ];
 		}
 		if ( empty( $account_id ) ) {
 			$filters['account_ids'] = $account_ids;

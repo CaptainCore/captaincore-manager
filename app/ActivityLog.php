@@ -58,10 +58,17 @@ class ActivityLog {
             $where[]  = 'account_id = %d';
             $values[] = $filters['account_id'];
         }
-        if ( ! empty( $filters['account_ids'] ) && is_array( $filters['account_ids'] ) ) {
-            $placeholders = implode( ', ', array_fill( 0, count( $filters['account_ids'] ), '%d' ) );
-            $where[]      = "account_id IN ($placeholders)";
-            $values       = array_merge( $values, $filters['account_ids'] );
+        // An empty account scope means the caller has no accounts, so it has to
+        // match nothing. Guarding this with ! empty() dropped the clause instead
+        // and returned every row in the table.
+        if ( isset( $filters['account_ids'] ) && is_array( $filters['account_ids'] ) ) {
+            if ( empty( $filters['account_ids'] ) ) {
+                $where[] = '1 = 0';
+            } else {
+                $placeholders = implode( ', ', array_fill( 0, count( $filters['account_ids'] ), '%d' ) );
+                $where[]      = "account_id IN ($placeholders)";
+                $values       = array_merge( $values, $filters['account_ids'] );
+            }
         }
         if ( ! empty( $filters['date_from'] ) ) {
             $where[]  = 'created_at >= %s';
