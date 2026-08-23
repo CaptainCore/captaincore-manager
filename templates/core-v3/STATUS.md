@@ -1637,6 +1637,32 @@ existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
 scroll jump, ESC, cached reopen firing zero refetches, and a real download
 whose file starts `# CaptainCore REST API`.
 
+### User API docs expansion (2026-08-23)
+`api-docs.md` was a path listing (many endpoints as a method+path stub,
+admin routes mixed in). Audited every `register_rest_route` in
+`captaincore.php` and rewrote it as a **user** reference — logged-in
+account members with an application password, not operators.
+
+Dropped administrator-only surface (users directory, fleet configurations,
+archives, security ops, provider credentials, hard site delete, `/jobs/{id}`,
+SSH key mutations, account plan/delete, GET `/users` which returns `[]` for
+non-admins). Expanded the rest with request fields, curl, response shapes,
+and the gotchas a coding agent actually hits: environment casing
+(`Production` vs `production`), `/site` vs `/sites` prefixes, API-vs-UI
+sync/async (`X-WP-Nonce` absent = wait 5 min unless `"async": true`),
+`POST /me/pins` body is the array itself, CLI command table, bulk-tools
+taking environment IDs, DNS bulk using Constellix `remote_id`.
+
+New user-facing sections that were missing entirely: Conventions, Sessions,
+Files, Performance, logs-archive, sandbox-token / Playground, Site Audits
+(request/cancel/coverage — not findings CRUD), Mailgun usage, site-filters,
+scheduled reports, activity-log query params, process-log timeline notes.
+
+38 H2 / 157 H3 (195 TOC entries, 83 tables). Viewer unchanged — still
+Parsedown + client TOC from h2/h3. Verified live headless desktop +
+mobile: host substituted, no leftover `{your-site}`, no admin TOC
+sections, Files / Site Audits TOC jumps land on the heading.
+
 ### Leading-input autofocus + Archives filter (2026-08-23)
 - **`leadFocusRef`** (app.js, beside `ddClose`): the one focus-on-mount ref for
   a screen's LEADING search/filter input. Flag lives on the DOM node so
