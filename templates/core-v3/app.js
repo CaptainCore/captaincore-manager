@@ -347,19 +347,14 @@ class Component extends DCLogic {
     ];
     const filtered = this.sortRows('accSort', ACC_COLS, list.filter(a => !nq || a.name.toLowerCase().includes(nq)));
     // Pagination (same as Sites/Domains).
-    const PAGE = 25;
+    const PAGE = this.pageSize();
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
     const pageNum = Math.min(Math.max(1, s.accPage || 1), totalPages);
     const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
     return {
       accCount: filtered.length + ' accounts',
       ...(s.route === 'accounts' ? { screenSub: filtered.length + ' accounts', screenSubDisplay: 'inline-block' } : {}),
-      accPageShow: totalPages > 1,
-      accPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' accounts',
-      accPrev: () => this.setState({ accPage: Math.max(1, pageNum - 1) }),
-      accNext: () => this.setState({ accPage: Math.min(totalPages, pageNum + 1) }),
-      accPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
-      accNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
+      ...this.pagerVals('acc', 'accPage', filtered.length, pageNum, totalPages, 'accounts'),
       aq: s.aq, onAq: e => this.setState({ aq: e.target.value, accPage: 1 }),
       accCols: this.mkSortCols('accSort', ACC_COLS),
       accRows: pageRows.map(a => ({ ...a,
@@ -853,7 +848,7 @@ class Component extends DCLogic {
     const selIds = filtered.filter(x => s.sel[x.id]).map(x => x.id);
     // Pagination — rendering thousands of rows makes every re-render (⌘K,
     // theme toggle) janky. Slice to a page; clamp when filters shrink results.
-    const PAGE = 25;
+    const PAGE = this.pageSize();
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
     const pageNum = Math.min(Math.max(1, s.sitesPage || 1), totalPages);
     const pageStart = (pageNum - 1) * PAGE;
@@ -928,14 +923,7 @@ class Component extends DCLogic {
       screenSub: s.route === 'sites' ? filtered.length + ' sites · ' + envCount + ' environments' : '',
       screenSubDisplay: s.route === 'sites' ? 'inline-block' : 'none',
       q: s.q, onQ: (e) => this.setState({ q: e.target.value, sitesPage: 1 }),
-      sitesPageShow: totalPages > 1,
-      sitesPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' sites',
-      sitesPrevDisabled: pageNum <= 1,
-      sitesNextDisabled: pageNum >= totalPages,
-      sitesPrev: () => this.setState({ sitesPage: Math.max(1, pageNum - 1) }),
-      sitesNext: () => this.setState({ sitesPage: Math.min(totalPages, pageNum + 1) }),
-      sitesPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
-      sitesNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
+      ...this.pagerVals('sites', 'sitesPage', filtered.length, pageNum, totalPages, 'sites'),
       facets: activeFacets.map(d => ({
         ...mkFacet(d.id, d.base, d.cur, d.plugin ? [] : d.opts()),
         isPlugin: !!d.plugin, notPlugin: !d.plugin,
@@ -1109,6 +1097,52 @@ class Component extends DCLogic {
       recs.push({ type: toks[idx].toUpperCase(), name: toks[0].replace(/\.$/, '') || '@', value, ttl: ttlTok || '3600' });
     });
     return recs;
+  }
+
+  // ── List pagination (Sites / Domains / Accounts) ──────────────
+  // One shared rows-per-page preference (localStorage `cc-page-size`,
+  // default 100), one shared vals builder so the three footers can't drift.
+  PAGE_SIZES = [25, 50, 100, 250];
+
+  pageSize() {
+    let n = this.state.pageSize;
+    if (!n) { try { n = parseInt(localStorage.getItem('cc-page-size'), 10); } catch (e) {} }
+    return this.PAGE_SIZES.includes(n) ? n : 100;
+  }
+
+  setPageSize(n) {
+    try { localStorage.setItem('cc-page-size', String(n)); } catch (e) {}
+    // Old page offsets are meaningless at a new size — every list restarts.
+    this.setState({ pageSize: n, sitesPage: 1, domPage: 1, accPage: 1 });
+  }
+
+  // prefix 'sites'|'dom'|'acc' → the footer's bindings. Page changes scroll
+  // the main pane back to the top (clicking Next at the list bottom otherwise
+  // strands you there). The footer shows whenever the size choice matters
+  // (more rows than the smallest size), not only when there are 2+ pages.
+  pagerVals(prefix, stateKey, filteredLen, pageNum, totalPages, noun) {
+    const PAGE = this.pageSize();
+    const start = (pageNum - 1) * PAGE;
+    const end = Math.min(filteredLen, start + PAGE);
+    const go = n => { this.setState({ [stateKey]: n }); if (this._mainEl) this._mainEl.scrollTop = 0; };
+    return {
+      [prefix + 'PageShow']: filteredLen > this.PAGE_SIZES[0],
+      [prefix + 'PageLabel']: (filteredLen ? (start + 1).toLocaleString() + '–' + end.toLocaleString() + ' of ' : '')
+        + filteredLen.toLocaleString() + ' ' + noun
+        + (totalPages > 1 ? ' · page ' + pageNum + ' of ' + totalPages.toLocaleString() : ''),
+      [prefix + 'Prev']: () => go(Math.max(1, pageNum - 1)),
+      [prefix + 'Next']: () => go(Math.min(totalPages, pageNum + 1)),
+      [prefix + 'First']: () => go(1),
+      [prefix + 'Last']: () => go(totalPages),
+      [prefix + 'PrevBg']: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
+      [prefix + 'NextBg']: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
+      // First/Last only earn their pixels once Prev/Next stops being enough.
+      [prefix + 'EndsShow']: totalPages > 2,
+      [prefix + 'Sizes']: this.PAGE_SIZES.map(n => ({ label: String(n),
+        fg: n === PAGE ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: n === PAGE ? 'var(--panel-2)' : 'transparent',
+        pick: () => this.setPageSize(n) }))
+    };
   }
 
   ddOpts(list, cur, key) {
@@ -1463,18 +1497,13 @@ class Component extends DCLogic {
     ];
     const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
     // Pagination (same as Sites — thousands of rows janks every re-render).
-    const PAGE = 25;
+    const PAGE = this.pageSize();
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
     const pageNum = Math.min(Math.max(1, s.domPage || 1), totalPages);
     const pageRows = filtered.slice((pageNum - 1) * PAGE, (pageNum - 1) * PAGE + PAGE);
     return {
       domCount: filtered.length + ' domains',
-      domPageShow: totalPages > 1,
-      domPageLabel: 'Page ' + pageNum + ' of ' + totalPages + ' · ' + filtered.length + ' domains',
-      domPrev: () => this.setState({ domPage: Math.max(1, pageNum - 1) }),
-      domNext: () => this.setState({ domPage: Math.min(totalPages, pageNum + 1) }),
-      domPrevBg: pageNum <= 1 ? 'var(--panel-2)' : 'var(--paper)',
-      domNextBg: pageNum >= totalPages ? 'var(--panel-2)' : 'var(--paper)',
+      ...this.pagerVals('dom', 'domPage', filtered.length, pageNum, totalPages, 'domains'),
       ...(s.route === 'domains' ? { screenSub: filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
       dq: s.dq, onDq: e => this.setState({ dq: e.target.value, domPage: 1 }),
       openNewDomain: () => this.setState({ ndOpen: true }),
@@ -2832,6 +2861,8 @@ class Component extends DCLogic {
       // again. Skipped on phones, where autofocus pops the keyboard over the
       // page. New list screens should put this ref on their toolbar search.
       leadFocusRef: el => { if (el && !el._focused && !this.isMobile()) { el._focused = true; el.focus(); } },
+      // The main scroll pane — page changes scroll it back to the top.
+      mainRef: el => { this._mainEl = el; },
       ddQ: s.ddQ, onDdQ: e => this.setState({ ddQ: e.target.value }),
       stopProp: (e) => e.stopPropagation(),
       onPalInput: (e) => this.setState({ palQuery: e.target.value, palIdx: 0 })

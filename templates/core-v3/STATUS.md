@@ -1594,6 +1594,29 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### List pagination round (2026-08-23)
+The three paginated lists (Sites / Domains / Accounts) moved onto ONE shared
+footer builder — `pagerVals(prefix, stateKey, …)` + `pageSize()`/
+`setPageSize()` in app.js — so they can't drift:
+
+- **Default is 100 rows/page** (was 25), with a **Per page 25 / 50 / 100 / 250**
+  segmented pill in the footer. One preference for all three lists, persisted
+  in localStorage `cc-page-size`; changing it resets every list to page 1.
+- **Range label**: `1–100 of 2,941 sites · page 1 of 30` (locale-formatted)
+  instead of "Page 1 of 118".
+- **Page changes scroll the main pane back to the top** (`mainRef` →
+  `this._mainEl` on the `<main>` scroller) — clicking Next at the list bottom
+  used to strand you there.
+- **« First / Last »** jump buttons, shown only when there are 3+ pages.
+- Footer now shows whenever rows exceed the SMALLEST size (25), not only at
+  2+ pages — otherwise the per-page control is unreachable right when you'd
+  want to shrink it. Under 25 rows it hides entirely.
+- Deliberately skipped: ←/→ keyboard paging (the toolbar search autofocuses on
+  every list, so arrow keys belong to the input).
+- Verified live headless (11 checks): default 100, pill → 25 + stored, Domains
+  inheriting the size, reload persistence, Next scrolling 2000→0, Last/First
+  jumps, small-filter footer hide, Accounts on the shared builder.
+
 ### Profile → API documentation viewer (2026-08-23)
 Legacy-parity port of the API Access docs row. New card on Profile (between
 Application password and Active sessions): "API documentation · Markdown

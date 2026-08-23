@@ -225,7 +225,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </sc-if>
       </div>
     </header>
-    <main style="flex:1;overflow-y:auto;min-width:0">
+    <main ref="{{ mainRef }}" style="flex:1;overflow-y:auto;min-width:0">
 
       <sc-if value="{{ showHome }}" hint-placeholder-val="{{ true }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:32px 32px 120px;animation:ccfade .25s ease">
@@ -723,11 +723,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-if>
           <sc-if value="{{ sitesPageShow }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+            <div class="cc-tabs" style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
               <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ sitesPageLabel }}</span>
               <div style="flex:1"></div>
+              <span style="font:500 12px var(--sans);color:var(--ink-dim)">Per page</span>
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:2px">
+                <sc-for list="{{ sitesSizes }}" as="ps" hint-placeholder-count="4">
+                  <span onClick="{{ ps.pick }}" style="padding:4px 10px;border-radius:6px;cursor:pointer;font:500 12px var(--sans);color:{{ ps.fg }};background:{{ ps.bg }}" style-hover="color:var(--ink)">{{ ps.label }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ sitesEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ sitesFirst }}" title="First page" style="border:1px solid var(--rule);background:{{ sitesPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">«</button>
+              </sc-if>
               <button onClick="{{ sitesPrev }}" style="border:1px solid var(--rule);background:{{ sitesPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
               <button onClick="{{ sitesNext }}" style="border:1px solid var(--rule);background:{{ sitesNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+              <sc-if value="{{ sitesEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ sitesLast }}" title="Last page" style="border:1px solid var(--rule);background:{{ sitesNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">»</button>
+              </sc-if>
             </div>
           </sc-if>
         </div>
@@ -1573,11 +1585,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-for>
           </div>
           <sc-if value="{{ domPageShow }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+            <div class="cc-tabs" style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
               <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ domPageLabel }}</span>
               <div style="flex:1"></div>
+              <span style="font:500 12px var(--sans);color:var(--ink-dim)">Per page</span>
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:2px">
+                <sc-for list="{{ domSizes }}" as="ps" hint-placeholder-count="4">
+                  <span onClick="{{ ps.pick }}" style="padding:4px 10px;border-radius:6px;cursor:pointer;font:500 12px var(--sans);color:{{ ps.fg }};background:{{ ps.bg }}" style-hover="color:var(--ink)">{{ ps.label }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ domEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ domFirst }}" title="First page" style="border:1px solid var(--rule);background:{{ domPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">«</button>
+              </sc-if>
               <button onClick="{{ domPrev }}" style="border:1px solid var(--rule);background:{{ domPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
               <button onClick="{{ domNext }}" style="border:1px solid var(--rule);background:{{ domNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+              <sc-if value="{{ domEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ domLast }}" title="Last page" style="border:1px solid var(--rule);background:{{ domNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">»</button>
+              </sc-if>
             </div>
           </sc-if>
         </div>
@@ -1974,11 +1998,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-for>
           </div>
           <sc-if value="{{ accPageShow }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+            <div class="cc-tabs" style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
               <span style="font:400 12.5px var(--sans);color:var(--ink-dim)">{{ accPageLabel }}</span>
               <div style="flex:1"></div>
+              <span style="font:500 12px var(--sans);color:var(--ink-dim)">Per page</span>
+              <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:2px">
+                <sc-for list="{{ accSizes }}" as="ps" hint-placeholder-count="4">
+                  <span onClick="{{ ps.pick }}" style="padding:4px 10px;border-radius:6px;cursor:pointer;font:500 12px var(--sans);color:{{ ps.fg }};background:{{ ps.bg }}" style-hover="color:var(--ink)">{{ ps.label }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ accEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ accFirst }}" title="First page" style="border:1px solid var(--rule);background:{{ accPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">«</button>
+              </sc-if>
               <button onClick="{{ accPrev }}" style="border:1px solid var(--rule);background:{{ accPrevBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">← Prev</button>
               <button onClick="{{ accNext }}" style="border:1px solid var(--rule);background:{{ accNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Next →</button>
+              <sc-if value="{{ accEndsShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ accLast }}" title="Last page" style="border:1px solid var(--rule);background:{{ accNextBg }};color:var(--ink);font:500 12.5px var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">»</button>
+              </sc-if>
             </div>
           </sc-if>
         </div>
