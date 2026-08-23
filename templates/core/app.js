@@ -1129,13 +1129,16 @@ class Component extends DCLogic {
 
   // ── List pagination (Sites / Domains / Accounts) ──────────────
   // One shared rows-per-page preference (localStorage `cc-page-size`,
-  // default 25), one shared vals builder so the three footers can't drift.
-  PAGE_SIZES = [25, 50, 100, 250];
+  // default 24), one shared vals builder so the three footers can't drift.
+  // Sizes are divisible by 12 so the card grid (2/3/4/6 columns depending on
+  // width) always fills its rows; a stored legacy size (25/50/100/250) fails
+  // the includes() check below and falls back to the default.
+  PAGE_SIZES = [24, 48, 96, 240];
 
   pageSize() {
     let n = this.state.pageSize;
     if (!n) { try { n = parseInt(localStorage.getItem('cc-page-size'), 10); } catch (e) {} }
-    return this.PAGE_SIZES.includes(n) ? n : 25;
+    return this.PAGE_SIZES.includes(n) ? n : 24;
   }
 
   setPageSize(n) {
