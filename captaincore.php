@@ -5254,8 +5254,13 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 	}
 	$user = new CaptainCore\User();
 	if ( ! $user->is_admin() ) {
-		$account_id = $order->get_meta( 'captaincore_account_id' );
-		if ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) {
+		// Ownership: the WooCommerce customer on the order, or a member of the
+		// account it was billed to. The customer check leads — most orders
+		// never received the captaincore_account_id meta, which 403'd rightful
+		// owners on the meta-only check.
+		$is_customer = (int) $order->get_customer_id() === get_current_user_id();
+		$account_id  = $order->get_meta( 'captaincore_account_id' );
+		if ( ! $is_customer && ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) ) {
 			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 		}
 	}
@@ -5321,8 +5326,13 @@ function captaincore_invoices_pdf_func( WP_REST_Request $request ) {
 	}
 	$user = new CaptainCore\User();
 	if ( ! $user->is_admin() ) {
-		$account_id = $order->get_meta( 'captaincore_account_id' );
-		if ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) {
+		// Ownership: the WooCommerce customer on the order, or a member of the
+		// account it was billed to. The customer check leads — most orders
+		// never received the captaincore_account_id meta, which 403'd rightful
+		// owners on the meta-only check.
+		$is_customer = (int) $order->get_customer_id() === get_current_user_id();
+		$account_id  = $order->get_meta( 'captaincore_account_id' );
+		if ( ! $is_customer && ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) ) {
 			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 		}
 	}
@@ -8684,7 +8694,8 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/processes/', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_processes_func',
-			'permission_callback' => 'captaincore_permission_check',
+			// Internal ops handbook — never customer-facing.
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -9387,7 +9398,9 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/keys/', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_keys_func',
-			'permission_callback' => 'captaincore_permission_check',
+			// Fleet management keys — the callback already returned [] for
+			// non-admins; the route now refuses outright.
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -9429,7 +9442,9 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/defaults/', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_defaults_func',
-			'permission_callback' => 'captaincore_permission_check',
+			// Fleet-wide defaults (incl. default admin users) — admin only.
+			// Per-account defaults live at /accounts/{id}/defaults.
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);

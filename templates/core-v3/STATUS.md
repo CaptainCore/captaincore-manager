@@ -1594,6 +1594,30 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Billing fixes + Settings hardening for customers (2026-08-23)
+Three fixes from a switched-session review:
+
+- **Invoice view/PDF 403'd rightful owners.** Both `/invoices/{id}` and
+  `…/pdf` authorized non-admins ONLY via the order's `captaincore_account_id`
+  meta — which most orders never received, so owners saw "Could not load
+  invoice". The check now leads with WooCommerce ownership
+  (`$order->get_customer_id() === get_current_user_id()`), meta as fallback.
+  Verified: owner 200 (detail + real PDF), a DIFFERENT customer still 403.
+- **Billing-address dialog type bumped** to the standard dialog scale
+  (labels 13px, inputs 14px/36px — were 12/12.5px/32px).
+- **Settings hardening.** Customers now get exactly two tabs — Providers
+  (self-scoped) + Cookbook — with a forced fall-through for any other tab id.
+  Site defaults, SSH keys (the fleet management key + rotate control) and
+  Handbook are operator surfaces. Server-side to match: `GET /defaults/`
+  (fleet default users incl. usernames), `GET /keys/` (fleet key list — the
+  callback already returned `[]` but the route now 403s outright) and
+  `GET /processes/` (the ENTIRE internal ops handbook, previously readable by
+  any logged-in customer via REST) are all `captaincore_admin_permission_check`
+  now. loadSettings skips those three fetches for customers. Legacy's
+  admin-only screens are unaffected; a legacy customer fetch just 403s into
+  an axios catch. NOTE for tests: `rest_do_request` 404s trailing-slash
+  paths — probe `/captaincore/v1/keys`, not `/keys/`.
+
 ### Cookbook: Mine / System scope tabs (2026-08-23)
 The Settings Cookbook list gained a segmented **Mine / System** toggle (counts
 in the labels, `cookScope` state). Split is on the `public` flag — which

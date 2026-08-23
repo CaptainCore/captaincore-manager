@@ -668,11 +668,15 @@ class Component extends DCLogic {
 
   computeSettings(s) {
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
-    // Branding is operator-only (the save route PUT /configurations/global is
-    // admin-gated server-side; the controls hide too). Customers landing on the
-    // default 'branding' tab fall through to Providers.
-    const tab = (!isOp && s.setTab === 'branding') ? 'providers' : s.setTab;
-    const tabs = [...(isOp ? [['branding', 'Branding']] : []), ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']].map(([id, label]) => ({ label,
+    // Customers get Providers (self-scoped) + Cookbook only. Branding, Site
+    // defaults, SSH keys (the fleet management key) and Handbook are operator
+    // surfaces — hidden here AND admin-gated server-side (GET /defaults/,
+    // /keys/, /processes/ all 403 for non-admins). A customer landing on a
+    // hidden tab id falls through to Providers.
+    const tab = (!isOp && !['providers', 'cookbook'].includes(s.setTab)) ? 'providers' : s.setTab;
+    const tabs = [...(isOp
+      ? [['branding', 'Branding'], ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']]
+      : [['providers', 'Providers'], ['cookbook', 'Cookbook']])].map(([id, label]) => ({ label,
       fg: tab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: tab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ setTab: id }) }));
