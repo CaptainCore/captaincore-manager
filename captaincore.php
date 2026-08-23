@@ -12730,6 +12730,47 @@ function captaincore_email_subscription_page( $message, $title ) {
 </html>";
 }
 
+/**
+ * Failure counters for the unauthenticated login endpoint.
+ *
+ * /login is reachable without a session and answers with a different string for
+ * a wrong password, a wrong one-time code and an unknown account, so without a
+ * counter it is a credential oracle that can be queried as fast as the host
+ * replies. Keyed on both the client address and the submitted login so neither
+ * a single address nor a single account can be ground down.
+ *
+ * @param string $login Submitted user login.
+ * @return array Transient keys to check and increment.
+ */
+function captaincore_login_throttle_keys( $login ) {
+	$ip = CaptainCore\GeoIP::client_ip();
+	return [
+		'cc_login_ip_' . md5( (string) $ip ),
+		'cc_login_user_' . md5( strtolower( (string) $login ) ),
+	];
+}
+
+function captaincore_login_is_throttled( $keys, $limit = 10 ) {
+	foreach ( $keys as $key ) {
+		if ( (int) get_transient( $key ) >= $limit ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function captaincore_login_record_failure( $keys, $window = 900 ) {
+	foreach ( $keys as $key ) {
+		set_transient( $key, (int) get_transient( $key ) + 1, $window );
+	}
+}
+
+function captaincore_login_clear_failures( $keys ) {
+	foreach ( $keys as $key ) {
+		delete_transient( $key );
+	}
+}
+
 function captaincore_login_func( WP_REST_Request $request ) {
 
 	// Mark that authentication is happening inside the CaptainCore secure login
@@ -12742,25 +12783,35 @@ function captaincore_login_func( WP_REST_Request $request ) {
 
 	if ( $post->command == "reset" ) {
 
+		// Answer identically whether or not the account exists. Returning null
+		// for an unknown login and true for a known one made this an account
+		// oracle, and the interface renders the same copy either way. The
+		// throttle also stops it being used to send unlimited reset mail.
+		$response = [ "message" => "If that account exists, a reset link is on its way." ];
+
+		$throttle_keys = captaincore_login_throttle_keys( $post->login->user_login );
+		if ( captaincore_login_is_throttled( $throttle_keys ) ) {
+			return $response;
+		}
+		captaincore_login_record_failure( $throttle_keys );
+
 		$user_data = get_user_by( 'login', $post->login->user_login );
 		if ( ! $user_data ) {
 			$user_data = get_user_by( 'email', $post->login->user_login );
 		}
 		if ( ! $user_data ) {
-			return;
+			return $response;
 		}
 
 		// Generate the key
 		$key = get_password_reset_key( $user_data );
 
-		if ( is_wp_error( $key ) ) {
-			return $key;
+		if ( ! is_wp_error( $key ) ) {
+			// Use the Custom CaptainCore Mailer
+			CaptainCore\Mailer::send_password_reset( $user_data, $key );
 		}
 
-		// Use the Custom CaptainCore Mailer
-		CaptainCore\Mailer::send_password_reset( $user_data, $key );
-
-		return true;
+		return $response;
 	}
 
 	if ( $post->command == "signIn" ) {
@@ -12770,9 +12821,15 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			"remember"      => true,
 		];
 
+		$throttle_keys = captaincore_login_throttle_keys( $post->login->user_login );
+		if ( captaincore_login_is_throttled( $throttle_keys ) ) {
+			return [ "errors" => "Too many attempts. Try again later." ];
+		}
+
 		$current_user = wp_authenticate( $post->login->user_login, $post->login->user_password );
 
 		if ( is_wp_error( $current_user ) ) {
+			captaincore_login_record_failure( $throttle_keys );
 			return [ "errors" => "Login failed." ];
 		}
 
@@ -12783,9 +12840,13 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		if ( $tfa_enabled ) {
 			$tfa_enabled_check = ( new CaptainCore\User( $current_user->ID, true ) )->tfa_login( $post->login->tfa_code );
 			if ( ! $tfa_enabled_check ) {
+				captaincore_login_record_failure( $throttle_keys );
 				return [ "errors" =>  "One time password is invalid." ];
 			}
 		}
+
+		// Credentials and any second factor are good from here on.
+		captaincore_login_clear_failures( $throttle_keys );
 
 		// When 2FA is not enabled, require that the login originate from a trusted
 		// location. An unknown location triggers an email-verify step and halts

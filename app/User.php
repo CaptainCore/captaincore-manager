@@ -1671,10 +1671,27 @@ class User {
     public function tfa_login( $token ) {
         $user   = (object) self::fetch();
         $secret = get_user_meta( $user->user_id , 'captaincore_2fa_token', true );
-        $otp    = \OTPHP\TOTP::createFromSecret($secret); // create TOTP object from the secret.
-        $verify = $otp->verify($token);
-        
-        return $verify;
+        if ( empty( $secret ) ) {
+            return false;
+        }
+        $otp = \OTPHP\TOTP::createFromSecret( $secret ); // create TOTP object from the secret.
+        if ( ! $otp->verify( (string) $token ) ) {
+            return false;
+        }
+
+        // RFC 6238 section 5.2: a code that has been accepted must not be
+        // accepted a second time. Without this the same six digits stay valid
+        // for the rest of their window, from any address - which is what makes
+        // a code captured by a relay page useful to whoever captured it.
+        $period   = method_exists( $otp, 'getPeriod' ) ? (int) $otp->getPeriod() : 30;
+        $timecode = (int) floor( time() / max( 1, $period ) );
+        $last     = (int) get_user_meta( $user->user_id, 'captaincore_2fa_last_timecode', true );
+        if ( $last >= $timecode ) {
+            return false;
+        }
+        update_user_meta( $user->user_id, 'captaincore_2fa_last_timecode', $timecode );
+
+        return true;
     }
 
     public function profile() {
