@@ -37,6 +37,10 @@ class Mailgun {
 
     public static function page( $domain, $page ) {
 
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return;
+        }
+
         // Validate the host strictly — str_contains would accept an attacker
         // URL like https://evil.tld/?x=https://api.mailgun.net.
         $parts = wp_parse_url( $page );
@@ -44,7 +48,16 @@ class Mailgun {
             return;
         }
 
-        if ( ! str_contains( $page, $domain ) ) {
+        // Scope the request to this zone's own event feed. A substring test over
+        // the whole URL is not an authorization check - the zone name can sit in
+        // an ignored query parameter while the path addresses another tenant's
+        // resource, and the request carries the account-wide API key.
+        $path = isset( $parts['path'] ) ? $parts['path'] : '';
+        if ( false !== strpos( $path, '..' ) ) {
+            return;
+        }
+        $prefix = '/v3/' . strtolower( (string) $domain ) . '/events';
+        if ( 0 !== strpos( strtolower( $path ), $prefix ) ) {
             return;
         }
 

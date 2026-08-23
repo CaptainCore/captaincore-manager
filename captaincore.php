@@ -6771,10 +6771,6 @@ function captaincore_domain_mailgun_events_func( $request ) {
 
     // If paging URL is provided, use it directly (decoding it first if necessary)
     if ( ! empty( $params['page_url'] ) ) {
-        $response = CaptainCore\Remote\Mailgun::get( "", [], $params['page_url'] ); // You might need to adjust Remote\Mailgun::get to handle full URLs or use a specific method
-        // Note: CaptainCore\Remote\Mailgun::page() exists but seems designed for the AJAX handler. 
-        // A simpler approach for the existing Mailgun::get class:
-        // If passing a full URL to Mailgun::get isn't supported, use Mailgun::page logic here.
         $response = CaptainCore\Remote\Mailgun::page( $zone, $params['page_url'] );
     } else {
         $response = CaptainCore\Remote\Mailgun::get( "v3/$zone/events", $params );
