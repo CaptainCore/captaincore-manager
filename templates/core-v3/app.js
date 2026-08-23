@@ -2245,9 +2245,12 @@ class Component extends DCLogic {
   ];
 
   componentDidMount() {
-    const saved = localStorage.getItem('captaincore-theme');
+    let saved = localStorage.getItem('captaincore-theme');
+    if (saved !== 'light' && saved !== 'dark' && saved !== 'system') {
+      try { saved = localStorage.getItem('ah-theme'); } catch (e) { saved = null; }
+    }
     const pref = (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
-    if (!saved) try { localStorage.setItem('captaincore-theme', 'system'); } catch (e) {}
+    try { localStorage.setItem('captaincore-theme', pref); localStorage.removeItem('ah-theme'); } catch (e) {}
     this.setState({ theme: pref });
     this.applyTheme(pref);
     try {
@@ -2256,6 +2259,15 @@ class Component extends DCLogic {
       if (this._themeMq.addEventListener) this._themeMq.addEventListener('change', this._onThemeMq);
       else if (this._themeMq.addListener) this._themeMq.addListener(this._onThemeMq);
     } catch (e) {}
+    this._onThemeStorage = (e) => {
+      if (e.key !== 'captaincore-theme') return;
+      let next = null;
+      try { next = localStorage.getItem('captaincore-theme'); } catch (err) {}
+      const p = (next === 'light' || next === 'dark' || next === 'system') ? next : 'system';
+      this.setState({ theme: p });
+      this.applyTheme(p);
+    };
+    window.addEventListener('storage', this._onThemeStorage);
     this.applyBrand();
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
@@ -2305,6 +2317,7 @@ class Component extends DCLogic {
       if (this._themeMq.removeEventListener) this._themeMq.removeEventListener('change', this._onThemeMq);
       else if (this._themeMq.removeListener) this._themeMq.removeListener(this._onThemeMq);
     }
+    if (this._onThemeStorage) window.removeEventListener('storage', this._onThemeStorage);
   }
   componentDidUpdate() {
     this.applyBrand();

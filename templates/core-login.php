@@ -39,7 +39,11 @@ $app_home   = home_url( $config_path );
 <script>
 try {
 	var stored = localStorage.getItem('captaincore-theme');
-	if (!stored) { localStorage.setItem('captaincore-theme', 'system'); stored = 'system'; }
+	if (stored !== 'light' && stored !== 'dark' && stored !== 'system') {
+		stored = localStorage.getItem('ah-theme');
+		if (stored !== 'light' && stored !== 'dark' && stored !== 'system') stored = 'system';
+		localStorage.setItem('captaincore-theme', stored);
+	}
 	var paint = stored;
 	if (stored !== 'light' && stored !== 'dark') {
 		paint = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';

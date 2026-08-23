@@ -1961,5 +1961,9 @@ the existing ctx menu: System, Light, Dark, with a check + brand-ink on
 the current pick. System follows `prefers-color-scheme` live. First visit
 (no stored key) persists System; existing light/dark locks are left
 alone. Icon shows the preference (half-circle / sun / moon), not the
-next-toggle glyph. A head pre-paint script in `core-v3.php` applies the
-resolved surface before first paint.
+next-toggle glyph. A head pre-paint script in `core.php` applies the
+resolved surface before first paint. Shared with the marketing theme
+(anchor-theme) on the same origin: both read/write this key, so a Dark
+pick here is Dark on the public site. A leftover `ah-theme` value is
+copied in once, then dropped. A `storage` listener keeps an open
+dashboard tab in sync if the marketing toggle changes the key.
