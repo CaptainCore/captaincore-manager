@@ -1594,6 +1594,35 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Cookbook: customers manage only their own recipes (2026-08-23)
+Customers could open Edit on public SYSTEM recipes (screenshot from a
+switched session) — the UI showed the code, and worse, `Recipes::list()`
+shipped public recipe CONTENT to every customer's browser. Both halves fixed:
+
+- **Server** (`Recipes::list()`): non-admins now get their own recipes plus
+  public rows with **content stripped**; other users' PRIVATE recipes are
+  omitted entirely (their titles previously leaked as inert "system" rows).
+  Write paths were already safe (create/update force `public=0` for
+  non-admins; update/delete verify ownership) — verified 403s live.
+- **Server** (`/run/code`): accepts **`recipe_id`** and resolves the STORED
+  content after an access check (public / own / admin) — so customers can run
+  system recipes whose code they can no longer read. Foreign private id → 403.
+- **Client**: `runRecipeNow` dispatches `{environments, recipe_id}` (never
+  code) for everyone; Settings › Cookbook rows carry `canEdit`
+  (`isOp || user_id !== 'system'`) — no Edit link on system rows for
+  customers, and Run… routes public recipes through the confirm-run dialog
+  instead of inserting code into the terminal. The New-recipe dialog hides
+  the Public toggle for customers (dead control — server forces 0).
+- Verified live as a REAL customer (11 checks): 21 content-free system rows,
+  zero Edit links, no foreign private titles, hidden toggle, own recipe
+  create→edit→delete round-trip, confirm-run dispatching by id with no code
+  key; admin regression: all rows editable, toggle shown, content intact,
+  admin runs also dispatch by id.
+- **Legacy caveat**: core-legacy.php inserts `recipe.content` client-side, so
+  a customer on `?ui=legacy` now gets an EMPTY insert for public recipes.
+  Accepted — legacy is the escape hatch, and the alternative was leaving the
+  content leak open.
+
 ### List pagination round (2026-08-23)
 The three paginated lists (Sites / Domains / Accounts) moved onto ONE shared
 footer builder — `pagerVals(prefix, stateKey, …)` + `pageSize()`/

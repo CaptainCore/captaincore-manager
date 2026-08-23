@@ -3874,6 +3874,20 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
     $environments = isset( $params['environments'] ) ? $params['environments'] : [];
     $targets      = [];
 
+    // Run a stored recipe by id. Recipes::list() strips public system recipe
+    // content for non-admins, so the client can't (and must not) send the
+    // code — the stored content is resolved here after an access check:
+    // public, own, or admin.
+    $recipe_id = isset( $params['recipe_id'] ) ? intval( $params['recipe_id'] ) : 0;
+    if ( $recipe_id && empty( $code ) ) {
+        $recipe = CaptainCore\Recipes::get( $recipe_id );
+        $can    = $recipe && ( ! empty( $recipe->public ) || $recipe->user_id == get_current_user_id() || ( new CaptainCore\User )->is_admin() );
+        if ( ! $can ) {
+            return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+        }
+        $code = (string) $recipe->content;
+    }
+
     if ( empty( $code ) ) {
         return new WP_Error( 'missing_code', 'Code is required', [ 'status' => 400 ] );
     }

@@ -153,7 +153,10 @@ Object.assign(Component.prototype, {
   },
 
   // termRun's dispatch path minus the textarea: same session model, same
-  // POST /run/code, but the scrollback echoes the recipe NAME, not its code.
+  // POST /run/code, but dispatched BY RECIPE ID — the server resolves the
+  // stored content (public system recipes reach non-admin browsers
+  // content-stripped, so the client couldn't send the code anyway) — and the
+  // scrollback echoes the recipe NAME, never its code.
   runRecipeNow() {
     const r = (this._recipes || []).find(x => String(x.recipe_id) === String(this.state.crRecipe));
     this.setState({ crRecipe: 0 });
@@ -165,7 +168,7 @@ Object.assign(Component.prototype, {
     const title = r.title || 'recipe';
     const target = (title.length > 42 ? title.slice(0, 42) + '…' : title) + ' · ' + where;
     const dispatch = () => this.api('/run/code', { method: 'POST',
-      body: { environments: targets.map(t => Number(t.id) || t.id), code: r.content || '' } });
+      body: { environments: targets.map(t => Number(t.id) || t.id), recipe_id: r.recipe_id } });
     const echo = '[recipe] ' + title;
     const session = this.sessionJobFor(sessionKey);
     if (session) { this.runInSession(session, { cmd: echo, target, dispatch }); return; }

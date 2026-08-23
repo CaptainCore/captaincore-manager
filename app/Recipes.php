@@ -19,11 +19,17 @@ class Recipes extends DB {
 
         foreach( $all_recipes as $recipe ) {
 			$recipe->public = (int) $recipe->public;
-			// Remove details if not admin and record not owned by them (keep content for public recipes)
+			// Non-admins see their own recipes plus public system recipes.
+			// Other users' PRIVATE recipes are omitted entirely (their titles
+			// are not this user's business), and public recipe CONTENT is
+			// stripped — customers run system recipes by id (/run/code
+			// resolves the stored content server-side), never by reading the
+			// code. user_id "system" is the client's not-mine marker.
 			if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
 				if ( empty( $recipe->public ) ) {
-					$recipe->content = "";
+					continue;
 				}
+				$recipe->content = "";
 				$recipe->user_id = "system";
 			}
 

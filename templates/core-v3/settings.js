@@ -76,10 +76,19 @@ Object.assign(Component.prototype, {
     const keyRows = set.keys.map(k => ({ name: k.title, fp: 'SHA256:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
       del: () => { if (!confirm('Delete SSH key "' + k.title + '"? This affects fleet site access.')) return;
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
-    const recipeRows = set.recipes.map(r => ({ name: r.title, vis: r.public == 1 ? 'Public' : 'Private',
-      visBg: r.public == 1 ? 'var(--ok-soft)' : 'var(--panel-2)', runs: '', hasRuns: false,
-      run: () => { this.insertRecipe(r); this.setState({ dockOpen: true }); },
-      edit: () => this.openRecipe(r) }));
+    // Customers manage only their OWN recipes: list() marks non-owned rows
+    // user_id "system" (content-stripped) — those get no Edit, and running a
+    // public recipe goes through the confirm-run path (dispatch by recipe_id;
+    // the code is never shown or inserted). Own/private recipes still insert
+    // into the terminal for review.
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    const recipeRows = set.recipes.map(r => { const canEdit = isOp || r.user_id !== 'system';
+      return { name: r.title, vis: r.public == 1 ? 'Public' : 'Private',
+        visBg: r.public == 1 ? 'var(--ok-soft)' : 'var(--panel-2)', runs: '', hasRuns: false, canEdit,
+        run: () => { this.setState({ dockOpen: true });
+          if (r.public == 1) this.confirmRecipeRun(r);
+          else this.insertRecipe(r); },
+        edit: () => { if (canEdit) this.openRecipe(r); } }; });
     const handRows = set.processes.map(h => ({ name: h.name, updated: (h.updated_at || '').slice(0, 10),
       view: () => this.setState({ procDlgOpen: true, procDlgName: h.name,
         procDlgBody: this.processBodyHtml(h) }),
@@ -96,6 +105,9 @@ Object.assign(Component.prototype, {
       recipeContent: s.recipeContent, onRecipeContent: e => this.setState({ recipeContent: e.target.value }),
       recipePublicBg: s.recipePublic ? 'var(--brand)' : 'var(--rule)',
       recipePublicJust: s.recipePublic ? 'flex-end' : 'flex-start',
+      // Only admins may publish a recipe fleet-wide (the create/update routes
+      // force public=0 for everyone else — this hides the dead toggle).
+      recipePubShow: isOp,
       toggleRecipePublic: () => this.setState(st => ({ recipePublic: !st.recipePublic })),
       newRecipe: () => this.setState({ recipeDlgOpen: true, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false }),
       closeRecipeDlg: () => this.setState({ recipeDlgOpen: false }),
