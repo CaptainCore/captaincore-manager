@@ -6501,6 +6501,25 @@ function captaincore_mailgun_setup( WP_REST_Request $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
+    // The sending zone has to sit under the domain that was just verified.
+    // Both interfaces send "<subdomain>.<domain name>"; without this the
+    // verified id and the domain acted on are unrelated, and the Mailgun zone
+    // plus its DNS records would be created against someone else's domain.
+    $domain_record = ( new CaptainCore\Domains )->get( $domain_id );
+    if ( empty( $domain_record->name ) ) {
+        return new WP_Error( 'no_domain', 'Domain not found', [ 'status' => 404 ] );
+    }
+    $full_domain = strtolower( trim( (string) $full_domain ) );
+    $suffix      = '.' . strtolower( $domain_record->name );
+    if ( ! preg_match( '/^[a-z0-9.-]+$/', $full_domain )
+        || substr( $full_domain, -strlen( $suffix ) ) !== $suffix ) {
+        return new WP_Error(
+            'invalid_domain',
+            'Sending domain must be a subdomain of ' . $domain_record->name . '.',
+            [ 'status' => 400 ]
+        );
+    }
+
     // 1. Run the setup (this remains the same)
     $setup_result = CaptainCore\Providers\Mailgun::setup( $full_domain );
 
@@ -6730,16 +6749,30 @@ function captaincore_mailgun_deploy( WP_REST_Request $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
+    // The domain check above says nothing about the site this deploys onto, so
+    // the site is verified separately - the script it runs reconfigures mail
+    // delivery on that install.
+    $site_id = intval( $site_id );
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
     $site = \CaptainCore\Sites::get( $site_id );
     if ( ! $site->site ) {
         return new WP_Error( 'site_not_found', 'Site not found', [ 'status' => 404 ] );
     }
 
 	$site_slug = $site->site;
-            
-	// Check if environment is staging and append suffix
+
+	// Resolve the environment against the site rather than appending the
+	// request string, which reaches the CLI command as-is.
 	if ( $environment_name && strtolower( $environment_name ) != "production" ) {
-		$site_slug = "{$site_slug}-" . strtolower( $environment_name );
+		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment_name );
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+		}
+		$environment_row = ( new CaptainCore\Environments )->get( $environment_id );
+		$site_slug       = "{$site_slug}-" . strtolower( $environment_row->environment );
 	}
 
     // Ensure SMTP password exists, fetch credentials, and run the deploy-mailgun script.
