@@ -1831,6 +1831,14 @@ existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
 scroll jump, ESC, cached reopen firing zero refetches, and a real download
 whose file starts `# CaptainCore REST API`.
 
+### Sidebar lockup: split links (2026-08-23)
+The brand lockup was one `goHome` click target. Now the anchor glyph is a real
+`<a href="{{ homeLink }}">` (CC_BOOT.homeLink = `home_url()`, exposed as
+`homeLink` state in app.js) to the site homepage, while the "Anchor Hosting"
+wordmark keeps the SPA `goHome` route. Verified live headless: glyph href
+resolves to the site root, wordmark click routes /account/sites → /account/
+with no page load.
+
 ### User API docs expansion (2026-08-23)
 `api-docs.md` was a path listing (many endpoints as a method+path stub,
 admin routes mixed in). Audited every `register_rest_route` in

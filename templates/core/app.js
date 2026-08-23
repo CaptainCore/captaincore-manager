@@ -2815,6 +2815,7 @@ class Component extends DCLogic {
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
+      homeLink: (window.CC_BOOT && window.CC_BOOT.homeLink) || '/',
       logoutUrl: (window.CC_BOOT && window.CC_BOOT.logoutUrl) || '#',
       showSwitchBack: !!(window.CC_BOOT && window.CC_BOOT.switchBackUrl),
       switchBackUrl: (window.CC_BOOT && window.CC_BOOT.switchBackUrl) || '#',

@@ -124,12 +124,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
          rail keeps a fixed 216px so content slides out instead of squishing. -->
       <div class="cc-backdrop" onClick="{{ toggleNav }}" style="display:{{ navBackdrop }}"></div>
       <nav class="cc-rail" style="flex:none;width:{{ navW }};border-right:{{ navBorder }};background:var(--panel);display:flex;flex-direction:column;padding:14px {{ navPadX }};gap:2px;min-height:0;overflow:hidden;opacity:{{ navOpacity }};pointer-events:{{ navPE }};transition:width .25s ease,padding .25s ease,opacity .2s ease">
-        <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px 16px;cursor:pointer">
-          <!-- Bare brand-ink anchor glyph — matches the anchor-theme lockup; no tile. -->
-          <span style="width:28px;height:28px;display:grid;place-items:center;flex:none;color:var(--brand-ink)">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 16px">
+          <!-- Bare brand-ink anchor glyph — matches the anchor-theme lockup; no tile.
+               Glyph links to the site homepage; the wordmark routes to the Home screen. -->
+          <a href="{{ homeLink }}" title="View site" style="width:28px;height:28px;display:grid;place-items:center;flex:none;color:var(--brand-ink)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"></circle><path d="M12 6.5V21"></path><path d="M7.5 10h9"></path><path d="M4 14.5a8 8 0 0 0 16 0"></path><path d="M4 14.5h2.6M20 14.5h-2.6"></path></svg>
-          </span>
-          <span style="font:700 17px var(--sans);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Anchor Hosting</span>
+          </a>
+          <span onClick="{{ goHome }}" style="font:700 17px var(--sans);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer">Anchor Hosting</span>
         </div>
         <div onClick="{{ openPalette }}" style="display:flex;align-items:center;gap:9px;background:var(--paper);border:1px solid var(--rule);color:var(--ink-dim);padding:8px 10px;border-radius:9px;cursor:pointer;font:400 var(--fs-14) var(--sans);margin-bottom:10px" style-hover="border-color:var(--brand);color:var(--ink)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2"></path></svg>
