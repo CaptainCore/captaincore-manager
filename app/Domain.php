@@ -879,7 +879,6 @@ class Domain {
             ];
 
             $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-            echo json_encode(  $response );
             if ( is_wp_error( $response ) ) {
                 return json_decode( $response->get_error_message() );
             } else {
@@ -963,7 +962,6 @@ class Domain {
             ];
 
             $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-            echo json_encode(  $response );
             if ( is_wp_error( $response ) ) {
                 return json_decode( $response->get_error_message() );
             }
@@ -1004,7 +1002,6 @@ class Domain {
             ];
 
             $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-            echo json_encode(  $response );
             if ( is_wp_error( $response ) ) {
                 return json_decode( $response->get_error_message() );
             } else {
@@ -1042,7 +1039,6 @@ class Domain {
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        echo json_encode(  $response );
         if ( is_wp_error( $response ) ) {
             return json_decode( $response->get_error_message() );
         } else {
@@ -1057,6 +1053,10 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        // Every other registrar mutation in this class records one, and a
+        // change of registrant is the one most worth being able to look up.
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'updated', 'domain', $this->domain_id, $domain->name, "Updated WHOIS contacts for {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
@@ -1137,7 +1137,7 @@ class Domain {
                 "registrant" => $response->contacts->registrant,
                 "admin"      => $response->contacts->admin,
                 "tech"       => $response->contacts->tech,
-                "billing"    => $repsonse->contacts->billing
+                "billing"    => $response->contacts->billing
             ] );
             if ( ! empty( $results->data ) ) {
                 return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." . json_encode( $results->data ) ];

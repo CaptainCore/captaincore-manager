@@ -155,12 +155,9 @@ class Domains extends DB {
         }
 
         // Existing v1 behavior: turn off Hover auto-renew. Does not cancel
-        // the registrar registration. renew_off() still echoes a debug dump,
-        // so swallow stdout to keep the REST body intact.
+        // the registrar registration.
         if ( ! empty( $domain->provider_id ) ) {
-            ob_start();
             ( new Domain( $domain_id ) )->renew_off();
-            ob_end_clean();
         }
 
         $pivots     = ( new AccountDomain() )->where( [ "domain_id" => $domain_id ] );
@@ -232,13 +229,13 @@ class Domains extends DB {
         return null;
     }
 
-    public function get_domain( $host ) {
+    public static function get_domain( $host ) {
         $myhost = strtolower(trim($host));
         $count = substr_count($myhost, '.');
         if($count === 2){
             if(strlen(explode('.', $myhost)[1]) > 3) $myhost = explode('.', $myhost, 2)[1];
         } else if($count > 2){
-            $myhost = get_domain(explode('.', $myhost, 2)[1]);
+            $myhost = self::get_domain(explode('.', $myhost, 2)[1]);
         }
         return $myhost;
     }
