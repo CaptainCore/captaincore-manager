@@ -713,6 +713,10 @@ class Component extends DCLogic {
       ]).map(r => ({ ...r, hasRuns: true, canEdit: true, visBg: r.vis === 'Public' ? 'var(--ok-soft)' : 'var(--panel-2)',
         run: () => { this.runJob('recipe', r.name); this.setState({ dockOpen: true }); } })),
       recipePubShow: true,
+      cookScopeTabs: [['mine', 'Mine'], ['system', 'System']].map(([id, label], i) => ({ label,
+        fg: i === 1 ? 'var(--ink)' : 'var(--ink-dim)', bg: i === 1 ? 'var(--panel-2)' : 'transparent',
+        go: () => this.setState({ cookScope: id }) })),
+      cookTabEmpty: false, cookTabEmptyText: '',
       handRows: (booted ? [] : [
         { name: 'New site onboarding', updated: 'Jun 12' },
         { name: 'Site migration checklist', updated: 'May 30' },

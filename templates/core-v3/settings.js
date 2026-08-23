@@ -82,13 +82,26 @@ Object.assign(Component.prototype, {
     // the code is never shown or inserted). Own/private recipes still insert
     // into the terminal for review.
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
-    const recipeRows = set.recipes.map(r => { const canEdit = isOp || r.user_id !== 'system';
+    // Cookbook scope: "Mine" (scripts you own — the default for customers) vs
+    // "System" (public scripts; operators land here — the fleet library IS
+    // their working set). Splitting on the public flag doubles as the
+    // ownership split, since non-admins can never own a public recipe.
+    const cookScope = s.cookScope || (isOp ? 'system' : 'mine');
+    const isSys = r => r.public == 1;
+    const scoped = set.recipes.filter(r => (cookScope === 'system') === isSys(r));
+    const recipeRows = scoped.map(r => { const canEdit = isOp || r.user_id !== 'system';
       return { name: r.title, vis: r.public == 1 ? 'Public' : 'Private',
         visBg: r.public == 1 ? 'var(--ok-soft)' : 'var(--panel-2)', runs: '', hasRuns: false, canEdit,
         run: () => { this.setState({ dockOpen: true });
           if (r.public == 1) this.confirmRecipeRun(r);
           else this.insertRecipe(r); },
         edit: () => { if (canEdit) this.openRecipe(r); } }; });
+    const cookScopeTabs = [['mine', 'Mine'], ['system', 'System']].map(([id, label]) => {
+      const n = set.recipes.filter(r => (id === 'system') === isSys(r)).length;
+      return { label: label + ' (' + n + ')',
+        fg: cookScope === id ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: cookScope === id ? 'var(--panel-2)' : 'transparent',
+        go: () => this.setState({ cookScope: id }) }; });
     const handRows = set.processes.map(h => ({ name: h.name, updated: (h.updated_at || '').slice(0, 10),
       view: () => this.setState({ procDlgOpen: true, procDlgName: h.name,
         procDlgBody: this.processBodyHtml(h) }),
@@ -98,6 +111,11 @@ Object.assign(Component.prototype, {
       brandSwatches, brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => this.saveBranding(),
       provRows, defRows, keyRows, recipeRows, handRows,
+      cookScopeTabs,
+      cookTabEmpty: !recipeRows.length,
+      cookTabEmptyText: cookScope === 'mine'
+        ? 'No scripts of your own yet — create one with + New recipe.'
+        : 'No system scripts.',
       // recipe editor
       recipeDlgOpen: s.recipeDlgOpen, recipeDlgEditing: !!s.recipeEditId,
       recipeDlgTitle: s.recipeEditId ? 'Edit recipe' : 'New recipe',
@@ -297,7 +315,8 @@ Object.assign(Component.prototype, {
     const body = { title, content: this.state.recipeContent || '', public: this.state.recipePublic ? 1 : 0 };
     const id = this.state.recipeEditId;
     const req = id ? this.api('/recipes/' + id, { method: 'PUT', body }) : this.api('/recipes', { method: 'POST', body });
-    this.setState({ recipeDlgOpen: false });
+    // Land on the tab the saved recipe lives in, so it's visible right away.
+    this.setState({ recipeDlgOpen: false, cookScope: body.public ? 'system' : 'mine' });
     req.then(() => this.loadSettings(true)).catch(() => {});
   },
 

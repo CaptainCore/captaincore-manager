@@ -1594,6 +1594,18 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Cookbook: Mine / System scope tabs (2026-08-23)
+The Settings Cookbook list gained a segmented **Mine / System** toggle (counts
+in the labels, `cookScope` state). Split is on the `public` flag — which
+doubles as the ownership split, since non-admins can never own a public
+recipe. **Defaults differ by role, deliberately**: customers land on Mine
+(their scripts are what they manage; empty state carries a "+ New recipe"
+CTA), operators land on System (the fleet library is their working set).
+Saving a recipe lands you on the tab it lives in. Verified live as both
+roles: customer Mine (0) with CTA → create → lands on Mine with the row →
+System tab shows 21 public rows with zero Edit links; admin defaults to
+System (21, all editable) with Mine (11) all private.
+
 ### Settings mock flash + Intercom/dock corner conflict (2026-08-23)
 - **Settings no longer flashes design samples.** computeSettings was the one
   screen the global mock-flash rule missed — fake providers (Kinsta/WP

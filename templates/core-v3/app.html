@@ -2767,7 +2767,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <sc-if value="{{ setTabCook }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+              <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                <sc-for list="{{ cookScopeTabs }}" as="ct" hint-placeholder-count="2">
+                  <span onClick="{{ ct.go }}" style="padding:4px 12px;border-radius:7px;cursor:pointer;font:500 13px var(--sans);color:{{ ct.fg }};background:{{ ct.bg }}" style-hover="color:var(--ink)">{{ ct.label }}</span>
+                </sc-for>
+              </div>
               <span style="font:400 13px var(--sans);color:var(--ink-dim)">Reusable scripts — run on one site or the whole fleet from the terminal.</span>
               <div style="flex:1"></div>
               <button onClick="{{ newRecipe }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 13px var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ New recipe</button>
@@ -2787,6 +2792,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </sc-if>
                 </div>
               </sc-for>
+              <sc-if value="{{ cookTabEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:18px;font:400 12.5px var(--sans);color:var(--ink-dim);text-align:center">{{ cookTabEmptyText }}</div>
+              </sc-if>
             </div>
           </sc-if>
 
