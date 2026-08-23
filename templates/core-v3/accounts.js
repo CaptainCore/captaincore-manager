@@ -196,7 +196,7 @@ Object.assign(Component.prototype, {
 
   renameAccount(acc, a, plan, reload) {
     const name = (this.state.accRenameVal || '').trim();
-    if (!name || name === (this.decodeHtml(a.name) || '')) { this.setState({ accRename: false }); return; }
+    if (!name || name === (this.decodeHtml(a.name) || '').trim()) { this.setState({ accRename: false }); return; }
     const tid = this.toast('Renaming account…', { kind: 'loading' });
     // billing_user_id rides along for v1 payload parity (the hardened route
     // only writes supplied keys either way).
@@ -274,16 +274,16 @@ Object.assign(Component.prototype, {
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
     const doRename = () => this.renameAccount(acc, a, plan, reload);
     return {
-      accName: this.decodeHtml(a.name) || (acc.loading ? 'Loading…' : 'Account'),
+      accName: (this.decodeHtml(a.name) || '').trim() || (acc.loading ? 'Loading…' : 'Account'),
       // Inline rename (pencil beside the name). Route: PUT /accounts/{id}
       // {account:{name}} — owner/admin gated server-side (verify_account_owner);
       // the UI gate mirrors it. Input seeds via ref (DC binds value like
       // defaultValue), keyed by account id so switching accounts re-seeds.
       accCanRename: !!a.account_id && (isOp || !!d.owner || d.level === 'full-billing'),
       accRenaming: !!s.accRename, accNotRenaming: !s.accRename,
-      accStartRename: () => this.setState({ accRename: true, accRenameVal: this.decodeHtml(a.name) || '' }),
+      accStartRename: () => this.setState({ accRename: true, accRenameVal: (this.decodeHtml(a.name) || '').trim() }),
       accRenameRef: el => { if (el && el._forId !== String(acc.accountId)) { el._forId = String(acc.accountId);
-        el.value = this.decodeHtml(a.name) || ''; el.focus(); el.select(); } },
+        el.value = (this.decodeHtml(a.name) || '').trim(); el.focus(); el.select(); } },
       onAccRename: e => this.setState({ accRenameVal: e.target.value }),
       accRenameKey: e => { if (e.key === 'Enter') { e.preventDefault(); doRename(); } },
       accRenameCancel: () => this.setState({ accRename: false }),

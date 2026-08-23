@@ -67,15 +67,69 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this._domain === dom) { dom.dnsLoading = false; dom.dnsErr = 'Could not load DNS records.'; this.setState({}); } });
   },
 
+  // Structured sub-values ride on `subs` (the legacy editor's per-value model:
+  // MX priority/server pairs, TXT/A/… round-robin value lists) while `value`
+  // stays the joined display string. Editing multi-value types operates on
+  // subs — so a TXT value CONTAINING a comma survives, which the old
+  // join-then-split-on-comma round trip corrupted.
   dnsRowFromApi(r) {
     const type = String(r.type || '').toUpperCase();
     const v = r.value;
-    let value;
-    if (type === 'MX') value = (Array.isArray(v) ? v : []).map(x => x.priority + ' ' + x.server).join(', ');
-    else if (type === 'SRV') value = (Array.isArray(v) ? v : []).map(x => [x.priority, x.weight, x.port, x.host].join(' ')).join(', ');
-    else if (type === 'HTTP') value = (v && v.url) || '';
-    else value = Array.isArray(v) ? v.map(x => x.value).join(', ') : String(v == null ? '' : v);
-    return { uid: r.id, recId: r.id, type, name: r.name || '@', value, ttl: String(r.ttl == null ? 3600 : r.ttl) };
+    let value, subs = null;
+    if (type === 'MX') {
+      subs = (Array.isArray(v) ? v : []).map(x => ({ priority: String(x.priority == null ? 10 : x.priority), server: x.server || '' }));
+      value = subs.map(x => x.priority + ' ' + x.server).join(', ');
+    } else if (type === 'SRV') {
+      subs = (Array.isArray(v) ? v : []).map(x => ({ priority: String(x.priority || 0), weight: String(x.weight || 0), port: String(x.port || 0), host: x.host || '' }));
+      value = subs.map(x => [x.priority, x.weight, x.port, x.host].join(' ')).join(', ');
+    } else if (type === 'HTTP') {
+      value = (v && v.url) || '';
+    } else if (Array.isArray(v)) {
+      subs = v.map(x => ({ value: String(x.value == null ? '' : x.value) }));
+      value = subs.map(x => x.value).join(', ');
+    } else {
+      value = String(v == null ? '' : v);
+    }
+    return { uid: r.id, recId: r.id, type, name: r.name || '@', value, subs, ttl: String(r.ttl == null ? 3600 : r.ttl) };
+  },
+
+  // Single-value types keep the plain input; everything else edits sub-rows.
+  DNS_SINGLE_TYPES: ['CNAME', 'HTTP'],
+
+  // Editable copy of a row's sub-values (each with a stable suid so the
+  // ref-seeded inputs survive row removal without index reuse corrupting
+  // neighbours). Rows born from zone import / the add bar have no subs yet —
+  // parse their display string once.
+  dnsSubsFor(r) {
+    if (this.DNS_SINGLE_TYPES.includes(r.type)) return null;
+    let base = r.subs;
+    if (!base || !base.length) {
+      const parsed = this.dnsValueForApi(r.type, r.value);
+      base = (Array.isArray(parsed) ? parsed : []).map(x => typeof x === 'object'
+        ? Object.fromEntries(Object.entries(x).map(([k, val]) => [k, String(val == null ? '' : val)]))
+        : { value: String(x) });
+    }
+    if (!base.length) base = [r.type === 'MX' ? { priority: '10', server: '' } : r.type === 'SRV' ? { priority: '0', weight: '0', port: '0', host: '' } : { value: '' }];
+    this._suid = (this._suid || 0);
+    return base.map(x => ({ ...x, suid: 's' + (++this._suid) }));
+  },
+
+  // Drop empty sub-rows; keep field strings (API conversion happens on save).
+  dnsCleanSubs(subs) {
+    return (subs || []).filter(x => ((x.server != null ? x.server : (x.host != null ? x.host : x.value)) || '').trim() !== '')
+      .map(({ suid, ...rest }) => rest);
+  },
+
+  dnsSubsToText(type, subs) {
+    if (type === 'MX') return subs.map(x => x.priority + ' ' + x.server).join(', ');
+    if (type === 'SRV') return subs.map(x => [x.priority, x.weight, x.port, x.host].join(' ')).join(', ');
+    return subs.map(x => x.value).join(', ');
+  },
+
+  dnsSubsForApi(type, subs) {
+    if (type === 'MX') return subs.map(x => ({ server: x.server, priority: parseInt(x.priority, 10) || 10 }));
+    if (type === 'SRV') return subs.map(x => ({ priority: parseInt(x.priority, 10) || 0, weight: parseInt(x.weight, 10) || 0, port: parseInt(x.port, 10) || 0, host: x.host || '' }));
+    return subs.map(x => ({ value: x.value }));
   },
 
   dnsValueForApi(type, valueStr) {
@@ -98,7 +152,9 @@ Object.assign(Component.prototype, {
     const calls = [];
     (s.dnsRecs || []).forEach(r => {
       const body = { type: r.type, name: r.name === '@' ? '' : r.name,
-        value: this.dnsValueForApi(r.type, r.value), ttl: parseInt(r.ttl, 10) || 3600 };
+        value: (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
+          ? this.dnsSubsForApi(r.type, r.subs)
+          : this.dnsValueForApi(r.type, r.value), ttl: parseInt(r.ttl, 10) || 3600 };
       if (!r.recId) calls.push(this.api('/dns/' + dom.domainId + '/records', { method: 'POST', body }));
       else if (r.edited) calls.push(this.api('/dns/' + dom.domainId + '/records/' + r.recId, { method: 'PUT', body }));
     });
@@ -434,7 +490,7 @@ Object.assign(Component.prototype, {
         else if (id === 'sending') this.loadMailgun(); } }));
     const dnsRows = (s.dnsRecs || []).map(r => ({ ...r, bg: typeBg[r.type] || 'var(--panel-2)',
       editing: s.dnsEdit === r.uid, notEditing: s.dnsEdit !== r.uid,
-      startEdit: () => this.setState({ dnsEdit: r.uid, dnsEN: r.name, dnsEV: r.value, dnsETtl: r.ttl }),
+      startEdit: () => this.setState({ dnsEdit: r.uid, dnsEN: r.name, dnsEV: r.value, dnsETtl: r.ttl, dnsESubs: this.dnsSubsFor(r) }),
       del: (e) => { e.stopPropagation(); this.setState(st => ({
         dnsRecs: st.dnsRecs.filter(x => x.uid !== r.uid),
         dnsDel: r.recId ? [...(st.dnsDel || []), r.recId] : (st.dnsDel || []),
@@ -531,9 +587,42 @@ Object.assign(Component.prototype, {
       // Operator zone management — create is the existing per-tab Activate
       // button; this card adds the teardown side for all three zone types.
       ...this.zoneAdminVals(s, dom, d, details, fwdActive),
-      dnsEditDone: () => this.setState(st => ({ dnsRecs: st.dnsRecs.map(x => x.uid === st.dnsEdit
-        ? { ...x, name: st.dnsEN.trim() || '@', value: st.dnsEV.trim() || x.value, ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }
-        : x), dnsEdit: 0, dnsDirty: true })),
+      dnsEditDone: () => this.setState(st => {
+        const subs = st.dnsESubs ? this.dnsCleanSubs(st.dnsESubs) : null;
+        return { dnsRecs: st.dnsRecs.map(x => x.uid !== st.dnsEdit ? x
+          : (subs && subs.length)
+            ? { ...x, name: st.dnsEN.trim() || '@', subs, value: this.dnsSubsToText(x.type, subs), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }
+            : { ...x, name: st.dnsEN.trim() || '@', ...(st.dnsESubs ? {} : { value: st.dnsEV.trim() || x.value }), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }),
+          dnsEdit: 0, dnsESubs: null, dnsDirty: true };
+      }),
+      // Sub-value editor for the row being edited (MX pairs, SRV quads,
+      // round-robin value lists). Inputs seed via suid-keyed refs — the DC
+      // runtime binds value like defaultValue, and removing a middle row
+      // would otherwise leave stale text in reused DOM nodes.
+      dnsEIsMulti: !!s.dnsESubs,
+      dnsEIsSingle: !s.dnsESubs,
+      dnsESubRows: (s.dnsESubs || []).map((sub, i) => {
+        const set = (k, v) => this.setState(st => ({ dnsESubs: (st.dnsESubs || []).map((x, j) => j === i ? { ...x, [k]: v } : x) }));
+        const seed = val => el => { if (el && el._suid !== sub.suid) { el._suid = sub.suid; el.value = val == null ? '' : val; } };
+        return {
+          isMx: 'server' in sub, isSrv: 'host' in sub, isVal: 'value' in sub,
+          refPriority: seed(sub.priority), onPriority: e => set('priority', e.target.value),
+          refWeight: seed(sub.weight), onWeight: e => set('weight', e.target.value),
+          refPort: seed(sub.port), onPort: e => set('port', e.target.value),
+          refServer: seed(sub.server), onServer: e => set('server', e.target.value),
+          refHost: seed(sub.host), onHost: e => set('host', e.target.value),
+          refValue: seed(sub.value), onValue: e => set('value', e.target.value),
+          canRemove: (s.dnsESubs || []).length > 1,
+          remove: () => this.setState(st => ({ dnsESubs: (st.dnsESubs || []).filter((_, j) => j !== i) }))
+        };
+      }),
+      dnsEAddSub: () => this.setState(st => {
+        const rec = (st.dnsRecs || []).find(x => x.uid === st.dnsEdit) || {};
+        const blank = rec.type === 'MX' ? { priority: '10', server: '' }
+          : rec.type === 'SRV' ? { priority: '0', weight: '0', port: '0', host: '' } : { value: '' };
+        this._suid = (this._suid || 0) + 1;
+        return { dnsESubs: [...(st.dnsESubs || []), { ...blank, suid: 's' + this._suid }] };
+      }),
       saveDns: () => this.saveDnsReal(),
       discardDns: () => this.loadDnsZone(),
       zoneReplace: () => this.setState(st => ({

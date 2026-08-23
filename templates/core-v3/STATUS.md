@@ -1594,6 +1594,27 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### DNS sub-record editor + rename trim (2026-08-23)
+- **DNS records edit as structured sub-values** (legacy-editor parity).
+  `dnsRowFromApi` keeps the joined display string but now also carries
+  `subs` — MX priority/server pairs, SRV quads, round-robin `{value}` lists
+  for A/AAAA/TXT/NS/… (CNAME/HTTP stay single-input via `DNS_SINGLE_TYPES`).
+  Editing a multi-value row renders per-value input rows (✕ per row when >1,
+  "+ Add value"; inputs seed via suid-keyed refs so removing a middle row
+  can't leave stale text in reused DOM nodes — the defaultValue trap).
+  Done drops empty rows and stages `subs`; save sends the structured API
+  shape. **This kills a real corruption class**: the old join-then-split-
+  on-comma round trip shredded any TXT value containing a comma into
+  multiple entries. The add-record bar still takes the string form.
+- Verified against the REAL Constellix zone for a test domain — an
+  interception glob failed on the first headless pass, so an MX priority and
+  a TXT value actually round-tripped through Constellix and back (then were
+  restored to the original values): pairs edit cleanly, the comma TXT stayed
+  ONE value, PUT payloads carry `[{server,priority:int}]` / `[{value}]`.
+- **Account rename editor trims** the stored leading/trailing whitespace on
+  seed (accounts with names like " \tsquarepegengr.com" showed a gulf of
+  space before the text); accName display trims too.
+
 ### Account detail: inline rename (2026-08-23)
 Pencil beside the account name (shown to operators and the account owner,
 matching the route's `verify_account_owner` gate) swaps the h1 for an inline

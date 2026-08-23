@@ -1668,13 +1668,45 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     </div>
                   </sc-if>
                   <sc-if value="{{ r.editing }}" hint-placeholder-val="{{ false }}">
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--panel)">
-                      <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
-                      <input value="{{ dnsEN }}" onInput="{{ onDnsEN }}" style="width:150px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                      <input value="{{ dnsEV }}" onInput="{{ onDnsEV }}" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                      <input value="{{ dnsETtl }}" onInput="{{ onDnsETtl }}" style="width:64px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none">
-                      <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
-                      <span onClick="{{ dnsEditCancel }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                    <div style="padding:8px 16px;background:var(--panel)">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
+                        <input value="{{ dnsEN }}" onInput="{{ onDnsEN }}" style="width:150px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                        <sc-if value="{{ dnsEIsSingle }}" hint-placeholder-val="{{ true }}">
+                          <input value="{{ dnsEV }}" onInput="{{ onDnsEV }}" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                        </sc-if>
+                        <sc-if value="{{ dnsEIsMulti }}" hint-placeholder-val="{{ false }}">
+                          <div style="flex:1"></div>
+                        </sc-if>
+                        <input value="{{ dnsETtl }}" onInput="{{ onDnsETtl }}" style="width:64px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none">
+                        <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
+                        <span onClick="{{ dnsEditCancel }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                      </div>
+                      <sc-if value="{{ dnsEIsMulti }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:6px;padding:8px 0 4px 68px">
+                          <sc-for list="{{ dnsESubRows }}" as="sv" hint-placeholder-count="2">
+                            <div style="display:flex;align-items:center;gap:8px">
+                              <sc-if value="{{ sv.isMx }}" hint-placeholder-val="{{ false }}">
+                                <input ref="{{ sv.refPriority }}" onInput="{{ sv.onPriority }}" placeholder="10" title="Priority" style="width:70px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                                <input ref="{{ sv.refServer }}" onInput="{{ sv.onServer }}" placeholder="mail.example.com." title="Server" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                              </sc-if>
+                              <sc-if value="{{ sv.isSrv }}" hint-placeholder-val="{{ false }}">
+                                <input ref="{{ sv.refPriority }}" onInput="{{ sv.onPriority }}" placeholder="0" title="Priority" style="width:60px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                                <input ref="{{ sv.refWeight }}" onInput="{{ sv.onWeight }}" placeholder="0" title="Weight" style="width:60px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                                <input ref="{{ sv.refPort }}" onInput="{{ sv.onPort }}" placeholder="0" title="Port" style="width:60px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                                <input ref="{{ sv.refHost }}" onInput="{{ sv.onHost }}" placeholder="target.example.com." title="Host" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                              </sc-if>
+                              <sc-if value="{{ sv.isVal }}" hint-placeholder-val="{{ false }}">
+                                <input ref="{{ sv.refValue }}" onInput="{{ sv.onValue }}" placeholder="value" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                              </sc-if>
+                              <sc-if value="{{ sv.canRemove }}" hint-placeholder-val="{{ false }}">
+                                <span onClick="{{ sv.remove }}" title="Remove value" style="flex:none;cursor:pointer;color:var(--ink-dim);font:600 var(--fs-13) var(--sans);width:24px;text-align:center" style-hover="color:var(--bad)">✕</span>
+                              </sc-if>
+                            </div>
+                          </sc-for>
+                          <span onClick="{{ dnsEAddSub }}" style="align-self:flex-start;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">+ Add value</span>
+                        </div>
+                      </sc-if>
                     </div>
                   </sc-if>
                 </div>
