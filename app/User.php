@@ -804,6 +804,16 @@ class User {
                 return (object) [ 'error' => 'SetupIntent is not in a valid state: ' . $setup_intent->status ];
             }
 
+            // create_ach_setup_intent() stamps the user this intent was minted
+            // for. Without reading it back, an id belonging to someone else
+            // could be presented here and their bank account attached to this
+            // profile - the id travels inside the client secret, so it is not
+            // a secret in its own right.
+            $intent_user_id = isset( $setup_intent->metadata->user_id ) ? (int) $setup_intent->metadata->user_id : 0;
+            if ( $intent_user_id !== (int) $this->user_id ) {
+                return (object) [ 'error' => 'SetupIntent does not belong to this user' ];
+            }
+
             $payment_method_id = $setup_intent->payment_method;
             if ( empty( $payment_method_id ) ) {
                 return (object) [ 'error' => 'No payment method found on SetupIntent' ];
@@ -964,7 +974,7 @@ class User {
             // Fallback: Check WooCommerce tokens (for legacy support)
             $token = \WC_Payment_Tokens::get( $token_id );
 
-            if ( is_null( $token ) ) {
+            if ( is_null( $token ) || (int) $token->get_user_id() !== (int) $this->user_id ) {
                 return (object) [ 'error' => 'Payment token not found' ];
             }
 
@@ -1115,6 +1125,11 @@ class User {
         try {
 
             $wc_token      = \WC_Payment_Tokens::get( $payment_id );
+            // A token id is a small integer from the request body, and
+            // WC_Payment_Tokens::get() looks it up across every user.
+            if ( is_null( $wc_token ) || (int) $wc_token->get_user_id() !== (int) $this->user_id ) {
+                return [ 'result' => 'fail', 'message' => 'Payment method not found.' ];
+            }
             $source_id     = $wc_token->get_token();
             $customer      = new \WC_Stripe_Customer( $this->user_id );
             $customer_id   = $customer->get_id();
@@ -1316,6 +1331,11 @@ class User {
         try {
 
             $wc_token      = \WC_Payment_Tokens::get( $payment_id );
+            // A token id is a small integer from the request body, and
+            // WC_Payment_Tokens::get() looks it up across every user.
+            if ( is_null( $wc_token ) || (int) $wc_token->get_user_id() !== (int) $this->user_id ) {
+                return [ 'result' => 'fail', 'message' => 'Payment method not found.' ];
+            }
             $source_id     = $wc_token->get_token();
             $customer      = new \WC_Stripe_Customer( $this->user_id );
             $customer_id   = $customer->get_id();
