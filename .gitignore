@@ -5,3 +5,10 @@
 *.bak
 *.swp
 Thumbs.db
+
+# Dev-only working docs (also excluded from release zips by bin/build-zip.sh)
+.claude/
+roadmap.md
+to-do.md
+user-account-security-plan.md
+templates/core/V1-PLAN.md
