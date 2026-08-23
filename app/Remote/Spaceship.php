@@ -33,24 +33,50 @@ class Spaceship {
     }
 
     public static function put( $endpoint, $parameters = [] ) {
-        $args      = [
+        return self::write( 'PUT', $endpoint, $parameters );
+    }
+
+    public static function post( $endpoint, $parameters = [] ) {
+        return self::write( 'POST', $endpoint, $parameters );
+    }
+
+    public static function delete( $endpoint, $parameters = [] ) {
+        return self::write( 'DELETE', $endpoint, $parameters );
+    }
+
+    /**
+     * Shared writer for PUT/POST/DELETE. Sends a JSON body and decodes the response.
+     */
+    private static function write( $method, $endpoint, $parameters = [] ) {
+        $args = [
             'timeout' => 120,
             'headers' => [
                 'Content-type' => 'application/json',
                 'X-Api-Secret' => \CaptainCore\Providers\Spaceship::credentials("api_secret"),
                 'X-Api-Key'    => \CaptainCore\Providers\Spaceship::credentials("api_key"),
             ],
-            'body'    => json_encode( $parameters ),
-            'method'  => 'PUT',
+            'method'  => $method,
         ];
+        // Only attach a body when there is one; some endpoints (e.g. DELETE) take none.
+        if ( ! empty( $parameters ) ) {
+            $args['body'] = json_encode( $parameters );
+        }
         $url    = self::$base_url . "/$endpoint";
-        $remote = wp_remote_post( $url, $args );
-    
+        $remote = wp_remote_request( $url, $args );
+
         if ( is_wp_error( $remote ) ) {
             return $remote->get_error_message();
-        } else {
-            return json_decode( $remote['body'] );
         }
+        // Async operations (202) return no body; surface the operation id header instead.
+        $body = json_decode( $remote['body'] );
+        if ( $body === null && '' === trim( (string) $remote['body'] ) ) {
+            $operation_id = wp_remote_retrieve_header( $remote, 'spaceship-async-operationid' );
+            return (object) [
+                'status'       => wp_remote_retrieve_response_code( $remote ),
+                'operation_id' => $operation_id ?: null,
+            ];
+        }
+        return $body;
     }
 
 }
