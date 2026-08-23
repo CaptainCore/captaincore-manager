@@ -469,7 +469,7 @@ class Site {
         $command = "site sync {$this->site_id}";
 
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -883,7 +883,7 @@ class Site {
         $command = "quicksave get {$this->site_id}-$environment $hash";
 
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -921,7 +921,7 @@ class Site {
         $command = "backup show {$this->site_id}-$environment $backup_id $file";
     
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -933,7 +933,7 @@ class Site {
         $command = "backup get {$this->site_id}-$environment $backup_id";
 
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -963,7 +963,7 @@ class Site {
         $command = "backup list {$this->site_id}-$environment --format=json";
 
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -1009,7 +1009,7 @@ class Site {
 
         $command = "logs archive-list {$this->site_id}-$environment";
 
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -1040,7 +1040,7 @@ class Site {
 
         $command = "logs archive-get {$this->site_id}-$environment $file";
 
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 

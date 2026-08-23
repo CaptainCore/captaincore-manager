@@ -2337,7 +2337,7 @@ function captaincore_jobs_get_func( WP_REST_Request $request ) {
 	$job_id = $request['id'];
 
 	// Disable https when debug enabled
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -2479,7 +2479,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	if ( $cmd == 'users-fetch' ) {
 		$args = array_merge( [ 'ssh' ], $sites, [ '--command=wp user list --format=json' ] );
 		$run_in_background = true;
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 			$args    = null;
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
 		}
@@ -2653,7 +2653,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	$request_command = $args !== null ? $args : $command;
 
 	// Disable https when debug enabled
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -4676,7 +4676,7 @@ function captaincore_running_func( $request ) {
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
 
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 			add_filter( 'https_ssl_verify', '__return_false' );
 		}
 
@@ -4709,7 +4709,7 @@ function captaincore_running_func( $request ) {
 }
 
 function captaincore_progress_func( $request ) {
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -4736,7 +4736,7 @@ function captaincore_progress_func( $request ) {
 function captaincore_progress_kill_func( $request ) {
 	$pid = $request['pid'];
 
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -4758,7 +4758,7 @@ function captaincore_progress_kill_func( $request ) {
 function captaincore_progress_detail_func( $request ) {
 	$pid = $request['pid'];
 
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -5031,10 +5031,18 @@ function captaincore_site_magiclogin_func( $request ) {
 				"timestamp"  => $timestamp,
 			] ),
 		"method"    => 'POST',
-		"sslverify" => false,
 	];
-	$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
-	$login_url = trim( $response["body"] );
+	// This is the one request that carries a token capable of minting an admin
+	// session and receives a working login URL back, so it verifies TLS like
+	// every other outbound call - relaxed only under the debug constant.
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
+		$args["sslverify"] = false;
+	}
+	$response = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'magiclogin_failed', $response->get_error_message(), [ 'status' => 502 ] );
+	}
+	$login_url = trim( wp_remote_retrieve_body( $response ) );
 	return $login_url;
 }
 
@@ -9447,7 +9455,7 @@ function captaincore_register_rest_endpoints() {
 				$job     = $results[0];
 				$task_id = $job->task_id;
 
-				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+				if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 					add_filter( 'https_ssl_verify', '__return_false' );
 				}
 
@@ -9534,7 +9542,7 @@ function captaincore_register_rest_endpoints() {
 					return strlen( $data );
 				} );
 
-				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+				if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 					curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
 				}
 
@@ -9564,7 +9572,7 @@ function captaincore_register_rest_endpoints() {
 				$job     = $results[0];
 				$task_id = $job->task_id;
 
-				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+				if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 					add_filter( 'https_ssl_verify', '__return_false' );
 				}
 
@@ -11128,7 +11136,7 @@ function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 	// Call the CaptainCore CLI server directly so we can surface HTTP errors
 	// (e.g. 502 when the CLI server is down) instead of silently returning an
 	// empty diff body.
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -11207,7 +11215,7 @@ function captaincore_environment_files_func( WP_REST_Request $request ) {
 	$path_b64 = base64_encode( $path );
 	$command  = "ssh {$target} --script=file-manager --action={$action} --path-b64={$path_b64}";
 
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -13014,7 +13022,7 @@ function captaincore_verify_permissions_account( $account_id ) {
 function captaincore_run_background_command( $command ) {
 
 	// Disable https when debug enabled
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
@@ -13058,7 +13066,7 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 	$command = "snapshot fetch-link $snapshot_id";
 
 	// Disable https when debug enabled
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 

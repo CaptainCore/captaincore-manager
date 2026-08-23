@@ -37,7 +37,7 @@ class Run {
     /** POST a request body to the CLI server and return the WP HTTP response. */
     private static function post( $path, $body, $timeout = 45 ) {
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
@@ -105,7 +105,7 @@ class Run {
         });
 
         // Disable SSL verification if debug is on
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
         }
 

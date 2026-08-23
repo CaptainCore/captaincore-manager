@@ -45,7 +45,7 @@ class Defaults {
         $command = "default-sync";
         
         // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
