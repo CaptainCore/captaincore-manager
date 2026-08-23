@@ -108,10 +108,24 @@ class SiteAudit {
         $date_prefix = date( 'Y-m-d', strtotime( $audit->created_at ) );
         $slug        = sanitize_title( $audit->site_name );
         $type_slug   = sanitize_title( str_replace( '_', '-', $audit->report_type ?: 'security-audit' ) );
-        $filename    = "{$date_prefix}_{$slug}-{$type_slug}.html";
+        // Every other part of this name is derivable from outside - the date, the
+        // site's domain and one of a handful of report types - and the file is
+        // served straight from the webroot with no authentication in front of
+        // it. The token is what makes the URL a capability rather than a guess.
+        $token       = bin2hex( random_bytes( 16 ) );
+        $filename    = "{$date_prefix}_{$slug}-{$type_slug}-{$token}.html";
         $html        = $this->render_html();
         $reports_dir = ABSPATH . 'reports';
         $file_path   = $reports_dir . '/' . $filename;
+
+        // Each publish mints a new name, so the previous file would otherwise
+        // stay readable at its old URL after the report was re-published.
+        if ( ! empty( $audit->report_path ) && $audit->report_path !== $filename ) {
+            $previous = $reports_dir . '/' . basename( $audit->report_path );
+            if ( file_exists( $previous ) ) {
+                unlink( $previous );
+            }
+        }
 
         file_put_contents( $file_path, $html );
 

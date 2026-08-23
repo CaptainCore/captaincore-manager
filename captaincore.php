@@ -4262,6 +4262,13 @@ function captaincore_domain_update_site_link_func( WP_REST_Request $request ) {
 
     $account_id_to_link = $site->customer_id;
 
+    // The domain and the site were both verified, but the account the domain is
+    // being moved to is a third object taken from the site row - and a relink
+    // carries DNS record control and the registrar transfer code with it.
+    if ( ! ( new \CaptainCore\User )->verify_accounts( [ $account_id_to_link ] ) ) {
+        return new WP_Error( 'permission_denied', 'You do not have access to the destination account.', [ 'status' => 403 ] );
+    }
+
     // Use the existing assign_accounts method to link the domain to this single account
     // This will overwrite any existing links, which matches the client-side's expectation.
     ( new \CaptainCore\Domain( $domain_id ) )->assign_accounts( [ $account_id_to_link ] );
@@ -10702,6 +10709,13 @@ function captaincore_report_send_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
 	}
 
+	// wp_mail() splits on commas, so an unvalidated value fans one request out
+	// to a list of addresses from the fleet's authenticated sender.
+	$recipient = sanitize_email( $recipient );
+	if ( ! is_email( $recipient ) ) {
+		return new WP_Error( 'invalid_recipient', 'A valid recipient email is required.', [ 'status' => 400 ] );
+	}
+
 	if ( ! current_user_can( 'manage_options' ) ) {
 		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
 		foreach ( $site_ids as $site_id ) {
@@ -10788,6 +10802,13 @@ function captaincore_account_report_send_func( WP_REST_Request $request ) {
 
 	if ( empty( $recipient ) ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
+	}
+
+	// wp_mail() splits on commas, so an unvalidated value fans one request out
+	// to a list of addresses from the fleet's authenticated sender.
+	$recipient = sanitize_email( $recipient );
+	if ( ! is_email( $recipient ) ) {
+		return new WP_Error( 'invalid_recipient', 'A valid recipient email is required.', [ 'status' => 400 ] );
 	}
 
 	$result = CaptainCore\Report::send_account( $account_id, $start_date, $end_date, $recipient );
@@ -10887,6 +10908,13 @@ function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 
 	if ( empty( $recipient ) ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
+	}
+
+	// wp_mail() splits on commas, so an unvalidated value fans one request out
+	// to a list of addresses from the fleet's authenticated sender.
+	$recipient = sanitize_email( $recipient );
+	if ( ! is_email( $recipient ) ) {
+		return new WP_Error( 'invalid_recipient', 'A valid recipient email is required.', [ 'status' => 400 ] );
 	}
 
 	// Verify access to the requested account (unless admin). Without this a
