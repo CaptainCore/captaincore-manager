@@ -12951,8 +12951,17 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			// Generate new user
 			$user_id = wp_insert_user( $userdata );
 
-			// Assign permission to account
-			( new CaptainCore\User( $user_id, true ) )->assign_accounts( [ $record->account_id ] );
+			if ( is_wp_error( $user_id ) ) {
+				return [ "error" => "Account already taken or invalid invite." ];
+			}
+
+			// Assign permission to account at the tier the invite was issued for.
+			// assign_accounts() defaults to full, so without this an invitee sent
+			// a restricted invite arrived with full access to the whole account.
+			( new CaptainCore\User( $user_id, true ) )->assign_accounts(
+				[ $record->account_id ],
+				empty( $record->level ) ? 'full' : $record->level
+			);
 
 			$account = new CaptainCore\Account( $record->account_id, true );
 			$account->calculate_totals();

@@ -1436,9 +1436,14 @@ class User {
         return false;
     }
 
-    public function insert_accounts( $account_ids = [] ) {
+    /**
+     * @param array  $account_ids
+     * @param string $level Access tier for rows this creates.
+     */
+    public function insert_accounts( $account_ids = [], $level = "full" ) {
 
         $accountuser = new AccountUser();
+        $level       = self::safe_account_level( $level );
 
         foreach( $account_ids as $account_id ) {
 
@@ -1447,14 +1452,31 @@ class User {
 
             // Add new record
             if ( count($lookup) == 0 ) {
-                $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => "full" ] );
+                $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => $level ] );
             }
 
         }
 
     }
 
-    public function assign_accounts( $account_ids = [] ) {
+    /**
+     * Constrain a tier to one the permission table knows, so a stored or
+     * submitted value cannot become an unrecognised level - tier_permissions()
+     * falls back to full for anything it does not recognise.
+     *
+     * @param string $level
+     * @return string
+     */
+    public static function safe_account_level( $level ) {
+        $allowed = [ 'full-billing', 'full', 'sites-only', 'domains-only' ];
+        return in_array( $level, $allowed, true ) ? $level : 'full';
+    }
+
+    /**
+     * @param array  $account_ids
+     * @param string $level Access tier for rows this creates.
+     */
+    public function assign_accounts( $account_ids = [], $level = "full" ) {
 
         $accountuser = new AccountUser();
 
@@ -1470,8 +1492,9 @@ class User {
         }
 
         // Add new records
+        $level = self::safe_account_level( $level );
         foreach ( array_diff( $account_ids, $current_account_ids ) as $account_id ) {
-            $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => "full" ] );
+            $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => $level ] );
         }
 
     }
