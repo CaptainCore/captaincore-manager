@@ -943,11 +943,16 @@ class Component extends DCLogic {
         open: () => this.openSite(x.id),
         ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(x)),
         unpin: (e) => { e.stopPropagation(); this.togglePin(x.id); } }; });
+    // Shimmer rows while the real fleet hydrates (same booted/_hydrated gate as
+    // homeSkel). Empty once hydrated, so the skeleton markup renders nothing.
+    const sitesSkel = !!window.CC_BOOT && !this._hydrated;
+    const countLabel = sitesSkel ? 'Loading fleet…' : filtered.length + ' sites · ' + envCount + ' environments';
     return {
       pinnedShow: pinnedStrip.length > 0,
       pinnedStrip,
-      sitesCount: filtered.length + ' sites · ' + envCount + ' environments',
-      screenSub: s.route === 'sites' ? filtered.length + ' sites · ' + envCount + ' environments' : '',
+      sitesSkelRows: sitesSkel ? Array.from({ length: 6 }, () => ({})) : [],
+      sitesCount: countLabel,
+      screenSub: s.route === 'sites' ? countLabel : '',
       screenSubDisplay: s.route === 'sites' ? 'inline-block' : 'none',
       q: s.q, onQ: (e) => this.setState({ q: e.target.value, sitesPage: 1 }),
       ...this.pagerVals('sites', 'sitesPage', filtered.length, pageNum, totalPages, 'sites'),
