@@ -463,6 +463,9 @@ class Component extends DCLogic {
       go: () => this.setState({ billTab: id }) }));
     return {
       billTabs: tabs,
+      // Shimmer invoice rows pre-hydration; realBillingVals overrides while its
+      // own fetch is in flight and clears once billing data lands.
+      billSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
       billTabInv: s.billTab === 'invoices', billTabPm: s.billTab === 'methods', billTabAddr: s.billTab === 'address',
       invoices: this.INVOICES.map(iv => { const paid = !iv.due || s.paid[iv.id];
         return { ...iv,
@@ -592,6 +595,9 @@ class Component extends DCLogic {
         fill: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)' })),
       queueStale: () => this.runJob('audit-queue', '9 stale sites'),
       steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); },
+      // Shimmer threat rows pre-hydration; realSecurityVals overrides while its
+      // own fetch is in flight and clears once security data lands.
+      secSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
       secLoading: false, secEmpty: false, secEmptyText: '', ckEmptyCore: false, ckEmptyPlug: false,
       covShowActions: true, covNote: '',
       ...(this._hydrated ? this.realSecurityVals(s) : {})

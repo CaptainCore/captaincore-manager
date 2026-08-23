@@ -1838,7 +1838,14 @@ drives 6 shimmer rows per view via `sitesSkelRows` (empty array once hydrated,
 so the markup self-hides) and the count chip reads "Loading fleet…". All three
 views (table / cards / list) have matching skeleton markup. Same treatment on
 Domains and Accounts (`domSkelRows` / `accSkelRows`, "Loading domains…" /
-"Loading accounts…" chips, verified live the same way). PAGE_SIZES moved
+"Loading accounts…" chips, verified live the same way), plus Billing invoices
+(`billSkelRows`), Security vulnerabilities (`secSkelRows`) and Users
+(`usersSkelRows`, upgraded from the old 2-bar shimmer to 6 grid-aligned rows).
+Billing and Security skeletons stay up through BOTH gates — pre-hydration
+(base vals) and each screen's own lazy fetch (`realBillingVals` /
+`realSecurityVals` !loaded branches override; the loaded branch omits the key
+so the base's hydrated [] clears it). The Security threats endpoint takes
+5–10s across the fleet, so its skeleton earns its keep. PAGE_SIZES moved
 25/50/100/250 → 24/48/96/240 (divisible by 12 so the auto-fill card grid fills
 its rows at 2/3/4/6 columns; a stored legacy size falls back to 24). Verified
 live headless with REST responses held 8s: skeletons + chip in all three

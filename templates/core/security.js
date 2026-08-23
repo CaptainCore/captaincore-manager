@@ -63,6 +63,7 @@ Object.assign(Component.prototype, {
     const sec = this._sec;
     const loading = this._secLoading && !sec;
     if (!sec) return { threats: [], secLoading: loading, secEmpty: !loading, secEmptyText: loading ? 'Loading security data…' : '',
+      secSkelRows: loading ? Array.from({ length: 4 }, () => ({})) : [],
       coreFails: [], plugFails: [], covShowActions: false };
     const notes = notesFor => notesFor; // unused; notes render from tracking
     const threats = (sec.threats.threats || []).map(t => {

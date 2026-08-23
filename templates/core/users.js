@@ -109,6 +109,7 @@ Object.assign(Component.prototype, {
       usersCount,
       ...(active && usersCount ? { screenSub: usersCount, screenSubDisplay: 'inline-block' } : {}),
       usersLoading: active && !!window.CC_BOOT && !this._users,
+      usersSkelRows: (active && !!window.CC_BOOT && !this._users) ? Array.from({ length: 6 }, () => ({})) : [],
       usersEmpty: !!this._users && filtered.length === 0,
       uq: s.uq || '', onUq: e => this.setState({ uq: e.target.value }),
       openNewUser: () => this.openNewUser(),
