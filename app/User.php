@@ -943,8 +943,6 @@ class User {
                 
                 // Verify with Stripe - amounts must be in cents as separate array items
                 $amounts_int = array_map( 'intval', $amounts );
-                error_log( "ACH Verify: Sending amounts to Stripe: " . print_r( $amounts_int, true ) );
-                error_log( "ACH Verify: Setup Intent ID: " . $setup_intent_id );
                 
                 $verify_result = \WC_Stripe_API::request(
                     [ 
@@ -954,7 +952,6 @@ class User {
                     "setup_intents/{$setup_intent_id}/verify_microdeposits"
                 );
                 
-                error_log( "ACH Verify: Stripe response: " . print_r( $verify_result, true ) );
                 
                 if ( ! empty( $verify_result->error ) ) {
                     return (object) [ 'error' => $verify_result->error->message ];

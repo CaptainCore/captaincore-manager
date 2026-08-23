@@ -17,6 +17,11 @@ class ScheduledReports extends DB {
     public static function all( $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
         $table = self::table_name();
+        // Both parts land in the query unquoted. No caller passes them today,
+        // which is exactly why this should be settled before one does.
+        $columns    = [ 'scheduled_report_id', 'interval', 'recipient', 'user_id', 'next_run', 'last_run', 'created_at', 'updated_at' ];
+        $sort       = in_array( $sort, $columns, true ) ? $sort : 'created_at';
+        $sort_order = strtoupper( (string) $sort_order ) === 'ASC' ? 'ASC' : 'DESC';
         $results = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY `{$sort}` {$sort_order}" );
         return $results;
     }

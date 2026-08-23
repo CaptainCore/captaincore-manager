@@ -3413,12 +3413,24 @@ function captaincore_provider_update_func( $request ) {
 	if ( ! ( new CaptainCore\Provider( $provider_id ) )->verify_ownership() ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$provider    = $request->get_param( "provider" );
-	unset( $provider["provider_id"] );
-	unset( $provider["created_at"] );
-	$provider["updated_at"]  = date("Y-m-d H:i:s");
-	$provider["credentials"] = json_encode( $provider["credentials"] );
-	return ( new CaptainCore\Providers )->update( $provider, [ "provider_id" => $provider_id ] );
+	// Unsetting two columns left the rest of the row writable, including user_id
+	// and provider - one decides who the record belongs to, the other decides
+	// which adapter reads it. Whitelist what an update may actually change.
+	$input  = (array) $request->get_param( "provider" );
+	$update = [
+		"credentials" => wp_json_encode( $input["credentials"] ?? [] ),
+		"updated_at"  => date( "Y-m-d H:i:s" ),
+	];
+	if ( isset( $input["name"] ) ) {
+		$update["name"] = sanitize_text_field( $input["name"] );
+	}
+	// The edit dialog offers the provider type, so it stays writable - but as a
+	// slug, since it selects which adapter reads the row. user_id is not here on
+	// purpose: it decides who owns the record.
+	if ( ! empty( $input["provider"] ) && preg_match( '/^[a-z0-9_-]{1,32}$/i', (string) $input["provider"] ) ) {
+		$update["provider"] = strtolower( $input["provider"] );
+	}
+	return ( new CaptainCore\Providers )->update( $update, [ "provider_id" => $provider_id ] );
 }
 
 function captaincore_provider_delete_func( $request ) {
