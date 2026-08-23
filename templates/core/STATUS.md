@@ -9,7 +9,8 @@ strips it from pushed URLs. This file is the **hand-maintained source of
 truth**; the Claude Design project "Anchor Hosting UI Revamp" (Anchor Home.dc.html,
 project `aa0b3f96-96ce-4fd8-bdc2-e5cfb72f64b1`) is now a visual reference only.
 Historical notes below that mention `core-v3.php` / `?ui=v3` refer to the
-pre-rename filenames.
+pre-rename filenames, and this directory itself was `templates/core-v3/` until
+2026-08-23 (renamed to `templates/core/` once it became the primary UI).
 
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).

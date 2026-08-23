@@ -13,11 +13,11 @@
 #   bin/                                 the release toolchain, dev only
 #   roadmap.md, to-do.md                 planning docs, dev only
 #   user-account-security-plan.md        planning doc, dev only
-#   templates/core-v3/STATUS.md          living build log, dev only
-#   templates/core-v3/V1-PLAN.md         release checklist, dev only
+#   templates/core/STATUS.md          living build log, dev only
+#   templates/core/V1-PLAN.md         release checklist, dev only
 #
 # vendor/ SHIPS (the optimized composer classmap is required at runtime).
-# templates/ SHIPS (core.php + core-v3 UI). manifest.json SHIPS (updater
+# templates/ SHIPS (core.php + core/ UI). manifest.json SHIPS (updater
 # fallback). changelog.md and api-docs.md SHIP (public docs).
 #
 # Usage: bin/build-zip.sh   → ../captaincore-manager.zip (from wp-content/plugins/)
@@ -41,8 +41,8 @@ zip -r -q -X "$OUT" "$NAME" \
 	-x "$NAME/roadmap.md" \
 	-x "$NAME/to-do.md" \
 	-x "$NAME/user-account-security-plan.md" \
-	-x "$NAME/templates/core-v3/STATUS.md" \
-	-x "$NAME/templates/core-v3/V1-PLAN.md" \
+	-x "$NAME/templates/core/STATUS.md" \
+	-x "$NAME/templates/core/V1-PLAN.md" \
 	-x "*.DS_Store"
 
 # Assert rather than trust: a silently fattened zip is invisible until someone
@@ -53,14 +53,14 @@ zip -r -q -X "$OUT" "$NAME" \
 # the first hit, unzip takes SIGPIPE, and the pipeline inherits its status.
 listing="$( unzip -l "$OUT" )"
 
-leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core-v3/(STATUS|V1-PLAN)\.md" <<< "$listing" || true )"
+leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN)\.md" <<< "$listing" || true )"
 [ "$leaked" = "0" ] || {
 	echo "FAIL: $leaked dev file(s) leaked into the zip" >&2
-	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core-v3/(STATUS|V1-PLAN)\.md" <<< "$listing" | head >&2
+	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN)\.md" <<< "$listing" | head >&2
 	exit 1
 }
 
-for required in "$NAME/captaincore.php" "$NAME/manifest.json" "$NAME/app/DB.php" "$NAME/vendor/composer/autoload_classmap.php" "$NAME/includes/class-captaincore-manager-updater.php" "$NAME/templates/core.php" "$NAME/templates/core-v3/app.html"; do
+for required in "$NAME/captaincore.php" "$NAME/manifest.json" "$NAME/app/DB.php" "$NAME/vendor/composer/autoload_classmap.php" "$NAME/includes/class-captaincore-manager-updater.php" "$NAME/templates/core.php" "$NAME/templates/core/app.html"; do
 	grep -q " $required\$" <<< "$listing" || { echo "FAIL: $required missing from the zip" >&2; exit 1; }
 done
 

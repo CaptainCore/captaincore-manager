@@ -32,7 +32,7 @@ The Manager never touches customer servers directly. It asks the CLI to do that,
 
 ## The interface
 
-The dashboard at `/account` is a hand-maintained single page application in `templates/core-v3/`. No build step, no bundler, no node_modules. Each section is a plain JavaScript file, and the whole interface ships with the plugin. It includes light and dark themes, a command palette and a terminal dock for streaming command output. The original Vue/Vuetify app from the 0.x era still ships as a fallback behind `?ui=legacy`.
+The dashboard at `/account` is a hand-maintained single page application in `templates/core/`. No build step, no bundler, no node_modules. Each section is a plain JavaScript file, and the whole interface ships with the plugin. It includes light and dark themes, a command palette and a terminal dock for streaming command output. The original Vue/Vuetify app from the 0.x era still ships as a fallback behind `?ui=legacy`.
 
 ## The REST API
 

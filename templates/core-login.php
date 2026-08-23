@@ -61,7 +61,7 @@ try {
   font-family: 'JetBrains Mono'; font-style: normal; font-weight: 100 800; font-display: swap;
   src: url('<?php echo $plugin_url; ?>public/fonts/jetbrains-mono.woff2') format('woff2');
 }
-/* Minn tokens — the app shell's palette (templates/core-v3/app.html helmet). */
+/* Minn tokens — the app shell's palette (templates/core/app.html helmet). */
 :root{
   --paper:#ffffff;--panel:#ffffff;--panel-2:#eeeef1;
   --rule:#e7e7ea;--ink:#1a1a1f;--ink-dim:#5e5e69;

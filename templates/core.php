@@ -5,7 +5,7 @@
  * lives on as templates/core-legacy.php behind ?ui=legacy. The login route is
  * the standalone templates/core-login.php.
  *
- * Source of truth lives in templates/core-v3/:
+ * Source of truth lives in templates/core/:
  *   app.html  — the DC template markup (visual design)
  *   app.js    — class Component extends DCLogic (application logic)
  *   data.js   — Component.prototype mixin: REST data layer / hydration
@@ -33,7 +33,7 @@ if ( ! is_user_logged_in() ) {
 $user       = ( new CaptainCore\User )->profile();
 $colors     = CaptainCore\Configurations::colors();
 $plugin_url = plugin_dir_url( __DIR__ );
-$v3_dir     = __DIR__ . '/core-v3';
+$v3_dir     = __DIR__ . '/core';
 $first_name = ! empty( $user->first_name ) ? $user->first_name : strtok( (string) $user->display_name, ' ' );
 
 $cc_boot = [
