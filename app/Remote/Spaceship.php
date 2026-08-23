@@ -11,7 +11,30 @@ class Spaceship {
 
     private static $base_url = 'https://spaceship.dev/api/v1';
 
+    /**
+     * Endpoints are built by interpolating a stored value - usually a domain
+     * name - into an API path, and get() adds its own query string, so no
+     * legitimate endpoint here contains one. A value carrying path or query
+     * syntax would steer the request to a different registrar resource while
+     * still sending the account's key.
+     *
+     * @param string $endpoint
+     * @return bool
+     */
+    private static function endpoint_is_safe( $endpoint ) {
+        $endpoint = (string) $endpoint;
+        if ( $endpoint === '' ) {
+            return false;
+        }
+        return ! preg_match( '~[?#\\\\\s]|(^|/)\.\.(/|$)~', $endpoint );
+    }
+
     public static function get( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
+
         $args      = [
             'timeout' => 120,
             'headers' => [
@@ -48,6 +71,11 @@ class Spaceship {
      * Shared writer for PUT/POST/DELETE. Sends a JSON body and decodes the response.
      */
     private static function write( $method, $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
+
         $args = [
             'timeout' => 120,
             'headers' => [

@@ -1931,6 +1931,13 @@ function captaincore_domains_create_func( WP_REST_Request $request ) {
 	$account_id     = intval( $request->get_param( 'account_id' ) );
 	$create_dns_zone = $request->get_param( 'create_dns_zone' ) !== false;
 
+	// The name is interpolated into registrar and Mailgun API paths - including
+	// the transfer auth-code endpoint - and rendered in both dashboards, so it
+	// has to look like a hostname rather than be whatever was typed.
+	$name = strtolower( trim( $name ) );
+	if ( ! empty( $name ) && ! preg_match( '/^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/', $name ) ) {
+		$errors[] = "Domain name is not valid.";
+	}
 	if ( empty( $name ) ) {
 		$errors[] = "Domain can't be empty.";
 	}
