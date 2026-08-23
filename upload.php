@@ -30,12 +30,23 @@ if ( empty( $_FILES['file']['name'] ) ) {
 // Disable PHP warning in order to produce a consistent response.
 error_reporting( E_ERROR | E_PARSE );
 
-// Normalize the filename and reject executable / dangerous file types — the
-// deploy directory is web-accessible, so an uploaded .php file would be RCE.
+// Normalize the filename and allow only what the one consumer sends — the
+// deploy directory is web-accessible, so anything executable landing there
+// would be RCE. The Add plugin/theme dialog uploads .zip archives and nothing
+// else, so an allowlist is both correct and narrower than enumerating every
+// dangerous extension.
 $filename  = sanitize_file_name( $_FILES['file']['name'] );
 $extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
-$blocked   = [ 'php', 'php3', 'php4', 'php5', 'php7', 'phps', 'phtml', 'pht', 'phar', 'cgi', 'pl', 'asp', 'aspx', 'jsp', 'jspx', 'htaccess', 'shtml' ];
-if ( $extension === '' || in_array( $extension, $blocked, true ) ) {
+$allowed   = [ 'zip' => 'application/zip' ];
+if ( ! isset( $allowed[ $extension ] ) ) {
+	$response->response = 'Invalid file type';
+	echo json_encode( $response );
+	exit;
+}
+
+// Confirm the contents match the name, so the extension is not the only check.
+$checked = wp_check_filetype_and_ext( $_FILES['file']['tmp_name'], $filename, $allowed );
+if ( empty( $checked['ext'] ) || ! isset( $allowed[ $checked['ext'] ] ) ) {
 	$response->response = 'Invalid file type';
 	echo json_encode( $response );
 	exit;
@@ -50,9 +61,14 @@ $deploy_path_url = "{$upload_dir['baseurl']}/deploy/";
 if ( ! file_exists( $deploy_path ) ) {
 	mkdir( $deploy_path, 0755, true );
 }
-$htaccess = "{$deploy_path}.htaccess";
-if ( ! file_exists( $htaccess ) ) {
-	file_put_contents( $htaccess, "php_flag engine off\n<FilesMatch \"\\.(php|php3|php4|php5|php7|phps|phtml|pht|phar)$\">\n\tRequire all denied\n</FilesMatch>\n" );
+// php_flag is a mod_php directive: under PHP-FPM Apache treats it as an invalid
+// command and returns 500 for this whole directory, and nginx ignores .htaccess
+// entirely. The FilesMatch block is portable, so the guard is written without
+// php_flag - and rewritten if an earlier build left the broken version behind.
+$htaccess       = "{$deploy_path}.htaccess";
+$htaccess_rules = "<FilesMatch \"\\.(php|php3|php4|php5|php7|phps|phtml|pht|phar)$\">\n\tRequire all denied\n</FilesMatch>\n";
+if ( ! file_exists( $htaccess ) || strpos( (string) file_get_contents( $htaccess ), 'php_flag' ) !== false ) {
+	file_put_contents( $htaccess, $htaccess_rules );
 }
 
 $upload_file     = "{$deploy_path}{$filename}";
