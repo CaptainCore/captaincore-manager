@@ -30,6 +30,9 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+// Keep in sync with the Version plugin header above and manifest.json.
+define( 'CAPTAINCORE_VERSION', '0.18.0' );
+
 function activate_captaincore() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-activator.php';
 	Captaincore_Activator::activate();
@@ -61,6 +64,7 @@ new CaptainCore\Router();
 
 require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/Parsedown.php';
+require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-manager-updater.php';
 
 function captaincore_cron_run() {
 	CaptainCore\Accounts::auto_switch_plans();
