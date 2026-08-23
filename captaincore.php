@@ -2473,9 +2473,15 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	}
 	if ( $cmd == 'recipe' ) {
 		$run_in_background = true;
-		$args        = array_merge( [ 'ssh' ], $sites, [ '--recipe=' . $value ] );
-		$recipe_name = ( new CaptainCore\Recipes )->get( $value )->title;
-		CaptainCore\ProcessLog::insert( $recipe_name, $post_id );
+		// Recipes::list() withholds other users' private recipes, so running one
+		// by id needs the same access test /run/code applies: public, own, or admin.
+		$recipe = CaptainCore\Recipes::get( intval( $value ) );
+		$can    = $recipe && ( ! empty( $recipe->public ) || $recipe->user_id == get_current_user_id() || ( new CaptainCore\User )->is_admin() );
+		if ( ! $can ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
+		$args = array_merge( [ 'ssh' ], $sites, [ '--recipe=' . intval( $value ) ] );
+		CaptainCore\ProcessLog::insert( $recipe->title, $post_id );
 	}
 	if ( $cmd == 'launch' ) {
 		$run_in_background = true;
@@ -2576,12 +2582,18 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	if ( $cmd == 'manage' ) {
 		$run_in_background = true;
 		if ( is_int( $post_id ) ) {
-			// $value is a WP-CLI subcommand that may contain spaces → split into
-			// discrete argv tokens. Flag name kept to a safe charset for hygiene;
-			// the input value passes raw (argv elements are never re-parsed).
-			$sub_tokens = preg_split( '/\s+/', trim( (string) $value ) );
-			$flag       = preg_replace( '/[^a-z0-9_-]/i', '', (string) $arguments['value'] );
-			$args       = array_merge( $sub_tokens, $sites, [ '--' . $flag . '=' . stripslashes( $arguments['input'] ) ] );
+			// $value selects the CaptainCore CLI subcommand, so it is matched
+			// against a fixed set rather than split out of request text. Splitting
+			// let a value carrying whitespace contribute extra argv tokens - including
+			// further site targets - ahead of the ones just verified above.
+			$subcommand = trim( (string) $value );
+			if ( ! in_array( $subcommand, [ 'ssh' ], true ) ) {
+				return new WP_Error( 'invalid_command', 'Unsupported manage command.', [ 'status' => 400 ] );
+			}
+			// Flag name kept to a safe charset; the input value passes raw (argv
+			// elements are never re-parsed).
+			$flag = preg_replace( '/[^a-z0-9_-]/i', '', (string) $arguments['value'] );
+			$args = array_merge( [ $subcommand ], $sites, [ '--' . $flag . '=' . stripslashes( $arguments['input'] ) ] );
 		}
 	}
 	if ( $cmd == 'quicksave_file_diff' ) {
@@ -3966,10 +3978,16 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
             } elseif ( ! empty( $env_data->enviroment_id ) ) { // Handle common frontend typo
                 $environment_id = $env_data->enviroment_id;
             } elseif ( ! empty( $env_data->site_id ) && ! empty( $env_data->environment ) ) {
-                // Fallback: Direct site_id + environment name provided
+                // Fallback: direct site_id + environment name. Resolve the name
+                // against the site's own environments and carry the stored value
+                // forward, so only a real environment can reach the CLI target.
                 if ( captaincore_verify_permissions( $env_data->site_id ) ) {
-                    $site_obj = CaptainCore\Sites::get( $env_data->site_id );
-                    $env_name = strtolower( $env_data->environment );
+                    $environment_id = ( new CaptainCore\Site( $env_data->site_id ) )->fetch_environment_id( $env_data->environment );
+                    if ( ! empty( $environment_id ) ) {
+                        $env_row  = ( new CaptainCore\Environments )->get( $environment_id );
+                        $site_obj = CaptainCore\Sites::get( $env_data->site_id );
+                        $env_name = strtolower( $env_row->environment );
+                    }
                 }
             }
         }
@@ -3998,13 +4016,14 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
         return new WP_Error( 'invalid_targets', 'No valid targets found or permission denied.', [ 'status' => 403 ] );
     }
 
-    // Dedup targets and format command
-    $targets       = array_unique( $targets );
-    $target_string = implode( " ", $targets );
-    $encoded_code  = base64_encode( stripslashes_deep( $code ) );
-    
+    // Dedup targets and format command. The argv-array form is used so each
+    // target stays a discrete argument - a string command is re-tokenized by
+    // the CLI server, where a target carrying whitespace would become two.
+    $targets      = array_values( array_unique( $targets ) );
+    $encoded_code = base64_encode( stripslashes_deep( $code ) );
+
     // Dispatch to CLI
-    $command = "run $target_string --code=$encoded_code";
+    $command = array_merge( [ 'run' ], $targets, [ '--code=' . $encoded_code ] );
 
     if ( captaincore_is_api_request( $request ) ) {
         $async = ! empty( $request->get_json_params()['async'] );
