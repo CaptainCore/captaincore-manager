@@ -1594,6 +1594,22 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Type scale tokenized + bumped (2026-08-23)
+"Font size overall still feels too small" — the structural answer, not
+another spot-bump: font sizes were the one thing the token system never
+covered (1,400+ inline `font:` declarations with literal px). All sizes in
+the 11–15.5px band now reference **`--fs-*` tokens** in the helmet `:root`
+(mechanical sweep: `font:<w> 12.5px …` → `font:<w> var(--fs-125) …`).
+**Token names carry the ORIGINAL design px size; values carry the current
+scale** — so resizing the whole app is a token edit, exactly like the color
+rule. Current values: the 12–15px reading band sits one step higher
+(12→13, 12.5→13.5, 13→14, 14→15…); ≤11.5px micro-labels/chips and ≥16px
+headings are unchanged to preserve hierarchy. New markup must use the
+tokens, never literal px in that band. Verified live: tokens resolve
+(row titles 15px, nav 15.5px), table/nav/dock/dialogs render clean in both
+themes, no page errors. The standalone login page keeps its own (already
+larger) scale.
+
 ### Billing fixes + Settings hardening for customers (2026-08-23)
 Three fixes from a switched-session review:
 

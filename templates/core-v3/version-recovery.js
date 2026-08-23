@@ -72,7 +72,7 @@ Object.assign(Component.prototype, {
         err: (e) => { const el = e.target; if (el._swapped) return; el._swapped = true; el.style.display = 'none';
           const d = document.createElement('div');
           d.textContent = 'Image no longer available in storage';
-          d.style.cssText = 'padding:26px;text-align:center;font:400 12.5px var(--sans);color:var(--ink-dim)';
+          d.style.cssText = 'padding:26px;text-align:center;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)';
           el.parentNode.appendChild(d); }
       })) : [],
       capTeaserShow: teaserN > 0,
