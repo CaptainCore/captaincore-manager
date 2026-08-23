@@ -2618,7 +2618,7 @@ class Component extends DCLogic {
 
     const primary = isOp
       ? [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing')]
-      : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
+      : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
     const operate = [this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
 
     // When booted (real app), never show design sample counts — '…' until
