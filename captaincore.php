@@ -6325,13 +6325,15 @@ function captaincore_site_invite_preview_func( $request ) {
     $user    = new CaptainCore\User( $user_id );
     $has_account_access = $user->verify_accounts( [ $account_id ] );
 
+    // The account name and totals describe the owning account, which is not
+    // necessarily the caller's, so they follow the same test as the lists.
     return [
         'site_name'          => $site->name,
-        'account_name'       => $account_rec->name,
-        'total_sites'        => $site_count,
-        'total_domains'      => $domain_count,
+        'account_name'       => $has_account_access ? $account_rec->name : '',
+        'total_sites'        => $has_account_access ? $site_count : null,
+        'total_domains'      => $has_account_access ? $domain_count : null,
         'has_account_access' => $has_account_access,
-        'sites_list'         => $has_account_access ? $all_sites : [], 
+        'sites_list'         => $has_account_access ? $all_sites : [],
         'domains_list'       => $has_account_access ? $all_domains : [],
     ];
 }
@@ -6350,12 +6352,27 @@ function captaincore_site_invite_func( $request ) {
     }
 
     $site = CaptainCore\Sites::get( $site_id );
-    
+
     // 2. Resolve Account
     $account_id = $site->customer_id ? $site->customer_id : $site->account_id;
 
+    // Site access does not imply account access - a site reaches this handler
+    // through the owning account, the customer account or a share, so the
+    // resolved account can belong to someone else. Apply the same membership
+    // and tier tests the account-scoped invite route uses.
+    $user = new CaptainCore\User;
+    if ( ! $user->is_admin() ) {
+        if ( ! $user->verify_accounts( [ $account_id ] ) ) {
+            return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+        }
+        $level = $user->account_level( $account_id );
+        if ( ! in_array( $level, [ 'full-billing', 'full' ] ) ) {
+            return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
+        }
+    }
+
     // 3. Perform Invite
-    $account_obj = new CaptainCore\Account( $account_id, true );
+    $account_obj = new CaptainCore\Account( $account_id );
     $account_obj->invite( $email );
 
     // 4. Return Generic Success Message (Privacy Protection)
