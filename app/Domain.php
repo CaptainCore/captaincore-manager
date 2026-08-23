@@ -545,7 +545,7 @@ class Domain {
 
         // Filter routes that match this domain and transform to alias format
         $aliases = [];
-        $domain_pattern = '/@' . preg_quote( $domain->name, '/' ) . '(["\']|\))/i';
+        $domain_pattern = self::domain_route_pattern( $domain->name );
         
         foreach ( $routes_response->items as $route ) {
             // Check if this route's expression matches our domain
@@ -569,7 +569,10 @@ class Domain {
         $alias_input = (object) $alias_input;
         
         // Build the Mailgun route expression
-        $alias_name = self::sanitize_email_token( $alias_input->name ?? '' );
+        $alias_name = self::safe_local_part( $alias_input->name ?? '' );
+        if ( $alias_name === '' && ! empty( $alias_input->name ) && $alias_input->name !== '*' ) {
+            return new \WP_Error( 'invalid_alias', 'Alias contains characters that are not allowed.', [ 'status' => 400 ] );
+        }
 
         if ( $alias_name === '*' || $alias_name === '' ) {
             // Catch-all alias
@@ -589,7 +592,7 @@ class Domain {
         foreach ( $recipients as $recipient ) {
             $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
             $recipient_email = self::sanitize_email_token( $recipient_email );
-            if ( $recipient_email === '' ) {
+            if ( $recipient_email === '' || ! is_email( $recipient_email ) ) {
                 continue;
             }
             $actions[] = 'forward("' . $recipient_email . '")';
@@ -623,6 +626,10 @@ class Domain {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
 
+        if ( ! self::route_belongs_to_domain( $route_id, $domain->name ) ) {
+            return new \WP_Error( 'permission_denied', 'Forward not found for this domain.', [ 'status' => 404 ] );
+        }
+
         $alias_input = (object) $alias_input;
 
         // Build update data
@@ -630,7 +637,10 @@ class Domain {
 
         // If name is being updated, rebuild the expression
         if ( isset( $alias_input->name ) ) {
-            $alias_name = self::sanitize_email_token( $alias_input->name );
+            $alias_name = self::safe_local_part( $alias_input->name );
+            if ( $alias_name === '' && $alias_input->name !== '' && $alias_input->name !== '*' ) {
+                return new \WP_Error( 'invalid_alias', 'Alias contains characters that are not allowed.', [ 'status' => 400 ] );
+            }
             if ( $alias_name === '*' || $alias_name === '' ) {
                 $update_data['expression'] = 'match_recipient(".*@' . $domain->name . '")';
                 $update_data['priority'] = 100;
@@ -652,7 +662,7 @@ class Domain {
             foreach ( $recipients as $recipient ) {
                 $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
                 $recipient_email = self::sanitize_email_token( $recipient_email );
-                if ( $recipient_email === '' ) {
+                if ( $recipient_email === '' || ! is_email( $recipient_email ) ) {
                     continue;
                 }
                 $actions[] = 'forward("' . $recipient_email . '")';
@@ -665,7 +675,7 @@ class Domain {
             return new \WP_Error( 'no_changes', 'No changes provided.' );
         }
 
-        $response = \CaptainCore\Remote\Mailgun::put( "v3/routes/{$route_id}", $update_data );
+        $response = \CaptainCore\Remote\Mailgun::put( "v3/routes/" . rawurlencode( (string) $route_id ), $update_data );
 
         if ( empty( $response->id ) && empty( $response->message ) ) {
             return new \WP_Error( 'mailgun_error', 'Failed to update route in Mailgun.', [ 'details' => $response ] );
@@ -680,7 +690,11 @@ class Domain {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
 
-        $response = \CaptainCore\Remote\Mailgun::delete( "v3/routes/{$route_id}" );
+        if ( ! self::route_belongs_to_domain( $route_id, $domain->name ) ) {
+            return new \WP_Error( 'permission_denied', 'Forward not found for this domain.', [ 'status' => 404 ] );
+        }
+
+        $response = \CaptainCore\Remote\Mailgun::delete( "v3/routes/" . rawurlencode( (string) $route_id ) );
 
         return $response;
     }
@@ -702,6 +716,55 @@ class Domain {
      * rejects it with "554 destination SMTP server doesn't support UTF-8
      * addresses". Visible Unicode is preserved so IDN/EAI addresses still work.
      */
+    /**
+     * Regex a route's expression must match for it to belong to this domain.
+     * Shared so the read and write paths cannot drift.
+     *
+     * @param string $domain_name
+     * @return string
+     */
+    private static function domain_route_pattern( $domain_name ) {
+        return '/@' . preg_quote( $domain_name, '/' ) . '(["\']|\))/i';
+    }
+
+    /**
+     * Confirm a Mailgun route belongs to this domain before it is changed.
+     *
+     * Routes are global to the Mailgun account, which covers every domain the
+     * fleet forwards mail for, so the route id alone says nothing about who
+     * owns it - verifying the domain in the URL is not the same as verifying
+     * the route being written.
+     *
+     * @param string $route_id
+     * @param string $domain_name
+     * @return bool
+     */
+    private static function route_belongs_to_domain( $route_id, $domain_name ) {
+        $route = \CaptainCore\Remote\Mailgun::get( "v3/routes/" . rawurlencode( (string) $route_id ) );
+        $expression = $route->route->expression ?? '';
+        if ( empty( $expression ) ) {
+            return false;
+        }
+        return (bool) preg_match( self::domain_route_pattern( $domain_name ), $expression );
+    }
+
+    /**
+     * A route expression is built by quoting these into match_recipient(), so
+     * they are validated against what a local part may contain rather than by
+     * removing characters known to be bad - a quote and a close paren survived
+     * that and let the caller append further expression grammar.
+     *
+     * @param string $value
+     * @return string Empty string when the value is not usable.
+     */
+    private static function safe_local_part( $value ) {
+        $value = self::sanitize_email_token( $value );
+        if ( $value === '*' ) {
+            return '*';
+        }
+        return preg_match( '/^[A-Za-z0-9._%+-]{1,64}$/', $value ) ? $value : '';
+    }
+
     private static function sanitize_email_token( $value ) {
         $value = (string) $value;
         // Strip every Unicode "Other" char (Cc control, Cf format incl. zero-width
