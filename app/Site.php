@@ -1536,7 +1536,7 @@ class Site {
             return;
         }
        
-        $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
+        $url      = "https://api.usefathom.com/v1/sites/" . rawurlencode( $fathom_id );
         $response = wp_remote_post( $url, [ 
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
             'body'    => [ "sharing" => $sharing, "share_password" => $share_password ],
@@ -1579,11 +1579,23 @@ class Site {
             return [ "Error" => "There was a problem retrieving stats." ];
         }
 
+        // The permitted codes are read above but were only used as a default, so
+        // a supplied id was queried as-is against the shared Fathom key. Analytics
+        // codes are public - they appear in the tracking snippet of every site
+        // Fathom monitors - so this has to be checked, the way stats_sharing()
+        // already does.
         if ( empty( $fathom_id ) ) {
             $fathom_id = $fathom_ids[0];
+        } elseif ( ! in_array( strtolower( (string) $fathom_id ), array_map( 'strtolower', $fathom_ids ), true ) ) {
+            return [ "Error" => "There was a problem retrieving stats." ];
         }
-    
-        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=$grouping&sort_by=timestamp:asc";
+
+        // $grouping reaches the query string directly.
+        if ( ! in_array( $grouping, [ 'hour', 'day', 'month', 'year' ], true ) ) {
+            $grouping = 'month';
+        }
+
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=" . rawurlencode( $fathom_id ) . "&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=$grouping&sort_by=timestamp:asc";
         $response = wp_remote_get( $url, [ 
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
@@ -1610,7 +1622,7 @@ class Site {
             }
         }
 
-        $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
+        $url      = "https://api.usefathom.com/v1/sites/" . rawurlencode( $fathom_id );
         $response = wp_remote_get( $url, [
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
