@@ -1,8 +1,9 @@
 // CaptainCore v3 — deep-linking / History API router (mixin).
 // Router.php already serves the SPA for every /account/<route> path, so this
 // keeps the URL in sync with state.route (+ detail ids and primary tabs) and
-// restores state on load / back-forward. The ?ui=v3 query string is preserved
-// on every push during the dev phase (v3 is gated on ?ui=v3 server-side).
+// restores state on load / back-forward. This UI is the server default now —
+// pushes drop the obsolete ?ui=v3 dev-gate param (old bookmarks still load;
+// the first navigation cleans the URL) while preserving any other query.
 //
 // applyUrl()  — parse location → setState (mount + popstate)
 // syncUrl()   — called from componentDidUpdate; pushState when the path drifts
@@ -63,11 +64,22 @@ Object.assign(Component.prototype, {
     }
   },
 
+  // location.search minus the retired ui=... switch (v3 was gated on ?ui=v3;
+  // legacy uses ?ui=legacy and must never ride along on SPA pushes).
+  cleanSearch() {
+    try {
+      const p = new URLSearchParams(location.search);
+      p.delete('ui');
+      const s = p.toString();
+      return s ? '?' + s : '';
+    } catch (e) { return location.search; }
+  },
+
   syncUrl() {
     if (this._suppressPush) { this._suppressPush = false; return; }
     const target = this.pathForState();
-    if (target === location.pathname) return;
-    try { history.pushState({ ccv3: true }, '', target + location.search); } catch (e) {}
+    if (target === location.pathname && this.cleanSearch() === location.search) return;
+    try { history.pushState({ ccv3: true }, '', target + this.cleanSearch()); } catch (e) {}
   },
 
   initRouter() {
@@ -76,7 +88,7 @@ Object.assign(Component.prototype, {
     window.addEventListener('popstate', () => this.applyUrl());
     this.applyUrl();
     // Replace the initial entry so back returns to the real landing URL.
-    try { history.replaceState({ ccv3: true }, '', this.pathForState() + location.search); } catch (e) {}
+    try { history.replaceState({ ccv3: true }, '', this.pathForState() + this.cleanSearch()); } catch (e) {}
   }
 
 });

@@ -1,9 +1,15 @@
 # Core v3 — build status & remaining work
 
-Ground-up rebuild of the CaptainCore Manager `/account` UI, served behind `?ui=v3`
-(branch in `app/Router.php::load_template`). This is the **hand-maintained source of
+Ground-up rebuild of the CaptainCore Manager `/account` UI — **the DEFAULT
+template since 2026-08-22** (`templates/core.php`; the shell reads this
+directory's modules). The old Vue app was renamed to `templates/core-legacy.php`
+and stays reachable behind `?ui=legacy` / `?ui=v1`; the retired `?ui=v3`
+dev-gate param is still accepted (it's simply the default) and the SPA router
+strips it from pushed URLs. This file is the **hand-maintained source of
 truth**; the Claude Design project "Anchor Hosting UI Revamp" (Anchor Home.dc.html,
 project `aa0b3f96-96ce-4fd8-bdc2-e5cfb72f64b1`) is now a visual reference only.
+Historical notes below that mention `core-v3.php` / `?ui=v3` refer to the
+pre-rename filenames.
 
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
@@ -1587,6 +1593,37 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 `&#038;` literally because WordPress stores `&` as that entity and the
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
+
+### v3 is the default + standalone login page (2026-08-22)
+The rename Austin asked for: `templates/core.php` (old Vue app) →
+`templates/core-legacy.php`, `templates/core-v3.php` → `templates/core.php`
+(git mv, history preserved). `Router::load_template` now picks:
+
+| Condition | Template |
+|---|---|
+| `?ui=legacy` or `?ui=v1` | `core-legacy.php` (escape hatch) |
+| route `welcome` / `connect` | `core-legacy.php` — logged-out invite/connect flows not rebuilt yet |
+| route `login` | **`core-login.php`** (new) |
+| everything else (incl. old `?ui=v3` bookmarks) | `core.php` (this UI) |
+
+**`templates/core-login.php`** — standalone login page, no React/DC runtime:
+Minn tokens + bundled fonts + the same theme pre-paint and `captaincore-theme`
+localStorage key (a theme toggle on the page carries the choice into the app),
+brand color/name from Configurations. Drives the existing open
+`POST /captaincore/v1/login/` endpoint with full v1 parity: signIn (redirect on
+success), TFA field revealed on "Enter one time password." / invalid-OTP,
+untrusted-location verification-email info state, and a reset-password mode.
+**Reset responses are read as text, never parsed** — the endpoint answers
+`true` for a real account and an EMPTY body for an unknown one, and both must
+render the same non-enumerating copy. Logged-in visits to `/login` redirect to
+the app (that template-level redirect is also what breaks the old
+shell→login→shell loop risk). Verified live headless (17 checks): logged-out
+redirect → login, both themes, bad-password error, TFA reveal+focus, reset
+round-trip, a REAL sign-in with a throwaway subscriber landing hydrated in the
+new UI (user deleted after), logged-in `/login` redirect, `?ui=legacy` and
+`/account/welcome` still serving the Vue app, and `?ui=v3` bookmarks cleaning
+themselves on first navigation. Follow-ups: `welcome`/`connect` rebuilds, and
+the login page shows no logo image yet (branding logo upload is still dead).
 
 ### UX round: dialogs, cookbook, defaults, handbook, new-site progress (2026-08-22)
 Seven fixes from a screenshot review, all verified live headless (28 checks):

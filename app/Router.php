@@ -99,10 +99,23 @@ class Router {
             // Security header
             header( 'X-Frame-Options: SAMEORIGIN' );
 
-            // Return path to your Vue app shell
-            $ui = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
-            if ( $ui === 'v3' ) {
-                $template_file = 'templates/core-v3.php';
+            // Template pick. core.php is the current UI (the v3 rebuild);
+            // core-legacy.php is the old Vue app, kept behind ?ui=legacy (or
+            // ?ui=v1) as an escape hatch. ?ui=v3 stays accepted for old
+            // bookmarks — it is simply the default now.
+            $ui    = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
+            $route = (string) get_query_var( 'captaincore_route' );
+            $base  = strtok( $route, '/' );
+            if ( $ui === 'legacy' || $ui === 'v1' ) {
+                $template_file = 'templates/core-legacy.php';
+            } elseif ( in_array( $base, [ 'welcome', 'connect' ], true ) ) {
+                // Logged-out invite/connect flows are not built in the new UI
+                // yet — keep serving the legacy app for them.
+                $template_file = 'templates/core-legacy.php';
+            } elseif ( $base === 'login' ) {
+                // Standalone login page (redirects to the app when already
+                // signed in).
+                $template_file = 'templates/core-login.php';
             } else {
                 $template_file = 'templates/core.php';
             }
