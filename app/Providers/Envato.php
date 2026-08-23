@@ -16,8 +16,24 @@ class Envato {
         }
     }
 
+    /**
+     * Envato purchases are per-account licenses, so a caller only ever sees the
+     * provider records they own. Reading every envato row meant one customer's
+     * request was answered with every other customer's - and the operator's -
+     * purchase list, and could mint a download URL against their token.
+     *
+     * @return array
+     */
+    private static function scoped_providers() {
+        $args = [ "provider" => "envato" ];
+        if ( ! ( new \CaptainCore\User )->is_admin() ) {
+            $args["user_id"] = get_current_user_id();
+        }
+        return ( new \CaptainCore\Providers )->where( $args );
+    }
+
     public static function themes() {
-        $providers = ( new \CaptainCore\Providers )->where( [ "provider" => "envato" ] );
+        $providers = self::scoped_providers();
         $themes   = [];
         foreach( $providers as $provider ) {
             $details = empty( $provider->details ) ? (object) [] : json_decode( $provider->details );
@@ -31,7 +47,7 @@ class Envato {
     }
 
     public static function plugins() {
-        $providers = ( new \CaptainCore\Providers )->where( [ "provider" => "envato" ] );
+        $providers = self::scoped_providers();
         $plugins   = [];
         foreach( $providers as $provider ) {
             $details = empty( $provider->details ) ? (object) [] : json_decode( $provider->details );
@@ -171,7 +187,7 @@ class Envato {
 
     public static function download_theme( $theme_id ) {
 
-        $providers = ( new \CaptainCore\Providers )->where( [ "provider" => "envato" ] );
+        $providers = self::scoped_providers();
         foreach( $providers as $provider ) {
             $token       = "";
             $credentials = empty( $provider->credentials ) ? (object) [] : json_decode( $provider->credentials );
@@ -202,7 +218,7 @@ class Envato {
 
     public static function download_plugin( $plugin_id ) {
 
-        $providers = ( new \CaptainCore\Providers )->where( [ "provider" => "envato" ] );
+        $providers = self::scoped_providers();
         foreach( $providers as $provider ) {
             $plugins     = [];
             $token       = "";

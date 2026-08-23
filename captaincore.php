@@ -3401,6 +3401,9 @@ function captaincore_provider_themes_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
+	if ( ! class_exists( $provider ) || ! method_exists( $provider, 'themes' ) ) {
+		return new WP_Error( 'invalid_provider', 'Unsupported provider.', [ 'status' => 400 ] );
+	}
 	return $provider::themes();
 }
 
@@ -3410,6 +3413,9 @@ function captaincore_provider_theme_download_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
+	if ( ! class_exists( $provider ) || ! method_exists( $provider, 'download_theme' ) ) {
+		return new WP_Error( 'invalid_provider', 'Unsupported provider.', [ 'status' => 400 ] );
+	}
 	return $provider::download_theme( $theme_id );
 }
 
@@ -3419,6 +3425,9 @@ function captaincore_provider_plugin_download_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
+	if ( ! class_exists( $provider ) || ! method_exists( $provider, 'download_plugin' ) ) {
+		return new WP_Error( 'invalid_provider', 'Unsupported provider.', [ 'status' => 400 ] );
+	}
 	return $provider::download_plugin( $plugin_id );
 }
 
@@ -3427,6 +3436,9 @@ function captaincore_provider_plugins_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
+	if ( ! class_exists( $provider ) || ! method_exists( $provider, 'plugins' ) ) {
+		return new WP_Error( 'invalid_provider', 'Unsupported provider.', [ 'status' => 400 ] );
+	}
 	return $provider::plugins();
 }
 
