@@ -172,6 +172,37 @@ class Site {
             $response['errors'][] = "Error: Staging environment port can only be numbers.";
         }
 
+        // Identity fields decide which account owns the row and which provider
+        // credential the fleet automation will spend, so they are validated as
+        // authorization input rather than stored as submitted. Administrators
+        // keep the unrestricted path used by the provisioning flows.
+        $user     = new User;
+        $is_admin = $user->is_admin();
+
+        if ( ! $is_admin ) {
+            $account_id = empty( $site->account_id ) ? 0 : (int) $site->account_id;
+            if ( $account_id < 1 || ! $user->verify_accounts( [ $account_id ] ) ) {
+                $response['errors'][] = "Error: Invalid account.";
+            }
+            // customer_id widens domain visibility in Domains::__construct, so a
+            // caller may only nominate an account they already belong to.
+            if ( ! empty( $site->customer_id ) && ! $user->verify_accounts( [ (int) $site->customer_id ] ) ) {
+                $response['errors'][] = "Error: Invalid customer account.";
+            }
+            // provider_id selects which stored API credential is used.
+            if ( ! empty( $site->provider_id ) && ! ( new Provider( (int) $site->provider_id ) )->verify_ownership() ) {
+                $response['errors'][] = "Error: Invalid provider.";
+            }
+        }
+
+        // provider and provider_site_id are interpolated into provider API paths.
+        if ( ! empty( $site->provider ) && ! preg_match( '/^[a-z0-9_-]{1,32}$/i', (string) $site->provider ) ) {
+            $response['errors'][] = "Error: Invalid provider name.";
+        }
+        if ( ! empty( $site->provider_site_id ) && ! preg_match( '/^[A-Za-z0-9._:-]{1,64}$/', (string) $site->provider_site_id ) ) {
+            $response['errors'][] = "Error: Invalid provider site id.";
+        }
+
         // Hunt for conflicting site names
         $site_check = Sites::where( [ "site" => $site->site ] );
 
