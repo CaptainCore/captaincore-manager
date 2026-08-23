@@ -19,7 +19,33 @@ class Kinsta {
         return self::getApiKey();
     }
 
+    /**
+     * Endpoints are built by interpolating stored ids into an API path, so a
+     * value carrying path or query syntax would steer the request to another
+     * resource while still sending the account's bearer token. Dot segments and
+     * fragments never appear in a Kinsta path, and no endpoint this client uses
+     * has a slash after its query string.
+     *
+     * @param string $endpoint
+     * @return bool
+     */
+    private static function endpoint_is_safe( $endpoint ) {
+        $endpoint = (string) $endpoint;
+        if ( false !== strpos( $endpoint, '..' ) || false !== strpos( $endpoint, '#' ) ) {
+            return false;
+        }
+        $query = strpos( $endpoint, '?' );
+        if ( false !== $query && false !== strpos( substr( $endpoint, $query ), '/' ) ) {
+            return false;
+        }
+        return true;
+    }
+
     public static function get( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return false;
+        }
         $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
@@ -59,6 +85,10 @@ class Kinsta {
     }
 
     public static function post( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return false;
+        }
         $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
@@ -79,6 +109,10 @@ class Kinsta {
     }
 
     public static function put( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return false;
+        }
         $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
@@ -100,6 +134,10 @@ class Kinsta {
     }
 
     public static function delete( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return false;
+        }
         $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,

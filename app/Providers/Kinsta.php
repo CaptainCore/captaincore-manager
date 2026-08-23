@@ -1144,7 +1144,7 @@ class Kinsta {
 
         if ( ! $response || isset( $response->error ) || (isset($response->status) && $response->status >= 400) ) {
             $error_message = $response->message ?? 'Unknown Kinsta API error during push.';
-            return new \WP_Error( 'kinsta_push_failed', $error_message, [ 'status' => $response->status ?? 500, 'details' => $response ] );
+            return new \WP_Error( 'kinsta_push_failed', $error_message, [ 'status' => $response->status ?? 500 ] );
         }
 
         return $response;
@@ -1161,7 +1161,7 @@ class Kinsta {
 		$kinsta_environments_response = \CaptainCore\Remote\Kinsta::get( "sites/{$cc_site->provider_site_id}/environments" );
 
 		if ( ! $kinsta_environments_response || isset( $kinsta_environments_response->error ) || ! isset( $kinsta_environments_response->site->environments ) ) {
-			return new \WP_Error( 'kinsta_api_error', "Could not fetch environments from Kinsta for site {$cc_site->name}.", [ 'status' => 500, 'details' => $kinsta_environments_response ] );
+			return new \WP_Error( 'kinsta_api_error', "Could not fetch environments from Kinsta for site {$cc_site->name}.", [ 'status' => 500 ] );
 		}
 
 		$cc_env_name_lower = strtolower( $cc_env->environment );
@@ -1262,7 +1262,7 @@ class Kinsta {
         $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
 
         if ( ! $response || isset( $response->error ) || ! isset( $response->site->environments ) ) {
-            return new \WP_Error( 'kinsta_api_error', 'Could not fetch environments from Kinsta.', [ 'status' => 500, 'details' => $response ] );
+            return new \WP_Error( 'kinsta_api_error', 'Could not fetch environments from Kinsta.', [ 'status' => 500 ] );
         }
 
         foreach ( $response->site->environments as $env ) {
@@ -1293,7 +1293,7 @@ class Kinsta {
         $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$kinsta_env_id}/pma-login-token" );
         
         if ( ! $response || isset( $response->error ) || ! isset($response->url) ) {
-             return new \WP_Error( 'kinsta_api_error', 'Error generating phpMyAdmin URL.', [ 'status' => 500, 'details' => $response ] );
+             return new \WP_Error( 'kinsta_api_error', 'Error generating phpMyAdmin URL.', [ 'status' => 500 ] );
         }
         
         return $response->url;
