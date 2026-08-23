@@ -5052,11 +5052,20 @@ function captaincore_me_profile_update_func( WP_REST_Request $request ) {
 	}
 
 	if ( count( $errors ) == 0 ) {
-		$result = wp_update_user( [
+		$update = [
 			'ID'           => $user_id,
 			'display_name' => $account->display_name,
 			'user_email'   => $account->email,
-		] );
+		];
+		// Optional — only written when the payload carries them, so older
+		// clients that omit the fields can't blank stored names.
+		if ( isset( $account->first_name ) ) {
+			$update['first_name'] = sanitize_text_field( $account->first_name );
+		}
+		if ( isset( $account->last_name ) ) {
+			$update['last_name'] = sanitize_text_field( $account->last_name );
+		}
+		$result = wp_update_user( $update );
 		if ( is_wp_error( $result ) ) {
 			$errors[] = $result->get_error_message();
 		}

@@ -1594,6 +1594,15 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Profile: first/last name fields (2026-08-23)
+The profile card gained a "Name" row (First + Last inputs sharing the row,
+above Display name), seeded from `CC_BOOT.profFirst/profLast` (raw user meta
+— `userFirstName` stays the greeting fallback). `PUT /me/profile` now writes
+`first_name`/`last_name`, but ONLY when the payload carries the keys, so
+older clients (legacy's profile save) can't blank stored names. Verified
+live: fields seed from stored meta, an edited last name persisted to user
+meta via the UI save (restored after).
+
 ### Profile: managed application-password listing (2026-08-23)
 The single fixed-name "Application password · Generate/Rotate" card became a
 full management listing (Minn Admin's AI-Access card): every WP application

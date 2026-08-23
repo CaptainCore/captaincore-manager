@@ -2839,6 +2839,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+              <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim);flex:none">Name</span>
+              <input value="{{ profFirst }}" onInput="{{ onProfFirst }}" placeholder="First" autocomplete="given-name" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none">
+              <input value="{{ profLast }}" onInput="{{ onProfLast }}" placeholder="Last" autocomplete="family-name" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none">
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
               <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Display name</span>
               <input value="{{ profName }}" onInput="{{ onProfName }}" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none">
             </div>

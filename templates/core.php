@@ -42,6 +42,10 @@ $cc_boot = [
     'role'            => $user->role,
     'dcRole'          => $user->role === 'administrator' ? 'operator' : 'customer',
     'userFirstName'   => $first_name,
+    // Raw name meta for the Profile form (userFirstName above is the display
+    // fallback used in greetings, not necessarily the stored meta).
+    'profFirst'       => (string) $user->first_name,
+    'profLast'        => (string) $user->last_name,
     'userDisplayName' => $user->display_name,
     'userEmail'       => $user->email,
     'userAvatar'      => get_avatar_url( $user->email, [ 'size' => 96 ] ),

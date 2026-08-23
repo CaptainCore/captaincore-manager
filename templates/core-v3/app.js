@@ -752,6 +752,8 @@ class Component extends DCLogic {
     const sessions = s.sessions || this.SESS_INIT;
     return {
       profName: s.profName, onProfName: e => this.setState({ profName: e.target.value }),
+      profFirst: s.profFirst || '', onProfFirst: e => this.setState({ profFirst: e.target.value }),
+      profLast: s.profLast || '', onProfLast: e => this.setState({ profLast: e.target.value }),
       profEmail: s.profEmail, onProfEmail: e => this.setState({ profEmail: e.target.value }),
       profSaveLabel: s.copied === 'prof' ? 'Saved ✓' : 'Save profile',
       saveProfile: () => { this.setState({ copied: 'prof' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },

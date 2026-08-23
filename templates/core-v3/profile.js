@@ -28,6 +28,8 @@ Object.assign(Component.prototype, {
     this.setState({
       profName: boot.userDisplayName || this.state.profName,
       profEmail: boot.userEmail || this.state.profEmail,
+      profFirst: boot.profFirst || '',
+      profLast: boot.profLast || '',
       tfa: this._prof.tfaEnabled ? 'on' : 'off'
     });
     this.api('/sessions').then(res => {
@@ -41,7 +43,8 @@ Object.assign(Component.prototype, {
   },
 
   saveProfileReal() {
-    const body = { display_name: (this.state.profName || '').trim(), email: (this.state.profEmail || '').trim() };
+    const body = { display_name: (this.state.profName || '').trim(), email: (this.state.profEmail || '').trim(),
+      first_name: (this.state.profFirst || '').trim(), last_name: (this.state.profLast || '').trim() };
     if ((this.state.profPw || '').trim()) body.new_password = this.state.profPw.trim();
     this.setState({ copied: 'prof' });
     clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1600);
@@ -230,6 +233,8 @@ Object.assign(Component.prototype, {
     return {
       ...this.apiDocsVals(s),
       profName: s.profName, onProfName: e => this.setState({ profName: e.target.value }),
+      profFirst: s.profFirst || '', onProfFirst: e => this.setState({ profFirst: e.target.value }),
+      profLast: s.profLast || '', onProfLast: e => this.setState({ profLast: e.target.value }),
       profEmail: s.profEmail, onProfEmail: e => this.setState({ profEmail: e.target.value }),
       profPw: s.profPw || '', onProfPw: e => this.setState({ profPw: e.target.value }),
       profMsg: s.profMsg || '', profHasMsg: !!(s.profMsg || ''),
