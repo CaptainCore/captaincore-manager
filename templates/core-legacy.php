@@ -19507,8 +19507,8 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		disableTFA() {
-			axios.get(
-				`/wp-json/captaincore/v1/me/tfa_deactivate`, {
+			axios.post(
+				`/wp-json/captaincore/v1/me/tfa_deactivate`, {}, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
@@ -19523,8 +19523,8 @@ const app = createApp({
 				})
 		},
 		enableTFA() {
-			axios.get(
-				`/wp-json/captaincore/v1/me/tfa_activate`, {
+			axios.post(
+				`/wp-json/captaincore/v1/me/tfa_activate`, {}, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {

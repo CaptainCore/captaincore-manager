@@ -8396,7 +8396,7 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_activate', [
-			'methods'             => 'GET',
+			'methods'             => 'POST',
 			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_activate();
 			},
@@ -8418,7 +8418,7 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_deactivate', [
-			'methods'             => 'GET',
+			'methods'             => 'POST',
 			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_deactivate();
 			},

@@ -1645,6 +1645,12 @@ class User {
         $otp->setIssuer('Anchor Hosting');
         $otp->setLabel( $user->email );
         update_user_meta( $user->user_id , 'captaincore_2fa_token', $token );
+        // Minting a new secret invalidates whatever authenticator was paired
+        // before, so enrolment goes back to incomplete until a code from the
+        // new secret is verified. Leaving the enabled flag set locked an
+        // already-enrolled user out of their own account.
+        delete_user_meta( $user->user_id , 'captaincore_2fa_enabled' );
+        delete_user_meta( $user->user_id , 'captaincore_2fa_last_timecode' );
         return $otp->getProvisioningUri();
     }
 
@@ -1652,6 +1658,7 @@ class User {
         $user    = (object) self::fetch();
         delete_user_meta( $user->user_id , 'captaincore_2fa_token' );
         delete_user_meta( $user->user_id , 'captaincore_2fa_enabled' );
+        delete_user_meta( $user->user_id , 'captaincore_2fa_last_timecode' );
         return "Deaactivated";
     }
 

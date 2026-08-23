@@ -56,7 +56,7 @@ Object.assign(Component.prototype, {
 
   tfaStartReal() {
     this.setState({ tfa: 'setup', tfaCode: '', tfaSecret: '…' });
-    this.api('/me/tfa_activate').then(res => {
+    this.api('/me/tfa_activate', { method: 'POST' }).then(res => {
       const uri = typeof res === 'string' ? res : (res && (res.uri || res.otpauth || res.message)) || '';
       let secret = '';
       const m = /[?&]secret=([^&]+)/i.exec(uri);
@@ -77,7 +77,7 @@ Object.assign(Component.prototype, {
   },
 
   tfaDisableReal() {
-    this.api('/me/tfa_deactivate').then(() => { this._prof.tfaEnabled = false; this.setState({ tfa: 'off' }); }).catch(() => {});
+    this.api('/me/tfa_deactivate', { method: 'POST' }).then(() => { this._prof.tfaEnabled = false; this.setState({ tfa: 'off' }); }).catch(() => {});
   },
 
   // ── Application passwords (managed list, Minn Admin parity) ──
