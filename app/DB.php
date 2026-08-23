@@ -23,29 +23,6 @@ class DB {
         return $wpdb->prepare( $sql, $value );
     }
 
-    static function valid_check( $data ) {
-        global $wpdb;
-
-        $sql_where       = '';
-        $sql_where_count = count( $data );
-        $i               = 1;
-        foreach ( $data as $key => $row ) {
-            if ( $i < $sql_where_count ) {
-                $sql_where .= "`$key` = '$row' and ";
-            } else {
-                $sql_where .= "`$key` = '$row'";
-            }
-            $i++;
-        }
-        $sql     = 'SELECT * FROM ' . self::_table() . " WHERE $sql_where";
-        $results = $wpdb->get_results( $sql );
-        if ( count( $results ) != 0 ) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
     static function get( $value ) {
         global $wpdb;
         return $wpdb->get_row( self::_fetch_sql( $value ) );
@@ -372,123 +349,6 @@ class DB {
         return in_array( $type, $allowed, true ) ? $type : '';
     }
 
-    static function fetch_sites_matching( $arguments = [] ) {
-        global $wpdb;
-        $arguments = (object) $arguments;
-        $filter    = empty( $arguments->filter ) ? "" : (object) $arguments->filter;
-        $table     = self::_table();
-        $provider_conditions    = "";
-        $environment_conditions = "";
-        $target_conditions      = [];
-        $field_selection        = "";
-        $environment_columns    = [ "address", "username", "password", "protocol", "port", "home_directory", "database_username", "database_password", "storage", "visits", "core", "fathom", "home_url", "themes", "plugins", "updates_enabled", "updates_exclude_themes", "updates_exclude_plugins", "screenshot", "capture_pages" ];
-        // $field is interpolated as a column identifier (can't be bound) —
-        // strip everything but identifier-safe characters; values are esc_sql'd.
-        if ( ! empty( $arguments->field ) ) {
-            $arguments->field = preg_replace( '/[^a-zA-Z0-9_,]/', '', $arguments->field );
-        }
-
-        if ( ! empty( $arguments->provider ) ) {
-            $provider_conditions = "AND {$table}.provider = '" . esc_sql( $arguments->provider ) . "'";
-        }
-        if ( $arguments->environment != "all" ) {
-            $environment_conditions = "AND {$wpdb->prefix}captaincore_environments.environment = '" . esc_sql( $arguments->environment ) . "'";
-        }
-
-        if ( ! empty( $arguments->field ) ) {
-            $field_selection = ", {$table}.{$arguments->field}";
-        }
-
-        if ( ! empty( $arguments->targets ) && count( $arguments->targets ) > 0 ) {
-            if ( in_array("updates-on", $arguments->targets ) ) {
-                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '1'";
-            }
-            if ( in_array("updates-off", $arguments->targets ) ) {
-                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '0'";
-            }
-            if ( in_array("offload-on", $arguments->targets ) ) {
-                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '1'";
-            }
-            if ( in_array("offload-off", $arguments->targets ) ) {
-                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '0'";
-            }
-            if ( in_array("monitor-on", $arguments->targets ) ) {
-                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.monitor_enabled = '1'";
-            }
-        }
-
-        $target_conditions = implode( " ", $target_conditions );
-
-        if ( ! empty( $arguments->field ) && in_array( $arguments->field, $environment_columns ) ) {
-            $field_selection = ", {$wpdb->prefix}captaincore_environments.{$arguments->field}";
-        }
-        
-        if ( ! empty( $arguments->field ) && strpos( $arguments->field, ',' ) !== false ) {
-            $fields = explode( ",", $arguments->field );
-            $field_selection = "";
-            foreach ( $fields as $field ) {
-                if ( in_array( $field, $environment_columns ) ) {
-                    $field_selection = "{$field_selection}, {$wpdb->prefix}captaincore_environments.{$field}";
-                    continue;
-                }
-                $field_selection = "{$field_selection}, {$table}.{$field}";
-            }
-        }
-
-        if ( empty( $filter->type ) ) {
-            $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
-                    FROM {$table}
-                    INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
-                    WHERE {$table}.status = 'active' $provider_conditions $environment_conditions $target_conditions
-                    order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-            $results = $wpdb->get_results( $sql );
-            return $results;
-        }
-
-        if ( $filter->type == "core" ) {
-            $core_version = esc_sql( $filter->version );
-            $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
-                    FROM {$table}
-                    INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
-                    WHERE {$wpdb->prefix}captaincore_environments.core = '{$core_version}' $provider_conditions $environment_conditions $target_conditions
-                    AND {$table}.status = 'active'
-                    order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-            $results = $wpdb->get_results( $sql );
-            return $results;
-        }
-
-        if ( empty( $filter->name ) ) {
-            $filter->name = '[^"]*';
-        }
-        if ( empty( $filter->status ) ) {
-            $filter->status = '[^"]*';
-        }
-        if ( empty( $filter->version ) ) {
-            $filter->version = '[^"]*';
-        }
-
-        // "type" is interpolated as a column identifier and cannot be bound; whitelist it.
-        $type_column = self::sanitize_component_column( $filter->type );
-        if ( empty( $type_column ) ) {
-            return [];
-        }
-
-        // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-        // esc_sql() each request-supplied value so it cannot break out of the REGEXP string literal.
-        $pattern = '{"name":"'.esc_sql( $filter->name ).'","title":"[^"]*","status":"'.esc_sql( $filter->status ).'","version":"'.esc_sql( $filter->version ).'"}';
-        $pattern = str_replace ( "{", "[{]", $pattern );
-        $pattern = str_replace ( "}", "[}]", $pattern );
-
-        $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
-                FROM {$table}
-                INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
-                WHERE {$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}' $provider_conditions $environment_conditions $target_conditions
-                AND {$table}.status = 'active'
-                order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-        $results = $wpdb->get_results( $sql );
-        return $results;
-    }
-
     static function fetch_sites_filtered( $filters = [], $allowed_site_ids = [] ) {
         global $wpdb;
         $table              = self::_table();
@@ -768,13 +628,6 @@ class DB {
         global $wpdb;
         $value = intval( $value );
         $sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by `environment` ASC";
-        return $wpdb->get_results( $sql );
-    }
-
-    static function fetch_field( $value, $environment, $field ) {
-        global $wpdb;
-        $value = intval( $value );
-        $sql   = "SELECT $field FROM " . self::_table() . " WHERE `site_id` = '$value' and `environment` = '$environment' order by `created_at` DESC";
         return $wpdb->get_results( $sql );
     }
 
