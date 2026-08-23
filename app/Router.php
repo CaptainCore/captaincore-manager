@@ -108,6 +108,9 @@ class Router {
             $base  = strtok( $route, '/' );
             if ( $ui === 'legacy' || $ui === 'v1' ) {
                 $template_file = 'templates/core-legacy.php';
+            } elseif ( $ui === 'v3' ) {
+                // Explicit new-UI request wins over a stored legacy preference.
+                $template_file = 'templates/core.php';
             } elseif ( in_array( $base, [ 'welcome', 'connect' ], true ) ) {
                 // Logged-out invite/connect flows are not built in the new UI
                 // yet — keep serving the legacy app for them.
@@ -116,6 +119,10 @@ class Router {
                 // Standalone login page (redirects to the app when already
                 // signed in).
                 $template_file = 'templates/core-login.php';
+            } elseif ( is_user_logged_in() && get_user_meta( get_current_user_id(), 'captaincore_legacy_ui', true ) ) {
+                // Per-user opt-out: this user asked for the old dashboard
+                // (Profile → Legacy dashboard toggle, either UI).
+                $template_file = 'templates/core-legacy.php';
             } else {
                 $template_file = 'templates/core.php';
             }

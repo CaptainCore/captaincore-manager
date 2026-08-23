@@ -56,6 +56,9 @@ $cc_boot = [
     // Profile state is server-rendered by User::profile() (same as v1) so the
     // Profile screen needs no extra fetch for its initial state.
     'tfaEnabled'      => ! empty( $user->tfa_enabled ),
+    // Per-user legacy-dashboard preference (Profile → Interface). Normally
+    // false here — a true value means this page was forced via ?ui=v3.
+    'legacyUi'        => (bool) get_user_meta( get_current_user_id(), 'captaincore_legacy_ui', true ),
     'appPassword'     => isset( $user->application_password ) ? $user->application_password : null,
     'sessions'        => isset( $user->sessions ) ? $user->sessions : [],
     // WooCommerce add-payment-method page (fallback if Stripe Elements can't load).

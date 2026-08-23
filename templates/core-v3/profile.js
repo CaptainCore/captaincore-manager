@@ -147,8 +147,33 @@ Object.assign(Component.prototype, {
       .catch(() => this.toast('Failed to download API documentation', { kind: 'error' }));
   },
 
+  // ── Interface preference (legacy dashboard) ──────────────────
+  // POST /me/legacy-ui sets per-user meta the Router reads: on the next page
+  // load this user gets core-legacy.php. Turning it ON therefore reloads into
+  // the old interface right away; the legacy Profile carries the mirror
+  // toggle (plus ?ui=v3 as the escape hatch).
+  legacyUiOn(s) {
+    return s.legacyUi === undefined ? !!(window.CC_BOOT || {}).legacyUi : !!s.legacyUi;
+  },
+
+  setLegacyUi() {
+    const next = !this.legacyUiOn(this.state);
+    this.setState({ legacyUi: next });
+    this.api('/me/legacy-ui', { method: 'POST', body: { enabled: next } }).then(() => {
+      if (next) { window.location = (window.CC_BOOT || {}).path || '/account/'; }
+      else this.toast('Legacy dashboard turned off', { kind: 'success' });
+    }).catch(() => {
+      this.setState({ legacyUi: !next });
+      this.toast('Could not save the preference', { kind: 'error' });
+    });
+  },
+
   apiDocsVals(s) {
+    const legacyOn = this.legacyUiOn(s);
     return {
+      legacyUiBg: legacyOn ? 'var(--brand)' : 'var(--rule)',
+      legacyUiJust: legacyOn ? 'flex-end' : 'flex-start',
+      toggleLegacyUi: () => this.setLegacyUi(),
       apiDocsView: () => this.viewApiDocs(),
       apiDocsDownload: () => this.downloadApiDocs(),
       adOpen: !!s.adOpen, adLoading: !!s.adLoading, adReady: !!s.adOpen && !s.adLoading,

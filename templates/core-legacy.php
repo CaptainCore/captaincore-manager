@@ -11207,6 +11207,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 					</v-row>
 					<v-row>
+					<v-col cols="12" class="mt-5">
+						<div class="text-subtitle-2 text-medium-emphasis mb-2">Interface</div>
+						<v-card flat border="thin" rounded="lg">
+							<v-list density="compact">
+								<v-list-item>
+									<template v-slot:prepend>
+										<v-icon icon="mdi-monitor-dashboard" class="mr-2"></v-icon>
+									</template>
+									<v-list-item-title>Legacy dashboard</v-list-item-title>
+									<v-list-item-subtitle>Switch off to use the new dashboard.</v-list-item-subtitle>
+									<template v-slot:append>
+										<v-switch v-model="legacy_ui" @update:model-value="toggleLegacyUi()" hide-details color="primary" density="compact"></v-switch>
+									</template>
+								</v-list-item>
+							</v-list>
+						</v-card>
+					</v-col>
+					</v-row>
+					<v-row>
 					<v-col cols="12" class="mt-3">
 						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
@@ -13770,6 +13789,7 @@ const app = createApp({
 		dialog_key: { show: false, key: {} },
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
+		legacy_ui: <?php echo get_user_meta( get_current_user_id(), 'captaincore_legacy_ui', true ) ? 'true' : 'false'; ?>,
 		process_roles: <?php echo ( ! empty( get_option('captaincore_process_roles') ) ? get_option('captaincore_process_roles') : "[]" ); ?>,
 		shared_with: [],
 		new_key: { show: false, title: "", key: "" },
@@ -19678,6 +19698,20 @@ const app = createApp({
 					this.snackbar.message = "Failed to download API docs."
 					this.snackbar.show = true
 				})
+		},
+		toggleLegacyUi() {
+			axios.post( '/wp-json/captaincore/v1/me/legacy-ui', { enabled: this.legacy_ui }, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then( response => {
+					if ( ! this.legacy_ui ) {
+						window.location = window.location.origin + this.configurations.path;
+						return;
+					}
+					this.snackbar.message = "Legacy dashboard set as your default."
+					this.snackbar.show = true
+				})
+				.catch( error => console.log( error ) );
 		},
 		updateAccount() {
 			axios.put( '/wp-json/captaincore/v1/me/profile', this.profile, {

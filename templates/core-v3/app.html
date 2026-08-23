@@ -2913,6 +2913,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Legacy dashboard</h2>
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">reloads into the previous interface — switch back from its Profile</span>
+              <div style="flex:1"></div>
+              <span onClick="{{ toggleLegacyUi }}" style="width:34px;height:20px;border-radius:99px;background:{{ legacyUiBg }};display:flex;align-items:center;padding:2px;justify-content:{{ legacyUiJust }};cursor:pointer;flex:none"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+            </div>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)">
               <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Active sessions</h2>
               <div style="flex:1"></div>

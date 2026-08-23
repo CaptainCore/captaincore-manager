@@ -1594,6 +1594,25 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Per-user legacy-dashboard preference (2026-08-23)
+Users can opt back into the old interface per user, from either side:
+
+- **User meta `captaincore_legacy_ui`** via new `POST /me/legacy-ui
+  {enabled}` (self-scoped). `Router::load_template` serves core-legacy.php
+  for logged-in users with the meta; **`?ui=v3` overrides the stored
+  preference per request** (and `?ui=legacy` still forces the other way),
+  so neither side can strand you. Login/welcome/connect routing unchanged.
+- **New UI**: Profile → "Legacy dashboard" card (Minn switch, above Active
+  sessions; `CC_BOOT.legacyUi` seeds it — normally false, true only when the
+  page was forced via ?ui=v3). Turning it ON saves then reloads into the old
+  interface.
+- **Legacy UI**: Profile → "Interface" section (v-switch, `legacy_ui` data
+  prop seeded from user meta by PHP, `toggleLegacyUi()` beside
+  updateAccount). Turning it OFF redirects into the new dashboard.
+- Verified live round-trip as a real customer: v3 toggle → legacy served →
+  ?ui=v3 override (CC_BOOT.legacyUi true) → legacy Profile switch shows ON →
+  toggle off → lands hydrated in the new UI; meta empty at the end.
+
 ### Sites view: right-click default (2026-08-23)
 Right-clicking the Table/Cards/List toggle opens a ctx menu (theme-toggle
 pattern: `openSitesViewMenu`, ✓ on the current pick) — "Default: Table /

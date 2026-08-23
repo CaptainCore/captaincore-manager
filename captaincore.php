@@ -8255,6 +8255,26 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Per-user interface preference: when set, Router::load_template serves
+	// the legacy dashboard (core-legacy.php) for this user. ?ui=v3 / ?ui=legacy
+	// still override per request. Toggles live on both dashboards' profiles.
+	register_rest_route(
+		'captaincore/v1', '/me/legacy-ui', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$enabled = ! empty( $request['enabled'] );
+				if ( $enabled ) {
+					update_user_meta( get_current_user_id(), 'captaincore_legacy_ui', 1 );
+				} else {
+					delete_user_meta( get_current_user_id(), 'captaincore_legacy_ui' );
+				}
+				return [ 'legacy_ui' => $enabled ];
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/me/application-password', [
 			'methods'             => 'POST',

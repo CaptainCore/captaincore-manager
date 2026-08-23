@@ -773,6 +773,7 @@ class Component extends DCLogic {
       killOthers: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.current) })),
       profPw: '', onProfPw: () => {}, profMsg: '', profHasMsg: false, tfaSecret: '', tfaHasSecret: false,
       apiDocsView: () => {}, apiDocsDownload: () => {}, adOpen: false, adLoading: false, adReady: false,
+      legacyUiBg: 'var(--rule)', legacyUiJust: 'flex-start', toggleLegacyUi: () => {},
       adClose: () => {}, adScrollRef: () => {}, adBodyRef: () => {}, adTocRows: [],
       ...(this._hydrated ? this.realProfileVals(s) : {})
     };
