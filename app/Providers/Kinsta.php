@@ -4,10 +4,41 @@ namespace CaptainCore\Providers;
 
 class Kinsta {
 
+    /**
+     * Whether this context may spend the key held on a provider row.
+     *
+     * Provider ids reach this class from site rows and request bodies, and each
+     * row holds an API key for someone's Kinsta account, so a row that is
+     * neither the caller's nor the shared house row must not be used on their
+     * behalf. WP-CLI and cron have no current user and legitimately walk every
+     * row.
+     *
+     * @param object|null $provider
+     * @return bool
+     */
+    private static function provider_is_usable( $provider ) {
+        if ( empty( $provider ) || $provider->provider !== 'kinsta' ) {
+            return false;
+        }
+        if ( ( defined( 'WP_CLI' ) && WP_CLI ) || wp_doing_cron() ) {
+            return true;
+        }
+        if ( (int) $provider->user_id === 0 ) {
+            return true;
+        }
+        if ( ( new \CaptainCore\User )->is_admin() ) {
+            return true;
+        }
+        return (int) $provider->user_id === get_current_user_id();
+    }
+
     public static function credentials( $record = "", $provider_id = "" ) {
         $credentials = ( new \CaptainCore\Provider( "kinsta" ) )->credentials();
         if ( ! empty( $provider_id ) ) {
-            $provider    = \CaptainCore\Providers::get( $provider_id );
+            $provider = \CaptainCore\Providers::get( $provider_id );
+            if ( ! self::provider_is_usable( $provider ) ) {
+                return $record === "" ? [] : null;
+            }
             $credentials = ! empty( $provider->credentials ) ? json_decode( $provider->credentials ) : [];
         }
         if ( $record == "" ) {
@@ -46,8 +77,17 @@ class Kinsta {
     public static function list_sites( $record = "", $provider_id = "" ) {
         $providers = self::list();
         $providers_with_sites = [];
+        $is_admin  = ( new \CaptainCore\User )->is_admin();
         foreach( $providers as $provider ) {
             if ( $provider['provider_id'] == 1 ) {
+                continue;
+            }
+            // The house rows point at the account every customer's site lives
+            // in, so its inventory is not a customer's to receive. list() still
+            // offers those providers for provisioning, which does not need the
+            // site list.
+            $row = \CaptainCore\Providers::get( $provider['provider_id'] );
+            if ( ! $is_admin && ( empty( $row ) || (int) $row->user_id === 0 ) ) {
                 continue;
             }
             $api_key = self::credentials("api", $provider['provider_id']);
@@ -696,164 +736,6 @@ class Kinsta {
         }
         
         return 202;
-
-    }
-
-    public static function fetch_sftp_password( $site_key = 0, $provider_id = "" ) {
-        $api_key = self::credentials( "api", $provider_id );
-        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
-
-        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site_key}/environments" );
-
-        if ( empty( $response->site->environments ) ) {
-            return '';
-        }
-
-        foreach ( $response->site->environments as $env ) {
-            if ( $env->name == "live" ) {
-                $password_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env->id}/ssh/password" );
-                return $password_response->environment->sftp_password ?? '';
-            }
-        }
-
-        return '';
-    }
-
-    public static function fetch_site_details( $site_key = 0 ) {
-        $token = self::credentials("token");
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idSite"        => $site_key,
-                ],
-                "operationName" => "getHeaderSite",
-                "query"         => 'fragment HeaderEnvironment on Environment {
-                    id
-                    name
-                    displayName
-                    isPremium
-                    isBlocked
-                    __typename
-                  }
-                  
-                  query getHeaderSite($idSite: String!) {
-                    site(id: $idSite) {
-                      id
-                      displayName
-                      environments {
-                        ...HeaderEnvironment
-                        __typename
-                      }
-                      environments_liveKeys
-                      __typename
-                    }
-                  }'                  
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-        $response = json_decode( $response['body'] );
-
-        foreach( $response->data->site->environments as $env ) {
-            if ( $env->name == "live" ) {
-                $environment = $env;
-            }
-        }
-        
-        // te: String!, $idEnvironment: String) {\n  site(id: $idSite) {\n    id\n    name\n    displayName\n    dbName\n    path\n    usr\n    siteLabels {\n      id\n      name\n      __typename\n    }\n    company {\n      id\n      name\n      __typename\n    }\n    environment(id: $idEnvironment) {\n      id\n      isPremium\n      cloudflareIP\n      customHostnames {\n        id\n        status\n        __typename\n      }\n      phpWorkerLimit\n      mysqlEditorDomain {\n        id\n        name\n        __typename\n      }\n      activeContainer {\n        id\n        lxdSshPort\n        loadBalancer {\n          id\n          extIP\n          __typename\n        }\n        lxdServer {\n          id\n          extIP\n          intHostname\n          zone {\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      customHostnames_liveKeys\n      activeContainer_liveKeys\n      __typename\n    }\n    hasPendingTransfer\n    hasFreeEnvSlot\n    siteLabels_liveKeys\n    environment_liveKeys(id: $idEnvironment)\n    hasPendingTransfer_liveKeys\n    hasFreeEnvSlot_liveKeys\n    __typename\n  }\n}\n"}
-
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idSite"        => $site_key,
-                    "idEnvironment" => $environment->id
-                ],
-                "operationName" => "SiteDetails",
-                "query"         => 'query SiteDetails($idSite: String!, $idEnvironment: String) {
-                    site(id: $idSite) {
-                      id
-                      name
-                      displayName
-                      dbName
-                      path
-                      usr
-                      siteLabels {
-                        id
-                        name
-                        __typename
-                      }
-                      company {
-                        id
-                        name
-                        __typename
-                      }
-                      environment(id: $idEnvironment) {
-                        id
-                        isPremium
-                        cloudflareIP
-                        customHostnames {
-                          id
-                          status
-                          __typename
-                        }
-                        phpWorkerLimit
-                        mysqlEditorDomain {
-                          id
-                          name
-                          __typename
-                        }
-                        activeContainer {
-                          id
-                          lxdSshPort
-                          loadBalancer {
-                            id
-                            extIP
-                            __typename
-                          }
-                          lxdServer {
-                            id
-                            extIP
-                            intHostname
-                            zone {
-                              id
-                              name
-                              __typename
-                            }
-                            __typename
-                          }
-                          __typename
-                        }
-                        customHostnames_liveKeys
-                        activeContainer_liveKeys
-                        __typename
-                      }
-                      hasPendingTransfer
-                      hasFreeEnvSlot
-                      siteLabels_liveKeys
-                      environment_liveKeys(id: $idEnvironment)
-                      hasPendingTransfer_liveKeys
-                      hasFreeEnvSlot_liveKeys
-                      __typename
-                    }
-                  }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        $response = json_decode( $response['body'] );
-
-        return $response->data->site;
 
     }
 

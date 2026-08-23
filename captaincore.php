@@ -3533,6 +3533,17 @@ function captaincore_provider_new_site_func( $request ) {
 			$errors[] = "Permission denied";
 		}
 	}
+	// clone_site_id names the environment the new site is copied from, and it
+	// is not validated anywhere else in the tree. Resolve it to a CaptainCore
+	// site the caller can already reach, so it cannot name another tenant's.
+	if ( ! empty( $site->clone_site_id ) ) {
+		$clone_rows = CaptainCore\Sites::where( [ "provider_site_id" => $site->clone_site_id ] );
+		$clone_row  = ! empty( $clone_rows ) ? $clone_rows[0] : null;
+		if ( empty( $clone_row ) || ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions( $clone_row->site_id ) ) ) {
+			$errors[] = "Permission denied for the clone source";
+		}
+	}
+
 	if ( ! empty( $errors ) ) {
 		return [
 			'errors' => $errors,
