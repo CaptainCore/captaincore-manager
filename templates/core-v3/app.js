@@ -67,7 +67,7 @@ class Component extends DCLogic {
     repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
-    setTab: 'branding', brandName: 'Anchor Hosting', keyDraft: '', sshKeys: null,
+    setTab: 'branding', brandName: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting', keyDraft: '', sshKeys: null,
     recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
     defDlgOpen: false, defEmail: '', defTimezone: '', defRecipes: [], defUsers: [],
@@ -676,45 +676,49 @@ class Component extends DCLogic {
       fg: tab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: tab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ setTab: id }) }));
-    const keys = s.sshKeys || this.KEYS_INIT;
+    // Real installs (CC_BOOT present) start every card EMPTY until
+    // realSettingsVals hydrates — the design samples below are for the DC
+    // editor preview only (the global mock-flash rule).
+    const booted = !!window.CC_BOOT;
+    const keys = s.sshKeys || (booted ? [] : this.KEYS_INIT);
     return {
       setTabs: tabs,
       setTabBrand: isOp && tab === 'branding', setTabProv: tab === 'providers', setTabDef: tab === 'defaults',
       setTabKeys: tab === 'keys', setTabCook: tab === 'cookbook', setTabHand: tab === 'handbook',
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
-      brandSwatches: [['primary', '#3b82c4'], ['success', '#22a06b'], ['warning', '#d9a406'], ['error', '#d94a3d'], ['accent', '#7c5cff']].map(([k, c]) => ({ k, c, on: () => {} })),
+      brandSwatches: (booted ? [] : [['primary', '#3b82c4'], ['success', '#22a06b'], ['warning', '#d9a406'], ['error', '#d94a3d'], ['accent', '#7c5cff']]).map(([k, c]) => ({ k, c, on: () => {} })),
       brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => { this.setState({ copied: 'brand' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
-      provRows: [
+      provRows: (booted ? [] : [
         { name: 'Kinsta', sub: 'Connected · 82 sites', dot: 'var(--ok)', action: 'Verify', canImport: true },
         { name: 'WP Engine', sub: 'Connected · 24 sites', dot: 'var(--ok)', action: 'Verify', canImport: true },
         { name: 'Rocket.net', sub: 'Connected · 12 sites', dot: 'var(--ok)', action: 'Verify', canImport: true },
         { name: 'GridPane', sub: 'Token expired — reconnect required', dot: 'var(--bad)', action: 'Reconnect', canImport: false },
         { name: 'Envato', sub: 'Connected · plugin & theme purchases', dot: 'var(--ok)', action: 'Verify', canImport: false }
-      ].map(p => ({ ...p,
+      ]).map(p => ({ ...p,
         verify: () => this.runJob(p.action.toLowerCase() + '-provider', p.name),
         doImport: () => this.runJob('provider-import', p.name + ' — remote sites + billing preview') })),
-      defRows: [['Default email', 'support@anchor.host'], ['Timezone', 'America/New_York'], ['Recipes on new site', 'security-baseline · smtp-setup'], ['Default users', 'anchor-admin (Administrator)']].map(([k, v]) => ({ k, v })),
+      defRows: (booted ? [] : [['Default email', 'support@anchor.host'], ['Timezone', 'America/New_York'], ['Recipes on new site', 'security-baseline · smtp-setup'], ['Default users', 'anchor-admin (Administrator)']]).map(([k, v]) => ({ k, v })),
       keyRows: keys.map(k => ({ ...k,
         del: () => this.setState(st => ({ sshKeys: (st.sshKeys || this.KEYS_INIT).filter(x => x.id !== k.id) })) })),
       keyDraft: s.keyDraft, onKeyDraft: e => this.setState({ keyDraft: e.target.value }),
       addKey: () => { const v = this.state.keyDraft.trim(); if (!v.startsWith('ssh-')) return;
         this.setState(st => ({ sshKeys: [...(st.sshKeys || this.KEYS_INIT), { id: 'k' + Date.now(), name: v.split(' ').pop() || 'new key', fp: 'SHA256:' + Math.random().toString(36).slice(2, 8) + '…', primary: false }], keyDraft: '' })); },
       rotateKey: () => this.runJob('rotate-management-key', 'fleet-wide SSH key rotation'),
-      recipeRows: [
+      recipeRows: (booted ? [] : [
         { name: 'Install security baseline', vis: 'Public', runs: '142' },
         { name: 'Deploy SMTP via Mailgun', vis: 'Public', runs: '96' },
         { name: 'Clean transients + optimize DB', vis: 'Private', runs: '61' },
         { name: 'Set up Fathom analytics', vis: 'Public', runs: '38' }
-      ].map(r => ({ ...r, hasRuns: true, canEdit: true, visBg: r.vis === 'Public' ? 'var(--ok-soft)' : 'var(--panel-2)',
+      ]).map(r => ({ ...r, hasRuns: true, canEdit: true, visBg: r.vis === 'Public' ? 'var(--ok-soft)' : 'var(--panel-2)',
         run: () => { this.runJob('recipe', r.name); this.setState({ dockOpen: true }); } })),
       recipePubShow: true,
-      handRows: [
+      handRows: (booted ? [] : [
         { name: 'New site onboarding', updated: 'Jun 12' },
         { name: 'Site migration checklist', updated: 'May 30' },
         { name: 'Incident response — malware', updated: 'Apr 22' },
         { name: 'Offboarding a customer', updated: 'Feb 14' }
-      ].map(h => ({ ...h })),
+      ]).map(h => ({ ...h })),
       recipeDlgOpen: false, recipeDlgEditing: false, recipeDlgTitle: 'New recipe', recipeTitle: '', recipeContent: '',
       onRecipeTitle: () => {}, onRecipeContent: () => {}, recipePublicBg: 'var(--rule)', recipePublicJust: 'flex-start',
       toggleRecipePublic: () => {}, newRecipe: () => {}, closeRecipeDlg: () => {}, saveRecipe: () => {}, deleteRecipe: () => {},
@@ -2284,6 +2288,17 @@ class Component extends DCLogic {
     // is parked at the bottom; a manual scroll up releases the pin until they
     // scroll back down (tracked by the consoleRef scroll listener).
     if (this._consoleEl && this._consolePinned) this._consoleEl.scrollTop = this._consoleEl.scrollHeight;
+    // Intercom's launcher and the activity dock share the bottom-right corner
+    // (customer sessions only — admin pages ship zero Intercom bytes). Hide
+    // the launcher while the dock is open and restore it on close; a
+    // messenger window the customer already opened is left alone. Chosen over
+    // moving the bubble left (collides with the sidebar user card and the
+    // switch-back pill) or permanently offsetting the dock (wastes the corner
+    // for every session that never opens chat).
+    if (window.Intercom && !!this.state.dockOpen !== !!this._dockWasOpen) {
+      try { window.Intercom('update', { hide_default_launcher: !!this.state.dockOpen }); } catch (e) {}
+    }
+    this._dockWasOpen = this.state.dockOpen;
     // Focus the command palette input the moment it opens (autofocus only
     // fires on first page load, not on dynamic mount).
     if (this.state.paletteOpen && !this._palWasOpen) {

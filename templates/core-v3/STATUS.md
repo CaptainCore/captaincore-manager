@@ -1594,6 +1594,23 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Settings mock flash + Intercom/dock corner conflict (2026-08-23)
+- **Settings no longer flashes design samples.** computeSettings was the one
+  screen the global mock-flash rule missed — fake providers (Kinsta/WP
+  Engine/…), recipes, handbook rows, defaults, key rows and swatches all
+  rendered until `realSettingsVals` hydrated. Every sample block now gates on
+  `booted` (empty until real data), and `state.brandName` seeds from
+  `CC_BOOT.name` instead of the literal sample. Verified by stalling all six
+  settings endpoints 4s: zero sample rows/names mid-stall, real data after.
+- **Intercom launcher yields the corner to the dock.** Customer sessions load
+  the Intercom bubble bottom-right — exactly where the activity dock opens.
+  componentDidUpdate now sends `Intercom('update', { hide_default_launcher })`
+  on dockOpen transitions ONLY (no churn on ordinary re-renders): launcher
+  hides while the dock is open, returns on close; an already-open messenger
+  window is untouched. Chosen over moving the bubble left (collides with the
+  sidebar user card + switch-back pill) or permanently offsetting the dock
+  (wastes the corner for sessions that never open chat).
+
 ### Cookbook: customers manage only their own recipes (2026-08-23)
 Customers could open Edit on public SYSTEM recipes (screenshot from a
 switched session) — the UI showed the code, and worse, `Recipes::list()`
