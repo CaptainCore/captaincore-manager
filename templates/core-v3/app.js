@@ -761,6 +761,8 @@ class Component extends DCLogic {
         kill: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.id !== se.id) })) })),
       killOthers: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.current) })),
       profPw: '', onProfPw: () => {}, profMsg: '', profHasMsg: false, tfaSecret: '', tfaHasSecret: false,
+      apiDocsView: () => {}, apiDocsDownload: () => {}, adOpen: false, adLoading: false, adReady: false,
+      adClose: () => {}, adScrollRef: () => {}, adBodyRef: () => {}, adTocRows: [],
       ...(this._hydrated ? this.realProfileVals(s) : {})
     };
   }
@@ -1133,7 +1135,7 @@ class Component extends DCLogic {
       // Terminal schedule + public-recipe confirm
       schedOpen: false, crRecipe: 0,
       // Profile / billing
-      sessModalOpen: false, billAddrOpen: false, cardDlgOpen: false, achDlgOpen: false, verifyDlgOpen: false,
+      sessModalOpen: false, billAddrOpen: false, cardDlgOpen: false, achDlgOpen: false, verifyDlgOpen: false, adOpen: false,
       // Site detail
       nsuOpen: false, dsuOpen: false, asgOpen: false, edsOpen: false, eeOpen: false,
       aaOpen: false, shareDlgOpen: false, udOpen: false, fmViewOpen: false,

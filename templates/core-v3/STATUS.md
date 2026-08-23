@@ -1594,6 +1594,26 @@ Site Overview → Accounts card (and the Accounts list/detail) showed
 interpolated text then escaped the ampersand. `decodeHtml()` runs at
 hydrate / shared-with / account-detail so the name renders as `&`.
 
+### Profile → API documentation viewer (2026-08-23)
+Legacy-parity port of the API Access docs row. New card on Profile (between
+Application password and Active sessions): "API documentation · Markdown
+reference for use with coding agents" with **View** and **Download**. Existing
+backend only — `GET /me/api-docs?format=html` → `{html}` (server Parsedown,
+`{your-site}` pre-substituted) and the bare route streams the raw markdown
+with attachment headers. Viewer dialog (`ad*` bindings in profile.js
+`apiDocsVals`, spread into BOTH realProfileVals returns): 1000×88vh, 250px TOC
+rail built client-side from the rendered h2/h3s (v1's exact slugging,
+duplicates suffixed), content injected via ref (`.cc-md .cc-apidoc` — no
+innerHTML binding in the DC runtime; `.cc-apidoc` adds document-scale type
+over the timeline-scale `.cc-md` base, incl. table + scroll-margin rules).
+TOC click scrolls the content container; HTML is cached on `_adHtml` so
+reopen is instant; Download builds a blob link (`captaincore-api-docs.md`);
+Escape closes via closeAllDialogs (`adOpen`). Mobile: the rail stacks via the
+existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
+(10 checks): 202-entry TOC, rendered body with the substituted host, TOC
+scroll jump, ESC, cached reopen firing zero refetches, and a real download
+whose file starts `# CaptainCore REST API`.
+
 ### Leading-input autofocus + Archives filter (2026-08-23)
 - **`leadFocusRef`** (app.js, beside `ddClose`): the one focus-on-mount ref for
   a screen's LEADING search/filter input. Flag lives on the DOM node so

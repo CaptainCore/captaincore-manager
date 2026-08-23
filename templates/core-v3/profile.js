@@ -107,10 +107,75 @@ Object.assign(Component.prototype, {
     });
   },
 
+  // ── API documentation (legacy parity: GET /me/api-docs) ──────
+  // ?format=html → { html } (server-side Parsedown, {your-site} already
+  // substituted); no format → raw markdown with attachment headers. The HTML
+  // is our own file rendered server-side — same trust as v1's v-html.
+  viewApiDocs() {
+    this.setState({ adOpen: true, adLoading: !this._adHtml });
+    if (this._adHtml) return;
+    this.api('/me/api-docs?format=html').then(res => {
+      // Stamp ids on h2/h3 for the TOC (v1's exact slug rules, duplicates
+      // suffixed) before the HTML is frozen into a string.
+      const doc = new DOMParser().parseFromString((res && res.html) || '', 'text/html');
+      const toc = []; const used = {};
+      doc.querySelectorAll('h2, h3').forEach(h => {
+        let id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        if (used[id]) { used[id]++; id += '-' + used[id]; } else { used[id] = 1; }
+        h.setAttribute('id', id);
+        toc.push({ id, text: h.textContent.trim(), level: parseInt(h.tagName[1], 10) });
+      });
+      this._adHtml = doc.body.innerHTML;
+      this._adToc = toc;
+      this.setState({ adLoading: false });
+    }).catch(() => {
+      this.setState({ adOpen: false, adLoading: false });
+      this.toast('Failed to load API documentation', { kind: 'error' });
+    });
+  },
+
+  downloadApiDocs() {
+    const boot = window.CC_BOOT || {};
+    fetch(boot.restRoot + 'captaincore/v1/me/api-docs', { headers: { 'X-WP-Nonce': boot.nonce } })
+      .then(r => { if (!r.ok) throw 0; return r.blob(); })
+      .then(b => {
+        const url = URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'captaincore-api-docs.md'; a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => this.toast('Failed to download API documentation', { kind: 'error' }));
+  },
+
+  apiDocsVals(s) {
+    return {
+      apiDocsView: () => this.viewApiDocs(),
+      apiDocsDownload: () => this.downloadApiDocs(),
+      adOpen: !!s.adOpen, adLoading: !!s.adLoading, adReady: !!s.adOpen && !s.adLoading,
+      adClose: () => this.setState({ adOpen: false }),
+      // Content scroll container + raw-HTML escape hatch (the DC runtime has
+      // no innerHTML binding — the timeline .cc-md ref pattern).
+      adScrollRef: el => { this._adScrollEl = el; },
+      adBodyRef: el => { if (el && el._html !== this._adHtml) { el._html = this._adHtml; el.innerHTML = this._adHtml || ''; } },
+      adTocRows: (this._adToc || []).map(t => ({
+        text: t.text,
+        pad: t.level === 2 ? '6px 16px' : '4px 16px 4px 30px',
+        weight: t.level === 2 ? '600' : '400',
+        size: t.level === 2 ? '13px' : '12.5px',
+        go: () => {
+          const c = this._adScrollEl;
+          const el = c && c.querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(t.id) : t.id));
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }))
+    };
+  },
+
   realProfileVals(s) {
     if (s.route === 'profile') this.profileInit();
-    if (!this._prof) return {};
+    if (!this._prof) return { ...this.apiDocsVals(s) };
     return {
+      ...this.apiDocsVals(s),
       profName: s.profName, onProfName: e => this.setState({ profName: e.target.value }),
       profEmail: s.profEmail, onProfEmail: e => this.setState({ profEmail: e.target.value }),
       profPw: s.profPw || '', onProfPw: e => this.setState({ profPw: e.target.value }),

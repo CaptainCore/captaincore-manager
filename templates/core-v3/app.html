@@ -92,6 +92,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .cc-md pre code{background:transparent;padding:0}
 .cc-md h1,.cc-md h2,.cc-md h3,.cc-md h4{font:600 14px var(--sans);margin:6px 0 4px}
 .cc-md blockquote{margin:4px 0;padding:2px 12px;border-left:3px solid var(--rule);color:var(--ink-dim)}
+/* API-docs viewer: document-scale type over the timeline-scale .cc-md base. */
+.cc-apidoc{font:400 13.5px/1.7 var(--sans)}
+.cc-apidoc h1{font:700 20px var(--sans);margin:0 0 12px;letter-spacing:-.01em}
+.cc-apidoc h2{font:700 16px var(--sans);margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--rule)}
+.cc-apidoc h2:first-of-type{margin-top:0;border-top:none;padding-top:0}
+.cc-apidoc h3{font:600 14px var(--sans);margin:18px 0 6px}
+.cc-apidoc h4{font:600 13px var(--sans);margin:14px 0 4px}
+.cc-apidoc h2,.cc-apidoc h3{scroll-margin-top:12px}
+.cc-apidoc p{margin:0 0 8px}
+.cc-apidoc pre{padding:10px 12px;margin:8px 0}
+.cc-apidoc table{border-collapse:collapse;margin:8px 0;font-size:12.5px}
+.cc-apidoc th,.cc-apidoc td{border:1px solid var(--rule);padding:5px 9px;text-align:left}
+.cc-apidoc th{background:var(--panel-2)}
 </style>
 </helmet>
 <div class="cc-shell" style="height:100vh;display:flex;flex-direction:column;background:var(--canvas);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -2834,6 +2847,18 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+              <h2 style="margin:0;font:600 14px var(--sans)">API documentation</h2>
+              <span style="font:400 12px var(--sans);color:var(--ink-dim)">Markdown reference for use with coding agents</span>
+              <div style="flex:1"></div>
+              <span onClick="{{ apiDocsView }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:5px 11px" style-hover="border-color:var(--brand)">View</span>
+              <button onClick="{{ apiDocsDownload }}" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 12.5px var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>
+                Download
+              </button>
+            </div>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)">
               <h2 style="margin:0;font:600 14px var(--sans)">Active sessions</h2>
               <div style="flex:1"></div>
@@ -4359,6 +4384,35 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeRecipeDlg }}" style="font:500 13px var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveRecipe }}" style="border:none;background:var(--brand);color:white;font:600 13px var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save recipe</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ API documentation viewer (profile.js) — TOC rail + server-rendered markdown ══ -->
+  <sc-if value="{{ adOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ adClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:5vh 20px">
+      <div onClick="{{ stopProp }}" style="width:1000px;max-width:calc(100vw - 40px);height:88vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 15px var(--sans)">API documentation</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ apiDocsDownload }}" style="font:500 12px var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:4px 10px" style-hover="border-color:var(--brand)">Download .md</span>
+          <span onClick="{{ adClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ adLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:grid;place-items:center;font:400 13px var(--sans);color:var(--ink-dim)">Loading documentation…</div>
+        </sc-if>
+        <sc-if value="{{ adReady }}" hint-placeholder-val="{{ false }}">
+          <div class="cc-plf-body" style="flex:1;display:flex;min-height:0">
+            <nav class="cc-plf-side" style="width:250px;flex:none;overflow-y:auto;border-right:1px solid var(--rule);padding:12px 0;background:var(--panel)">
+              <sc-for list="{{ adTocRows }}" as="t" hint-placeholder-count="8">
+                <div onClick="{{ t.go }}" style="padding:{{ t.pad }};font:{{ t.weight }} {{ t.size }} var(--sans);color:var(--ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="background:var(--panel-2);color:var(--brand-ink)">{{ t.text }}</div>
+              </sc-for>
+            </nav>
+            <div ref="{{ adScrollRef }}" style="flex:1;overflow-y:auto;min-width:0">
+              <div ref="{{ adBodyRef }}" class="cc-md cc-apidoc" style="padding:20px 28px 60px;max-width:760px"></div>
+            </div>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>
