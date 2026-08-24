@@ -271,6 +271,11 @@ class Site {
             if ( $site->customer_id == $account_id or $site->account_id == $account_id ) {
                 continue;
             }
+            // Sharing a site writes an AccountSite row under the named account,
+            // so a non-admin may only nominate accounts they belong to.
+            if ( ! $is_admin && ! ( new User )->verify_accounts( [ (int) $account_id ] ) ) {
+                continue;
+            }
             $shared_with_ids[] = $account_id;
         }
 
@@ -337,6 +342,7 @@ class Site {
 
         // Prep for response to return
         $response = [];
+        $is_admin = ( new User )->is_admin();
 
         // Validate site exists
         $current_site = ( new Sites )->get( $this->site_id );
@@ -378,6 +384,11 @@ class Site {
         $shared_with_ids      = [];
         foreach( $site->shared_with as $account_id ) {
             if ( $site->customer_id == $account_id or $site->account_id == $account_id ) {
+                continue;
+            }
+            // Sharing a site writes an AccountSite row under the named account,
+            // so a non-admin may only nominate accounts they belong to.
+            if ( ! $is_admin && ! ( new User )->verify_accounts( [ (int) $account_id ] ) ) {
                 continue;
             }
             $shared_with_ids[] = $account_id;

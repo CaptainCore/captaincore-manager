@@ -11944,6 +11944,13 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 
+	// The audit is authorized, the finding is not - confirm it belongs to that
+	// audit before writing to it, as the delete peer does.
+	$finding = ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
+	if ( empty( $finding ) || intval( $finding->site_audit_id ) !== $audit_id ) {
+		return new WP_Error( 'not_found', 'Finding not found for this audit.', [ 'status' => 404 ] );
+	}
+
 	$resolving = ! empty( $params['status'] ) && $params['status'] === 'resolved';
 
 	// Apply general field updates first so title/description/severity/etc. are

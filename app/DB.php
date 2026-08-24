@@ -183,13 +183,13 @@ class DB {
     static function select_active_sites( $field = "site_id", $conditions = [] ) {
         global $wpdb;
         $table = self::_table();
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
-            $where_statements[] =  "{$table}.{$row} = '{$value}'";
+        $field = preg_replace( '/[^a-zA-Z0-9_]/', '', $field );
+        $where = self::prepared_where( $conditions, $table );
+        if ( $where === null ) {
+            return [];
         }
-        $where_statements = implode( " AND ", $where_statements );
-        $sql = "SELECT {$table}.{$field} FROM {$table} INNER JOIN wp_captaincore_sites ON {$table}.site_id = wp_captaincore_sites.site_id WHERE $where_statements AND wp_captaincore_sites.status = 'active'";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
+        $sql = "SELECT {$table}.{$field} FROM {$table} INNER JOIN wp_captaincore_sites ON {$table}.site_id = wp_captaincore_sites.site_id WHERE {$where[0]} AND wp_captaincore_sites.status = 'active'";
+        $results = array_column( $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) ), $field );
         return $results;
     }
 
@@ -227,22 +227,17 @@ class DB {
     static function fetch_domains( $conditions = [] ) {
         global $wpdb;
         $table = self::_table();
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
-            if ( is_array( $value ) ) {
-                $values = implode( ", ", $value );
-                $where_statements[] =  "{$table}.{$row} IN ($values)";
-                continue;
-            }
-            $where_statements[] =  "{$table}.{$row} = '{$value}'";
+        $where = self::prepared_where( $conditions, $table );
+        if ( $where === null ) {
+            return [];
         }
-        $where_statements = implode( " AND ", $where_statements );
+        $where_statements = $where[0];
         $sql = "SELECT {$table}.domain_id, {$wpdb->prefix}captaincore_domains.name
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_domains ON {$table}.domain_id = {$wpdb->prefix}captaincore_domains.domain_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_domains.`name` ASC";
-        $results = $wpdb->get_results( $sql );
+        $results = $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) );
         return $results;
     }
 
@@ -296,28 +291,20 @@ class DB {
     static function fetch_process_logs( $conditions = [] ) {
         global $wpdb;
         $table = self::_table();
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
-            if ( is_array($value) ) {
-                // An empty array yields `IN ()`, which is invalid SQL. With no
-                // possible matches, return nothing rather than emit a broken query.
-                if ( empty( $value ) ) {
-                    return [];
-                }
-                $values = implode( ", ", $value );
-                $where_statements[] =  "{$table}.{$row} IN ($values)";
-                continue;
-            }
-            $where_statements[] =  "{$table}.{$row} = '{$value}'";
+        // An empty array yields `IN ()`, which is invalid SQL. With no possible
+        // matches, return nothing rather than emit a broken query.
+        $where = self::prepared_where( $conditions, $table );
+        if ( $where === null ) {
+            return [];
         }
-        $where_statements = implode( " AND ", $where_statements );
+        $where_statements = $where[0];
         $sql = "SELECT {$table}.process_log_id, {$wpdb->prefix}captaincore_processes.name
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_process_logs ON {$table}.process_log_id = {$wpdb->prefix}captaincore_process_logs.process_log_id
                 LEFT JOIN {$wpdb->prefix}captaincore_processes ON {$wpdb->prefix}captaincore_process_logs.process_id = {$wpdb->prefix}captaincore_processes.process_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_process_logs.`created_at` DESC";
-        $results = $wpdb->get_results( $sql );
+        $results = $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) );
         return $results;
     }
 
@@ -365,6 +352,40 @@ class DB {
      * @param mixed $id
      * @return bool
      */
+    /**
+     * Build a prepared WHERE fragment for the join helpers below: identifiers
+     * scrubbed, every value bound.
+     *
+     * Returns [ $sql, $values ], or null when a condition cannot match anything
+     * (an empty IN list, which would otherwise emit invalid SQL).
+     *
+     * @param array  $conditions
+     * @param string $prefix Table name to qualify columns with, or "".
+     * @return array|null
+     */
+    private static function prepared_where( $conditions, $prefix = '' ) {
+        $clauses = [];
+        $values  = [];
+        foreach ( $conditions as $row => $value ) {
+            $row = preg_replace( '/[^a-zA-Z0-9_]/', '', $row );
+            $col = $prefix === '' ? "`{$row}`" : "{$prefix}.`{$row}`";
+            if ( is_array( $value ) ) {
+                if ( empty( $value ) ) {
+                    return null;
+                }
+                $clauses[] = $col . ' IN (' . implode( ',', array_fill( 0, count( $value ), '%s' ) ) . ')';
+                $values    = array_merge( $values, array_values( $value ) );
+                continue;
+            }
+            $clauses[] = "{$col} = %s";
+            $values[]  = $value;
+        }
+        if ( empty( $clauses ) ) {
+            return null;
+        }
+        return [ implode( ' AND ', $clauses ), $values ];
+    }
+
     static function is_valid_id( $id ) {
         if ( is_bool( $id ) || ! is_scalar( $id ) ) {
             return false;
@@ -607,36 +628,43 @@ class DB {
     static function fetch_sites_for_process_log( $conditions = [] ) {
         global $wpdb;
         $table = self::_table();
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
-            $where_statements[] =  "{$table}.{$row} = '{$value}'";
+        $where = self::prepared_where( $conditions, $table );
+        if ( $where === null ) {
+            return [];
         }
-        $where_statements = implode( " AND ", $where_statements );
+        $where_statements = $where[0];
         $sql = "SELECT {$table}.site_id, {$wpdb->prefix}captaincore_sites.name
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-        $results = $wpdb->get_results( $sql );
+        $results = $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) );
         return $results;
     }
 
     static function latest_capture( $conditions ) {
-        $sort = "created_at";
-        $sort_order = "DESC";
         global $wpdb;
-        $where_statements = [];
+        // Built the same way as where() - identifier scrubbed, every value
+        // bound. One caller passes values straight from the CLI ingest body,
+        // which json_decode()s php://input and so never sees wp_magic_quotes.
+        $where_clauses = [];
+        $values        = [];
         foreach ( $conditions as $row => $value ) {
+            $row = preg_replace( '/[^a-zA-Z0-9_]/', '', $row );
             if ( is_array( $value ) ) {
-                $values = implode( ", ", $value );
-                $where_statements[] =  "`{$row}` IN ($values)";
+                $placeholders    = implode( ',', array_fill( 0, count( $value ), '%s' ) );
+                $where_clauses[] = "`{$row}` IN ($placeholders)";
+                $values          = array_merge( $values, array_values( $value ) );
                 continue;
             }
-            $where_statements[] =  "`{$row}` = '{$value}'";
+            $where_clauses[] = "`{$row}` = %s";
+            $values[]        = $value;
         }
-        $where_statements = implode( " AND ", $where_statements );
-        $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC limit 1";
-        $results = $wpdb->get_results( $sql );
+        if ( empty( $where_clauses ) ) {
+            return [];
+        }
+        $sql     = 'SELECT * FROM ' . self::_table() . ' WHERE ' . implode( ' AND ', $where_clauses ) . ' ORDER BY `created_at` DESC LIMIT 1';
+        $results = $wpdb->get_results( $wpdb->prepare( $sql, $values ) );
         if ( is_array( $results ) && ! empty( $results ) ) {
             $results = $results[0];
         }
