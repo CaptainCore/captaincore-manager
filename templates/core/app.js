@@ -45,6 +45,7 @@ class Component extends DCLogic {
     deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
+    nsProto: 'sftp', nsPort: '2222',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
     nsToken: '', nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
@@ -1096,6 +1097,8 @@ class Component extends DCLogic {
       nsAddr: s.nsAddr, onNsAddr: e => this.setState({ nsAddr: e.target.value }),
       nsUser: s.nsUser, onNsUser: e => this.setState({ nsUser: e.target.value }),
       nsPass: s.nsPass, onNsPass: e => this.setState({ nsPass: e.target.value }),
+      nsPort: s.nsPort, onNsPort: e => this.setState({ nsPort: e.target.value }),
+      nsProtoChips: ['sftp', 'ssh'].map(l => chip(l, s.nsProto, 'nsProto')),
       nsAcc: s.nsAcc,
       ddNsAccOpen: s.ddOpen === 'nsAcc',
       ddToggleNsAcc: e => this.ddToggleAt('nsAcc', e),
@@ -1145,7 +1148,8 @@ class Component extends DCLogic {
           this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc); }
         else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
         else if (st.nsPath === 'import') { this.importProviderSites(); return; }
-        else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
+        else { if (this._hydrated) { this.submitManualSite(); return; }
+          this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs); }
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, nsShared: [], nsCustomerId: '', nsBillingId: '', dockOpen: true }); },
       viewTable: s.view === 'table', viewCards: s.view === 'cards', viewList: s.view === 'list',
       tblBg: s.view === 'table' ? 'var(--panel-2)' : 'transparent', tblFg: s.view === 'table' ? 'var(--ink)' : 'var(--ink-dim)',
@@ -1427,6 +1431,38 @@ class Component extends DCLogic {
   // Real Kinsta site creation — v1's newKinstaSite payload verbatim:
   // POST /providers/kinsta/new-site { site } → queues a ProviderAction and
   // returns the Kinsta operation_id (or { errors: [] } from validation).
+  // New site › Connect manually → POST /sites (v1 dialog_new_site contract:
+  // Site::create wants name, an alnum slug ≥3 chars, and a production env with
+  // address/username/protocol/port; a staging env with an empty address is
+  // dropped server-side). Offload/env-vars are post-connect per the form note.
+  submitManualSite() {
+    const st = this.state;
+    const name = (st.nsName || '').trim();
+    const addr = (st.nsAddr || '').trim();
+    const user = (st.nsUser || '').trim();
+    const port = (st.nsPort || '2222').trim();
+    if (!name || !addr || !user) { this.toast('Site name, server address and user are required', { kind: 'error' }); return; }
+    if (!/^\d+$/.test(port)) { this.toast('Port must be a number', { kind: 'error' }); return; }
+    const slug = name.toLowerCase().replace(/\.[a-z]+$/, '').replace(/[^a-z0-9]/g, '');
+    if (slug.length < 3) { this.toast('Could not derive a site slug (3+ letters or digits) from the name', { kind: 'error' }); return; }
+    const mkEnv = (env, monitor) => ({ environment: env, site: slug, address: addr, username: user,
+      password: st.nsPass || '', protocol: st.nsProto || 'sftp', port, home_directory: '',
+      monitor_enabled: monitor, updates_enabled: '1', offload_enabled: false,
+      offload_provider: '', offload_access_key: '', offload_secret_key: '', offload_bucket: '', offload_path: '' });
+    const envs = [mkEnv('Production', '1')];
+    if (st.nsEnvs === 'Production + Staging') envs.push(mkEnv('Staging', '0'));
+    const site = { name, site: slug, provider: '', domain: '', key: '', environment_vars: [],
+      account_id: st.nsBillingId || st.nsCustomerId || (st.nsShared && st.nsShared[0]) || '',
+      shared_with: st.nsShared || [], environments: envs };
+    const tid = this.toast('Connecting ' + name + '…', { kind: 'loading' });
+    this.api('/sites', { method: 'POST', body: { site } }).then(res => {
+      if (res && res.errors && res.errors.length) { this.updateToast(tid, res.errors[0], { kind: 'error' }); return; }
+      this.updateToast(tid, name + ' connected', { kind: 'success' });
+      this.setState({ nsOpen: false, nsName: '', nsAddr: '', nsUser: '', nsPass: '', nsShared: [], nsCustomerId: '', nsBillingId: '' });
+      if (res && res.site_id) this.openSite(res.site_id);
+    }).catch(() => this.updateToast(tid, 'Could not create the site', { kind: 'error' }));
+  }
+
   createKinstaSite() {
     const st = this.state;
     const name = st.nsName.trim();
