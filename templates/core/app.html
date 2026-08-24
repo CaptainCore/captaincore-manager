@@ -1289,6 +1289,45 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <!-- ══ Registry tab — WP Registry audit coverage for this environment ══ -->
+          <sc-if value="{{ tabSiteDomains }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ sdSupported }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:10px;margin-top:14px">
+                <input value="{{ sdNew }}" onInput="{{ onSdNew }}" placeholder="add-a-domain.com" style="flex:1;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 11px;outline:none">
+                <button onClick="{{ sdAdd }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:0 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Add domain</button>
+              </div>
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <sc-for list="{{ sdRows }}" as="d" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <span style="font:500 var(--fs-13) var(--mono)">{{ d.name }}</span>
+                    <sc-if value="{{ d.badge }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 var(--fs-115) var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">{{ d.badge }}</span>
+                    </sc-if>
+                    <span style="font:500 var(--fs-115) var(--sans);background:{{ d.stBg }};border-radius:99px;padding:2px 9px">{{ d.statusLabel }}</span>
+                    <div style="flex:1"></div>
+                    <sc-if value="{{ d.canPrimary }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ d.setPrimary }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Make primary</span>
+                    </sc-if>
+                    <sc-if value="{{ d.canDel }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ d.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ sdLoading }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:11px;padding:12px 16px;border-bottom:1px solid var(--rule)"><span class="cc-skel" style="width:190px;height:13px"></span><span class="cc-skel" style="width:64px;height:18px;border-radius:99px"></span></div>
+                  <div style="display:flex;gap:11px;padding:12px 16px"><span class="cc-skel" style="width:150px;height:13px"></span><span class="cc-skel" style="width:64px;height:18px;border-radius:99px"></span></div>
+                </sc-if>
+                <sc-if value="{{ sdEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);text-align:center">No domains mapped to this environment yet.</div>
+                </sc-if>
+                <sc-if value="{{ sdHasError }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:16px;font:400 var(--fs-125) var(--sans);color:var(--bad);text-align:center">{{ sdError }}</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sdUnsupported }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);text-align:center">Domain mappings are managed at the provider — available for Kinsta and Rocket.net sites.</div>
+            </sc-if>
+          </sc-if>
           <sc-if value="{{ tabRegistry }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Every installed component's content hash, matched against audits on <a href="https://wpregistry.io/" target="_blank" rel="noopener" style="color:var(--brand-ink);text-decoration:none">WP Registry</a>.</div>
             <sc-if value="{{ regLoading }}" hint-placeholder-val="{{ false }}">

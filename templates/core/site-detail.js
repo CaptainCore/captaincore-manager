@@ -27,7 +27,7 @@ Object.assign(Component.prototype, {
       // so it bailed on the missing _detail and the tab would sit empty until
       // you clicked away and back. Fire the current leaf's load now that the
       // environment list exists (stats/registry/captures key off it).
-      const deferred = { stats: 'loadStats', registry: 'loadRegistry', captures: 'loadCaptures',
+      const deferred = { sitedomains: 'loadEnvDomains', stats: 'loadStats', registry: 'loadRegistry', captures: 'loadCaptures',
         logs: 'loadLogs', versions: 'loadQuicksaves', backups: 'loadBackups',
         snapshots: 'loadSnapshots', timeline: 'loadTimeline' }[this.state.siteTab];
       if (deferred && this[deferred]) setTimeout(() => this[deferred](), 0);
@@ -194,6 +194,97 @@ Object.assign(Component.prototype, {
           })
           .catch(() => this.updateToast(tid, 'Could not save update settings', { kind: 'error' }));
       }
+    };
+  },
+
+  // ── Environment domain mappings (Inventory › Domains; v1 parity:
+  // dialog_domain_mappings). Provider-backed (Kinsta / Rocket.net):
+  // GET/POST/DELETE /sites/{id}/{env}/domains + PUT …/domains/primary.
+  // Writes are async at the provider, so v1's refetch-after-5s ritual carries
+  // over. Rows: { id, name, is_active, verification_records }.
+  _sdKey() {
+    const real = this._detail;
+    return real ? real.siteId + ':' + (this.state.env || 'Production') : '';
+  },
+
+  loadEnvDomains(force) {
+    const real = this._detail;
+    if (!real) return;
+    const key = this._sdKey();
+    if (!force && this._sd && this._sd.key === key) return;
+    const sd = this._sd = { key, list: null, error: '' };
+    const bump = () => { if (this._sd === sd) this.setState({}); };
+    this.api('/sites/' + real.siteId + '/' + (this.state.env || 'Production').toLowerCase() + '/domains')
+      .then(list => {
+        if (list && list.code) { sd.error = list.message || 'Could not load domains.'; sd.list = []; }
+        else sd.list = Array.isArray(list) ? list : [];
+        bump();
+      })
+      .catch(() => { sd.error = 'Could not load domains.'; sd.list = []; bump(); });
+  },
+
+  _sdRefetchSoon() {
+    clearTimeout(this._sdTimer);
+    this._sdTimer = setTimeout(() => this.loadEnvDomains(true), 5000);
+  },
+
+  envDomainsVals(real, s) {
+    if (s.siteTab !== 'sitedomains' || !real) return { sdSupported: false, sdUnsupported: false, sdRows: [], sdLoading: false, sdHasError: false, sdError: '' };
+    const f = this.FLEET.find(x => String(x.id) === String(real.siteId));
+    const provider = ((real.site && real.site.provider) || (f && f.provider) || '').toLowerCase();
+    const supported = provider === 'kinsta' || provider === 'rocketdotnet';
+    if (!supported) return { sdSupported: false, sdUnsupported: true, sdRows: [], sdLoading: false, sdHasError: false, sdError: '' };
+    const e = this.currentEnv(real, s) || {};
+    const home = String(e.home_url || '');
+    const sd = (this._sd && this._sd.key === this._sdKey()) ? this._sd : null;
+    // Env switch while on the tab: the cached key no longer matches — refetch.
+    if (!sd) setTimeout(() => this.loadEnvDomains(), 0);
+    const list = (sd && sd.list) || [];
+    const envLower = (s.env || 'Production').toLowerCase();
+    const path = '/sites/' + real.siteId + '/' + envLower + '/domains';
+    return {
+      sdSupported: true, sdUnsupported: false,
+      sdLoading: !sd || sd.list === null,
+      sdHasError: !!(sd && sd.error), sdError: (sd && sd.error) || '',
+      sdEmpty: !!sd && Array.isArray(sd.list) && !sd.list.length && !sd.error,
+      sdNew: s.sdNew || '', onSdNew: ev => this.setState({ sdNew: ev.target.value }),
+      sdAdd: () => {
+        const name = (this.state.sdNew || '').trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (!name) return;
+        const tid = this.toast('Adding ' + name + '…', { kind: 'loading' });
+        this.api(path, { method: 'POST', body: { domain_name: name } })
+          .then(() => { this.updateToast(tid, name + ' is being added', { kind: 'success' });
+            this.setState({ sdNew: '' }); this._sdRefetchSoon(); })
+          .catch(() => this.updateToast(tid, 'Could not add ' + name, { kind: 'error' }));
+      },
+      sdRows: list.map(d => {
+        const name = d.name || '';
+        const system = name.includes('kinsta.cloud') || name.includes('onrocket.site');
+        const primary = !!name && home.includes(name);
+        return {
+          name, system, primary,
+          active: !!d.is_active,
+          statusLabel: d.is_active ? 'Active' : 'Pending DNS',
+          stBg: d.is_active ? 'var(--ok-soft)' : 'var(--warn-soft)',
+          badge: system ? 'System' : primary ? 'Primary' : '',
+          canPrimary: !system && !primary && !!d.is_active,
+          setPrimary: () => {
+            if (!confirm('Set ' + name + ' as the primary domain? This runs a search-and-replace on the site.')) return;
+            const tid = this.toast('Setting ' + name + ' as primary…', { kind: 'loading' });
+            this.api(path + '/primary', { method: 'PUT', body: { domain_id: d.id, run_search_and_replace: true } })
+              .then(() => { this.updateToast(tid, name + ' is becoming primary (may take a few minutes)', { kind: 'success' }); this._sdRefetchSoon(); })
+              .catch(() => this.updateToast(tid, 'Could not set primary', { kind: 'error' }));
+          },
+          canDel: !system && !primary,
+          del: () => {
+            if (!confirm('Delete the domain ' + name + '? This cannot be undone.')) return;
+            const tid = this.toast('Deleting ' + name + '…', { kind: 'loading' });
+            this.api(path, { method: 'DELETE', body: { domain_ids: [d.id] } })
+              .then(() => { this.updateToast(tid, name + ' is being deleted', { kind: 'success' }); this._sdRefetchSoon(); })
+              .catch(() => this.updateToast(tid, 'Could not delete ' + name, { kind: 'error' }));
+          }
+        };
+      })
     };
   },
 

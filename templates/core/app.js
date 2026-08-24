@@ -1805,6 +1805,7 @@ class Component extends DCLogic {
       else if (tab === 'captures') this.loadCaptures();
       else if (tab === 'timeline') this.loadTimeline();
       else if (tab === 'files') this.loadFiles();
+      else if (tab === 'sitedomains') this.loadEnvDomains();
     }, 0);
     const slug = site.name.split('.')[0];
     const host = s.env === 'Staging' ? 'staging-' + site.name : site.name;
@@ -2019,6 +2020,8 @@ class Component extends DCLogic {
       tabUsers: leaf === 'users', tabLogs: leaf === 'logs', tabTimeline: leaf === 'timeline',
       tabRegistry: leaf === 'registry', tabScheduled: leaf === 'scheduled',
       tabFiles: leaf === 'files',
+      tabSiteDomains: leaf === 'sitedomains',
+      ...this.envDomainsVals(real, s),
       credRows,
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
@@ -2548,7 +2551,7 @@ class Component extends DCLogic {
   SITE_TAB_GROUPS = [
     { id: 'overview',  label: 'Overview',  leaves: [['overview', 'Overview']] },
     { id: 'stats',     label: 'Stats',     leaves: [['stats', 'Stats']] },
-    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['registry', 'Registry'], ['files', 'Files']] },
+    { id: 'inventory', label: 'Inventory', leaves: [['plugins', 'Plugins'], ['themes', 'Themes'], ['sitedomains', 'Domains'], ['registry', 'Registry'], ['files', 'Files']] },
     // Users stays TOP-LEVEL on purpose. Grouping buys the most for tabs you
     // skip past; Users is the opposite — "pick a site → Users → Login as" is a
     // spoken instruction to customers, so it must stay one click and one word.

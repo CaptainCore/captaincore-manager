@@ -1848,6 +1848,16 @@ selected site's Production environment_id from FLEET.environmentsRaw and POST
 `/sites/bulk-tools` after a confirm. All verified live with stubbed dispatch
 routes (no fleet commands ran); payloads observed correct.
 
+### Remaining parity blockers closed (2026-08-23)
+Manual Add Site (`submitManualSite` → POST /sites, v1 dialog_new_site
+contract, offload/env-vars post-connect), managed-update settings editor
+("Update settings…" on the overview → PUT /sites/{id}/settings, toggle +
+excluded plugin/theme chips), and environment **Domains** mappings (new
+Inventory leaf; Kinsta/Rocket.net GET/POST/DELETE + PUT …/primary with the
+v1 refetch-after-5s ritual; primary/system domains protected). All verified
+live with stubbed dispatch/provider routes. With these + site requests +
+updates/bulk, all 9 Phase-1 GAP-BLOCKERs are closed.
+
 ### Site requests: real submission + operator queue (2026-08-23)
 New `site-requests.js` mixin (registered in core.php's $v3_scripts). The New
 site › Request tab now really POSTs `/site-requests` when hydrated (mock kept
