@@ -115,6 +115,11 @@ class Router {
                 // Logged-out invite/connect flows are not built in the new UI
                 // yet — keep serving the legacy app for them.
                 $template_file = 'templates/core-legacy.php';
+            } elseif ( isset( $_GET['account'], $_GET['token'] ) ) {
+                // Account invite links (Account::invite() emails
+                // "?account={id}&token={t}" on the base path) — the invite
+                // preview/accept flow only exists in the legacy app.
+                $template_file = 'templates/core-legacy.php';
             } elseif ( $base === 'login' ) {
                 // Standalone login page (redirects to the app when already
                 // signed in).

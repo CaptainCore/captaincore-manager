@@ -456,8 +456,10 @@ NAME=$(wp --path=$P eval 'echo LOGGED_IN_COOKIE;')
   dialog (`POST /accounts/`); Cookbook **New/Edit recipe** editor
   (`POST|PUT|DELETE /recipes`); Handbook **View** → process HTML in an iframe dialog;
   the header **activity bell** now opens the dock (dot only while jobs run). Hid dead
-  no-backend controls on real data: domain **Auto-renew** toggle and account
-  **Cancel plan…** (neither has a v1 route).
+  no-backend controls on real data: domain **Auto-renew** toggle (no v1 route)
+  and account **Cancel plan…** (`POST /billing/cancel-plan` exists, but
+  cancellation is deliberately handled out-of-band — correction 2026-08-23,
+  the original "no v1 route" reason here was wrong).
 
 - **Production-readiness round** (verified live) —
   - **Deep linking** (`router.js`): URL syncs with navigation, back/forward restores the
