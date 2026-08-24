@@ -342,6 +342,25 @@ Object.assign(Component.prototype, {
         { k: 'Storage', used: gb(usage.storage).toFixed(1) + ' of ' + (limits.storage || '—') + ' GB', pct: pct(gb(usage.storage), parseFloat(limits.storage) || 0) },
         { k: 'Visits / mo', used: (Number(usage.visits) || 0).toLocaleString() + ' of ' + (Number(limits.visits) || 0).toLocaleString(), pct: pct(Number(usage.visits) || 0, Number(limits.visits) || 0) }
       ].map(u => ({ ...u, fill: u.pct >= 80 ? 'var(--warn)' : 'var(--brand)' })),
+      // "Request changes" — small dialog → POST /billing/request-plan-changes
+      // (v1 dialog_modify_plan's customer path; Mailer renders subscription.name,
+      // plan.name and plan.interval, so the request message rides plan.name).
+      planRequest: () => this.setState({ planReqOpen: true, planReqText: '' }),
+      planReqOpen: !!s.planReqOpen,
+      planReqText: s.planReqText || '',
+      onPlanReqText: e => this.setState({ planReqText: e.target.value }),
+      closePlanReq: () => this.setState({ planReqOpen: false }),
+      planReqPlan: plan.name || '—',
+      planReqSend: () => {
+        const msg = (this.state.planReqText || '').trim();
+        if (!msg) return;
+        const tid = this.toast('Sending request…', { kind: 'loading' });
+        this.api('/billing/request-plan-changes', { method: 'POST', body: { subscription: {
+          name: plan.name || 'Current plan',
+          plan: { name: msg, interval: plan.interval || '—' } } } })
+          .then(() => { this.updateToast(tid, 'Change request sent', { kind: 'success' }); this.setState({ planReqOpen: false }); })
+          .catch(() => { this.updateToast(tid, 'Could not send the request', { kind: 'error' }); });
+      },
       planRows: [
         { k: 'Plan', v: plan.name || '—' },
         { k: 'Price', v: plan.price ? '$' + plan.price + (plan.interval == 1 ? '/mo' : ' / ' + plan.interval + ' mo') : '—' },

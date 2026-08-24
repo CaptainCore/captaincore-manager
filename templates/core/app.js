@@ -735,6 +735,9 @@ class Component extends DCLogic {
       addKey: () => { const v = this.state.keyDraft.trim(); if (!v.startsWith('ssh-')) return;
         this.setState(st => ({ sshKeys: [...(st.sshKeys || this.KEYS_INIT), { id: 'k' + Date.now(), name: v.split(' ').pop() || 'new key', fp: 'SHA256:' + Math.random().toString(36).slice(2, 8) + '…', primary: false }], keyDraft: '' })); },
       rotateKey: () => this.runJob('rotate-management-key', 'fleet-wide SSH key rotation'),
+      // Management-key card is design-sample only (fake fingerprint, no rotate
+      // route) — never render it on the real app.
+      keysShowMgmt: !window.CC_BOOT,
       recipeRows: (booted ? [] : [
         { name: 'Install security baseline', vis: 'Public', runs: '142' },
         { name: 'Deploy SMTP via Mailgun', vis: 'Public', runs: '96' },

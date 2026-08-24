@@ -59,12 +59,12 @@ renders, animates a dock job, and does nothing:
 
 | control | binding | rendered at | consequence |
 |---|---|---|---|
-| "Request changes" (account Plan) | `planRequest` app.js:449 | app.html:2283 | customer is told the change request was sent; nothing reaches ops |
+| ~~"Request changes" (account Plan)~~ **CLOSED 2026-08-23** — real override in accounts.js: dialog collects the request, POSTs `/billing/request-plan-changes` with the v1 `{subscription}` contract. Verified live (network POST + Mailer path). | `planRequest` app.js:449 | app.html:2283 | was: nothing reached ops |
 | "Update all (N)" (site Plugins/Themes) | `doUpdateAll` app.js:2063 | app.html:1094 | count is real, the update never runs |
-| "Queue audits for 9 stale sites" | `queueStale` app.js:596 | app.html:2582 | no audits queued (label count is hardcoded too) |
-| "Run update-before-audit steer queue" | `steerQueue` app.js:597 | app.html:2583 | dock shows `drift --steer --force` that never ran |
-| "Rotate…" (Settings › SSH keys) | `rotateKey` app.js:737 | app.html:2886 | no key rotation |
-| "Renew now" (domain › Registrar) | `renewNow` app.js:1701 | app.html:1828 | no renewal (registrar toggles are inert too, domains.js:641) |
+| ~~"Queue audits for 9 stale sites"~~ **NOT A LIVE DEFECT** (corrected 2026-08-23) — `covShowActions: false` in both realSecurityVals branches gates the button off on real data (app.html:2584 sc-if). Design-sample only. |  |  |  |
+| ~~"Run update-before-audit steer queue"~~ **NOT A LIVE DEFECT** (corrected 2026-08-23) — same `covShowActions` gate as above. Design-sample only. |  |  |  |
+| ~~"Rotate…" (Settings › SSH keys)~~ **CLOSED 2026-08-23** — the whole Management-key card was a design sample (hardcoded fake fingerprint, no rotate route in v1 either). Now hidden whenever CC_BOOT exists (`keysShowMgmt`); the real "Your public keys" list is untouched. Verified live. | `rotateKey` app.js:737 | app.html:2886 | was: fake fingerprint + inert Rotate shown on real data |
+| ~~"Renew now" (domain › Registrar)~~ **NOT A LIVE DEFECT** (corrected 2026-08-23) — button gated on `regWarn`, and the real branch sets `regWarn: false` / `regShowRenew: false` (domains.js:639). Only the Auto-renew toggle is inert on real data, and that is the deliberate no-route hide recorded in STATUS.md; transfer lock + WHOIS privacy use the real `regToggle`. |  |  |  |
 
 Three more sit one level up — a whole flow bound to `runJob`:
 
@@ -96,7 +96,7 @@ network tab. Every row above should get one real execution in Phase 3d.
 | manual **Add Site** (`dialog_new_site`) | full per-env credentials, SSH key, offload, env vars → `POST /sites` | v3 collects name/address/user/pass/env-count (app.html:4396-4404) then calls mock `runJob('connect-site')` (app.js:1123). No offload or `environment_vars` fields exist in v3 at all. Operators cannot onboard a non-Kinsta site |
 | `GET/POST/DELETE /sites/{id}/{env}/domains` + `PUT …/domains/primary` | Kinsta/Rocket.net domain mappings: list, add, delete, set primary, DNS verify | zero hits in `templates/core/*.js` or `app.html`; site tab groups (app.js:2470-2482) have no domains tab. v1 entry core-legacy.php:5200 `showDomainMappings()`. Nothing in STATUS.md. Attaching a domain to an environment is impossible in v3 |
 | `PUT /sites/{id}/settings` (`dialog_update_settings`) | per-env managed-update policy: on/off + excluded plugins/themes | v3 renders it read-only (site-detail.js:138); no `updates_exclude_plugins`/`updates_exclude_themes` binding anywhere. An operator cannot exclude a plugin that breaks a site from managed updates. No STATUS.md rationale |
-| `POST /billing/request-plan-changes` | customer requests a plan/interval change; server notifies ops | button is visible on real data (app.html:2283, no `sc-if`) and bound only to the mock (app.js:449). STATUS.md:415 admits it is unwired |
+| ~~`POST /billing/request-plan-changes`~~ **CLOSED 2026-08-23** — see the headline table; wired with a request dialog. | customer requests a plan/interval change; server notifies ops | was mock-bound |
 | sites-list bulk selection + `/sites/bulk-tools` | multi-site tools | `bulkActions` is a mock (app.js:1052). Already a known blocker in V1-PLAN |
 | whole-site update ("Update all") | update every pending component | `doUpdateAll` mock (app.js:2063) while the count is real. Already a known blocker in V1-PLAN |
 | `POST /update-queue/run` (per-row update) | steer one plugin/theme to a target version | v3 reads the queue only for the home badge (home.js:36). Already a known blocker in V1-PLAN |

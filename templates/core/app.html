@@ -2885,12 +2885,16 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
           <sc-if value="{{ setTabKeys }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-              <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Management key</h2></div>
-              <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
-                <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">SHA256:kT8mQx…9fLw · used for all site SSH</span>
-                <div style="flex:1"></div>
-                <span onClick="{{ rotateKey }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Rotate…</span>
-              </div>
+              <!-- Design-sample only: the fingerprint is a mock and rotation has
+                   no REST route. keysShowMgmt is false whenever CC_BOOT exists. -->
+              <sc-if value="{{ keysShowMgmt }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Management key</h2></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                  <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">SHA256:kT8mQx…9fLw · used for all site SSH</span>
+                  <div style="flex:1"></div>
+                  <span onClick="{{ rotateKey }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Rotate…</span>
+                </div>
+              </sc-if>
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Your public keys</h2></div>
               <sc-for list="{{ keyRows }}" as="k" hint-placeholder-count="1">
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
@@ -4133,6 +4137,28 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="flex:1"></div>
           <span onClick="{{ closeEp }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ epSave }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ epSaveLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Request plan changes dialog (customer; v1 parity: dialog_modify_plan request path) ══ -->
+  <sc-if value="{{ planReqOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePlanReq }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:10vh 20px">
+      <div onClick="{{ stopProp }}" style="width:480px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">Request plan changes</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closePlanReq }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Current plan: <span style="font:500 var(--fs-125) var(--mono);color:var(--ink)">{{ planReqPlan }}</span></span>
+          <textarea value="{{ planReqText }}" onInput="{{ onPlanReqText }}" placeholder="What would you like to change? (plan, billing interval, addons…)" style="min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:9px 11px;outline:none;resize:vertical"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closePlanReq }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ planReqSend }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Send request</button>
         </div>
       </div>
     </div>
