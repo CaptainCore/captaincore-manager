@@ -76,9 +76,9 @@ class Mailer {
         $formatted_address = implode( '<br>', $lines );
 
         return "
-            <div style='text-align: left; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 20px;'>
-                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Billing Address</h4>
-                <p style='margin: 0; font-size: 14px; color: #4a5568; line-height: 1.5;'>{$formatted_address}</p>
+            <div style='text-align: left; margin-top: 30px; border-top: 1px solid #E3E7EE; padding-top: 20px;'>
+                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Billing Address</h4>
+                <p style='margin: 0; font-size: 14px; color: #565C66; line-height: 1.5;'>{$formatted_address}</p>
             </div>
         ";
     }
@@ -110,7 +110,7 @@ class Mailer {
 
             foreach ( $meta_data as $meta ) {
                 if ( $meta->key === 'Details' ) {
-                    $details = '<div style="font-size: 12px; color: #718096; margin-top: 4px;">' . nl2br( $meta->value ) . '</div>';
+                    $details = '<div style="font-size: 12px; color: #666D7A; margin-top: 4px;">' . nl2br( $meta->value ) . '</div>';
                     
                     // Check if the Details meta indicates this is the managed sites item
                     if ( strpos( $meta->value, "Managed WordPress sites" ) !== false ) {
@@ -133,17 +133,17 @@ class Mailer {
                     sort($maintenance_sites);
                     $site_list_html = implode(", ", $maintenance_sites);
                     $count = count($maintenance_sites);
-                    $details .= "<div style='font-size: 12px; color: #718096; margin-top: 8px; line-height: 1.5em;'><strong>{$count} Sites Included:</strong><br/>{$site_list_html}</div>";
+                    $details .= "<div style='font-size: 12px; color: #666D7A; margin-top: 8px; line-height: 1.5em;'><strong>{$count} Sites Included:</strong><br/>{$site_list_html}</div>";
                 }
             }
 
             $items_html .= "
             <tr>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: left;'>
-                    <div style='font-weight: 600; color: #2d3748;'>{$product_name}</div>
+                <td style='padding: 12px 0; border-bottom: 1px solid #E3E7EE; text-align: left;'>
+                    <div style='font-weight: 600; color: #15181D;'>{$product_name}</div>
                     {$details}
                 </td>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top; color: #2d3748; width: 1%; white-space: nowrap;'>
+                <td style='padding: 12px 0; border-bottom: 1px solid #E3E7EE; font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: right; vertical-align: top; color: #15181D; width: 1%; white-space: nowrap;'>
                     {$total_price}
                 </td>
             </tr>";
@@ -152,12 +152,12 @@ class Mailer {
         $total = $order->get_formatted_order_total();
 
         return "
-        <h3 style='margin: 0 0 15px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Details</h3>
+        <h3 style='margin: 0 0 15px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #A3ACB9; text-align: left;'>Details</h3>
         <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='font-size: 14px;'>
             {$items_html}
             <tr>
-                <td style='padding-top: 15px; padding-right: 15px; font-weight: 700; color: #2d3748; text-align: right;'>Total</td>
-                <td style='padding-top: 15px; font-weight: 700; color: {$brand_color}; text-align: right; font-size: 16px; white-space: nowrap;'>{$total}</td>
+                <td style='padding-top: 15px; padding-right: 15px; font-weight: 700; color: #15181D; text-align: right;'>Total</td>
+                <td style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding-top: 15px; font-weight: 700; color: {$brand_color}; text-align: right; font-size: 16px; white-space: nowrap;'>{$total}</td>
             </tr>
         </table>";
     }
@@ -169,15 +169,15 @@ class Mailer {
         self::prepare();
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
-        $logo_url    = $config->logo ?? '';
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $logo_url    = $config->email_logo ?? $config->logo ?? '';
         $site_name   = get_bloginfo( 'name' );
         $site_url    = home_url();
 
         // Build unsubscribe link if provided
         $unsubscribe_html = '';
         if ( ! empty( $unsubscribe_url ) ) {
-            $unsubscribe_html = "<p style='margin: 5px 0 0;'><a href='{$unsubscribe_url}' style='color: #a0aec0; text-decoration: underline;'>Unsubscribe</a></p>";
+            $unsubscribe_html = "<p style='margin: 5px 0 0;'><a href='{$unsubscribe_url}' style='color: #A3ACB9; text-decoration: underline;'>Unsubscribe</a></p>";
         }
 
         // Build support footer if enabled
@@ -187,8 +187,8 @@ class Mailer {
             $support_footer_html = "
                             <!-- Internal Footer Area -->
                             <tr>
-                                <td style='padding: 30px 40px; background-color: #f7fafc; border-top: 1px solid #edf2f7; text-align: center;'>
-                                    <p style='margin: 0; font-size: 14px; color: #718096;'>
+                                <td style='padding: 30px 40px; background-color: #F5F7FA; border-top: 1px solid #E3E7EE; text-align: center;'>
+                                    <p style='margin: 0; font-size: 14px; color: #666D7A;'>
                                         Questions? <a href='mailto:{$admin_email}' style='color: {$brand_color}; text-decoration: none;'>Contact Support</a>
                                     </p>
                                 </td>
@@ -203,22 +203,22 @@ class Mailer {
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
             <title>{$subject}</title>
         </head>
-        <body style='margin: 0; padding: 0; background-color: #f7fafc; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #4a5568;'>
+        <body style='margin: 0; padding: 0; background-color: #F5F7FA; font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #565C66;'>
             <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
                 <tr>
                     <td style='padding: 40px 20px; text-align: center;'>
-                        
+
                         <div style='margin-bottom: 30px;'>
-                            <img src='{$logo_url}' alt='{$site_name}' style='max-height: 64px; width: auto;'>
+                            <img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto;'>
                         </div>
 
-                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); overflow: hidden;'>
-                            
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-top: 3px solid {$brand_color}; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
+
                             <!-- Header Area -->
                             <tr>
-                                <td style='padding: 40px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #edf2f7;'>
-                                    <h1 style='margin: 0 0 10px; font-size: 24px; font-weight: 800; color: #2d3748;'>{$headline}</h1>
-                                    <p style='margin: 0; font-size: 16px; color: #718096;'>{$subheadline}</p>
+                                <td style='padding: 40px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #E3E7EE;'>
+                                    <h1 style='margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: #15181D;'>{$headline}</h1>
+                                    <p style='margin: 0; font-size: 16px; color: #666D7A;'>{$subheadline}</p>
                                 </td>
                             </tr>
 
@@ -231,8 +231,8 @@ class Mailer {
                             {$support_footer_html}
                         </table>
 
-                        <div style='margin-top: 30px; font-size: 12px; color: #a0aec0;'>
-                             <p style='margin: 0;'><a href='{$site_url}' style='color: #a0aec0; text-decoration: none;'>{$site_name}</a></p>
+                        <div style='margin-top: 30px; font-size: 12px; color: #A3ACB9;'>
+                             <p style='margin: 0;'><a href='{$site_url}' style='color: #A3ACB9; text-decoration: none;'>{$site_name}</a></p>
                              {$unsubscribe_html}
                         </div>
 
@@ -254,7 +254,7 @@ class Mailer {
         if ( ! $order ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
 
         $total        = $order->get_formatted_order_total();
@@ -284,11 +284,11 @@ class Mailer {
 
         $content_html = "
             <div style='text-align: center; margin-bottom: 40px;'>
-                <div style='margin-bottom: 20px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
+                <div style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-bottom: 20px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$pay_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Pay Invoice &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$pay_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Pay Invoice &rarr;</a>
                         </td>
                     </tr>
                 </table>
@@ -307,7 +307,7 @@ class Mailer {
         if ( empty( $orders ) ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
         
@@ -338,16 +338,16 @@ class Mailer {
             $items_html   = self::get_line_items_html( $order, $brand_color );
             $billing_html = self::get_billing_address_html( $order );
 
-            $intro_html = "<div style='text-align: center; margin-bottom: 20px; color: #e53e3e; font-weight: 600;'>Payment Failed</div>";
+            $intro_html = "<div style='text-align: center; margin-bottom: 20px; color: #BF3B2E; font-weight: 600;'>Payment Failed</div>";
 
             $content_html = "
                 {$intro_html}
                 <div style='text-align: center; margin-bottom: 40px;'>
-                    <div style='margin-bottom: 20px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
+                    <div style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-bottom: 20px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                         <tr>
-                            <td style='border-radius: 4px; background-color: {$brand_color};'>
-                                <a href='{$pay_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Pay Invoice &rarr;</a>
+                            <td style='border-radius: 10px; background-color: {$brand_color};'>
+                                <a href='{$pay_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Pay Invoice &rarr;</a>
                             </td>
                         </tr>
                     </table>
@@ -387,12 +387,12 @@ class Mailer {
                 $date     = $o->get_date_created()->date('F j, Y');
     
                 $order_list_html .= "
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 15px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 15px;'>
                     <table width='100%'>
                         <tr>
                             <td style='vertical-align: middle; text-align: left;'>
-                                <div style='font-weight: 700; color: #2d3748; font-size: 16px;'>Order #{$o->get_id()}</div>
-                                <div style='color: #718096; font-size: 14px;'>{$date}</div>
+                                <div style='font-weight: 700; color: #15181D; font-size: 16px;'>Order #{$o->get_id()}</div>
+                                <div style='color: #666D7A; font-size: 14px;'>{$date}</div>
                             </td>
                             <td style='vertical-align: middle; text-align: right;'>
                                 <div style='font-weight: 700; color: {$brand_color}; font-size: 16px; margin-bottom: 8px;'>{$total}</div>
@@ -423,7 +423,7 @@ class Mailer {
         if ( empty( $orders ) ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
 
         $account   = ( new Accounts )->get( $account_id );
@@ -445,9 +445,9 @@ class Mailer {
         $site_list_html = "";
         
         if ( ! empty( $sites ) ) {
-            $site_list_html = "<div style='background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 25px;'>
-                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Active Sites</h4>
-                <ul style='margin: 0; padding-left: 20px; color: #4a5568; font-size: 14px;'>";
+            $site_list_html = "<div style='background-color: #F5F7FA; border: 1px solid #E3E7EE; border-radius: 6px; padding: 15px; margin-bottom: 25px;'>
+                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Active Sites</h4>
+                <ul style='margin: 0; padding-left: 20px; color: #565C66; font-size: 14px;'>";
             
             foreach ( $sites as $s ) {
                 $site_list_html .= "<li style='margin-bottom: 4px;'>{$s['name']}</li>";
@@ -463,12 +463,12 @@ class Mailer {
             $date     = $order->get_date_created()->date('F j, Y');
 
             $order_list_html .= "
-            <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 15px;'>
+            <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 15px;'>
                 <table width='100%'>
                     <tr>
                         <td style='vertical-align: middle; text-align: left;'>
-                            <div style='font-weight: 700; color: #2d3748; font-size: 16px;'>Order #{$order->get_id()}</div>
-                            <div style='color: #718096; font-size: 14px;'>{$date}</div>
+                            <div style='font-weight: 700; color: #15181D; font-size: 16px;'>Order #{$order->get_id()}</div>
+                            <div style='color: #666D7A; font-size: 14px;'>{$date}</div>
                         </td>
                         <td style='vertical-align: middle; text-align: right;'>
                             <div style='font-weight: 700; color: {$brand_color}; font-size: 16px; margin-bottom: 8px;'>{$total}</div>
@@ -500,7 +500,7 @@ class Mailer {
         if ( ! $order ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         // Add Admin as BCC
@@ -532,13 +532,13 @@ class Mailer {
 
         $intro_html = "
             <div style='text-align: center; margin-bottom: 20px;'>
-                <div style='display: inline-block; background-color: #C6F6D5; color: #22543D; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                <div style='display: inline-block; background-color: #E2F0E9; color: #166B42; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                     Paid in Full
                 </div>
             </div>
             <div style='text-align: center; margin-bottom: 40px;'>
-                <div style='margin-bottom: 10px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
-                <div style='color: #718096; font-size: 14px;'>Thank you for your business.</div>
+                <div style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-bottom: 10px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$total}</div>
+                <div style='color: #666D7A; font-size: 14px;'>Thank you for your business.</div>
             </div>
         ";
 
@@ -561,7 +561,7 @@ class Mailer {
 
         // 1. Prepare Data
         $config        = Configurations::get();
-        $brand_color   = $config->colors->primary ?? '#0D47A1';
+        $brand_color   = $config->colors->primary ?? '#123E8C';
         $site_name     = get_bloginfo( 'name' ); // e.g., "Anchor Hosting"
         $admin_email   = get_option( 'admin_email' );
         
@@ -577,17 +577,17 @@ class Mailer {
 
         // 3. Construct Body HTML
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p>Welcome to {$site_name}. With the following, you can sign into your {$site_name} account in order to manage WordPress hosting services. Let me know at <a href='mailto:{$admin_email}' style='color: {$brand_color}; text-decoration: none;'>{$admin_email}</a> if you have any questions.</p>
                 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin: 25px 0; text-align: center;'>
-                    <p style='margin-bottom: 5px; font-size: 14px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;'>Your Login</p>
-                    <div style='font-size: 20px; font-weight: 700; color: #2d3748; margin-bottom: 20px;'>{$user->user_login}</div>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin: 25px 0; text-align: center;'>
+                    <p style='margin-bottom: 5px; font-size: 14px; color: #666D7A; text-transform: uppercase; letter-spacing: 0.05em;'>Your Login</p>
+                    <div style='font-size: 20px; font-weight: 700; color: #15181D; margin-bottom: 20px;'>{$user->user_login}</div>
                     
                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                         <tr>
-                            <td style='border-radius: 4px; background-color: {$brand_color};'>
-                                <a href='{$action_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>One time set-up password link &rarr;</a>
+                            <td style='border-radius: 10px; background-color: {$brand_color};'>
+                                <a href='{$action_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>One time set-up password link &rarr;</a>
                             </td>
                         </tr>
                     </table>
@@ -617,7 +617,7 @@ class Mailer {
 
         // 1. Prepare Data
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $login       = $user->user_login;
 
@@ -626,11 +626,11 @@ class Mailer {
 
         // 3. Construct Body HTML
         $content_html = "
-            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p>Someone has requested a password reset for the following account:</p>
                 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0; display: inline-block;'>
-                    <strong style='color: #2d3748;'>{$login}</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 15px; margin: 20px 0; display: inline-block;'>
+                    <strong style='color: #15181D;'>{$login}</strong>
                 </div>
 
                 <p>If this was a mistake, just ignore this email and nothing will happen.</p>
@@ -638,8 +638,8 @@ class Mailer {
 
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 30px auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$reset_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Reset Password &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$reset_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Reset Password &rarr;</a>
                         </td>
                     </tr>
                 </table>
@@ -663,7 +663,7 @@ class Mailer {
         if ( ! $user ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $login       = $user->user_login;
 
@@ -679,27 +679,27 @@ class Mailer {
         }
 
         $content_html = "
-            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p>A sign-in from a new location was just attempted for your account:</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin: 20px 0; display: inline-block; text-align: left; min-width: 280px;'>
-                    <div style='margin-bottom: 10px;'><strong style='color: #2d3748;'>" . esc_html( $login ) . "</strong></div>
-                    <div style='font-size: 13px; color: #718096;'>Location: <strong style='color: #4a5568;'>{$location_line}</strong></div>
-                    <div style='font-size: 13px; color: #718096;'>IP: <strong style='color: #4a5568;'>" . esc_html( $ip ) . "</strong></div>
-                    <div style='font-size: 12px; color: #a0aec0; margin-top: 8px;'>{$ua}</div>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin: 20px 0; display: inline-block; text-align: left; min-width: 280px;'>
+                    <div style='margin-bottom: 10px;'><strong style='color: #15181D;'>" . esc_html( $login ) . "</strong></div>
+                    <div style='font-size: 13px; color: #666D7A;'>Location: <strong style='color: #565C66;'>{$location_line}</strong></div>
+                    <div style='font-size: 13px; color: #666D7A;'>IP: <strong style='color: #565C66;'>" . esc_html( $ip ) . "</strong></div>
+                    <div style='font-size: 12px; color: #A3ACB9; margin-top: 8px;'>{$ua}</div>
                 </div>
 
                 <p>If this was you, click the button below to finish signing in. The link expires in 30&nbsp;minutes.</p>
 
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 30px auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='" . esc_url( $verify_url ) . "' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Confirm sign-in &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='" . esc_url( $verify_url ) . "' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Confirm sign-in &rarr;</a>
                         </td>
                     </tr>
                 </table>
 
-                <p style='font-size: 13px; color: #718096;'>If this was not you, ignore this email and change your password — someone may have your credentials.</p>
+                <p style='font-size: 13px; color: #666D7A;'>If this was not you, ignore this email and change your password — someone may have your credentials.</p>
             </div>
         ";
 
@@ -717,21 +717,21 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_access_granted_notification( $to_email, $account_name, $sites = [], $domains = [] ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $login_url   = home_url() . ( $config->path ?? '/account/' );
 
         // 1. Build Site List Preview
         $site_list_html = "";
         if ( ! empty( $sites ) ) {
-            $site_list_html = "<div style='background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 20px; text-align: left;'>
-                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Included Sites</h4>
-                <ul style='margin: 0; padding-left: 20px; color: #4a5568; font-size: 14px;'>";
+            $site_list_html = "<div style='background-color: #F5F7FA; border: 1px solid #E3E7EE; border-radius: 6px; padding: 15px; margin-top: 20px; text-align: left;'>
+                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Included Sites</h4>
+                <ul style='margin: 0; padding-left: 20px; color: #565C66; font-size: 14px;'>";
             
             $count = 0;
             foreach ( $sites as $s ) {
                 if ( $count >= 5 ) {
                     $remaining = count( $sites ) - 5;
-                    $site_list_html .= "<li style='margin-bottom: 4px; font-style: italic; color: #718096;'>...and $remaining more.</li>";
+                    $site_list_html .= "<li style='margin-bottom: 4px; font-style: italic; color: #666D7A;'>...and $remaining more.</li>";
                     break;
                 }
                 // Handle array format from Account::sites()
@@ -755,8 +755,8 @@ class Mailer {
             <div style='text-align: center; margin: 35px 0;'>
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$login_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Log in to Dashboard &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$login_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Log in to Dashboard &rarr;</a>
                         </td>
                     </tr>
                 </table>
@@ -777,7 +777,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_invite_new_user( $to_email, $account_name, $invite_url ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
 
         $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>You have been granted access to the account <strong>{$account_name}</strong>.</p>";
@@ -787,13 +787,13 @@ class Mailer {
             <div style='text-align: center; margin: 35px 0;'>
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$invite_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Accept Invitation &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$invite_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Accept Invitation &rarr;</a>
                         </td>
                     </tr>
                 </table>
             </div>
-            <p style='text-align: center; font-size: 12px; color: #a0aec0;'>If the button doesn't work, copy and paste this link:<br><a href='{$invite_url}' style='color: {$brand_color};'>{$invite_url}</a></p>
+            <p style='text-align: center; font-size: 12px; color: #A3ACB9;'>If the button doesn't work, copy and paste this link:<br><a href='{$invite_url}' style='color: {$brand_color};'>{$invite_url}</a></p>
         ";
 
         self::send_email_with_layout( 
@@ -810,17 +810,17 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_snapshot_ready( $to_email, $site_name, $snapshot_id, $download_url ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
 
         $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>The snapshot you requested for <strong>{$site_name}</strong> is ready.</p>";
-        $intro_text .= "<div style='background-color: #f7fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px; text-align: center;'><strong>Snapshot #{$snapshot_id}</strong><br><small style='color: #718096;'>Link expires in 7 days.</small></div>";
+        $intro_text .= "<div style='background-color: #F5F7FA; padding: 15px; border-radius: 6px; border: 1px solid #E3E7EE; margin-bottom: 25px; text-align: center;'><strong>Snapshot #{$snapshot_id}</strong><br><small style='color: #666D7A;'>Link expires in 7 days.</small></div>";
 
         $action_button = "
             <div style='text-align: center; margin: 35px 0;'>
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Snapshot &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Snapshot &rarr;</a>
                         </td>
                     </tr>
                 </table>
@@ -841,17 +841,17 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_backup_download_ready( $to_email, $site_name, $environment, $file_count, $timestamp, $download_url ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
 
         $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>Contains <strong>{$file_count}</strong> files from <strong>{$site_name}</strong> {$environment} environment as of {$timestamp}.</p>";
-        $intro_text .= "<div style='background-color: #f7fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px; text-align: center;'><small style='color: #718096;'>Link expires in 7 days.</small></div>";
+        $intro_text .= "<div style='background-color: #F5F7FA; padding: 15px; border-radius: 6px; border: 1px solid #E3E7EE; margin-bottom: 25px; text-align: center;'><small style='color: #666D7A;'>Link expires in 7 days.</small></div>";
 
         $action_button = "
             <div style='text-align: center; margin: 35px 0;'>
                 <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                     <tr>
-                        <td style='border-radius: 4px; background-color: {$brand_color};'>
-                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Backup &rarr;</a>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Backup &rarr;</a>
                         </td>
                     </tr>
                 </table>
@@ -879,7 +879,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_process_completed( $to_email, $subject, $headline, $subheadline, $message, $link_url = '' ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
 
         $content = "<p style='margin-bottom: 25px; line-height: 1.6;'>{$message}</p>";
 
@@ -888,13 +888,13 @@ class Mailer {
                 <div style='text-align: center; margin: 35px 0;'>
                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
                         <tr>
-                            <td style='border-radius: 4px; background-color: {$brand_color};'>
-                                <a href='{$link_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>View Site &rarr;</a>
+                            <td style='border-radius: 10px; background-color: {$brand_color};'>
+                                <a href='{$link_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>View Site &rarr;</a>
                             </td>
                         </tr>
                     </table>
                 </div>
-                <p style='text-align: center; font-size: 12px; color: #a0aec0;'><a href='{$link_url}' style='color: {$brand_color};'>{$link_url}</a></p>
+                <p style='text-align: center; font-size: 12px; color: #A3ACB9;'><a href='{$link_url}' style='color: {$brand_color};'>{$link_url}</a></p>
             ";
         }
 
@@ -906,7 +906,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_site_removal_request( $site, $user, $is_removal ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
 
@@ -916,35 +916,35 @@ class Mailer {
             $headline    = "Removal Requested";
             $subheadline = $site->name;
             $intro_text  = "A request has been submitted to remove the following site.";
-            $status_color = "#e53e3e"; // Red
+            $status_color = "#BF3B2E"; // Red
             $status_text  = "Removal Pending";
         } else {
             $subject     = "{$site_name} - Cancel Site Removal Request";
             $headline    = "Removal Cancelled";
             $subheadline = $site->name;
             $intro_text  = "A request has been submitted to keep this site. Please disregard the previous removal request.";
-            $status_color = "#38a169"; // Green
+            $status_color = "#1C8A55"; // Green
             $status_text  = "Active";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>{$intro_text}</p>
                 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site ID</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
                         </tr>
                         <tr>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
@@ -995,14 +995,14 @@ class Mailer {
             $headline     = "Audit Requested";
             $subheadline  = $site->name;
             $intro_text   = "A request has been submitted for a site audit.";
-            $status_color = "#d97706"; // Orange
+            $status_color = "#C05C24"; // Orange
             $status_text  = "Audit Pending";
         } else {
             $subject      = "{$site_name} - Cancel Site Audit Request";
             $headline     = "Audit Cancelled";
             $subheadline  = $site->name;
             $intro_text   = "The audit request has been cancelled. Please disregard the previous request.";
-            $status_color = "#38a169"; // Green
+            $status_color = "#1C8A55"; // Green
             $status_text  = "Cancelled";
         }
 
@@ -1010,39 +1010,39 @@ class Mailer {
         if ( ! empty( $notes ) ) {
             $notes_escaped = nl2br( esc_html( $notes ) );
             $notes_html = "
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
-                    <div style='color: #718096; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;'>Notes from Customer</div>
-                    <div style='color: #2d3748; font-size: 14px; line-height: 1.6;'>{$notes_escaped}</div>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <div style='color: #666D7A; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;'>Notes from Customer</div>
+                    <div style='color: #15181D; font-size: 14px; line-height: 1.6;'>{$notes_escaped}</div>
                 </div>
             ";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>{$intro_text}</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site ID</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Report Type</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$report_type_label}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Report Type</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$report_type_label}</td>
                         </tr>
                         <tr>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
@@ -1076,7 +1076,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_cancel_plan_request( $subscription, $user ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
 
@@ -1085,30 +1085,30 @@ class Mailer {
         $subheadline = $subscription->name;
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>A request has been submitted to cancel the following plan.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Plan Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$subscription->name}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Plan Name</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$subscription->name}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account ID</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>#{$subscription->account_id}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Account ID</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>#{$subscription->account_id}</td>
                         </tr>
                         <tr>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
-                                {$user['name']} <span style='color: #a0aec0; font-weight: 400;'>({$user['email']})</span>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
+                                {$user['name']} <span style='color: #A3ACB9; font-weight: 400;'>({$user['email']})</span>
                             </td>
                         </tr>
                     </table>
                 </div>
 
                 <div style='text-align: center;'>
-                    <div style='display: inline-block; background-color: #e53e3e; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #BF3B2E; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Cancellation Pending
                     </div>
                 </div>
@@ -1133,7 +1133,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_plan_change_request( $subscription, $user ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
 
@@ -1142,27 +1142,27 @@ class Mailer {
         $subheadline = $subscription->name;
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>A request has been submitted to change the following plan.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Current Plan</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$subscription->name}</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Current Plan</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$subscription->name}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>New Plan</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>New Plan</td>
                             <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['name']}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>New Interval</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>New Interval</td>
                             <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['interval']}</td>
                         </tr>
                         <tr>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
-                                {$user['name']} <span style='color: #a0aec0; font-weight: 400;'>({$user['email']})</span>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
+                                {$user['name']} <span style='color: #A3ACB9; font-weight: 400;'>({$user['email']})</span>
                             </td>
                         </tr>
                     </table>
@@ -1194,7 +1194,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_site_request_notification( $site_name, $site_notes, $account_name, $user ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $subject     = "New Site Request: {$site_name}";
@@ -1205,31 +1205,31 @@ class Mailer {
         $notes_html = "";
         if ( ! empty( $site_notes ) ) {
             $notes_html = "
-                <div style='margin-top: 25px; padding-top: 20px; border-top: 1px solid #edf2f7;'>
-                    <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Notes</h4>
-                    <p style='margin: 0; font-style: italic; color: #4a5568;'>\"" . nl2br( esc_html( wp_unslash( $site_notes ) ) ) . "\"</p>
+                <div style='margin-top: 25px; padding-top: 20px; border-top: 1px solid #E3E7EE;'>
+                    <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Notes</h4>
+                    <p style='margin: 0; font-style: italic; color: #565C66;'>\"" . nl2br( esc_html( wp_unslash( $site_notes ) ) ) . "\"</p>
                 </div>
             ";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>A new site request has been submitted.</p>
                 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Account</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
                         </tr>
                         <tr>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
-                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
@@ -1279,13 +1279,13 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     private static function style_code_blocks( $content ) {
         // Style for <pre> blocks (code blocks) - dark theme
-        $pre_style = 'background-color: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 6px; overflow-x: auto; text-align: left; font-size: 13px; line-height: 1.5; margin: 20px 0;';
+        $pre_style = 'background-color: #141922; color: #E3E7EE; padding: 16px 20px; border-radius: 6px; overflow-x: auto; text-align: left; font-size: 13px; line-height: 1.5; margin: 20px 0;';
         
         // Style for <code> inside <pre> - inherit and use monospace
         $code_in_pre_style = 'background: none; color: inherit; padding: 0; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: inherit; white-space: pre-wrap; word-wrap: break-word;';
         
         // Style for inline <code> (not in pre) - subtle background
-        $inline_code_style = 'background-color: #f1f5f9; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.9em;';
+        $inline_code_style = 'background-color: #EDF0F5; color: #15181D; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.9em;';
 
         // First, handle <pre><code>...</code></pre> blocks
         $content = preg_replace_callback(
@@ -1380,7 +1380,7 @@ class Mailer {
         }
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
 
         // Get post data
         $post_title   = get_the_title( $post );
@@ -1412,10 +1412,10 @@ class Mailer {
         // Build content HTML
         $content_html = "
             {$featured_html}
-            <div style='font-size: 16px; line-height: 1.6; color: #4a5568; text-align: left;'>
+            <div style='font-size: 16px; line-height: 1.6; color: #565C66; text-align: left;'>
                 {$post_content}
             </div>
-            <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; text-align: center;'>
+            <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #E3E7EE; text-align: center;'>
                 <p style='margin: 0;'>
                     <a href='{$permalink}' style='color: {$brand_color}; text-decoration: none; font-weight: 600;'>View on website &rarr;</a>
                 </p>
@@ -1455,20 +1455,20 @@ class Mailer {
             $details   = '';
             foreach ( $meta_data as $meta ) {
                 if ( $meta->key === 'Details' ) {
-                    $details = '<div style="font-size: 12px; color: #718096; margin-top: 4px;">' . nl2br( esc_html( $meta->value ) ) . '</div>';
+                    $details = '<div style="font-size: 12px; color: #666D7A; margin-top: 4px;">' . nl2br( esc_html( $meta->value ) ) . '</div>';
                 }
             }
 
             $items_html .= "
             <tr>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: left;'>
-                    <div style='font-weight: 600; color: #2d3748;'>{$product_name}</div>
+                <td style='padding: 12px 0; border-bottom: 1px solid #E3E7EE; text-align: left;'>
+                    <div style='font-weight: 600; color: #15181D;'>{$product_name}</div>
                     {$details}
                 </td>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: center; vertical-align: top; color: #718096; width: 60px;'>
+                <td style='padding: 12px 0; border-bottom: 1px solid #E3E7EE; text-align: center; vertical-align: top; color: #666D7A; width: 60px;'>
                     x{$qty}
                 </td>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top; color: #2d3748; width: 1%; white-space: nowrap;'>
+                <td style='padding: 12px 0; border-bottom: 1px solid #E3E7EE; font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-align: right; vertical-align: top; color: #15181D; width: 1%; white-space: nowrap;'>
                     {$total_price}
                 </td>
             </tr>";
@@ -1486,36 +1486,36 @@ class Mailer {
         // Refund reason row
         $reason_html = '';
         if ( ! empty( $refund_reason ) ) {
-            $reason_html = "<div style='font-size: 12px; color: #718096; margin-top: 2px;'>" . esc_html( $refund_reason ) . "</div>";
+            $reason_html = "<div style='font-size: 12px; color: #666D7A; margin-top: 2px;'>" . esc_html( $refund_reason ) . "</div>";
         }
 
         $order_date = $order->get_date_created()->date( 'F j, Y' );
 
         return "
-        <h3 style='margin: 0 0 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Order Summary</h3>
-        <p style='margin: 0 0 15px; font-size: 14px; color: #718096; text-align: left;'>Order #{$order->get_id()} ({$order_date})</p>
+        <h3 style='margin: 0 0 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #A3ACB9; text-align: left;'>Order Summary</h3>
+        <p style='margin: 0 0 15px; font-size: 14px; color: #666D7A; text-align: left;'>Order #{$order->get_id()} ({$order_date})</p>
         <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='font-size: 14px;'>
-            <tr style='border-bottom: 2px solid #edf2f7;'>
-                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: left;'>Product</td>
-                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: center; width: 60px;'>Qty</td>
-                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: right;'>Price</td>
+            <tr style='border-bottom: 2px solid #E3E7EE;'>
+                <td style='padding: 8px 0; font-weight: 600; color: #666D7A; text-align: left;'>Product</td>
+                <td style='padding: 8px 0; font-weight: 600; color: #666D7A; text-align: center; width: 60px;'>Qty</td>
+                <td style='padding: 8px 0; font-weight: 600; color: #666D7A; text-align: right;'>Price</td>
             </tr>
             {$items_html}
             <tr>
-                <td colspan='2' style='padding: 12px 0 8px; color: #718096; text-align: right; border-bottom: 1px solid #edf2f7;'>Subtotal:</td>
-                <td style='padding: 12px 0 8px; color: #2d3748; text-align: right; white-space: nowrap; border-bottom: 1px solid #edf2f7;'>{$subtotal}</td>
+                <td colspan='2' style='padding: 12px 0 8px; color: #666D7A; text-align: right; border-bottom: 1px solid #E3E7EE;'>Subtotal:</td>
+                <td style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 12px 0 8px; color: #15181D; text-align: right; white-space: nowrap; border-bottom: 1px solid #E3E7EE;'>{$subtotal}</td>
             </tr>
             <tr>
-                <td colspan='2' style='padding: 8px 0; text-align: right; border-bottom: 1px solid #edf2f7;'>
-                    <span style='color: #718096;'>Refund:</span>
+                <td colspan='2' style='padding: 8px 0; text-align: right; border-bottom: 1px solid #E3E7EE;'>
+                    <span style='color: #666D7A;'>Refund:</span>
                     {$reason_html}
                 </td>
-                <td style='padding: 8px 0; color: #e53e3e; text-align: right; white-space: nowrap; border-bottom: 1px solid #edf2f7; vertical-align: top;'>-{$refund_amount}</td>
+                <td style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 8px 0; color: #BF3B2E; text-align: right; white-space: nowrap; border-bottom: 1px solid #E3E7EE; vertical-align: top;'>-{$refund_amount}</td>
             </tr>
             <tr>
-                <td colspan='2' style='padding: 15px 0 0; font-weight: 700; color: #2d3748; text-align: right;'>Total:</td>
+                <td colspan='2' style='padding: 15px 0 0; font-weight: 700; color: #15181D; text-align: right;'>Total:</td>
                 <td style='padding: 15px 0 0; text-align: right; white-space: nowrap;'>
-                    <span style='text-decoration: line-through; color: #a0aec0;'>{$original_total}</span>
+                    <span style='text-decoration: line-through; color: #A3ACB9;'>{$original_total}</span>
                     <span style='font-weight: 700; color: {$brand_color}; margin-left: 8px;'>{$new_total}</span>
                 </td>
             </tr>
@@ -1532,7 +1532,7 @@ class Mailer {
         if ( ! $order || ! $refund ) return;
 
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
 
@@ -1572,13 +1572,13 @@ class Mailer {
 
         $intro_html = "
             <div style='text-align: center; margin-bottom: 20px;'>
-                <div style='display: inline-block; background-color: #E9D8FD; color: #553C9A; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                <div style='display: inline-block; background-color: #EAF0FB; color: #123E8C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                     {$refund_type_text}
                 </div>
             </div>
             <div style='text-align: center; margin-bottom: 40px;'>
-                <div style='margin-bottom: 10px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$refund_amount}</div>
-                <div style='color: #718096; font-size: 14px;'>A refund has been issued to your original payment method.</div>
+                <div style='font-family: \"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-bottom: 10px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$refund_amount}</div>
+                <div style='color: #666D7A; font-size: 14px;'>A refund has been issued to your original payment method.</div>
             </div>
         ";
 
@@ -1597,7 +1597,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_checksum_alert( $site_name, $environment_name, $home_url, $checksum_details ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $modified = $checksum_details->modified ?? [];
@@ -1608,18 +1608,18 @@ class Mailer {
         foreach ( $modified as $file ) {
             $file_rows .= "
                 <tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>" . esc_html( $file ) . "</td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: right;'>
-                        <span style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>Modified</span>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>" . esc_html( $file ) . "</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: right;'>
+                        <span style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>Modified</span>
                     </td>
                 </tr>";
         }
         foreach ( $extra as $file ) {
             $file_rows .= "
                 <tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>" . esc_html( $file ) . "</td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: right;'>
-                        <span style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>Should not exist</span>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>" . esc_html( $file ) . "</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: right;'>
+                        <span style='display: inline-block; background-color: #F7EFDB; color: #B0761B; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>Should not exist</span>
                     </td>
                 </tr>";
         }
@@ -1628,40 +1628,40 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Checksum Failed
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>Core file verification has detected unexpected changes. This could indicate a compromised site.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
                 </div>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
-                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
-                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Affected Files</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #E3E7EE;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Affected Files</strong>
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         {$file_rows}
@@ -1686,14 +1686,14 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_session_anomaly_alert( $site_name, $environment_name, $home_url, $max_severity, $anomalies ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $sev_style = [
-            'critical' => [ '#FED7D7', '#9B2C2C' ],
-            'high'     => [ '#FEEBC8', '#9C4221' ],
-            'medium'   => [ '#FEFCBF', '#975A16' ],
-            'low'      => [ '#E2E8F0', '#4A5568' ],
+            'critical' => [ '#F6E0DD', '#BF3B2E' ],
+            'high'     => [ '#F7E6D9', '#C05C24' ],
+            'medium'   => [ '#F7EFDB', '#B0761B' ],
+            'low'      => [ '#E3E7EE', '#565C66' ],
         ];
 
         $rows = '';
@@ -1703,10 +1703,10 @@ class Mailer {
             list( $bg, $fg ) = $sev_style[ $sev ] ?? $sev_style['low'];
             $rows .= "
                 <tr>
-                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; white-space: nowrap;'>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #E3E7EE; vertical-align: top; white-space: nowrap;'>
                         <span style='display: inline-block; background-color: {$bg}; color: {$fg}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>" . esc_html( $sev ) . "</span>
                     </td>
-                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
                 </tr>";
         }
 
@@ -1716,15 +1716,15 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
                     <div style='display: inline-block; background-color: {$hbg}; color: {$hfg}; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         " . esc_html( ucfirst( $max_severity ) ) . " Session Anomaly
@@ -1733,23 +1733,23 @@ class Mailer {
 
                 <p style='margin-bottom: 25px;'>A change in administrator sessions or account privileges was detected on this site. This can indicate a compromised account, an injected-capability backdoor, or an unexpected privilege escalation. Review the changes below.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
                 </div>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
-                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
-                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Detected Changes</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #E3E7EE;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Detected Changes</strong>
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         {$rows}
@@ -1769,10 +1769,10 @@ class Mailer {
 
     // Severity badge palette shared by the session-anomaly alert + digest.
     private static $session_sev_style = [
-        'critical' => [ '#FED7D7', '#9B2C2C' ],
-        'high'     => [ '#FEEBC8', '#9C4221' ],
-        'medium'   => [ '#FEFCBF', '#975A16' ],
-        'low'      => [ '#E2E8F0', '#4A5568' ],
+        'critical' => [ '#F6E0DD', '#BF3B2E' ],
+        'high'     => [ '#F7E6D9', '#C05C24' ],
+        'medium'   => [ '#F7EFDB', '#B0761B' ],
+        'low'      => [ '#E3E7EE', '#565C66' ],
     ];
 
     private static function session_anomaly_rows_html( $anomalies ) {
@@ -1783,10 +1783,10 @@ class Mailer {
             list( $bg, $fg ) = self::$session_sev_style[ $sev ] ?? self::$session_sev_style['low'];
             $rows .= "
                 <tr>
-                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; vertical-align: top; white-space: nowrap;'>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #E3E7EE; vertical-align: top; white-space: nowrap;'>
                         <span style='display: inline-block; background-color: {$bg}; color: {$fg}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>" . esc_html( $sev ) . "</span>
                     </td>
-                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-size: 14px; line-height: 1.5;'>" . esc_html( $a['detail'] ?? '' ) . "</td>
                 </tr>";
         }
         return $rows;
@@ -1802,7 +1802,7 @@ class Mailer {
         if ( empty( $items ) ) {
             return false;
         }
-        $brand_color = '#0D47A1';
+        $brand_color = '#123E8C';
         $count       = count( $items );
 
         $cards = '';
@@ -1821,19 +1821,19 @@ class Mailer {
             $rows = self::session_anomaly_rows_html( $it['anomalies'] ?? [] );
 
             $cards .= "
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 20px;'>
-                    <div style='padding: 14px 16px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between;'>
-                        <span style='font-size: 16px; font-weight: 700; color: #2d3748;'>{$site_link}</span>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 20px;'>
+                    <div style='padding: 14px 16px; border-bottom: 1px solid #E3E7EE; display: flex; justify-content: space-between;'>
+                        <span style='font-size: 16px; font-weight: 700; color: #15181D;'>{$site_link}</span>
                         <span style='display: inline-block; background-color: {$hbg}; color: {$hfg}; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase; float: right;'>" . esc_html( $sev ) . "</span>
                     </div>
-                    <div style='padding: 6px 16px; color: #718096; font-size: 13px;'>{$env}" . ( $when ? " &middot; {$when}" : '' ) . "</div>
+                    <div style='padding: 6px 16px; color: #666D7A; font-size: 13px;'>{$env}" . ( $when ? " &middot; {$when}" : '' ) . "</div>
                     <table width='100%' cellpadding='0' cellspacing='0'>{$rows}</table>
                 </div>";
         }
 
         $plural = $count === 1 ? 'environment' : 'environments';
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <p style='margin-bottom: 25px;'>Session / privilege change-detection flagged <strong>{$count} {$plural}</strong> since the last digest. Each item is a CHANGE from the prior daily snapshot — a new admin-capable account, a role gaining takeover capabilities, an injected-capability backdoor, or an admin session/IP spike. Review the changes below.</p>
                 {$cards}
             </div>
@@ -1854,7 +1854,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_plugin_checksum_alert( $site_name, $environment_name, $home_url, $plugin_checksum_details ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $modified      = $plugin_checksum_details->modified ?? [];
@@ -1871,32 +1871,32 @@ class Mailer {
 
             switch ( $message ) {
                 case 'File was added':
-                    $badge_bg    = '#FEFCBF';
-                    $badge_color = '#975A16';
+                    $badge_bg    = '#F7EFDB';
+                    $badge_color = '#B0761B';
                     $badge_text  = 'Added';
                     break;
                 case 'File was deleted':
-                    $badge_bg    = '#E9D8FD';
-                    $badge_color = '#553C9A';
+                    $badge_bg    = '#EAF0FB';
+                    $badge_color = '#123E8C';
                     $badge_text  = 'Deleted';
                     break;
                 case 'File content has changed':
                 case 'Checksum does not match':
-                    $badge_bg    = '#FED7D7';
-                    $badge_color = '#9B2C2C';
+                    $badge_bg    = '#F6E0DD';
+                    $badge_color = '#BF3B2E';
                     $badge_text  = 'Modified';
                     break;
                 default:
-                    $badge_bg    = '#FED7D7';
-                    $badge_color = '#9B2C2C';
+                    $badge_bg    = '#F6E0DD';
+                    $badge_color = '#BF3B2E';
                     $badge_text  = esc_html( $message ?: 'Mismatch' );
                     break;
             }
 
             $file_rows .= "
                 <tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$slug}/{$file}</td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: right;'>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$slug}/{$file}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: right;'>
                         <span style='display: inline-block; background-color: {$badge_bg}; color: {$badge_color}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>{$badge_text}</span>
                     </td>
                 </tr>";
@@ -1906,8 +1906,8 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
@@ -1916,38 +1916,38 @@ class Mailer {
         $skipped_note = '';
         if ( $skipped_count > 0 ) {
             $skipped_note = "
-                <p style='margin: 0 0 25px; color: #718096; font-size: 13px; text-align: center;'>
+                <p style='margin: 0 0 25px; color: #666D7A; font-size: 13px; text-align: center;'>
                     {$skipped_count} premium plugin" . ( $skipped_count === 1 ? '' : 's' ) . " without published wordpress.org checksums were skipped.
                 </p>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Plugin Checksum Failed
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>One or more plugin files differ from the checksums published by wordpress.org for the installed plugin version. This could indicate a compromised plugin or a tampered install.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
                 </div>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
-                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
-                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Affected Files</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #E3E7EE;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Affected Files</strong>
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         {$file_rows}
@@ -1971,7 +1971,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function send_malware_alert( $site_name, $environment_name, $home_url, $findings ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         // Build findings table rows
@@ -1984,11 +1984,11 @@ class Mailer {
 
             $finding_rows .= "
                 <tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;' title='{$rel_path}'>{$filename}</td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>
-                        <span style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>{$sig_name}</span>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;' title='{$rel_path}'>{$filename}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: center;'>
+                        <span style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>{$sig_name}</span>
                     </td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #4a5568; font-size: 13px;'>{$sig_desc}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #565C66; font-size: 13px;'>{$sig_desc}</td>
                 </tr>";
         }
 
@@ -1996,46 +1996,46 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Malware Detected
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>A malware scan has detected suspicious files during the latest quicksave. Immediate investigation is recommended.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
                 </div>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
-                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
-                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Findings</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #E3E7EE;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Findings</strong>
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>File</th>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: center; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Signature</th>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Description</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>File</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: center; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Signature</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Description</th>
                         </tr>
                         {$finding_rows}
                     </table>
@@ -2054,7 +2054,7 @@ class Mailer {
 
     static public function send_capture_alert( $site_name, $environment_name, $home_url, $findings ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         // Build findings table rows
@@ -2067,23 +2067,23 @@ class Mailer {
 
             // Severity badge colors
             if ( $severity === 'critical' || $severity === 'high' ) {
-                $badge_bg    = '#FED7D7';
-                $badge_color = '#9B2C2C';
+                $badge_bg    = '#F6E0DD';
+                $badge_color = '#BF3B2E';
             } else {
-                $badge_bg    = '#FEFCBF';
-                $badge_color = '#975A16';
+                $badge_bg    = '#F7EFDB';
+                $badge_color = '#B0761B';
             }
 
             $severity_html = esc_html( $severity );
-            $sig_html      = ! empty( $sig_name ) ? "<br><span style='font-size: 11px; color: #718096;'>{$sig_name}</span>" : '';
+            $sig_html      = ! empty( $sig_name ) ? "<br><span style='font-size: 11px; color: #666D7A;'>{$sig_name}</span>" : '';
 
             $finding_rows .= "
                 <tr>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 13px;'>{$page}</td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-size: 13px;'>{$page}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: center;'>
                         <span style='display: inline-block; background-color: {$badge_bg}; color: {$badge_color}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>{$severity_html}</span>
                     </td>
-                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #4a5568; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$label}{$sig_html}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #565C66; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$label}{$sig_html}</td>
                 </tr>";
         }
 
@@ -2091,8 +2091,8 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
@@ -2100,38 +2100,38 @@ class Mailer {
 
         $finding_count = count( $findings );
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F7EFDB; color: #B0761B; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Injection Detected
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>A capture check detected {$finding_count} new script(s) or stylesheet(s) injected since the last capture. Investigation is recommended.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
                 </div>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
-                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
-                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Findings</strong>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #E3E7EE;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Findings</strong>
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Page</th>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: center; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Severity</th>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Element</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Page</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: center; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Severity</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Element</th>
                         </tr>
                         {$finding_rows}
                     </table>
@@ -2150,44 +2150,44 @@ class Mailer {
 
     static public function send_default_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $site_url_html = '';
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Default Role: Administrator
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>The default new user role for this site is set to <strong>Administrator</strong>. This is a serious security risk — anyone who registers will have full admin access.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Default Role</td>
-                            <td style='color: #9B2C2C; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Default Role</td>
+                            <td style='color: #BF3B2E; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
                         </tr>
                     </table>
                 </div>
@@ -2205,48 +2205,48 @@ class Mailer {
 
     static public function send_registration_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
 
         $site_url_html = '';
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
-                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                    <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>
                         <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F7EFDB; color: #B0761B; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Open Registration + Elevated Role
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>This site has open registration enabled with the default new user role set to <strong>" . esc_html( ucfirst( $default_role ) ) . "</strong>. Anyone can register and receive elevated privileges.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                         <tr>
-                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Registration</td>
-                            <td style='padding-bottom: 10px; color: #C05621; font-weight: 600; text-align: right;'>Open</td>
+                            <td width='120' style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Registration</td>
+                            <td style='padding-bottom: 10px; color: #C05C24; font-weight: 600; text-align: right;'>Open</td>
                         </tr>
                         <tr>
-                            <td width='120' style='color: #718096; font-size: 14px;'>Default Role</td>
-                            <td style='color: #C05621; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
+                            <td width='120' style='color: #666D7A; font-size: 14px;'>Default Role</td>
+                            <td style='color: #C05C24; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
                         </tr>
                     </table>
                 </div>
@@ -2264,29 +2264,29 @@ class Mailer {
 
     static public function send_missing_billing_user_alert( $account_id, $account_name ) {
         $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
         $admin_url   = admin_url();
 
         $content_html = "
-            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
-                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    <div style='display: inline-block; background-color: #F7EFDB; color: #B0761B; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
                         Renewal Skipped
                     </div>
                 </div>
 
                 <p style='margin-bottom: 25px;'>A renewal order could not be generated because the account has no valid billing contact. Please assign a billing contact or close the account.</p>
 
-                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
+                            <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>Account</td>
+                            <td style='padding-bottom: 10px; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
                         </tr>
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Account ID</td>
-                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$account_id}</td>
+                            <td style='color: #666D7A; font-size: 14px;'>Account ID</td>
+                            <td style='color: #15181D; font-weight: 600; text-align: right;'>{$account_id}</td>
                         </tr>
                     </table>
                 </div>
