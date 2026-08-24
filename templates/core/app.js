@@ -351,13 +351,16 @@ class Component extends DCLogic {
   computeAccounts(s, isOp) {
     const list = isOp ? this.ACCOUNTS : this.ACCOUNTS.filter(a => a.owned);
     const nq = s.aq.trim().toLowerCase();
+    // Billing status is operator-only — invoice state of accounts a customer
+    // merely belongs to is owner material (the server also strips
+    // outstanding_invoices for non-owners).
     const ACC_COLS = [
       { label: 'Account', k: 'name', val: a => (a.name || '').toLowerCase() },
       { label: 'Users', k: 'users', val: a => Number(a.users) || 0 },
       { label: 'Sites', k: 'sites', val: a => Number(a.sites) || 0 },
       { label: 'Domains', k: 'domains', val: a => Number(a.domains) || 0 },
       { label: 'Plan', k: 'plan', val: a => a.plan || '' },
-      { label: 'Billing', k: 'due', val: a => a.due ? 0 : 1 }
+      ...(isOp ? [{ label: 'Billing', k: 'due', val: a => a.due ? 0 : 1 }] : [])
     ];
     const filtered = this.sortRows('accSort', ACC_COLS, list.filter(a => !nq || a.name.toLowerCase().includes(nq)));
     // Pagination (same as Sites/Domains).
@@ -374,6 +377,8 @@ class Component extends DCLogic {
       ...(s.route === 'accounts' ? { screenSub: accLabel, screenSubDisplay: 'inline-block' } : {}),
       ...this.pagerVals('acc', 'accPage', filtered.length, pageNum, totalPages, 'accounts'),
       aq: s.aq, onAq: e => this.setState({ aq: e.target.value, accPage: 1 }),
+      accGrid: isOp ? '2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr' : '2fr 0.6fr 0.6fr 0.7fr 1.3fr',
+      accShowBill: isOp,
       accCols: this.mkSortCols('accSort', ACC_COLS),
       accRows: pageRows.map(a => ({ ...a,
         billLabel: a.due ? 'Invoice due' : 'Current',

@@ -2142,3 +2142,15 @@ Domain expiry isn't wired into the platform (the /domains contract has no
 expiry data — the row always rendered "—"), so the Expires row and its
 renew-now affordance are gone from the Registration card, along with the
 now-unused regExpires/regWarn/renewNow bindings in both layers.
+
+### Billing column is operator-only (2026-08-24)
+The accounts-list Billing column (Invoice due / Current) leaked invoice
+status to account members who are not the owner. Now enforced at both
+layers: `Accounts::list()` strips `metrics.outstanding_invoices` for
+members who are not the account's billing user (admins keep it
+fleet-wide), and the v3 list drops the whole column for customers (grid
+narrows to five columns via `accGrid`/`accShowBill`). A customer's own
+invoices remain on their Billing screen, which is self-scoped
+(wc_get_orders by customer). Verified live: customer list has no Billing
+column and the API rows carry no outstanding_invoices; operator list is
+unchanged.

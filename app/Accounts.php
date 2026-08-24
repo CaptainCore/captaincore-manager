@@ -34,7 +34,9 @@ class Accounts extends DB {
     }
 
 	public function list() {
-        $accounts = [];
+        $accounts        = [];
+        $is_admin        = ( new User )->is_admin();
+        $current_user_id = get_current_user_id();
         foreach ( $this->accounts as $account_id ) {
             $account  = self::get( $account_id );
             $defaults = json_decode( $account->defaults );
@@ -50,6 +52,12 @@ class Accounts extends DB {
                 'plan_name'       => $plan_name,
                 'filtered'        => true
             ];
+            // Invoice status is owner material — strip it for members who are
+            // not the account's billing user (admins keep it fleet-wide).
+            if ( ! $is_admin && (int) $account->billing_user_id !== $current_user_id
+                && is_object( $result->metrics ) && isset( $result->metrics->outstanding_invoices ) ) {
+                unset( $result->metrics->outstanding_invoices );
+            }
             if ( $result->defaults->users == "" ) {
                 $result->defaults->users = [];
             }

@@ -2164,29 +2164,33 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="flex:1"></div>
           </div>
           <div class="cc-tbl" style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-            <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
+            <div style="display:grid;grid-template-columns:{{ accGrid }};gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">
               <sc-for list="{{ accCols }}" as="h" hint-placeholder-count="3">
                 <span onClick="{{ h.go }}" style="color:{{ h.fg }};cursor:{{ h.cursor }};white-space:nowrap" style-hover="color:var(--ink)">{{ h.label }}{{ h.arrow }}</span>
               </sc-for>
             </div>
             <sc-for list="{{ accRows }}" as="a" hint-placeholder-count="6">
-              <div onClick="{{ a.open }}" onContextMenu="{{ a.ctx }}" style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 var(--fs-14) var(--sans)" style-hover="background:var(--panel-2)">
+              <div onClick="{{ a.open }}" onContextMenu="{{ a.ctx }}" style="display:grid;grid-template-columns:{{ accGrid }};gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center;cursor:pointer;font:400 var(--fs-14) var(--sans)" style-hover="background:var(--panel-2)">
                 <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
                 <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ a.users }}</span>
                 <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ a.sites }}</span>
                 <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ a.domains }}</span>
                 <span style="color:var(--ink-dim);font:400 var(--fs-13) var(--sans)">{{ a.plan }}</span>
-                <span style="font:500 var(--fs-125) var(--sans);color:{{ a.billFg }}">{{ a.billLabel }}</span>
+                <sc-if value="{{ accShowBill }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:500 var(--fs-125) var(--sans);color:{{ a.billFg }}">{{ a.billLabel }}</span>
+                </sc-if>
               </div>
             </sc-for>
             <sc-for list="{{ accSkelRows }}" as="k" hint-placeholder-count="0">
-              <div style="display:grid;grid-template-columns:2fr 0.6fr 0.6fr 0.7fr 1.3fr 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center">
+              <div style="display:grid;grid-template-columns:{{ accGrid }};gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);align-items:center">
                 <span class="cc-skel" style="width:170px;height:13px"></span>
                 <span class="cc-skel" style="width:28px;height:12px"></span>
                 <span class="cc-skel" style="width:28px;height:12px"></span>
                 <span class="cc-skel" style="width:28px;height:12px"></span>
                 <span class="cc-skel" style="width:100px;height:12px"></span>
-                <span class="cc-skel" style="width:70px;height:12px"></span>
+                <sc-if value="{{ accShowBill }}" hint-placeholder-val="{{ true }}">
+                  <span class="cc-skel" style="width:70px;height:12px"></span>
+                </sc-if>
               </div>
             </sc-for>
           </div>
