@@ -9,9 +9,26 @@ The interface release. CaptainCore Manager reaches 1.0 with a rebuilt `/account`
 - New core interface: a rebuilt fleet dashboard served at `/account`, wearing the Minn Admin design system with light and dark themes, a command palette, and a working terminal dock.
 - Self-updater: the plugin now checks a release manifest on GitHub and offers updates through the WordPress Plugins screen, verifying each download against the sha256 published in the manifest before install.
 - Release tooling: `bin/build-zip.sh` builds the distributable zip with dev files excluded and prints the sha256 for the manifest stamp.
+- Automatic database migrations: pending schema upgrades now run on the first admin request after an update, so updating through the Plugins screen no longer requires a manual `DB::upgrade()` step.
+
 ### Improved
 
+- The sidebar brand lockup now offers two destinations: the anchor icon links to the site homepage while the company name returns to the dashboard's Home screen.
+- The sites, domains, accounts, billing, security and users screens show shimmer placeholders while their data loads instead of an empty page.
+- Checksum failure rows identify the exact environment: each row shows the environment's home URL and a Production or Staging chip instead of repeating the site name.
+- Page sizes changed from 25/50/100/250 to 24/48/96/240 so the card grid always fills its rows evenly, whatever the window width.
+
 ### Fixed
+
+- Account invite emails work again: invite links now open the invite preview and accept flow instead of the new dashboard, which had no way to redeem them.
+- The account Plan tab's "Request changes" button now opens a request dialog and actually delivers the request to operations. Previously it showed a confirmation without sending anything.
+- Removed a sample "Management key" card from Settings that displayed a fake SSH fingerprint and an inert Rotate control.
+- Updates are back on the site screen: plugins and themes show pending updates from the fleet update queue, each row can update individually, and "Update all" runs the managed update with quicksaves before and after.
+- Bulk site actions work: select sites and run Sync data, Update WP, Back up, Apply HTTPS or Scan errors across all of them.
+- Connect manually works: a non-Kinsta site can be onboarded from the New site dialog with server credentials, protocol and port, creating production and optional staging environments.
+- Domain mappings for Kinsta and Rocket.net sites are managed from a new Domains tab on the site: add a domain, delete one, or set the primary.
+- Managed-update settings are editable per environment again: toggle updates and exclude specific plugins or themes from the site overview.
+- Site requests are real again: the New site request form submits to operations, and both customers and operators see each request progress through Requested, Preparing and Ready on the Sites screen. Previously the form silently discarded the submission.
 
 ## **v0.18.0** - May 6, 2024
 
