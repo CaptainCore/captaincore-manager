@@ -7,6 +7,11 @@
 
 namespace CaptainCore\Remote;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Constellix {
 
     /**

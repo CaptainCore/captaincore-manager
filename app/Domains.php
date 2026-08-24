@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Domains extends DB {
 
     static $primary_key = 'domain_id';

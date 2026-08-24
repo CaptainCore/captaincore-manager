@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Environments extends DB {
 
     static $primary_key = 'environment_id';

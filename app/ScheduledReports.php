@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class ScheduledReports extends DB {
 
     static $primary_key = 'scheduled_report_id';

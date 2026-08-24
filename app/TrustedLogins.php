@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Per-user list of trusted login fingerprints, stored as an array in usermeta
  * under `captaincore_trusted_logins`.

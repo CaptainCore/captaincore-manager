@@ -7,6 +7,11 @@
 
 namespace CaptainCore\Remote;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Spaceship {
 
     private static $base_url = 'https://spaceship.dev/api/v1';

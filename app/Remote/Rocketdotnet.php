@@ -9,6 +9,11 @@
 
 namespace CaptainCore\Remote;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Rocketdotnet {
 
     private static $base_url = 'https://api.rocket.net/v1';

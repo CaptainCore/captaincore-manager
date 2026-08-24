@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Domain {
 
     protected $domain_id = "";

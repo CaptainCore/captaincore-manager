@@ -2,6 +2,11 @@
 
 namespace CaptainCore\Providers;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Envato {
 
     public static function credentials( $record = "" ) {

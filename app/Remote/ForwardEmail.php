@@ -8,6 +8,11 @@
 
 namespace CaptainCore\Remote;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class ForwardEmail {
 
     private static $base_url = 'https://api.forwardemail.net/v1';

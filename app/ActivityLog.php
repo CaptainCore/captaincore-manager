@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class ActivityLog {
 
     public static function log( $action, $entity_type, $entity_id = null, $entity_name = null, $description = '', $context = [], $account_id = null ) {

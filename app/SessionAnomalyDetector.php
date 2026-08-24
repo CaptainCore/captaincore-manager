@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Pure delta-detection over consecutive session snapshots (WP Registry compromise telemetry,
  * Phase 2). Compares a NEW snapshot payload to the PREVIOUS one for the same environment and

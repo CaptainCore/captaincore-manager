@@ -2,6 +2,11 @@
 
 namespace CaptainCore\Remote;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class GridPane {
 
     private static $api_url = "https://my.gridpane.com/oauth/api/v1";

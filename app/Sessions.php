@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Read + destroy helpers for WordPress auth sessions (WP's session_tokens
  * usermeta). Produces the payload consumed by the /account/profile "Active

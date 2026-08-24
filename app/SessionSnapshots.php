@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class SessionSnapshots extends DB {
 
 	static $primary_key = 'session_snapshot_id';

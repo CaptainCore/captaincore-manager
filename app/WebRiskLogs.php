@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class WebRiskLogs extends DB {
 
 	static $primary_key = 'web_risk_log_id';

@@ -10,6 +10,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class ScheduledReportsCLI {
 
 	/**

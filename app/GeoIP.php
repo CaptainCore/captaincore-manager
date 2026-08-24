@@ -2,6 +2,11 @@
 
 namespace CaptainCore;
 
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use GeoIp2\Database\Reader;
 use GeoIp2\Exception\AddressNotFoundException;
 
