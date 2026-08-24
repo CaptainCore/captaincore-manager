@@ -2136,3 +2136,9 @@ overrode openNsvDlg — it now seeds the domain's current nameservers.
 Verified live: external domain (customer) shows the trimmed card;
 registered domain (operator) keeps every row and the dialog seeds
 ns1–4.anchor.host.
+
+### Expires row removed from Registrar tab (2026-08-24)
+Domain expiry isn't wired into the platform (the /domains contract has no
+expiry data — the row always rendered "—"), so the Expires row and its
+renew-now affordance are gone from the Registration card, along with the
+now-unused regExpires/regWarn/renewNow bindings in both layers.

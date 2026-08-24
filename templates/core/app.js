@@ -1779,10 +1779,6 @@ class Component extends DCLogic {
       // Design preview shows the connected-registrar variant; the real layer
       // flips these off for externally registered domains.
       regConnected: true, regExternal: false, nsCanEdit: true,
-      regExpires: d.expires + (d.warn ? ' · in 12 days' : ''),
-      regExpFg: d.warn ? 'var(--bad)' : 'var(--ink)',
-      regWarn: !!d.warn,
-      renewNow: () => this.runJob('renew-domain', d.name),
       togAuto: mkTog('auto', 'Auto-renew'), togLock: mkTog('lock', 'Transfer lock'), togPriv: mkTog('priv', 'WHOIS privacy'),
       authMark: s.copied === 'auth' ? 'Copied ✓' : 'Copy',
       authCopy: () => { try { navigator.clipboard.writeText('XK7-99Q2-RRB1'); } catch (e) {}
@@ -1802,7 +1798,7 @@ class Component extends DCLogic {
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgActive: true, mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
-      regShowRenew: true, regShowAuto: true,
+      regShowAuto: true,
       domHasAccounts: false, domAccounts: [],
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };

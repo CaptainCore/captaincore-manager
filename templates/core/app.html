@@ -1909,13 +1909,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <div style="padding:12px 16px;font:400 var(--fs-125)/1.6 var(--sans);color:var(--ink-dim)">This domain is registered externally. Renewal, transfer locks and contacts are managed at its current registrar.</div>
                 </sc-if>
                 <sc-if value="{{ regConnected }}" hint-placeholder-val="{{ true }}">
-                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Expires</span>
-                    <span style="font:400 var(--fs-13) var(--mono);color:{{ regExpFg }}">{{ regExpires }}</span>
-                    <sc-if value="{{ regWarn }}" hint-placeholder-val="{{ false }}">
-                      <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
-                    </sc-if>
-                  </div>
                   <sc-if value="{{ regShowAuto }}" hint-placeholder-val="{{ true }}">
                     <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
                       <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togAuto.label }}</span>

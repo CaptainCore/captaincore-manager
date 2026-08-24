@@ -646,7 +646,6 @@ Object.assign(Component.prototype, {
       // Seed the edit dialog from the CURRENT nameservers (the design mock
       // seeded sample values into real sessions).
       openNsvDlg: () => this.setState({ nsvOpen: true, nsvText: nsReal.join('\n') }),
-      regExpires: '—', regExpFg: 'var(--ink)', regWarn: false, regShowRenew: false,
       regShowAuto: false,
       togAuto: { label: 'Auto-renew', bg: 'var(--rule)', just: 'flex-start', state: '—', flip: () => {} },
       togLock: regToggle('lock', 'Transfer lock', 'lock'),
