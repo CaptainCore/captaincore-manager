@@ -15,12 +15,12 @@ Object.assign(Component.prototype, {
   loadSettings(force) {
     if (this._setLoading || (this._set && !force)) return;
     this._setLoading = true;
-    // Customers skip the operator-only sources (defaults/keys/processes) —
-    // those routes 403 for them anyway, and their tabs are hidden.
+    // Customers skip the operator-only sources (providers/defaults/keys/
+    // processes) — their tabs are hidden (Cookbook is the only customer tab).
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
     const skip = () => Promise.resolve({ code: 'skipped' });
     Promise.allSettled([
-      this.api('/configurations/'), this.api('/providers'), isOp ? this.api('/defaults/') : skip(),
+      this.api('/configurations/'), isOp ? this.api('/providers') : skip(), isOp ? this.api('/defaults/') : skip(),
       isOp ? this.api('/keys/') : skip(), this.api('/recipes/'), isOp ? this.api('/processes/') : skip()
     ]).then(([cfg, prov, def, keys, recipes, procs]) => {
       this._setLoading = false;

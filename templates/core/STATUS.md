@@ -2045,3 +2045,17 @@ resolved surface before first paint. Shared with the marketing theme
 pick here is Dark on the public site. A leftover `ah-theme` value is
 copied in once, then dropped. A `storage` listener keeps an open
 dashboard tab in sync if the marketing toggle changes the key.
+
+### Customer role-gating: Providers + Connect manually (2026-08-24)
+Customers no longer see the Settings › Providers tab (Cookbook is now their
+only Settings tab; hidden tab ids fall through to Cookbook and the
+`/providers` fetch is skipped for them). In the New site dialog, Connect
+manually joins Import from provider as operator-only, and its backing
+route (`POST /sites`) now uses `captaincore_admin_permission_check` —
+customers create sites via the request flow. Verified live with Playwright
+as a customer (Cookbook-only Settings, New/Request-only dialog) and as an
+operator (all six tabs + all four paths intact). Also swapped the
+transactional-email / login logo to the brand app icon
+(`uploads/brand/anchor-icon-tile-512.png`) — that's the `logo` field in
+the `captaincore_configurations` site option (data, not code), updated
+locally and on production.

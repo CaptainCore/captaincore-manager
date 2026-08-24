@@ -695,15 +695,15 @@ class Component extends DCLogic {
 
   computeSettings(s) {
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
-    // Customers get Providers (self-scoped) + Cookbook only. Branding, Site
-    // defaults, SSH keys (the fleet management key) and Handbook are operator
+    // Customers get Cookbook only. Branding, Providers, Site defaults,
+    // SSH keys (the fleet management key) and Handbook are operator
     // surfaces — hidden here AND admin-gated server-side (GET /defaults/,
     // /keys/, /processes/ all 403 for non-admins). A customer landing on a
-    // hidden tab id falls through to Providers.
-    const tab = (!isOp && !['providers', 'cookbook'].includes(s.setTab)) ? 'providers' : s.setTab;
+    // hidden tab id falls through to Cookbook.
+    const tab = (!isOp && s.setTab !== 'cookbook') ? 'cookbook' : s.setTab;
     const tabs = [...(isOp
       ? [['branding', 'Branding'], ['providers', 'Providers'], ['defaults', 'Site defaults'], ['keys', 'SSH keys'], ['cookbook', 'Cookbook'], ['handbook', 'Handbook']]
-      : [['providers', 'Providers'], ['cookbook', 'Cookbook']])].map(([id, label]) => ({ label,
+      : [['cookbook', 'Cookbook']])].map(([id, label]) => ({ label,
       fg: tab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: tab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ setTab: id }) }));
@@ -1082,14 +1082,15 @@ class Component extends DCLogic {
         this.setState(patch); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
-      // Import is operator-only — it assigns sites to accounts and bills them.
+      // Import and Connect manually are operator-only — they assign sites to
+      // accounts and bill them (POST /sites is also admin-gated server-side).
       nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']]
-        .filter(([id]) => id !== 'import' || isOp)
+        .filter(([id]) => isOp || (id !== 'import' && id !== 'manual'))
         .map(([id, label]) => ({ label,
           bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
           go: () => { this.setState({ nsPath: id }); if (id === 'import') setTimeout(() => this.primeImport(), 0); } })),
       nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta',
-      nsIsImport: s.nsPath === 'import' && isOp, nsIsManual: s.nsPath === 'manual',
+      nsIsImport: s.nsPath === 'import' && isOp, nsIsManual: s.nsPath === 'manual' && isOp,
       nsName: s.nsName, onNsName: e => this.setState({ nsName: e.target.value }),
       nsDomain: s.nsDomain, onNsDomain: e => this.setState({ nsDomain: e.target.value }),
       nsErrors: s.nsErrors.map(text => ({ text })),

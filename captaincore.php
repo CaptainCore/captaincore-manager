@@ -8175,7 +8175,9 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\Site )->create( $request["site"] );
 			},
-			'permission_callback' => 'captaincore_permission_check',
+			// Connect manually / new-site creation assigns sites to accounts —
+			// operator only. Customers create sites via the request flow.
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
