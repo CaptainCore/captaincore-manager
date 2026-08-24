@@ -2471,6 +2471,14 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		}
 	}
 
+	// Hard delete is ADMIN ONLY here for the same reason it is on
+	// DELETE /sites/{id} - verify_permissions() only proves the caller owns the
+	// site, and this dispatches the same CLI `site delete`. Customers request
+	// removal instead, which queues it for an operator after the final backup.
+	if ( $cmd === 'remove' && ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Only administrators can delete a site. Request removal instead.', [ 'status' => 403 ] );
+	}
+
 	$fetch    = (object) ( new CaptainCore\Site( $post_id ) )->get();
 	$site     = $fetch->site;
 	$provider = $fetch->provider;
@@ -3581,7 +3589,13 @@ function captaincore_provider_import_func( $request ) {
 	if ( ! $provider->verify_ownership() ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
+	// Owning the provider row is not the same as belonging to the account the
+	// sites get written to - import_sites() sets account_id and customer_id on
+	// every row it creates.
 	$account_id = intval( $request['account_id'] );
+	if ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions_account( $account_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
 	$sites      = $request['sites'];
 	return $provider->import_sites( $sites, $account_id );
 }
