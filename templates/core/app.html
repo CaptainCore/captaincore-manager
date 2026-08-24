@@ -208,7 +208,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <button onClick="{{ openNewDomain }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-14) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New domain</button>
       </sc-if>
       <sc-if value="{{ showAccounts }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-14) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New account</button>
+        <sc-if value="{{ accNewShow }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ openNewAccount }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-14) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New account</button>
+        </sc-if>
       </sc-if>
       <sc-if value="{{ showSites }}" hint-placeholder-val="{{ false }}">
         <button onClick="{{ openNewSite }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-14) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer;flex:none" style-hover="filter:brightness(1.08)">+ New site</button>

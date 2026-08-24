@@ -383,6 +383,9 @@ class Component extends DCLogic {
           { label: 'Open account', act: () => this.openAccount(a.id) },
           { label: 'Copy account name', act: () => this.ctxCopy(a.name, 'account name') }
         ]) })),
+      // Creating accounts is operator-only (POST /accounts/ is admin-gated
+      // server-side); customers get accounts via invites or site requests.
+      accNewShow: isOp,
       // Live-chat banner under the list — the landing spot of Home's "Get
       // help" card. Customers only: Intercom ships only on customer sessions
       // (core.php), where window.Intercom exists from page load (the loader

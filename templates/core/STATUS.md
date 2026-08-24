@@ -2086,3 +2086,14 @@ Verified live with Playwright: banner renders for a customer and is
 absent for an operator, and the click issues the `show` command (checked
 via a recording stub — Intercom's real widget refuses to boot in headless
 browsers, but boots normally in real ones, launcher bubble present).
+
+### New account is operator-only (2026-08-24)
+The "+ New account" header button on Accounts now renders only for
+operators (`accNewShow`), and its route (`POST /accounts/`) moved from
+logged-in to `captaincore_admin_permission_check` — previously any
+customer could create accounts via the API (the callback attached the
+creator). Customers join accounts via invites; new-customer accounts ride
+the site-request flow. The legacy v1 app only ever GETs /accounts, so
+nothing breaks there. Verified live: customer sees no button and the API
+returns rest_forbidden 403; operator keeps the button and a live POST
+succeeded (test account deleted after).

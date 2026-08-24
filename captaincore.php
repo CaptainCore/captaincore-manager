@@ -9234,7 +9234,9 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/accounts/', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_accounts_create_func',
-			'permission_callback' => 'captaincore_permission_check',
+			// Creating accounts is operator-only; customers join accounts via
+			// invites, and new-customer accounts ride the site-request flow.
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
