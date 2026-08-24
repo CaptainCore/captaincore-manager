@@ -66,17 +66,28 @@ class Domains extends DB {
 
     public function list() {
         $domains        = [];
+        $provider_names = [];
         foreach( $this->domains as $domain_id ) {
             $domain  = self::get( $domain_id );
             $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+            $provider_name = "";
+            if ( ! empty( $domain->provider_id ) ) {
+                if ( ! isset( $provider_names[ $domain->provider_id ] ) ) {
+                    $provider = Providers::get( $domain->provider_id );
+                    $provider_names[ $domain->provider_id ] = $provider->name ?? "";
+                }
+                $provider_name = $provider_names[ $domain->provider_id ];
+            }
             $domains[] = [
                 "domain_id"   => (int) $domain_id,
                 "remote_id"   => $domain->remote_id,
                 "provider_id" => ! empty( $domain->provider_id ) ? $domain->provider_id : "",
+                "provider"    => $provider_name,
                 "name"        => $domain->name,
                 "status"      => $domain->status,
                 "price"       => $domain->price,
                 "forwarding"  => ! empty( $details->mailgun_forwarding_id ),
+                "sending"     => ! empty( $details->mailgun_id ),
             ];
         }
         return $domains;

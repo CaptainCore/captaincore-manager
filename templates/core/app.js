@@ -261,7 +261,7 @@ class Component extends DCLogic {
     { id: 'snap_77b03', name: 'uploads-june', when: 'Jun 30 · 4:44 PM', size: '1.4 GB', filter: 'Uploads', expires: 'expired' }
   ];
   DOMAINS = window.CC_BOOT ? [] : [
-    { id: 'bloomd', name: 'bloomandbranch.com', account: 'Bloom & Branch Floral', registrar: 'Hover', dns: true, forwarding: true, expires: 'Mar 12, 2027', auto: true, owned: true },
+    { id: 'bloomd', name: 'bloomandbranch.com', account: 'Bloom & Branch Floral', registrar: 'Hover', dns: true, forwarding: true, sending: true, expires: 'Mar 12, 2027', auto: true, owned: true },
     { id: 'harbord', name: 'harborlightyoga.com', account: 'Harbor Light Yoga', registrar: 'Hover', dns: true, forwarding: true, expires: 'Jul 28, 2026', auto: false, warn: true, owned: true },
     { id: 'petersond', name: 'petersonlaw.com', account: 'Peterson Law', registrar: 'Spaceship', dns: true, expires: 'Nov 3, 2026', auto: true },
     { id: 'wildflowerd', name: 'thewildflowerpantry.com', account: 'Wildflower Pantry', registrar: 'Hover', dns: true, expires: 'Feb 9, 2027', auto: true, owned: true },
@@ -1622,7 +1622,10 @@ class Component extends DCLogic {
       { label: 'Domain', k: 'name', val: d => (d.name || '').toLowerCase() },
       { label: 'Registrar', k: 'registrar', val: d => d.registrar || '' },
       { label: 'DNS', k: 'dns', val: d => d.dns ? 1 : 0 },
-      { label: 'Email forwarding', k: 'forwarding', val: d => d.forwarding ? 1 : 0 }
+      { label: 'Email forwarding', k: 'forwarding', val: d => d.forwarding ? 1 : 0 },
+      // "Site notifications" = the bundled Mailgun sending zone (mg.domain)
+      // exists — the zone WP transactional email rides on.
+      { label: 'Site notifications', k: 'sending', val: d => d.sending ? 1 : 0 }
     ];
     const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
     // Pagination (same as Sites — thousands of rows janks every re-render).
@@ -1658,9 +1661,12 @@ class Component extends DCLogic {
             .then(res => {
               if (res && res.code) { console.warn('domain create failed', res); return; }
               this.api('/domains/').then(domains => {
+                // Keep the registrar mapping in sync with data.js hydrate.
+                const rBrand = (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting';
                 this.DOMAINS = (Array.isArray(domains) ? domains : []).map(x => ({ id: String(x.domain_id), name: x.name,
-                  account: '', registrar: x.provider_id ? 'Registrar' : '—', dns: !!x.remote_id,
-                  forwarding: !!x.forwarding, expires: '—', auto: null, owned: true }));
+                  account: '', registrar: x.provider_id ? (isOp && x.provider ? x.provider : rBrand) : 'External',
+                  dns: !!x.remote_id,
+                  forwarding: !!x.forwarding, sending: !!x.sending, expires: '—', auto: null, owned: true }));
                 this.setState({});
               }).catch(() => {});
             }).catch(() => {});
@@ -1672,6 +1678,7 @@ class Component extends DCLogic {
       domRows: pageRows.map(d => ({ ...d,
         dnsLabel: d.dns ? 'Active' : '—', dnsFg: d.dns ? 'var(--ok)' : 'var(--ink-dim)',
         fwdLabel: d.forwarding ? 'Active' : '—', fwdFg: d.forwarding ? 'var(--ok)' : 'var(--ink-dim)',
+        sndLabel: d.sending ? 'Active' : '—', sndFg: d.sending ? 'var(--ok)' : 'var(--ink-dim)',
         expFg: d.warn ? 'var(--bad)' : 'var(--ink)',
         autoLabel: d.auto === null ? '—' : d.auto ? 'On' : 'Off',
         autoFg: d.auto === false ? 'var(--warn)' : 'var(--ink-dim)',

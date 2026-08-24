@@ -2106,3 +2106,18 @@ The Domains list gained a sortable "Email forwarding" column (Active /
 hydrate mapping (data.js + the post-create refetch) carries it through.
 Verified live as operator: a domain with a forwarding zone shows green
 Active, its sibling without one shows the dash.
+
+### Registrar labels + Site notifications column (2026-08-24)
+Registrar column now reads "External" for domains not registered through
+us; registered domains show the actual registrar provider (Hover.com /
+Spaceship, from a new `provider` name in the /domains/ list payload) for
+operators and the configured business name (Branding settings via
+CC_BOOT.name — not hardcoded) for customers. "Active" was rejected — it
+would sit beside the DNS column's Active and read as a status. Also added
+a "Site notifications" column: Active when the domain's bundled Mailgun
+sending zone exists (`details.mailgun_id` — the mg.* zone WP
+transactional email rides on), mapped through Domains::list() →
+hydrate → DOM_COLS like the forwarding column. Provider-name lookups are
+memoized per provider_id (3k-row list, two providers). Verified live:
+operator sees Spaceship / External and a sending-zone domain shows
+Site notifications Active; customer sees the business name / External.

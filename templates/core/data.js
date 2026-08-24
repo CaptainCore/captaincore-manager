@@ -70,9 +70,16 @@ Object.assign(Component.prototype, {
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
         domains: (a.metrics && a.metrics.domains) || 0, plan: a.plan_name || '', owned: true,
         due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));
+      // Registrar column: registered through us \u2192 the provider name for
+      // operators (Hover.com / Spaceship \u2014 operationally useful) and the
+      // configured business name (Branding settings, CC_BOOT.name) for
+      // customers (the vendor is an implementation detail); else "External".
+      const domIsOp = (boot.dcRole || 'operator') === 'operator';
+      const brandName = boot.name || 'Anchor Hosting';
       this.DOMAINS = (Array.isArray(domains) ? domains : []).map(d => ({ id: String(d.domain_id), name: d.name,
-        account: '', registrar: d.provider_id ? 'Registrar' : '\u2014', dns: !!d.remote_id,
-        forwarding: !!d.forwarding, expires: '\u2014', auto: null, owned: true }));
+        account: '', registrar: d.provider_id ? (domIsOp && d.provider ? d.provider : brandName) : 'External',
+        dns: !!d.remote_id,
+        forwarding: !!d.forwarding, sending: !!d.sending, expires: '\u2014', auto: null, owned: true }));
       this._hydrated = true;
       // Drop the design's sample jobs; only real dispatched jobs from here on.
       this.setState(st => ({ tick: st.tick, jobs: st.jobs.filter(j => j.real) }));
