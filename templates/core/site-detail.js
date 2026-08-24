@@ -501,7 +501,10 @@ Object.assign(Component.prototype, {
       this.setState(st => ({ shareSending: false, shareDlgOpen: false, shareDraft: '',
         shared: [...(st.shared || []), { uid: Date.now(), name: email, pending: true }] }));
       this.toast((res && res.message) || 'Invitation sent', { kind: 'success' });
-    }).catch(() => this.setState({ shareSending: false, shareErr: 'Error sending invite.' }));
+    }).catch(err => this.setState({ shareSending: false,
+      // api() throws 'auth' on 401/403 before the body is readable — name the
+      // real reason instead of the generic line.
+      shareErr: (err && err.message === 'auth') ? 'Your access level does not allow sending invites.' : 'Error sending invite.' }));
   },
 
   // Bindings for the Share Access dialog (spread into computeDetail's return).

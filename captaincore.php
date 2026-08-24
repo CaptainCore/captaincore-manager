@@ -6572,26 +6572,42 @@ function captaincore_site_invite_func( $request ) {
 
     $site = CaptainCore\Sites::get( $site_id );
 
-    // 2. Resolve Account
+    // 2. Resolve Account — the invite ALWAYS lands in the customer account
+    // when one exists. Inviting into the owning/agency account instead would
+    // grant the new person access to everything that agency manages,
+    // including the agency's own sites.
     $account_id = $site->customer_id ? $site->customer_id : $site->account_id;
 
-    // Site access does not imply account access - a site reaches this handler
-    // through the owning account, the customer account or a share, so the
-    // resolved account can belong to someone else. Apply the same membership
-    // and tier tests the account-scoped invite route uses.
+    // Sender authorization: full or full-billing on ANY account that
+    // legitimately grants this site — the owning account, the customer
+    // account, or an account the site is shared with. This lets an agency
+    // managing a customer site share it without being a member of the
+    // customer account, while sites-only tiers still cannot add people.
     $user = new CaptainCore\User;
     if ( ! $user->is_admin() ) {
-        if ( ! $user->verify_accounts( [ $account_id ] ) ) {
-            return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+        $granting = [ (int) $site->account_id, (int) $site->customer_id ];
+        foreach ( ( new CaptainCore\AccountSite )->where( [ "site_id" => $site_id ] ) as $pivot ) {
+            $granting[] = (int) $pivot->account_id;
         }
-        $level = $user->account_level( $account_id );
-        if ( ! in_array( $level, [ 'full-billing', 'full' ] ) ) {
+        $allowed = false;
+        foreach ( array_filter( array_unique( $granting ) ) as $granting_id ) {
+            if ( ! $user->verify_accounts( [ $granting_id ] ) ) {
+                continue;
+            }
+            if ( in_array( $user->account_level( $granting_id ), [ 'full-billing', 'full' ], true ) ) {
+                $allowed = true;
+                break;
+            }
+        }
+        if ( ! $allowed ) {
             return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
         }
     }
 
-    // 3. Perform Invite
-    $account_obj = new CaptainCore\Account( $account_id );
+    // 3. Perform Invite — constructed pre-authorized: the sender was vetted
+    // above but may not be a member of the customer account the invite lands
+    // in, and the plain constructor would silently drop the account id.
+    $account_obj = new CaptainCore\Account( $account_id, true );
     $account_obj->invite( $email );
 
     // 4. Return Generic Success Message (Privacy Protection)

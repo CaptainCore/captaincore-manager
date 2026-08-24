@@ -2180,3 +2180,22 @@ right-click → Cancel job → daemon streamed "Error: signal: killed", row
 flipped to error, "Job cancelled." toast, 0 running. Gotcha caught in
 verification: the ctx guard must read j.state === 'running' from the
 SOURCE job entry — the mapped `running` flag lives only on the row object.
+
+### Site invites open to shared-access senders (2026-08-24)
+An agency managing a customer site could not use Share Access — the
+invite handler resolved the target to the CUSTOMER account (customer_id
+wins over account_id, deliberately: inviting into the agency account
+would hand the new person the agency's own sites) but then required the
+SENDER to be a member of that same customer account, which agency staff
+never are. Sender authorization now accepts full / full-billing on ANY
+account that grants the site (owning, customer, or shared via the
+AccountSite pivot) while the invite still always lands in the customer
+account. Two adjacent fixes rode along: the Account object is now
+constructed pre-authorized (the plain constructor silently drops the
+account id when the sender is not a member, which would have created a
+broken invite), and the Share dialog names the real reason on 403
+instead of the generic "Error sending invite." (api() throws before the
+body is readable). Verified locally with captured mail on a customer
+site with an agency owner: agency full member sends and the invite row
+lands on the customer account; sites-only tier and unrelated users stay
+denied; admin unchanged.
