@@ -2514,6 +2514,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="border-bottom:1px solid var(--rule)">
                   <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:500 var(--fs-14) var(--sans)">{{ c.site }}</span>
+                    <sc-if value="{{ c.envShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 var(--fs-115) var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px;color:var(--ink-dim)">{{ c.env }}</span>
+                    </sc-if>
                     <span style="font:500 var(--fs-115) var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 9px">{{ c.mod }} modified</span>
                     <span style="font:500 var(--fs-115) var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px">{{ c.extra }} extra</span>
                     <div style="flex:1"></div>
@@ -2534,6 +2537,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="border-bottom:1px solid var(--rule)">
                   <div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:11px;padding:12px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel-2)">
                     <span style="font:500 var(--fs-14) var(--sans)">{{ c.site }}</span>
+                    <sc-if value="{{ c.envShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 var(--fs-115) var(--mono);background:var(--panel-2);border-radius:99px;padding:2px 9px;color:var(--ink-dim)">{{ c.env }}</span>
+                    </sc-if>
                     <span style="font:500 var(--fs-12) var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ c.slug }}</span>
                     <sc-for list="{{ c.chips }}" as="ch" hint-placeholder-count="2">
                       <span style="font:500 var(--fs-11) var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 8px">{{ ch.f }}</span>

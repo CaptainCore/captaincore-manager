@@ -1831,6 +1831,15 @@ existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
 scroll jump, ESC, cached reopen firing zero refetches, and a real download
 whose file starts `# CaptainCore REST API`.
 
+### Checksum rows: home_url + environment chip (2026-08-23)
+Core/plugin checksum failure rows titled by `site_name` repeated identically
+for production + staging. Rows now title by the environment's `home_url`
+(protocol stripped, site_name fallback) with an environment chip — both fields
+were already in the REST payloads (`/checksum-failures`,
+`/plugin-checksum-failures`); frontend-only fix (`envRow()` in security.js).
+Verified with fixture REST responses: prod row shows the bare domain,
+staging row shows the kinsta.cloud staging URL, chips on both.
+
 ### Sites listing: hydration skeleton + grid page sizes (2026-08-23)
 Pre-hydration the sites screen showed an empty table and "0 sites · 0
 environments". Now `sitesSkel` (same `booted && !_hydrated` gate as homeSkel)

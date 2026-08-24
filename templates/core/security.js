@@ -95,10 +95,14 @@ Object.assign(Component.prototype, {
       };
     });
     const base = p => (p || '').split('/').slice(-2).join('/');
+    // Row title is the environment's home_url (site_name repeats across
+    // production + staging rows and doesn't say which is which).
+    const envRow = c => ({ site: (c.home_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || c.site_name,
+      env: c.environment || '', envShow: !!c.environment });
     const coreFails = (sec.core || []).map((c, i) => {
       const d = c.core_checksum_details || {};
       const mod = (d.modified || []).length, missing = (d.missing || []).length, extra = (d.extra || []).length;
-      return { id: 'core' + i, site: c.site_name, mod, extra: extra + missing,
+      return { id: 'core' + i, ...envRow(c), mod, extra: extra + missing,
         files: [...(d.modified || []).map(p => p + ' — modified'), ...(d.missing || []).map(p => p + ' — missing'), ...(d.extra || []).map(p => p + ' — extra')].map(p => ({ p })),
         open: s.ckOpen === 'core' + i,
         toggle: () => this.setState(st => ({ ckOpen: st.ckOpen === 'core' + i ? '' : 'core' + i })),
@@ -109,7 +113,7 @@ Object.assign(Component.prototype, {
     });
     const plugFails = (sec.plug.failures || []).map((c, i) => {
       const mod = (c.plugin_checksum_details && c.plugin_checksum_details.modified) || [];
-      return { id: 'plug' + i, site: c.site_name, slug: (c.slugs_affected || []).join(', ') || '—',
+      return { id: 'plug' + i, ...envRow(c), slug: (c.slugs_affected || []).join(', ') || '—',
         chips: mod.slice(0, 4).map(m => ({ f: base(m.slug + '/' + m.file) })),
         open: s.ckOpen === 'plug' + i,
         toggle: () => this.setState(st => ({ ckOpen: st.ckOpen === 'plug' + i ? '' : 'plug' + i })),
