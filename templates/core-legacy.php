@@ -13331,7 +13331,7 @@ const app = createApp({
 		archive_search: "",
 		dialog_archive_link: { show: false, url: "", loading: false },
 		dialog_store_archive: { show: false, url: "", error: "", submitting: false, uploading: false, token: null, eventSource: null, progress: { phase: "", percent: 0, current: 0, total: 0, detail: "" } },
-		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
+		configurations: <?php echo json_encode( captaincore_configurations_for_current_user() ); ?>,
 		configurations_step: 0,
 		configurations_loading: true,
 		security_tab: "vulnerabilities",

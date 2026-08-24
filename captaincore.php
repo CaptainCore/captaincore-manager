@@ -1820,16 +1820,43 @@ function captaincore_accounts_create_func( $request ) {
 }
 
 
-function captaincore_configurations_func( $request ) {
+/**
+ * The configuration object as the current viewer is allowed to see it.
+ *
+ * Configurations::get() returns the whole captaincore_configurations option and
+ * the admin writer stores arbitrary keys in it, so a denylist of one key only
+ * held until the next server-side secret was added. Non-admins - including
+ * logged-out visitors, since the legacy template renders for the invite and
+ * connect flows - get an explicit allow-list of the keys the interface reads,
+ * so anything new is private by default rather than public by default.
+ *
+ * intercom_secret_key is the HMAC key for Intercom identity verification (used
+ * server-side in User->intercom_hash); leaking it lets anyone forge a
+ * verification hash for any email. The frontend only needs intercom_embed_id.
+ *
+ * @return object
+ */
+function captaincore_configurations_for_current_user() {
 	$configurations = ( new CaptainCore\Configurations )->get();
-	// Server-only secrets must not reach non-admins. intercom_secret_key is the
-	// HMAC key for Intercom identity verification (used only server-side in
-	// User->intercom_hash); leaking it lets any user forge a verification hash
-	// for any email. The frontend only needs intercom_embed_id.
-	if ( ! ( new CaptainCore\User )->is_admin() && isset( $configurations->intercom_secret_key ) ) {
-		unset( $configurations->intercom_secret_key );
+
+	if ( is_user_logged_in() && ( new CaptainCore\User )->is_admin() ) {
+		return $configurations;
 	}
-	return $configurations;
+
+	$public = [
+		'name', 'path', 'url', 'mode', 'colors',
+		'logo', 'logo_only', 'logo_width',
+		'dns_introduction', 'dns_introduction_html', 'dns_nameservers',
+		'hosting_plans', 'usage_pricing', 'maintenance_pricing',
+		'woocommerce', 'scheduled_tasks', 'remote_upload_uri',
+		'intercom_embed_id',
+	];
+
+	return (object) array_intersect_key( (array) $configurations, array_flip( $public ) );
+}
+
+function captaincore_configurations_func( $request ) {
+	return captaincore_configurations_for_current_user();
 }
 
 function captaincore_configurations_update_func( $request ) {
