@@ -768,15 +768,55 @@ Object.assign(Component.prototype, {
   },
 
   // ── Addons ────────────────────────────────────────────────────
+  // Fleet update-queue cache (operator only): slug+type → resolved update
+  // target, used to light per-addon "Update to X" and the Update all count.
+  loadUpdateQueue() {
+    if (this._uqLoading || this._updateQueue !== undefined) return;
+    if ((window.CC_BOOT || {}).dcRole !== 'operator') { this._updateQueue = null; return; }
+    this._uqLoading = true;
+    this.api('/update-queue').then(res => {
+      this._uqLoading = false;
+      const map = {};
+      ((res && res.items) || []).forEach(it => { map[(it.type || 'plugin') + ':' + it.slug] = it; });
+      this._updateQueue = map; this.setState({});
+    }).catch(() => { this._uqLoading = false; this._updateQueue = null; });
+  },
+
+  uqLatest(kind, slug) {
+    const map = this._updateQueue;
+    if (!map) return '';
+    const it = map[(kind === 'themes' ? 'theme' : 'plugin') + ':' + slug];
+    return it ? (it.update_to || it.steer_to || '') : '';
+  },
+
+  _verCmp(a, b) {
+    const pa = String(a).split(/[.\-]/).map(x => parseInt(x, 10) || 0);
+    const pb = String(b).split(/[.\-]/).map(x => parseInt(x, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0) ? 1 : -1;
+    }
+    return 0;
+  },
+
+  // Update target for an installed addon: the queue's resolved target, but
+  // only when it is actually NEWER than what the site runs (the fleet
+  // baseline can lag a site that is ahead — never offer a downgrade).
+  uqUpdateTarget(kind, slug, installed) {
+    const t = this.uqLatest(kind, slug);
+    return (t && installed && this._verCmp(t, installed) > 0) ? t : '';
+  },
+
   realAddonSrc(real, s) {
     const e = this.currentEnv(real, s);
     if (!e) return [];
+    if (this.loadUpdateQueue) this.loadUpdateQueue();
     const list = s.addonKind === 'plugins' ? e.plugins : e.themes;
     if (!Array.isArray(list)) return [];
     return list.map(p => ({
       name: p.title || p.plugin || p.name || '',
       slug: p.name || p.slug || '',
-      v: p.version || '', latest: p.version || '',
+      v: p.version || '',
+      latest: this.uqUpdateTarget(s.addonKind, p.name || p.slug || '', p.version || '') || p.version || '',
       active: p.status === 'active' || p.status === 'active-network',
       // must-use plugins and drop-ins can't be toggled, updated, or deleted
       // by wp plugin commands — the UI renders them as a static chip.

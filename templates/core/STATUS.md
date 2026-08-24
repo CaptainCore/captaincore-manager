@@ -1833,6 +1833,21 @@ existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
 scroll jump, ESC, cached reopen firing zero refetches, and a real download
 whose file starts `# CaptainCore REST API`.
 
+### Updates + bulk actions wired (2026-08-23)
+Three parity blockers in one slice. (1) Per-addon updates: `realAddonSrc`
+resolves `latest` from the fleet update-queue cache (`loadUpdateQueue` /
+`uqUpdateTarget` in site-detail.js — operator-only fetch, newer-only so a
+site ahead of the fleet is never offered a downgrade); the ctx "Update to X"
+runs `wp plugin|theme update <slug> --skip-themes --skip-plugins` via
+`/run/code` with realSync after. (2) "Update all (N)" counts pending updates
+across both kinds and dispatches the managed CLI `update` for the site via
+`/sites/bulk-tools` (new `update` case in captaincore.php — quicksaves +
+update log, v1's manual-update parity). (3) Sites-list bulk actions
+(sync-data / update / backup / apply-https / scan-errors) resolve each
+selected site's Production environment_id from FLEET.environmentsRaw and POST
+`/sites/bulk-tools` after a confirm. All verified live with stubbed dispatch
+routes (no fleet commands ran); payloads observed correct.
+
 ### Site requests: real submission + operator queue (2026-08-23)
 New `site-requests.js` mixin (registered in core.php's $v3_scripts). The New
 site › Request tab now really POSTs `/site-requests` when hydrated (mock kept

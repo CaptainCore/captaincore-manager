@@ -60,7 +60,7 @@ renders, animates a dock job, and does nothing:
 | control | binding | rendered at | consequence |
 |---|---|---|---|
 | ~~"Request changes" (account Plan)~~ **CLOSED 2026-08-23** — real override in accounts.js: dialog collects the request, POSTs `/billing/request-plan-changes` with the v1 `{subscription}` contract. Verified live (network POST + Mailer path). | `planRequest` app.js:449 | app.html:2283 | was: nothing reached ops |
-| "Update all (N)" (site Plugins/Themes) | `doUpdateAll` app.js:2063 | app.html:1094 | count is real, the update never runs |
+| ~~"Update all (N)"~~ **CLOSED 2026-08-23** — real path dispatches the managed CLI `update` for the site via `/sites/bulk-tools` (new `update` tool case). Count is now computed from the fleet update-queue targets across both kinds (downgrades never offered). Verified with stubbed dispatch. | `doUpdateAll` | app.html:1129 | was: mock |
 | ~~"Queue audits for 9 stale sites"~~ **NOT A LIVE DEFECT** (corrected 2026-08-23) — `covShowActions: false` in both realSecurityVals branches gates the button off on real data (app.html:2584 sc-if). Design-sample only. |  |  |  |
 | ~~"Run update-before-audit steer queue"~~ **NOT A LIVE DEFECT** (corrected 2026-08-23) — same `covShowActions` gate as above. Design-sample only. |  |  |  |
 | ~~"Rotate…" (Settings › SSH keys)~~ **CLOSED 2026-08-23** — the whole Management-key card was a design sample (hardcoded fake fingerprint, no rotate route in v1 either). Now hidden whenever CC_BOOT exists (`keysShowMgmt`); the real "Your public keys" list is untouched. Verified live. | `rotateKey` app.js:737 | app.html:2886 | was: fake fingerprint + inert Rotate shown on real data |
@@ -72,7 +72,7 @@ Three more sit one level up — a whole flow bound to `runJob`:
 |---|---|---|
 | ~~New site › **Request** tab~~ **CLOSED 2026-08-23** — real POST when hydrated (site-requests.js `submitSiteRequest`) | `nsCreate` app.js:1120 | was: silently discarded |
 | New site › **Manual** (Connect site) | `nsCreate` app.js:1123 | a non-Kinsta site cannot be onboarded at all |
-| Sites list **bulk actions** | `bulkActions` app.js:1052 | Sync/Update/Back up/Apply HTTPS/Scan across selected sites all no-op |
+| ~~Sites list **bulk actions**~~ **CLOSED 2026-08-23** — real path resolves each selected site's Production environment id and POSTs `/sites/bulk-tools` (sync-data / update / backup / apply-https / scan-errors) after a confirm; toast reports dispatch. Verified with stubbed dispatch (2 sites → 2 env ids). | `bulkActions` | was: all no-op |
 
 `importZone` (app.js:1695) is also mock-bound but is **not a defect** — the key is
 dead, real zone import runs through `zoneAppend`/`zoneReplace` (app.js:1666-1667,
@@ -98,8 +98,8 @@ network tab. Every row above should get one real execution in Phase 3d.
 | `PUT /sites/{id}/settings` (`dialog_update_settings`) | per-env managed-update policy: on/off + excluded plugins/themes | v3 renders it read-only (site-detail.js:138); no `updates_exclude_plugins`/`updates_exclude_themes` binding anywhere. An operator cannot exclude a plugin that breaks a site from managed updates. No STATUS.md rationale |
 | ~~`POST /billing/request-plan-changes`~~ **CLOSED 2026-08-23** — see the headline table; wired with a request dialog. | customer requests a plan/interval change; server notifies ops | was mock-bound |
 | sites-list bulk selection + `/sites/bulk-tools` | multi-site tools | `bulkActions` is a mock (app.js:1052). Already a known blocker in V1-PLAN |
-| whole-site update ("Update all") | update every pending component | `doUpdateAll` mock (app.js:2063) while the count is real. Already a known blocker in V1-PLAN |
-| `POST /update-queue/run` (per-row update) | steer one plugin/theme to a target version | v3 reads the queue only for the home badge (home.js:36). Already a known blocker in V1-PLAN |
+| ~~whole-site update ("Update all")~~ **CLOSED 2026-08-23** — see headline table row above. | update every pending component | was mock |
+| ~~per-addon updates~~ **CLOSED 2026-08-23** — `realAddonSrc` now resolves each addon's `latest` from the fleet update-queue (`uqUpdateTarget`, newer-only), lighting the per-row "Update to X" ctx action, which runs `wp plugin|theme update <slug>` on the site via `/run/code`. The fleet-wide steering table (`POST /update-queue/run`) remains legacy/post-1.0 — the per-SITE need this blocker described is met. | steer one plugin/theme | was: queue read only for the home badge |
 
 ## GAP-POST-1.0 — real, but `?ui=legacy` covers it
 

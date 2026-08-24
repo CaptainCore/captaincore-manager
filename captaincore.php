@@ -4004,6 +4004,11 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
         case 'sync-data':
             $args = array_merge( [ 'sync-data' ], $target_list );
             break;
+        case 'update':
+            // Managed update (quicksave before/after + update log), same CLI
+            // command v1's manual site update ran.
+            $args = array_merge( [ 'update' ], $target_list );
+            break;
         case 'deploy-defaults':
             $args = array_merge( [ 'site', 'deploy-defaults' ], $target_list );
             break;

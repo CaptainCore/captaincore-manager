@@ -1052,8 +1052,29 @@ class Component extends DCLogic {
       clearSel: () => this.setState({ sel: {} }),
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
       toggleAll: () => this.setState({ sel: allSel ? {} : Object.fromEntries(filtered.map(x => [x.id, true])) }),
-      bulkActions: ['Sync data', 'Update WP', 'Back up', 'Apply HTTPS', 'Scan errors'].map(label => ({ label,
-        go: () => { this.runJob(label.toLowerCase().replace(/ /g, '-'), selIds.length + ' sites'); this.setState({ sel: {}, dockOpen: true }); } })),
+      bulkActions: [['Sync data', 'sync-data'], ['Update WP', 'update'], ['Back up', 'backup'], ['Apply HTTPS', 'apply-https'], ['Scan errors', 'scan-errors']].map(([label, tool]) => ({ label,
+        go: () => {
+          if (!this._hydrated) { this.runJob(label.toLowerCase().replace(/ /g, '-'), selIds.length + ' sites'); this.setState({ sel: {}, dockOpen: true }); return; }
+          // Selection is site-level; bulk-tools wants environment ids — use
+          // each selected site's Production environment.
+          const envIds = [];
+          selIds.forEach(id => {
+            const f = this.FLEET.find(x => String(x.id) === String(id));
+            const envs = (f && f.environmentsRaw) || [];
+            const prod = envs.find(e => e && (e.environment || 'Production') === 'Production') || envs[0];
+            if (prod && prod.environment_id) envIds.push(prod.environment_id);
+          });
+          if (!envIds.length) { this.toast('No environments resolved for the selection', { kind: 'error' }); return; }
+          if (!confirm(label + ' on ' + envIds.length + ' site' + (envIds.length === 1 ? '' : 's') + ' (production)?')) return;
+          const tid = this.toast(label + ' · dispatching to ' + envIds.length + ' sites…', { kind: 'loading' });
+          this.api('/sites/bulk-tools', { method: 'POST', body: { tool, environments: envIds, params: {} } })
+            .then(res => {
+              if (res && res.code) { this.updateToast(tid, res.message || label + ' failed', { kind: 'error' }); return; }
+              this.updateToast(tid, label + ' started on ' + envIds.length + ' site' + (envIds.length === 1 ? '' : 's'), { kind: 'success' });
+              this.setState({ sel: {} });
+            })
+            .catch(() => this.updateToast(tid, label + ' failed to dispatch', { kind: 'error' }));
+        } })),
       openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
         // v1 parity (showNewSiteKinsta): customers default their first account as billing.
         if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;
@@ -1804,7 +1825,9 @@ class Component extends DCLogic {
     const addonsSrc = real ? this.realAddonSrc(real, sAK) : (sAK.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
       const doToggle = () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name);
-      const doUpdate = () => this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name);
+      const doUpdate = () => real
+        ? this.aaRunCode((sAK.addonKind === 'themes' ? 'wp theme update ' : 'wp plugin update ') + a.slug + ' --skip-themes --skip-plugins', a.slug + ' on ' + site.name)
+        : this.runJob('update', a.slug + ' ' + a.v + ' → ' + a.latest + ' on ' + site.name);
       const doDelete = () => real ? this.realDeleteAddon(a, real, sAK)
         : this.runJob((sAK.addonKind === 'plugins' ? 'plugin' : 'theme') + ' delete', a.slug + ' on ' + site.name);
       return { ...a, upd,
@@ -1822,7 +1845,12 @@ class Component extends DCLogic {
         { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') },
         { label: 'Delete…', danger: true, act: doDelete }
       ]) }; });
-    const updCount = real ? 0 : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
+    // Real: pending updates across BOTH kinds via the fleet update-queue
+    // targets (uqUpdateTarget never offers a downgrade; mu/dropins excluded).
+    const updCount = real
+      ? ['plugins', 'themes'].reduce((n, k) => n + this.realAddonSrc(real, Object.assign({}, sAK, { addonKind: k }))
+          .filter(a => !a.mu && a.latest !== a.v).length, 0)
+      : this.PLUGINS.concat(this.THEMES).filter(a => a.v !== a.latest).length;
     const qsFiles = real ? this.realQsFiles(real, s) : this.QS_FILES;
     const curPath = qsFiles.some(f => f.path === s.qsFile) ? s.qsFile : (qsFiles[0] ? qsFiles[0].path : '');
     const curFile = qsFiles.find(f => f.path === curPath) || { path: '', st: 'M', add: 0, del: 0, diff: [] };
@@ -2065,7 +2093,13 @@ class Component extends DCLogic {
       aktBg: s.addonKind === 'themes' ? 'var(--panel-2)' : 'transparent', aktFg: s.addonKind === 'themes' ? 'var(--ink)' : 'var(--ink-dim)',
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
-      doUpdateAll: () => this.runJob('update-wp', site.name + ' · ' + updCount + ' components'),
+      doUpdateAll: () => {
+        if (!real) { this.runJob('update-wp', site.name + ' · ' + updCount + ' components'); return; }
+        if (!confirm('Run a managed update on ' + site.name + '? Updates pending components with quicksaves before and after.')) return;
+        this.runTool({ label: 'update', real, s,
+          dispatch: () => this.bulkTool('update', real, s),
+          onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
+      },
       ...this.computeAddAddon(real, s, site),
       ...this.computeFiles(real, s),
       quicksaves, newQuicksave: () => real ? this.realNewQuicksave(real) : this.runJob('quicksave', site.name),
