@@ -6172,6 +6172,13 @@ function captaincore_site_snapshot_download_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
+	// The link is minted with a 24 hour expiry and emailed out, so it outlives
+	// the mailbox it lands in. The interface only hid expired links client
+	// side - enforce it here, where it counts.
+	if ( empty( $snapshot->expires_at ) || strtotime( (string) $snapshot->expires_at ) < time() ) {
+		return new WP_Error( 'token_expired', 'This download link has expired.', [ 'status' => 403 ] );
+	}
+
 	$snapshot_url = captaincore_snapshot_download_link( $snapshot_id  );
 	header('Location: ' . $snapshot_url);
 	exit;
@@ -11107,7 +11114,14 @@ function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
 		$update_data['interval'] = $params['interval'];
 	}
 	if ( isset( $params['recipient'] ) ) {
-		$update_data['recipient'] = $params['recipient'];
+		// wp_mail() splits on commas, so an unvalidated value fans one report
+		// out to a list of addresses from the fleet's authenticated sender.
+		// The create path already validates this.
+		$recipient = sanitize_email( $params['recipient'] );
+		if ( ! is_email( $recipient ) ) {
+			return new WP_Error( 'invalid_recipient', 'A valid recipient email is required.', [ 'status' => 400 ] );
+		}
+		$update_data['recipient'] = $recipient;
 	}
 	if ( array_key_exists( 'account_id', $params ) ) {
 		// Verify access to the account being assigned (unless admin).
@@ -12929,11 +12943,12 @@ function captaincore_email_subscription_page( $message, $title ) {
  * @param string $login Submitted user login.
  * @return array Transient keys to check and increment.
  */
-function captaincore_login_throttle_keys( $login ) {
-	$ip = CaptainCore\GeoIP::client_ip();
+function captaincore_login_throttle_keys( $login, $scope = 'login' ) {
+	$ip     = CaptainCore\GeoIP::client_ip();
+	$prefix = $scope === 'reset' ? 'cc_reset' : 'cc_login';
 	return [
-		'cc_login_ip_' . md5( (string) $ip ),
-		'cc_login_user_' . md5( strtolower( (string) $login ) ),
+		"{$prefix}_ip_" . md5( (string) $ip ),
+		"{$prefix}_user_" . md5( strtolower( (string) $login ) ),
 	];
 }
 
@@ -12976,7 +12991,10 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		// throttle also stops it being used to send unlimited reset mail.
 		$response = [ "message" => "If that account exists, a reset link is on its way." ];
 
-		$throttle_keys = captaincore_login_throttle_keys( $post->login->user_login );
+		// Reset counts against its own keys. Sharing the sign-in counter meant
+		// ten anonymous reset requests locked the named account out of signing
+		// in for the throttle window, password and TOTP notwithstanding.
+		$throttle_keys = captaincore_login_throttle_keys( $post->login->user_login, 'reset' );
 		if ( captaincore_login_is_throttled( $throttle_keys ) ) {
 			return $response;
 		}
