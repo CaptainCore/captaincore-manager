@@ -212,7 +212,7 @@ class Mailer {
                             <img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto;'>
                         </div>
 
-                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-top: 3px solid {$brand_color}; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
 
                             <!-- Header Area -->
                             <tr>
