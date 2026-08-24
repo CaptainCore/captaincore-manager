@@ -138,7 +138,8 @@ class ScanQueueCLI {
 					'headers'   => [ 'Content-Type' => 'application/json' ],
 					'body'      => wp_json_encode( $chunk ),
 					'timeout'   => 60,
-					'sslverify' => false,
+					// TLS relaxation is debug-only, as elsewhere in the plugin.
+					'sslverify' => ! ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ),
 				] );
 
 				if ( is_wp_error( $response ) ) {

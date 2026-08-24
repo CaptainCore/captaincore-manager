@@ -115,7 +115,9 @@ class SecurityThreats {
 			'headers'   => [ 'Content-Type' => 'application/json' ],
 			'body'      => wp_json_encode( $inventory ),
 			'timeout'   => 30,
-			'sslverify' => false,
+			// TLS relaxation is debug-only here, as it is on every other
+			// outbound call. This body is the fleet's full component inventory.
+			'sslverify' => ! ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ),
 		] );
 
 		if ( is_wp_error( $response ) ) {

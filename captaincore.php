@@ -7616,7 +7616,10 @@ function captaincore_register_rest_endpoints() {
 			}
 			// Allow CLI token auth (resync via --sync flag)
 			$params = $request->get_json_params();
-			if ( ! empty( $params['token'] ) && $params['token'] === captaincore_get_cli_token() ) {
+			// Constant-time, string-only - matching the /api gate. A pass here
+			// returns the whole environments table plus the CLI token.
+			if ( ! empty( $params['token'] ) && is_string( $params['token'] )
+				&& hash_equals( (string) captaincore_get_cli_token(), $params['token'] ) ) {
 				return true;
 			}
 			return false;
