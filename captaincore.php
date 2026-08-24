@@ -3100,7 +3100,9 @@ function captaincore_dns_bulk_func( WP_REST_Request $request ) {
 
 	foreach ( $record_updates as $record_update ) {
 
-		$record_id     = $record_update['record_id'];
+		// Interpolated into the Constellix API path - int only, or it can
+		// steer the request at another tenant's zone.
+		$record_id     = (int) ( $record_update['record_id'] ?? 0 );
 		$record_type   = strtolower($record_update['record_type']);
 		$record_name   = $record_update['record_name'];
 		$record_value  = $record_update['record_value'];
@@ -4473,7 +4475,7 @@ function captaincore_create_dns_record( WP_REST_Request $request ) {
 function captaincore_update_dns_record( WP_REST_Request $request ) {
     $domain_id    = $request['id'];
 	$remote_id    = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
-    $record_id    = $request['record_id'];
+    $record_id    = (int) $request['record_id'];
     $record_type  = $request->get_param( 'type' );
     $record_name  = $request->get_param( 'name' );
     $record_value = $request->get_param( 'value' );
@@ -4499,7 +4501,7 @@ function captaincore_update_dns_record( WP_REST_Request $request ) {
 function captaincore_delete_dns_record( WP_REST_Request $request ) {
     $domain_id = $request['id'];
 	$remote_id    = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
-    $record_id = $request['record_id'];
+    $record_id = (int) $request['record_id'];
 
     $response = CaptainCore\Remote\Constellix::delete( "domains/$remote_id/records/$record_id" );
 

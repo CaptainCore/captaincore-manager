@@ -9,7 +9,30 @@ namespace CaptainCore\Remote;
 
 class Constellix {
 
+    /**
+     * Endpoints are built by interpolating ids into an API path, and several
+     * of those ids arrive from request input. A value carrying path or query
+     * syntax would steer the request at a different tenant's zone while still
+     * sending the account-wide key and HMAC, so reject it before the call.
+     *
+     * Mirrors Remote\Spaceship::endpoint_is_safe().
+     *
+     * @param string $endpoint
+     * @return bool
+     */
+    private static function endpoint_is_safe( $endpoint ) {
+        $endpoint = (string) $endpoint;
+        if ( $endpoint === '' ) {
+            return false;
+        }
+        return ! preg_match( '~[?#\\\\\s]|(^|/)\.\.(/|$)~', $endpoint );
+    }
+
     public static function get( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -42,6 +65,10 @@ class Constellix {
      * @return object|WP_Error An object with 'headers' and 'body' properties, or WP_Error on failure.
      */
     public static function get_raw( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -73,6 +100,10 @@ class Constellix {
 
     public static function post( $endpoint, $parameters = [] ) {
 
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
+
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -100,6 +131,10 @@ class Constellix {
      * Performs a POST request and returns the raw response with headers and body.
      */
     public static function post_raw( $endpoint, $parameters = [] ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -127,6 +162,10 @@ class Constellix {
     }
     
     public static function put( $endpoint, $parameters ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
     
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
@@ -155,6 +194,10 @@ class Constellix {
      * Performs a PUT request and returns the raw response with headers and body.
      */
     public static function put_raw( $endpoint, $parameters ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -182,6 +225,10 @@ class Constellix {
     }
     
     public static function delete( $endpoint ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
     
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
@@ -213,6 +260,10 @@ class Constellix {
      * Performs a DELETE request and returns the raw response with headers and body.
      */
     public static function delete_raw( $endpoint ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
         $args      = [
@@ -239,6 +290,10 @@ class Constellix {
     }
 
     public static function all( $endpoint ) {
+
+        if ( ! self::endpoint_is_safe( $endpoint ) ) {
+            return null;
+        }
          // Load Constellix domains from transient
          $constellix_domains = get_transient( 'constellix_all_domains' );
 
