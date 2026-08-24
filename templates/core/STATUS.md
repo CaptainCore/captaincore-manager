@@ -2059,3 +2059,17 @@ transactional-email / login logo to the brand app icon
 (`uploads/brand/anchor-icon-tile-512.png`) — that's the `logo` field in
 the `captaincore_configurations` site option (data, not code), updated
 locally and on production.
+
+### Account Plan tab is owner-only (2026-08-24)
+The account-detail Plan tab now shows only for the account owner
+(`full-billing`) and operators — full-access users no longer see it. This
+is enforced in data, not just chrome: `Account::fetch()` now honors the
+existing `tier_permissions` `plan` flag (previously unused) and strips
+the plan payload down to its name (kept for the account header) for
+anyone below full-billing, so addons, charges, credits and the billing
+contact never leave the server. UI side (`realAccountVals`): the tab is
+filtered from `accTabs` and `accTabPlan` is force-false without the
+permission. Verified live with Playwright on a real account: full-access
+customer sees four tabs, operator sees five; `fetch()` as the full-access
+user returns `plan: {name}` only while the owner still gets the full
+15-field plan + invoices.

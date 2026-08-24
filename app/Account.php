@@ -140,6 +140,14 @@ class Account {
             $record["invoices"] = $this->invoices();
         }
 
+        // Plan details (pricing, addons, credits, billing contact) are owner
+        // material — tier_permissions grants plan only to full-billing. Strip
+        // to the plan name (shown in the account header) for everyone else.
+        if ( ! $user->is_admin() && empty( $perms['plan'] ) ) {
+            $plan_name                  = $record["account"]["plan"]->name ?? "";
+            $record["account"]["plan"] = (object) [ "name" => $plan_name ];
+        }
+
         return $record;
     }
 

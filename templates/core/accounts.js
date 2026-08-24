@@ -267,11 +267,16 @@ Object.assign(Component.prototype, {
     const pct = (used, limit) => limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
     const usage = plan.usage || {};
     const limits = plan.limits || {};
-    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    // Plan is owner-only (tier_permissions: plan=false below full-billing);
+    // operators keep it for Edit plan. The server strips plan details down to
+    // the name for everyone else, so full-access users get neither the tab
+    // nor the data.
+    const canPlan = isOp || !!d.owner || d.level === 'full-billing';
+    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ...(canPlan ? [['plan', 'Plan']] : []), ['activity', 'Activity']].map(([id, label]) => ({ label,
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
-    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
     const doRename = () => this.renameAccount(acc, a, plan, reload);
     return {
       accName: (this.decodeHtml(a.name) || '').trim() || (acc.loading ? 'Loading…' : 'Account'),
@@ -292,6 +297,7 @@ Object.assign(Component.prototype, {
         (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
         + (acc.err ? ' · ' + acc.err : ''),
       accTabs: tabs,
+      accTabPlan: s.accTab === 'plan' && canPlan,
       accShowTransfer: (d.users || []).some(u => (u.level || '') !== 'full-billing') && (d.owner || d.level === 'full-billing'),
       accShowTrusted: false, accShowCancel: false,
       // v1 parity (deleteAccount): admin-only; the route also kicks off the
