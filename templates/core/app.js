@@ -1120,7 +1120,8 @@ class Component extends DCLogic {
         import: this.nsImportCta(s), manual: 'Connect site' }[s.nsPath],
       ...this.computeNsImport(s, isOp),
       nsCreate: () => { const st = this.state;
-        if (st.nsPath === 'request') this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc);
+        if (st.nsPath === 'request') { if (this._hydrated) { this.submitSiteRequest(); return; }
+          this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc); }
         else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
         else if (st.nsPath === 'import') { this.importProviderSites(); return; }
         else this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs);
@@ -1132,6 +1133,7 @@ class Component extends DCLogic {
       setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
       setViewList: () => this.setState({ view: 'list' }),
       viewCtx: (e) => this.openSitesViewMenu(e),
+      ...this.siteRequestsVals(s),
       listRows: rows,
       siteCols: this.mkSortCols('sitesSort', SITE_COLS)
     };

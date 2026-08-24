@@ -1833,6 +1833,18 @@ existing `cc-plf-body`/`cc-plf-side` classes. Verified live headless
 scroll jump, ESC, cached reopen firing zero refetches, and a real download
 whose file starts `# CaptainCore REST API`.
 
+### Site requests: real submission + operator queue (2026-08-23)
+New `site-requests.js` mixin (registered in core.php's $v3_scripts). The New
+site › Request tab now really POSTs `/site-requests` when hydrated (mock kept
+for design mode); the Sites screen shows each request as a card (name, account,
+step pills Requested/Preparing/Ready with dates, notes, step-3 URL link).
+Operators: Continue/Back (`/site-requests/continue|back`), Modify dialog
+(URL/name/notes → PUT `/site-requests/update`), Finish/Cancel (delete).
+Customers see their own requests and can cancel. Backend: added GET
+`/site-requests` (list; v1 embedded it server-side at boot — same
+`captaincore_permission_check`, admins see all users' requests). Verified live
+end-to-end as operator with all five writes observed on the network.
+
 ### Checksum rows: home_url + environment chip (2026-08-23)
 Core/plugin checksum failure rows titled by `site_name` repeated identically
 for production + staging. Rows now title by the environment's `home_url`

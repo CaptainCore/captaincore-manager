@@ -631,6 +631,42 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-for>
             </div>
           </sc-if>
+          <!-- ══ Site requests queue (customer submissions; operators step them Requested → Preparing → Ready) ══ -->
+          <sc-if value="{{ srShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+              <sc-for list="{{ srRows }}" as="r" hint-placeholder-count="1">
+                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <span style="font:600 var(--fs-14) var(--sans)">{{ r.name }}</span>
+                    <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ r.acc }}</span>
+                    <span style="font:500 var(--fs-115) var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">Site request</span>
+                    <div style="flex:1"></div>
+                    <sc-if value="{{ r.isOp }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ r.modify }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Modify</span>
+                    </sc-if>
+                    <sc-if value="{{ r.canBack }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ r.back }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Back</span>
+                    </sc-if>
+                    <sc-if value="{{ r.canCont }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ r.cont }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Continue</button>
+                    </sc-if>
+                    <span onClick="{{ r.finish }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">{{ r.finishLabel }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;flex-wrap:wrap">
+                    <sc-for list="{{ r.steps }}" as="st" hint-placeholder-count="3">
+                      <span style="display:inline-flex;align-items:baseline;gap:7px;background:{{ st.bg }};color:{{ st.fg }};border-radius:99px;padding:4px 12px;font:500 var(--fs-125) var(--sans)">{{ st.label }}<span style="font:400 var(--fs-115) var(--mono);opacity:.75">{{ st.sub }}</span></span>
+                    </sc-for>
+                    <sc-if value="{{ r.hasUrl }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ r.openUrl }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ r.url }} ↗</span>
+                    </sc-if>
+                    <sc-if value="{{ r.hasNotes }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ r.notes }}</span>
+                    </sc-if>
+                  </div>
+                </section>
+              </sc-for>
+            </div>
+          </sc-if>
           <sc-if value="{{ viewTable }}" hint-placeholder-val="{{ true }}">
             <div class="cc-tbl" style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <div style="display:grid;grid-template-columns:36px 48px 2fr 1fr 1fr 0.8fr 0.8fr;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);align-items:center">
@@ -4159,6 +4195,32 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="flex:1"></div>
           <span onClick="{{ closePlanReq }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ planReqSend }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Send request</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Modify site request dialog (operator; v1 parity: dialog_site_request) ══ -->
+  <sc-if value="{{ srEditOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSrEdit }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:10vh 20px">
+      <div onClick="{{ stopProp }}" style="width:480px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">Update site request</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeSrEdit }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+          <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">New site URL
+            <input value="{{ srEditUrl }}" onInput="{{ onSrEditUrl }}" placeholder="https://" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none"></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Name
+            <input value="{{ srEditName }}" onInput="{{ onSrEditName }}" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none"></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Notes
+            <textarea value="{{ srEditNotes }}" onInput="{{ onSrEditNotes }}" style="min-height:70px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:9px 11px;outline:none;resize:vertical"></textarea></label>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeSrEdit }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ srEditSave }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save</button>
         </div>
       </div>
     </div>

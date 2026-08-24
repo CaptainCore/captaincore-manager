@@ -2107,6 +2107,10 @@ function captaincore_billing_update_func( WP_REST_Request $request ) {
 	return [ 'success' => true ];
 }
 
+function captaincore_site_requests_list_func( WP_REST_Request $request ) {
+	return ( new CaptainCore\User )->fetch_requested_sites();
+}
+
 function captaincore_site_requests_create_func( WP_REST_Request $request ) {
 	$user  = new CaptainCore\User;
 	$value = $request->get_param( 'request' );
@@ -9336,6 +9340,16 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site-requests', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_requests_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// List for the v3 site-requests queue (v1 embedded this server-side at
+	// boot). Same scoping as the writes: admins see every user's requests.
+	register_rest_route(
+		'captaincore/v1', '/site-requests', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_requests_list_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
