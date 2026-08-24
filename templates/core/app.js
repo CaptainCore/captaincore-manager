@@ -349,21 +349,22 @@ class Component extends DCLogic {
   }
 
   // Bulk-target every site of an account in the dock terminal — the legacy
-  // console's bulk-selection shortcut. Preselects each site's Production
-  // environment as the terminal target set and opens the dock; the @ picker
-  // shows (and can refine) the selection.
+  // console's bulk-selection shortcut. Preselects EVERY environment of every
+  // account site (production + staging) as the terminal target set and opens
+  // the dock; the @ picker shows (and can refine) the selection.
   openAccountTerminal(accountId, accountName) {
     const ids = [];
+    let sites = 0;
     this.FLEET.forEach(f => {
       const match = String(f.accountId || '') === String(accountId) || (!!accountName && f.account === accountName);
       if (!match) return;
-      const envs = f.environmentsRaw || [];
-      const prod = envs.find(e => e && (e.environment || 'Production') === 'Production') || envs[0];
-      if (prod && prod.environment_id) ids.push(String(prod.environment_id));
+      const before = ids.length;
+      (f.environmentsRaw || []).forEach(e => { if (e && e.environment_id) ids.push(String(e.environment_id)); });
+      if (ids.length > before) sites++;
     });
     if (!ids.length) { this.toast('No sites with environments found for ' + (accountName || 'this account'), { kind: 'info' }); return; }
     this.setState({ dockOpen: true, termSel: ids, tpOpen: false, cookOpen: false });
-    this.toast('Terminal targeting ' + ids.length + ' site' + (ids.length === 1 ? '' : 's') + ' · ' + accountName, { kind: 'success' });
+    this.toast('Terminal targeting ' + ids.length + ' environment' + (ids.length === 1 ? '' : 's') + ' across ' + sites + ' site' + (sites === 1 ? '' : 's') + ' · ' + accountName, { kind: 'success' });
   }
 
   computeAccounts(s, isOp) {
