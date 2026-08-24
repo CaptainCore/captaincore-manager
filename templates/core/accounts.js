@@ -314,6 +314,7 @@ Object.assign(Component.prototype, {
       },
       ...this.transferVals(s, d, reload),
       ...this.computeEditPlan(s, acc, a, plan, reload),
+      accTermOpen: () => this.openAccountTerminal(acc.accountId, (this.decodeHtml(a.name) || '').trim()),
       accUsers: (d.users || []).map(u => { const label = this.ACC_LEVEL_LABELS[u.level] || u.level || 'Full access';
         return { n: u.name || u.email, e: u.email, level: label, last: '',
           init: (u.name || u.email).split(/[\s@]/).map(w => w[0]).join('').slice(0, 2).toUpperCase(),

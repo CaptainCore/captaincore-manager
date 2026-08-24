@@ -2154,3 +2154,15 @@ invoices remain on their Billing screen, which is self-scoped
 (wc_get_orders by customer). Verified live: customer list has no Billing
 column and the API rows carry no outstanding_invoices; operator list is
 unchanged.
+
+### Bulk-target an account's sites in the terminal (2026-08-24)
+The legacy console's bulk-selection shortcut, rebuilt for v3. Two entry
+points: "Open sites in terminal" in the accounts-list right-click menu,
+and an "Open all in terminal" button on the account detail's Sites tab.
+Both call openAccountTerminal(), which preselects the Production
+environment of every fleet site belonging to the account (FLEET rows now
+carry accountId from hydrate; name-match fallback covers design mode) as
+the terminal target set (termSel), opens the dock, and toasts the count —
+the @ picker shows "N environments selected" and can refine before
+running. No targets → info toast instead of an empty dock. Verified live
+as a customer: both paths target 24 environments for a 24-site account.

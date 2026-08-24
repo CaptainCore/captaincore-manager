@@ -2328,7 +2328,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
 
           <sc-if value="{{ accTabSites }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;margin-top:16px">
+              <div style="flex:1"></div>
+              <button onClick="{{ accTermOpen }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5M12 19h8"></path></svg>Open all in terminal</button>
+            </div>
+            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accSites }}" as="s" hint-placeholder-count="2">
                 <div onClick="{{ s.open }}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="flex:1;font:500 var(--fs-14) var(--sans)">{{ s.name }}</span>

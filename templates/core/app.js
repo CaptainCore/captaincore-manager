@@ -348,6 +348,24 @@ class Component extends DCLogic {
       trusted: this.TRUSTED.map(t => ({ ...t })), invEmail: '', invLevel: 'Full access' });
   }
 
+  // Bulk-target every site of an account in the dock terminal — the legacy
+  // console's bulk-selection shortcut. Preselects each site's Production
+  // environment as the terminal target set and opens the dock; the @ picker
+  // shows (and can refine) the selection.
+  openAccountTerminal(accountId, accountName) {
+    const ids = [];
+    this.FLEET.forEach(f => {
+      const match = String(f.accountId || '') === String(accountId) || (!!accountName && f.account === accountName);
+      if (!match) return;
+      const envs = f.environmentsRaw || [];
+      const prod = envs.find(e => e && (e.environment || 'Production') === 'Production') || envs[0];
+      if (prod && prod.environment_id) ids.push(String(prod.environment_id));
+    });
+    if (!ids.length) { this.toast('No sites with environments found for ' + (accountName || 'this account'), { kind: 'info' }); return; }
+    this.setState({ dockOpen: true, termSel: ids, tpOpen: false, cookOpen: false });
+    this.toast('Terminal targeting ' + ids.length + ' site' + (ids.length === 1 ? '' : 's') + ' · ' + accountName, { kind: 'success' });
+  }
+
   computeAccounts(s, isOp) {
     const list = isOp ? this.ACCOUNTS : this.ACCOUNTS.filter(a => a.owned);
     const nq = s.aq.trim().toLowerCase();
@@ -386,6 +404,7 @@ class Component extends DCLogic {
         open: () => this.openAccount(a.id),
         ctx: (e) => this.openCtxMenu(e, [
           { label: 'Open account', act: () => this.openAccount(a.id) },
+          { label: 'Open sites in terminal', act: () => this.openAccountTerminal(a.id, a.name) },
           { label: 'Copy account name', act: () => this.ctxCopy(a.name, 'account name') }
         ]) })),
       // Creating accounts is operator-only (POST /accounts/ is admin-gated
@@ -448,6 +467,7 @@ class Component extends DCLogic {
         this.setState(st => ({ accInvites: [...st.accInvites, { uid: Date.now(), e, level: st.invLevel, sent: 'just now' }], invEmail: '' })); },
       trusted: (s.trusted || []).map(td => ({ ...td,
         revoke: () => this.setState(st => ({ trusted: st.trusted.filter(x => x.uid !== td.uid) })) })),
+      accTermOpen: () => this.openAccountTerminal(acc.id, acc.name),
       accSites: this.FLEET.filter(x => x.account === acc.name).map(x => { const [health, dot] = healthOf(x);
         return { ...x, health, dot, open: () => this.openSite(x.id) }; }),
       accDomains: this.DOMAINS.filter(d => d.account === acc.name).map(d => ({ ...d,
