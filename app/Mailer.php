@@ -930,7 +930,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site->name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
                         </tr>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
@@ -1020,7 +1020,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site->name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site->name ) . "</td>
                         </tr>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
@@ -1215,11 +1215,11 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         <tr>
                             <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$account_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
                         </tr>
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
@@ -1625,7 +1625,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -1644,7 +1644,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -1713,7 +1713,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -1732,7 +1732,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -1903,7 +1903,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -1930,7 +1930,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -1993,7 +1993,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -2012,7 +2012,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -2088,7 +2088,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -2108,7 +2108,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -2154,7 +2154,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -2173,7 +2173,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>
@@ -2209,7 +2209,7 @@ class Mailer {
                 <tr>
                     <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
-                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                        <a href='" . esc_url( $home_url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $home_url ) . "</a>
                     </td>
                 </tr>";
         }
@@ -2228,7 +2228,7 @@ class Mailer {
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
                             <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
-                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $site_name ) . "</td>
                         </tr>
                         {$site_url_html}
                         <tr>

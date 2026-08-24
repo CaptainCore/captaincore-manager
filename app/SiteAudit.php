@@ -348,7 +348,7 @@ class SiteAudit {
                 foreach ( $sorted_checks as $check ) {
                     $icon_class = esc_attr( $check->icon ?? 'pass' );
                     $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
-                    $label      = $check->label ?? '';
+                    $label      = esc_html( $check->label ?? '' );
                     $out .= "      <li><span class=\"icon {$icon_class}\">{$icon_char}</span> {$label}</li>\n";
                 }
                 $out .= "    </ul>\n  </div>\n</div>\n\n";
@@ -393,7 +393,7 @@ class SiteAudit {
                     $key    = esc_html( $config->key ?? '' );
                     $value  = esc_html( $config->value ?? '' );
                     $status = $config->status ?? null;
-                    $class  = $status ? " class=\"{$status}\"" : '';
+                    $class  = $status ? ' class="' . esc_attr( $status ) . '"' : '';
                     $out .= "      <tr><td><strong>{$key}</strong></td><td{$class}>{$value}</td></tr>\n";
                 }
                 $out .= "    </table>\n  </div>\n</div>\n\n";
@@ -611,7 +611,7 @@ class SiteAudit {
                         if ( $label ) {
                             $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
                         }
-                        $html .= "    <div class=\"file-tree\">" . ( $ev->content ?? '' ) . "</div>\n";
+                        $html .= "    <div class=\"file-tree\">" . wp_kses_post( $ev->content ?? '' ) . "</div>\n";
                         break;
 
                     case 'stats':
@@ -753,7 +753,7 @@ class SiteAudit {
 
             switch ( $type ) {
                 case 'prose':
-                    $html .= "    " . ( $block->content ?? $block->html ?? '' ) . "\n";
+                    $html .= "    " . wp_kses_post( $block->content ?? $block->html ?? '' ) . "\n";
                     break;
 
                 case 'table':
@@ -814,7 +814,7 @@ class SiteAudit {
                     foreach ( $items as $item ) {
                         $icon_class = esc_attr( $item->icon ?? 'pass' );
                         $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
-                        $label      = $item->label ?? '';
+                        $label      = esc_html( $item->label ?? '' );
                         $html .= "      <li><span class=\"icon {$icon_class}\">{$icon_char}</span> {$label}</li>\n";
                     }
                     $html .= "    </ul>\n";
