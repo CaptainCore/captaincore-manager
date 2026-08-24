@@ -383,6 +383,12 @@ class Component extends DCLogic {
           { label: 'Open account', act: () => this.openAccount(a.id) },
           { label: 'Copy account name', act: () => this.ctxCopy(a.name, 'account name') }
         ]) })),
+      // Live-chat banner under the list — the landing spot of Home's "Get
+      // help" card. Customers only: Intercom ships only on customer sessions
+      // (core.php), where window.Intercom exists from page load (the loader
+      // stub queues calls until the widget lands).
+      accChatShow: !isOp && !!window.Intercom,
+      accChatOpen: () => { try { window.Intercom('show'); } catch (e) {} },
       naOpen: s.naOpen, naName: s.naName, naMsg: s.naMsg, naHasMsg: !!s.naMsg,
       openNewAccount: () => this.setState({ naOpen: true, naName: '', naMsg: '' }),
       closeNa: () => this.setState({ naOpen: false }),

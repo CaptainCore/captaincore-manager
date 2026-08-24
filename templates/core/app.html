@@ -2204,6 +2204,18 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
           </sc-if>
+          <sc-if value="{{ accChatShow }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ accChatOpen }}" style="display:flex;align-items:center;gap:14px;margin-top:16px;padding:16px 18px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);cursor:pointer" style-hover="border-color:var(--brand)">
+              <div style="width:38px;height:38px;border-radius:10px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;flex:none">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 14v.01M9.5 9a2.5 2.5 0 115 0c0 1.5-2.5 2-2.5 3.5"></path></svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font:600 var(--fs-14) var(--sans);color:var(--ink)">Need a hand with an account?</div>
+                <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);margin-top:2px">Start a live chat — we usually reply in a few minutes.</div>
+              </div>
+              <span style="font:600 var(--fs-125) var(--sans);color:var(--brand-ink);white-space:nowrap">Chat with us →</span>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 

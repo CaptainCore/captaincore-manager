@@ -2073,3 +2073,16 @@ permission. Verified live with Playwright on a real account: full-access
 customer sees four tabs, operator sees five; `fetch()` as the full-access
 user returns `plan: {name}` only while the owner still gets the full
 15-field plan + invoices.
+
+### Live-chat banner on Accounts (2026-08-24)
+A clickable banner under the accounts list ("Need a hand with an
+account?" / "Chat with us") completes Home's "Get help" card flow, which
+routes customers to Accounts. Clicking calls `window.Intercom('show')` —
+the same command the launcher bubble uses; the boot snippet's loader stub
+queues the call if the widget hasn't finished loading. Customer-only by
+construction: it renders only when `window.Intercom` exists, and core.php
+ships Intercom solely on customer sessions, so operators never see it.
+Verified live with Playwright: banner renders for a customer and is
+absent for an operator, and the click issues the `show` command (checked
+via a recording stub — Intercom's real widget refuses to boot in headless
+browsers, but boots normally in real ones, launcher bubble present).
