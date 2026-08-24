@@ -83,22 +83,28 @@ class Sites extends DB {
     }
 
     public function verify( $site_id = "" ) {
+        $allowed = array_map( 'intval', (array) $this->sites_all );
+
         // Check multiple site ids
         if ( is_array( $site_id ) ) {
-            $valid = true;
-            foreach ($site_id as $id) {
-                if ( in_array( $id, $this->sites_all ) ) {
-                    continue;
-                }
-                $valid = false;
+            // An empty or malformed scope has to mean "no", not "nothing to
+            // check". A caller that forwards a request array - array_column()
+            // over a body that carries no site_id yields [] - would otherwise
+            // be granted by sending nothing at all.
+            if ( empty( $site_id ) ) {
+                return false;
             }
-            return $valid;
-        }
-        // Check individual site id
-        if ( in_array( $site_id, $this->sites_all ) ) {
+            foreach ( $site_id as $id ) {
+                if ( ! self::is_valid_id( $id ) || ! in_array( (int) $id, $allowed, true ) ) {
+                    return false;
+                }
+            }
             return true;
         }
-        return false;
+
+        // Check individual site id. Strict, and only after the value is known
+        // to be a positive integer - see DB::is_valid_id().
+        return self::is_valid_id( $site_id ) && in_array( (int) $site_id, $allowed, true );
     }
 
     public static function update_environments_cache( $site_id = "" ) {

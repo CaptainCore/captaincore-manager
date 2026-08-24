@@ -349,6 +349,32 @@ class DB {
         return in_array( $type, $allowed, true ) ? $type : '';
     }
 
+    /**
+     * Is this value usable as a record id in an ownership check?
+     *
+     * Ownership lists are built from $wpdb results, so they hold numeric
+     * STRINGS. A loose in_array() therefore matches a boolean needle against
+     * every non-empty element - `in_array( true, [ "12" ] )` is true - which
+     * lets a JSON `true` in a request body satisfy an ownership check for a
+     * record the caller does not own. WP_REST_Request ranks JSON body params
+     * above URL params, so a route regex of [\d]+ does not prevent it.
+     *
+     * Rejecting booleans, non-scalars and non-numeric strings BEFORE the
+     * comparison is what closes that door; callers then compare ints strictly.
+     *
+     * @param mixed $id
+     * @return bool
+     */
+    static function is_valid_id( $id ) {
+        if ( is_bool( $id ) || ! is_scalar( $id ) ) {
+            return false;
+        }
+        if ( ! preg_match( '/^[0-9]+$/', (string) $id ) ) {
+            return false;
+        }
+        return (int) $id > 0;
+    }
+
     static function fetch_sites_filtered( $filters = [], $allowed_site_ids = [] ) {
         global $wpdb;
         $table              = self::_table();

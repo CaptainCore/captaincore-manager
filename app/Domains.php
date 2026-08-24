@@ -94,27 +94,29 @@ class Domains extends DB {
     }
 
     public function verify( $domain_id = "" ) {
-        // Check multiple site ids
+        $allowed = array_map( 'intval', (array) $this->domains );
+
+        // Check multiple domain ids
         if ( is_array( $domain_id ) ) {
-            $valid = true;
-            foreach ( $domain_id as $id ) {
-                if ( in_array( $id, $this->domains ) ) {
-                    continue;
-                }
-                $valid = false;
+            // An empty or malformed scope has to mean "no" - see Sites::verify().
+            if ( empty( $domain_id ) ) {
+                return false;
             }
-            return $valid;
-        }
-        // Check individual site id
-        if ( in_array( $domain_id, $this->domains ) ) {
+            foreach ( $domain_id as $id ) {
+                if ( ! self::is_valid_id( $id ) || ! in_array( (int) $id, $allowed, true ) ) {
+                    return false;
+                }
+            }
             return true;
         }
-        return false;
+
+        // Check individual domain id.
+        return self::is_valid_id( $domain_id ) && in_array( (int) $domain_id, $allowed, true );
     }
 
     public function delete_domain( $domain_id ) {
 
-        if ( ! in_array( $domain_id, $this->domains ) ) {
+        if ( ! self::verify( $domain_id ) ) {
             return [ "errors" => "Permission denied." ];
         }
 
