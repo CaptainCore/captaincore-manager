@@ -1776,6 +1776,9 @@ class Component extends DCLogic {
       importZone: () => this.runJob('dns-import', 'zone file → ' + d.name),
       exportZone: () => this.runJob('dns-export', d.name + ' → BIND'),
       regRegistrar: d.registrar,
+      // Design preview shows the connected-registrar variant; the real layer
+      // flips these off for externally registered domains.
+      regConnected: true, regExternal: false, nsCanEdit: true,
       regExpires: d.expires + (d.warn ? ' · in 12 days' : ''),
       regExpFg: d.warn ? 'var(--bad)' : 'var(--ink)',
       regWarn: !!d.warn,

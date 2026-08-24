@@ -2121,3 +2121,18 @@ hydrate → DOM_COLS like the forwarding column. Provider-name lookups are
 memoized per provider_id (3k-row list, two providers). Verified live:
 operator sees Spaceship / External and a sending-zone domain shows
 Site notifications Active; customer sees the business name / External.
+
+### Registrar tab cleanup: external domains + real nameserver seeds (2026-08-24)
+Externally registered domains (no registrar provider) now get a clean
+Registrar tab: the Registration card says "External" with a one-line
+explainer, and the registrar-only rows (Expires, Transfer lock, WHOIS
+privacy, Auth code), the Contacts card, and the nameserver Edit link all
+collapse (POST /nameservers and /contacts need a connected registrar).
+The nameserver LIST stays — it reads from the DNS zone. Header status
+line reads "Registered externally" instead of "No registrar connected".
+Also fixed: the Edit-nameservers dialog seeded the design mock
+(ns11.constellix.com …) into real sessions because the real layer never
+overrode openNsvDlg — it now seeds the domain's current nameservers.
+Verified live: external domain (customer) shows the trimmed card;
+registered domain (operator) keeps every row and the dialog seeds
+ns1–4.anchor.host.

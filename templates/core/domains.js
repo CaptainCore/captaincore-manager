@@ -574,7 +574,7 @@ Object.assign(Component.prototype, {
     const accs = (info.accounts || []).filter(a => a && (a.account_id || a.name));
     return {
       domTabs: lazyTabs,
-      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · No registrar connected'),
+      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · Registered externally'),
       domHasAccounts: accs.length > 0,
       domAccounts: accs.map(a => ({
         name: this.decodeHtml(a.name),
@@ -635,7 +635,17 @@ Object.assign(Component.prototype, {
         dnsDel: [...(st.dnsDel || []), ...st.dnsRecs.filter(x => x.recId).map(x => x.recId)],
         dnsDirty: true, zoneOpen: false, zoneText: '' })),
       exportZone: () => this.exportZoneReal(d.name),
-      regRegistrar: provider ? (provider.status || 'Connected') : 'Not connected',
+      // No registrar provider → the domain is registered elsewhere: say
+      // "External" and collapse the registrar-only rows (expiry, locks, auth
+      // code), the Contacts card, and the nameserver Edit (POST /nameservers
+      // needs a connected registrar). The nameserver list stays — it comes
+      // from the DNS zone and is informational.
+      regRegistrar: provider ? (provider.status || 'Connected') : 'External',
+      regConnected: !!provider, regExternal: !provider,
+      nsCanEdit: !!provider,
+      // Seed the edit dialog from the CURRENT nameservers (the design mock
+      // seeded sample values into real sessions).
+      openNsvDlg: () => this.setState({ nsvOpen: true, nsvText: nsReal.join('\n') }),
       regExpires: '—', regExpFg: 'var(--ink)', regWarn: false, regShowRenew: false,
       regShowAuto: false,
       togAuto: { label: 'Auto-renew', bg: 'var(--rule)', just: 'flex-start', state: '—', flip: () => {} },

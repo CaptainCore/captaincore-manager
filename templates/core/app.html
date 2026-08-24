@@ -1905,43 +1905,49 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Registrar</span>
                   <span style="font:400 var(--fs-13) var(--sans)">{{ regRegistrar }}</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Expires</span>
-                  <span style="font:400 var(--fs-13) var(--mono);color:{{ regExpFg }}">{{ regExpires }}</span>
-                  <sc-if value="{{ regWarn }}" hint-placeholder-val="{{ false }}">
-                    <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
-                  </sc-if>
-                </div>
-                <sc-if value="{{ regShowAuto }}" hint-placeholder-val="{{ true }}">
+                <sc-if value="{{ regExternal }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:12px 16px;font:400 var(--fs-125)/1.6 var(--sans);color:var(--ink-dim)">This domain is registered externally. Renewal, transfer locks and contacts are managed at its current registrar.</div>
+                </sc-if>
+                <sc-if value="{{ regConnected }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togAuto.label }}</span>
-                    <span onClick="{{ togAuto.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togAuto.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togAuto.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
-                    <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togAuto.state }}</span>
+                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Expires</span>
+                    <span style="font:400 var(--fs-13) var(--mono);color:{{ regExpFg }}">{{ regExpires }}</span>
+                    <sc-if value="{{ regWarn }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ renewNow }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Renew now</button>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ regShowAuto }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                      <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togAuto.label }}</span>
+                      <span onClick="{{ togAuto.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togAuto.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togAuto.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                      <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togAuto.state }}</span>
+                    </div>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togLock.label }}</span>
+                    <span onClick="{{ togLock.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togLock.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togLock.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                    <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togLock.state }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togPriv.label }}</span>
+                    <span onClick="{{ togPriv.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togPriv.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togPriv.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                    <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togPriv.state }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px">
+                    <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Auth code</span>
+                    <span style="font:400 var(--fs-13) var(--mono)">•••-••••-••••</span>
+                    <span onClick="{{ authCopy }}" style="font:500 var(--fs-115) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="border-color:var(--brand)">{{ authMark }}</span>
                   </div>
                 </sc-if>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togLock.label }}</span>
-                  <span onClick="{{ togLock.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togLock.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togLock.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
-                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togLock.state }}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togPriv.label }}</span>
-                  <span onClick="{{ togPriv.flip }}" style="width:34px;height:20px;border-radius:99px;background:{{ togPriv.bg }};display:flex;align-items:center;padding:2px;justify-content:{{ togPriv.just }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
-                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ togPriv.state }}</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;padding:10px 16px">
-                  <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Auth code</span>
-                  <span style="font:400 var(--fs-13) var(--mono)">•••-••••-••••</span>
-                  <span onClick="{{ authCopy }}" style="font:500 var(--fs-115) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="border-color:var(--brand)">{{ authMark }}</span>
-                </div>
               </section>
               <div style="display:flex;flex-direction:column;gap:14px">
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Nameservers</h2><span onClick="{{ openNsvDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Nameservers</h2><sc-if value="{{ nsCanEdit }}" hint-placeholder-val="{{ true }}"><span onClick="{{ openNsvDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span></sc-if></div>
                   <sc-for list="{{ nsList }}" as="ns" hint-placeholder-count="3">
                     <div style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ ns.n }}</div>
                   </sc-for>
                 </section>
+                <sc-if value="{{ regConnected }}" hint-placeholder-val="{{ true }}">
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Contacts</h2><span onClick="{{ openCtDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Edit contacts</span></div>
                   <div style="padding:12px 16px">
@@ -1950,6 +1956,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:8px">Same contact for all 4 roles (registrant, admin, tech, billing).</div>
                   </div>
                 </section>
+                </sc-if>
               </div>
             </div>
           </sc-if>
