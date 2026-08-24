@@ -28,12 +28,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="<?php echo $plugin_url; ?>public/css/vuetify.min.css" rel="stylesheet">
 <link href="<?php echo $plugin_url; ?>public/css/materialdesignicons.min.css" rel="stylesheet">
 <?php } else { ?>
-<link href="https://cdn.jsdelivr.net/npm/vuetify@3.9.0/dist/vuetify.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@3.9.0/dist/vuetify.min.css" rel="stylesheet" integrity="sha384-hN2DiXCDAK5oBARPaHDVhvOayjvI1gLTPc/0PHXvm7t/inYE2JqcJTfcaZLiBpuu" crossorigin="anonymous">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet" integrity="sha384-WKL5jx7Jp5xCgVpuz3AQtH37JBIDSgiCawKkzMQrYsWX1sjlIqJUlmCZuDgExIbE" crossorigin="anonymous">
 <?php } ?>
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2026-04-20.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-twilight.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css" rel="stylesheet" integrity="sha384-rCCjoCPCsizaAAYVoz1Q0CmCTvnctK0JkfCSjx7IIxexTBg+uCKtFYycedUjMyA2" crossorigin="anonymous" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-twilight.min.css" rel="stylesheet" integrity="sha384-y+hQKgEu+YxMrO9Gz8qht2l+mSRSSKzo6oCArnnM1dNUB1GjU+gtEo8okfTHS6yb" crossorigin="anonymous" />
 <style>
 	.audit-row { border-left: 3px solid transparent; }
 	.audit-row-malware  { border-left-color: rgb(var(--v-theme-error)); }
@@ -13221,18 +13221,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/numeral.min.js"></script>
 <?php } else { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@3.5.20/dist/vue.global.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@3.9.6/dist/vuetify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue-upload-component@3.1.17/dist/vue-upload-component.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.20/dist/vue.global.js" integrity="sha384-F5dSrlswLUM/D61wErJB9vYDeUjdRRR8OhlhQoB9+DaFx7MtckL6mvyXenDB3M6E" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js" integrity="sha384-6woDBwQr+eqsszpfCWmyJ2UTm+OSym/GuB2NAD8H3d+6xuEZzOMJ/6GEPDTPPCmi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@3.9.6/dist/vuetify.min.js" integrity="sha384-nmgq4b+382GG22V17+/uWwVwX8Bw8yb6hMJzVolMFGqQ5538wNY1L4d/THKJTPUE" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-upload-component@3.1.17/dist/vue-upload-component.min.js" integrity="sha384-wFAJQX06SGfXgout7+HZMXaZabA0mgxdG+yA5N2NFxmssOJEWdLTcY9RSEI8dcXm" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js" integrity="sha384-MzylRT5zJalpRrNr8tU39jpkHiha0v+h78aWs+2n3p40Yd+0//a69GxuWrxnPZqQ" crossorigin="anonymous"></script>
 <?php } ?>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-log.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js" integrity="sha384-dwwI6ICEN/0ZQlS5owhUa/6ZzvwUPmjH45bFVCAcjgjTulbHJvlE+TGU3g1k0N3R" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js" integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js" integrity="sha384-DpVxUeeBWjUvUV1czyIHJAjh+jYUZFu2lLakbdua5vbwOrBGi1UgaKCHjTC+x3Ky" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js" integrity="sha384-xAgN7OCsK5s0d3G18tqRYrxy8hWsPA14E26TMh7Mi9ZM09vaz4EA0DBTl+80F5yC" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-log.min.js" integrity="sha384-JzXaMmXoVH6MvXBXAok2yQwiR973aUkG3KUviEhYliOdY1Cmru7APkZNClZzorcN" crossorigin="anonymous"></script>
+<!-- Stripe forbids SRI on v3: they push updates to this URL by design. Same
+     exception applies to the Google Fonts stylesheet, which varies by UA. -->
 <script src="https://js.stripe.com/v3/"></script>
 <script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
@@ -26539,7 +26541,7 @@ app.mount('#app');
 
 </script>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
 <script type='text/javascript' src='/wp-content/plugins/arve-pro/build/main.js'></script>
 <script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/build/main.js'></script>
 <?php } ?>
