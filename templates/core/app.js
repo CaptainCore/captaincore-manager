@@ -261,8 +261,8 @@ class Component extends DCLogic {
     { id: 'snap_77b03', name: 'uploads-june', when: 'Jun 30 · 4:44 PM', size: '1.4 GB', filter: 'Uploads', expires: 'expired' }
   ];
   DOMAINS = window.CC_BOOT ? [] : [
-    { id: 'bloomd', name: 'bloomandbranch.com', account: 'Bloom & Branch Floral', registrar: 'Hover', dns: true, expires: 'Mar 12, 2027', auto: true, owned: true },
-    { id: 'harbord', name: 'harborlightyoga.com', account: 'Harbor Light Yoga', registrar: 'Hover', dns: true, expires: 'Jul 28, 2026', auto: false, warn: true, owned: true },
+    { id: 'bloomd', name: 'bloomandbranch.com', account: 'Bloom & Branch Floral', registrar: 'Hover', dns: true, forwarding: true, expires: 'Mar 12, 2027', auto: true, owned: true },
+    { id: 'harbord', name: 'harborlightyoga.com', account: 'Harbor Light Yoga', registrar: 'Hover', dns: true, forwarding: true, expires: 'Jul 28, 2026', auto: false, warn: true, owned: true },
     { id: 'petersond', name: 'petersonlaw.com', account: 'Peterson Law', registrar: 'Spaceship', dns: true, expires: 'Nov 3, 2026', auto: true },
     { id: 'wildflowerd', name: 'thewildflowerpantry.com', account: 'Wildflower Pantry', registrar: 'Hover', dns: true, expires: 'Feb 9, 2027', auto: true, owned: true },
     { id: 'midwestd', name: 'midwestmakersmarket.com', account: 'Midwest Makers', registrar: 'Spaceship', dns: true, expires: 'Sep 17, 2026', auto: true },
@@ -1621,7 +1621,8 @@ class Component extends DCLogic {
     const DOM_COLS = [
       { label: 'Domain', k: 'name', val: d => (d.name || '').toLowerCase() },
       { label: 'Registrar', k: 'registrar', val: d => d.registrar || '' },
-      { label: 'DNS', k: 'dns', val: d => d.dns ? 1 : 0 }
+      { label: 'DNS', k: 'dns', val: d => d.dns ? 1 : 0 },
+      { label: 'Email forwarding', k: 'forwarding', val: d => d.forwarding ? 1 : 0 }
     ];
     const filtered = this.sortRows('domSort', DOM_COLS, list.filter(d => !nq || d.name.includes(nq) || d.account.toLowerCase().includes(nq)));
     // Pagination (same as Sites — thousands of rows janks every re-render).
@@ -1659,7 +1660,7 @@ class Component extends DCLogic {
               this.api('/domains/').then(domains => {
                 this.DOMAINS = (Array.isArray(domains) ? domains : []).map(x => ({ id: String(x.domain_id), name: x.name,
                   account: '', registrar: x.provider_id ? 'Registrar' : '—', dns: !!x.remote_id,
-                  expires: '—', auto: null, owned: true }));
+                  forwarding: !!x.forwarding, expires: '—', auto: null, owned: true }));
                 this.setState({});
               }).catch(() => {});
             }).catch(() => {});
@@ -1670,6 +1671,7 @@ class Component extends DCLogic {
       domCols: this.mkSortCols('domSort', DOM_COLS),
       domRows: pageRows.map(d => ({ ...d,
         dnsLabel: d.dns ? 'Active' : '—', dnsFg: d.dns ? 'var(--ok)' : 'var(--ink-dim)',
+        fwdLabel: d.forwarding ? 'Active' : '—', fwdFg: d.forwarding ? 'var(--ok)' : 'var(--ink-dim)',
         expFg: d.warn ? 'var(--bad)' : 'var(--ink)',
         autoLabel: d.auto === null ? '—' : d.auto ? 'On' : 'Off',
         autoFg: d.auto === false ? 'var(--warn)' : 'var(--ink-dim)',

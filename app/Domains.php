@@ -67,7 +67,8 @@ class Domains extends DB {
     public function list() {
         $domains        = [];
         foreach( $this->domains as $domain_id ) {
-            $domain = self::get( $domain_id );
+            $domain  = self::get( $domain_id );
+            $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
             $domains[] = [
                 "domain_id"   => (int) $domain_id,
                 "remote_id"   => $domain->remote_id,
@@ -75,6 +76,7 @@ class Domains extends DB {
                 "name"        => $domain->name,
                 "status"      => $domain->status,
                 "price"       => $domain->price,
+                "forwarding"  => ! empty( $details->mailgun_forwarding_id ),
             ];
         }
         return $domains;

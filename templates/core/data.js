@@ -72,7 +72,7 @@ Object.assign(Component.prototype, {
         due: !!(a.metrics && a.metrics.outstanding_invoices > 0) }));
       this.DOMAINS = (Array.isArray(domains) ? domains : []).map(d => ({ id: String(d.domain_id), name: d.name,
         account: '', registrar: d.provider_id ? 'Registrar' : '\u2014', dns: !!d.remote_id,
-        expires: '\u2014', auto: null, owned: true }));
+        forwarding: !!d.forwarding, expires: '\u2014', auto: null, owned: true }));
       this._hydrated = true;
       // Drop the design's sample jobs; only real dispatched jobs from here on.
       this.setState(st => ({ tick: st.tick, jobs: st.jobs.filter(j => j.real) }));

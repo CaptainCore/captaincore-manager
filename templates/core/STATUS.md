@@ -2097,3 +2097,12 @@ the site-request flow. The legacy v1 app only ever GETs /accounts, so
 nothing breaks there. Verified live: customer sees no button and the API
 returns rest_forbidden 403; operator keeps the button and a live POST
 succeeded (test account deleted after).
+
+### Email forwarding column on Domains (2026-08-24)
+The Domains list gained a sortable "Email forwarding" column (Active /
+—), matching the DNS column's treatment. `Domains::list()` now emits a
+`forwarding` boolean — true when the domain's details JSON carries a
+`mailgun_forwarding_id` (the apex Mailgun forwarding zone) — and the
+hydrate mapping (data.js + the post-create refetch) carries it through.
+Verified live as operator: a domain with a forwarding zone shows green
+Active, its sibling without one shows the dash.
