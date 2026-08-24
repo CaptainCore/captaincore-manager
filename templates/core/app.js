@@ -2870,7 +2870,12 @@ class Component extends DCLogic {
       pick: () => {
         this.setState(j.session ? { jobSel: j.id, termSel: j.session.split(',') } : { jobSel: j.id });
         if (this._termEl) this._termEl.focus({ preventScroll: true });
-      } }));
+      },
+      // Right-click on a RUNNING job → Cancel (v1's killCommand). Finished
+      // rows keep the browser menu. (j is the source entry: state, not the
+      // mapped `running` flag.)
+      ctx: (e) => { if (!(j.state === 'running' && j.real)) return;
+        this.openCtxMenu(e, [{ label: 'Cancel job', danger: true, act: () => this.cancelJob(j.id) }]); } }));
     // Dock job strip (Minn mockup): running rows first. The dock is
     // bottom-anchored with height:auto, so every row grows it UPWARD; the
     // strip caps at a few rows ("+ N more" expands) so a busy fleet can't

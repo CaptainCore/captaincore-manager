@@ -2167,3 +2167,16 @@ the @ picker shows "N environments selected" and can refine before
 running. No targets → info toast instead of an empty dock. Verified live
 as a customer: a 24-site account targets 40 environments (24 prod +
 16 staging), toast reads "N environments across M sites".
+
+### Cancel a running job (2026-08-24)
+Right-clicking a RUNNING row in the Activity dock's job strip now offers
+"Cancel job" (finished rows keep the browser menu). cancelJob() is v1's
+killCommand rebuilt: send { token, action: "kill" } over the job's own
+WebSocket (the daemon's wsHandler kills the process server-side), append
+"➜ Process terminated by user." to the stream, and resolve the row as
+error — the daemon's socket close re-runs finishJob idempotently.
+Verified live end-to-end: dispatched sleep 45 against 2 environments,
+right-click → Cancel job → daemon streamed "Error: signal: killed", row
+flipped to error, "Job cancelled." toast, 0 running. Gotcha caught in
+verification: the ctx guard must read j.state === 'running' from the
+SOURCE job entry — the mapped `running` flag lives only on the row object.

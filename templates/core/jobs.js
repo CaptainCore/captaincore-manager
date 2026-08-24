@@ -111,6 +111,22 @@ Object.assign(Component.prototype, {
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
     'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy' },
 
+  // Cancel a running job — v1's killCommand (core-legacy.php:25227): tell the
+  // daemon to kill the process over the job's own socket ({token, action:
+  // "kill"}), append the termination line, and resolve the row as error. The
+  // daemon closes the socket after killing; the onclose handler re-runs
+  // finishJob with the same error state, which is idempotent.
+  cancelJob(id) {
+    const job = this._jobObjs && this._jobObjs[id];
+    if (!job) return;
+    if (job.ws && job.ws.readyState === WebSocket.OPEN && job.token) {
+      try { job.ws.send(JSON.stringify({ token: job.token, action: 'kill' })); } catch (e) {}
+    }
+    job.stream.push('➜ Process terminated by user.');
+    this.finishJob(job, 'error');
+    if (this.toast) this.toast('Job cancelled.', { kind: 'info' });
+  },
+
   finishJob(job, state) {
     this.patchJob(job.id, { state, pct: 100, right: state === 'done' ? 'just now' : 'error' });
     // Resolve the loading toast a background action created on dispatch.

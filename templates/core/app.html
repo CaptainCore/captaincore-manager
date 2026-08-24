@@ -3288,7 +3288,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ dockJobsShow }}" hint-placeholder-val="{{ true }}">
         <div style="flex:none;display:flex;flex-direction:column;padding:6px 8px;border-bottom:1px solid var(--rule);max-height:38vh;overflow-y:auto">
           <sc-for list="{{ dockJobs }}" as="j" hint-placeholder-count="3">
-            <div onClick="{{ j.pick }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 var(--fs-14) var(--sans);background:{{ j.rowBg }}" style-hover="background:var(--panel-2)">
+            <div onClick="{{ j.pick }}" onContextMenu="{{ j.ctx }}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;font:400 var(--fs-14) var(--sans);background:{{ j.rowBg }}" style-hover="background:var(--panel-2)">
               <span style="width:8px;height:8px;border-radius:50%;background:{{ j.dot }};flex:none;animation:{{ j.dotAnim }}"></span>
               <span style="font-weight:600;flex:none">{{ j.label }}</span>
               <span style="font-size:var(--fs-125);color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ j.target }}</span>
