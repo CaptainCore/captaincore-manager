@@ -18,6 +18,25 @@ class Run {
      * @param string       $payload
      * @return array
      */
+    /**
+     * Normalize an environment name before it is interpolated into a command.
+     *
+     * Legacy string commands are re-tokenized by the CLI server, so whitespace
+     * in an environment segment becomes extra argv tokens. Every environment
+     * value that reaches a command string has to come through here (or an
+     * equivalent in_array() check in the REST handler) so it can only ever be
+     * one of the known names.
+     *
+     * @param mixed    $environment
+     * @param string[] $allowed
+     * @param string   $fallback
+     * @return string
+     */
+    public static function safe_environment( $environment, $allowed = [ 'production', 'staging' ], $fallback = 'production' ) {
+        $environment = strtolower( trim( (string) $environment ) );
+        return in_array( $environment, $allowed, true ) ? $environment : $fallback;
+    }
+
     private static function build_body( $command, $payload = "" ) {
         if ( is_array( $command ) ) {
             $body = [ "args" => array_values( $command ) ];

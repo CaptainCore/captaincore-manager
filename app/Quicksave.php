@@ -12,7 +12,7 @@ class Quicksave {
 
     // Constrain the environment segment to the known values; site_id is an int.
     private function safe_environment( $environment ) {
-        return strtolower( (string) $environment ) === "staging" ? "staging" : "production";
+        return Run::safe_environment( $environment );
     }
 
     public function get( $hash, $environment = "production" ) {

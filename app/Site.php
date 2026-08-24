@@ -917,6 +917,7 @@ class Site {
 
     public function backup_show_file( $backup_id, $file_id, $environment = "production" ) {
 
+        $environment = Run::safe_environment( $environment );
         $file    = base64_encode( $file_id );
         $command = "backup show {$this->site_id}-$environment $backup_id $file";
     
@@ -1754,6 +1755,7 @@ class Site {
 
     public function update_logs( $environment = "both" ) {
 
+        $environment = Run::safe_environment( $environment, [ 'production', 'staging', 'both' ], 'both' );
         $command     = "update-log list {$this->site_id}-$environment";
         $response    = Run::CLI( $command );
         $update_logs = json_decode( $response );
@@ -1823,6 +1825,7 @@ class Site {
 
     public function quicksaves( $environment = "both" ) {
 
+        $environment = Run::safe_environment( $environment, [ 'production', 'staging', 'both' ], 'both' );
         $command    = "quicksave list {$this->site_id}-$environment";
         $response   = Run::CLI( $command );
         $quicksaves = json_decode( $response );

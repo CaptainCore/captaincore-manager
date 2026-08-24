@@ -5894,7 +5894,10 @@ function captaincore_site_captures_new_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$environment = strtolower( $request['environment'] ?? '' );
+	$environment = strtolower( (string) $request['environment'] );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+	}
 	$site        = new CaptainCore\Site( $site_id );
 
 	// Remote Sync
@@ -5976,6 +5979,11 @@ function captaincore_site_environment_performance_monitor_toggle_func( $request 
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
+	$environment = strtolower( (string) $environment );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+	}
+
 	$params  = $request->get_json_params();
 	$enabled = ! empty( $params['enabled'] );
 	$action  = $enabled ? 'activate' : 'deactivate';
@@ -5991,6 +5999,11 @@ function captaincore_site_environment_performance_monitor_fetch_func( $request )
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = strtolower( (string) $environment );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 
 	$hours   = ! empty( $request['hours'] ) ? intval( $request['hours'] ) : 0;
@@ -6129,9 +6142,17 @@ function captaincore_update_logs_get_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$hash_before = $request['hash_before'];
-	$hash_after  = $request['hash_after'];
-	$environment = $request['environment'];
+	$environment = strtolower( (string) $environment );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+	}
+
+	// Route regex constrains these to [a-zA-Z0-9-]+, but read them from the URL
+	// segment explicitly - a JSON body of the same name outranks the URL in
+	// WP_REST_Request's parameter order.
+	$url_params  = $request->get_url_params();
+	$hash_before = preg_replace( '/[^a-zA-Z0-9-]/', '', (string) ( $url_params['hash_before'] ?? '' ) );
+	$hash_after  = preg_replace( '/[^a-zA-Z0-9-]/', '', (string) ( $url_params['hash_after'] ?? '' ) );
 	$command     = "update-log get $site_id-$environment $hash_before $hash_after";
 	$response    = CaptainCore\Run::CLI( $command );
 	return json_decode( $response );
@@ -6191,7 +6212,7 @@ function captaincore_quicksaves_rollback_func( $request ) {
 
 function captaincore_quicksaves_sandbox_token_func( $request ) {
 	$site_id          = $request->get_param( 'site_id' );
-	$environment      = strtolower( $request->get_param( 'environment' ) ?? 'production' );
+	$environment      = CaptainCore\Run::safe_environment( $request->get_param( 'environment' ) );
 	$hash             = $request['hash'];
 	$include_database = (bool) $request->get_param( 'include_database' );
 
@@ -6262,7 +6283,10 @@ function captaincore_quicksaves_artifact_func( $request ) {
 	}
 
 	$site_id     = $data['site_id'];
-	$environment = $data['environment'];
+	// Re-normalize on read rather than trusting the stored copy - these two
+	// commands are still the legacy string form, so the environment segment is
+	// the one token that could otherwise add argv to the CLI invocation.
+	$environment = CaptainCore\Run::safe_environment( $data['environment'] ?? '' );
 
 	if ( $type === 'database' ) {
 		header( 'Access-Control-Allow-Origin: *' );
@@ -6301,6 +6325,10 @@ function captaincore_site_sync_data_func( $request ) {
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$environment = strtolower( (string) $environment );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
 
