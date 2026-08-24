@@ -15,6 +15,7 @@
 #   user-account-security-plan.md        planning doc, dev only
 #   templates/core/STATUS.md          living build log, dev only
 #   templates/core/V1-PLAN.md         release checklist, dev only
+#   templates/core/PARITY.md          parity-audit checklist, dev only
 #
 # vendor/ SHIPS (the optimized composer classmap is required at runtime).
 # templates/ SHIPS (core.php + core/ UI). manifest.json SHIPS (updater
@@ -61,6 +62,7 @@ zip -r -q -X "$OUT" "$NAME" \
 	-x "$NAME/user-account-security-plan.md" \
 	-x "$NAME/templates/core/STATUS.md" \
 	-x "$NAME/templates/core/V1-PLAN.md" \
+	-x "$NAME/templates/core/PARITY.md" \
 	-x "$NAME/public/faker.js" \
 	-x "*.DS_Store"
 
@@ -72,10 +74,10 @@ zip -r -q -X "$OUT" "$NAME" \
 # the first hit, unzip takes SIGPIPE, and the pipeline inherits its status.
 listing="$( unzip -l "$OUT" )"
 
-leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN)\.md" <<< "$listing" || true )"
+leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md" <<< "$listing" || true )"
 [ "$leaked" = "0" ] || {
 	echo "FAIL: $leaked dev file(s) leaked into the zip" >&2
-	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN)\.md" <<< "$listing" | head >&2
+	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md" <<< "$listing" | head >&2
 	exit 1
 }
 
