@@ -3,14 +3,14 @@
   "slug": "captaincore-manager",
   "author": "<a href=\"https://austinginder.com\">Austin Ginder</a>",
   "author_profile": "https://profiles.wordpress.org/austinginder",
-  "version": "0.18.0",
-  "download_url": "https://github.com/CaptainCore/captaincore-manager/releases/download/v0.18.0/captaincore-manager.zip",
+  "version": "1.0.0",
+  "download_url": "https://github.com/CaptainCore/captaincore-manager/releases/download/v1.0.0/captaincore-manager.zip",
   "sha256": "",
   "requires": "6.0",
   "tested": "7.0",
   "requires_php": "7.4",
   "added": "2018-02-01 12:00:00",
-  "last_updated": "2026-08-23 12:00:00",
+  "last_updated": "2026-08-24 12:00:00",
   "homepage": "https://captaincore.io",
   "sections": {
     "description": "WordPress management toolkit for geeky maintenance professionals. Requires a connection to CaptainCore CLI."

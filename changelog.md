@@ -1,15 +1,34 @@
 # Changelog
 
-## **v1.0.0** - Unreleased
+## **v1.0.0** - August 24, 2026
 
-The interface release. CaptainCore Manager reaches 1.0 with a rebuilt `/account` experience: a fast, hand-maintained single-page interface (`templates/core/`) that replaces the original Vue dashboard as the default, while the legacy app remains one switch away. This release also puts the project on a proper release cycle with GitHub Releases, a signed update manifest, and a self-updater.
+The interface release. CaptainCore Manager reaches 1.0 with a rebuilt `/account` experience: a fast, hand-maintained single-page interface (`templates/core/`) that replaces the original Vue dashboard as the default, while the legacy app remains one switch away. This cut also records the control-plane work since 0.18.0: hash-based security operations, session monitoring, new hosting and registrar providers, email forwarding, in-browser logs and a terminal, customer reports, and a proper GitHub Releases cycle with a signed update manifest and self-updater.
 
 ### Added
 
-- New core interface: a rebuilt fleet dashboard served at `/account`, wearing the Minn Admin design system with light and dark themes, a command palette, and a working terminal dock.
+- New core interface: a rebuilt fleet dashboard served at `/account`, wearing the Minn Admin design system with light and dark themes, a command palette, and a terminal dock for multi-target runs, cookbook recipes, scheduled scripts, grouped sessions and cancel.
 - Self-updater: the plugin now checks a release manifest on GitHub and offers updates through the WordPress Plugins screen, verifying each download against the sha256 published in the manifest before install.
 - Release tooling: `bin/build-zip.sh` builds the distributable zip with dev files excluded and prints the sha256 for the manifest stamp.
 - Automatic database migrations: pending schema upgrades now run on the first admin request after an update, so updating through the Plugins screen no longer requires a manual `DB::upgrade()` step.
+- Security operations: hash-based plugin, theme and loose-file inventory across the fleet, threat tracking, and security patches, wired to WP Registry so one audit of a build covers every site running that exact code.
+- Site audits: stored reports with findings for security, malware, performance, accessibility, debug and incident work, plus WP-CLI queues that rank unaudited components and updates-before-audit.
+- Session monitoring: daily snapshots of admin accounts, sessions and injected capabilities, with delta-based anomaly alerts instead of repeating the same baseline every day.
+- Google Web Risk checks against every production home URL, with a log of each fleet run.
+- Integrity alerts when core or plugin checksums fail, malware is detected, visual captures change unexpectedly, or a site's default role is unsafe.
+- Provider APIs for Spaceship (registrar), GridPane, Rocket.net, Cloudflare and Forward Email, plus Kinsta site create, clone, and import of existing sites from a connected provider.
+- Email forwarding per domain through Forward Email, with Mailgun zone deploy, verification, usage and suppressions.
+- DNS zone create, toggle and delete from the domain screen.
+- In-browser server logs, including a gunzip proxy so archived logs can be read without downloading.
+- File manager on each environment, locked to the site home directory, with image previews and delete.
+- Performance Monitor charts per environment.
+- Activity log of operator and customer actions across sites, domains and accounts.
+- Scheduled customer reports covering updates, backups, visits and process logs.
+- Branded transactional mailer for invoices, invites, password resets, plan requests and security alerts.
+- ACH bank payments through Stripe, alongside cards.
+- Location-aware login verification: GeoIP fingerprints and a trusted-login list, with email challenges for new locations.
+- Site labels for operator notes that do not change lifecycle status (moved, DNS elsewhere, down, domain expiring).
+- Application passwords on Profile, with a built-in API documentation viewer.
+- WP-CLI commands for web-risk checks, scan/component/update queues, session alerts, scheduled reports, DNS, Mailgun, provider sync, site labels and restic cache.
 
 ### Improved
 
