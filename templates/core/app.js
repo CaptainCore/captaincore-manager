@@ -2073,6 +2073,9 @@ class Component extends DCLogic {
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
       ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false }),
+      usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator',
+      openUpdSettings: () => this.openUpdSettings(real, s),
+      ...this.updSettingsVals(real, s),
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,

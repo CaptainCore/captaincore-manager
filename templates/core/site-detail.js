@@ -141,6 +141,62 @@ Object.assign(Component.prototype, {
     return rows.filter(([, v]) => v !== '');
   },
 
+  // ── Managed-update settings dialog (v1 parity: dialog_update_settings) ──
+  // PUT /sites/{id}/settings { environment, value: { updates_enabled,
+  // updates_exclude_plugins: [], updates_exclude_themes: [] } }; the handler
+  // stores per-env and dispatches its own `site sync`.
+  openUpdSettings(real, s) {
+    const e = this.currentEnv(real, s);
+    if (!e) return;
+    const csv = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    this.setState({ usOpen: true,
+      usEnabled: !!(e.updates_enabled && e.updates_enabled !== '0'),
+      usExPlugins: csv(e.updates_exclude_plugins),
+      usExThemes: csv(e.updates_exclude_themes) });
+  },
+
+  updSettingsVals(real, s) {
+    if (!s.usOpen || !real) return { usOpen: false };
+    const e = this.currentEnv(real, s) || {};
+    const mkChips = (list, key) => (list || []).map(p => { const slug = p.name || p.slug || '';
+      const on = (this.state[key] || []).includes(slug);
+      return { label: slug,
+        bg: on ? 'var(--warn-soft)' : 'var(--panel-2)', fg: on ? 'var(--ink)' : 'var(--ink-dim)',
+        bd: on ? 'var(--warn)' : 'var(--rule)',
+        toggle: () => this.setState(st => ({ [key]: (st[key] || []).includes(slug)
+          ? st[key].filter(x => x !== slug) : [...(st[key] || []), slug] })) };
+    }).filter(c => c.label);
+    return {
+      usOpen: true,
+      usEnvLabel: e.environment || 'Production',
+      usEnabled: !!s.usEnabled,
+      usFlip: () => this.setState(st => ({ usEnabled: !st.usEnabled })),
+      usTogBg: s.usEnabled ? 'var(--ok)' : 'var(--rule)',
+      usTogJust: s.usEnabled ? 'flex-end' : 'flex-start',
+      usPluginChips: mkChips(e.plugins, 'usExPlugins'),
+      usThemeChips: mkChips(e.themes, 'usExThemes'),
+      usClose: () => this.setState({ usOpen: false }),
+      usSave: () => {
+        const st = this.state;
+        const value = { updates_enabled: st.usEnabled ? '1' : '0',
+          updates_exclude_plugins: st.usExPlugins || [], updates_exclude_themes: st.usExThemes || [] };
+        const tid = this.toast('Saving update settings…', { kind: 'loading' });
+        this.api('/sites/' + real.siteId + '/settings', { method: 'PUT',
+          body: { environment: e.environment || 'Production', value } })
+          .then(() => {
+            // Reflect the save locally; the handler's own `site sync` will
+            // refresh the canonical row later.
+            e.updates_enabled = value.updates_enabled;
+            e.updates_exclude_plugins = value.updates_exclude_plugins.join(',');
+            e.updates_exclude_themes = value.updates_exclude_themes.join(',');
+            this.updateToast(tid, 'Update settings saved', { kind: 'success' });
+            this.setState({ usOpen: false });
+          })
+          .catch(() => this.updateToast(tid, 'Could not save update settings', { kind: 'error' }));
+      }
+    };
+  },
+
   realSync(real, s) {
     const id = real.siteId;
     const name = (real.site && real.site.name) || '';
