@@ -2583,6 +2583,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <sc-if value="{{ pm.isDefault }}" hint-placeholder-val="{{ false }}">
                       <span style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px;flex:none">Default</span>
                     </sc-if>
+                    <span onClick="{{ pm.remove }}" style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim);cursor:pointer;flex:none;padding:2px 6px;border-radius:5px" style-hover="color:var(--bad);background:var(--bad-soft)">Remove</span>
                   </div>
                 </sc-for>
                 <sc-if value="{{ invNoMethods }}" hint-placeholder-val="{{ false }}">

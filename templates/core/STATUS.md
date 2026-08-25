@@ -2413,3 +2413,13 @@ details not provisioned yet), and fails LOUDLY after 5 attempts.
 (3) check()'s 404/500 tolerance raised from 10 to 30 attempts (~5 min of
 polling) — Kinsta operations can 404 while queued, and a second create
 that day was marked failed at attempt 10 while Kinsta completed it.
+
+### Remove payment method from the invoice payment section (2026-08-25)
+Each saved-method row in the invoice Payment card now has a Remove
+action (stopPropagation so it does not toggle the radio selection):
+confirm → DELETE /billing/payment-methods/{token} → toast, clear the
+selection if it pointed at the removed method, reload /billing/ so the
+section re-renders. Verified live with the token-filter bypass: a sole
+default card shows Remove beside the Default chip; removing it empties
+the WC tokens, the section falls back to the no-methods prompt and the
+Pay button disappears (only add-card-and-pay remains). Fixtures removed.

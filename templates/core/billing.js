@@ -193,13 +193,22 @@ Object.assign(Component.prototype, {
     const selTok = s.invPaySel != null ? String(s.invPaySel) : (defTok != null ? String(defTok) : '');
     const amount = d ? ('$' + (Number(String(d.total).replace(/[^0-9.]/g, '')) || 0).toFixed(2)) : '';
     const invPayMethods = methods.map(pm => { const m = pm.method || {}; const on = String(pm.token) === selTok;
+      const label = (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????');
       return {
-        label: (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????'),
+        label,
         sub: pm.type === 'ach' ? [m.bank_name, m.account_type].filter(Boolean).join(' · ') : (pm.expires ? 'Expires ' + pm.expires : ''),
         isDefault: !!pm.is_default,
         dotBd: on ? 'var(--brand)' : 'var(--rule)', dotBg: on ? 'var(--brand)' : 'transparent',
         rowBd: on ? 'var(--brand)' : 'var(--rule)', rowBg: on ? 'var(--brand-soft)' : 'transparent',
-        pick: () => this.setState({ invPaySel: String(pm.token) })
+        pick: () => this.setState({ invPaySel: String(pm.token) }),
+        remove: (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation();
+          if (!confirm('Remove ' + label + ' from your payment methods?')) return;
+          const tid = this.toast('Removing ' + label + '…', { kind: 'loading' });
+          this.api('/billing/payment-methods/' + pm.token, { method: 'DELETE' }).then(() => {
+            this.updateToast(tid, label + ' removed', { kind: 'success' });
+            this.setState(st => String(st.invPaySel) === String(pm.token) ? { invPaySel: null, invPayConfirm: false } : {});
+            this.loadBilling(true);
+          }).catch(() => this.updateToast(tid, 'Could not remove ' + label, { kind: 'error' })); }
       }; });
     const selLabel = (methods.map(pm => pm).filter(pm => String(pm.token) === selTok).map(pm => {
       const m = pm.method || {}; return (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????'); })[0]) || '';
