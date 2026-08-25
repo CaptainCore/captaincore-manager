@@ -2231,3 +2231,20 @@ when EMPTY so an unassigned domain can be assigned. Customers see the
 plain chips, no controls. Verified live: assigned a second account to a
 real domain (pivot row created, chip + toast), unassigned it (pivot
 restored), customer view clean.
+
+### Per-account Site defaults tab (2026-08-25)
+The account detail gained a "Site defaults" tab (between Domains and
+Plan) for admins AND full-access members — sites-only/domains-only tiers
+see neither the tab nor a working route (PUT /accounts/{id}/defaults now
+tier-gates full/full-billing; previously ANY member could write). The
+tab shows the summary rows (default email / timezone / recipes / users)
+and Edit reuses the SHARED fleet Site defaults dialog from settings.js:
+state.defTarget (set by openAccDefaults) routes saveDefaultsReal() to
+the account endpoint with the { defaults: {...} } body shape, seeded
+from the account's own defaults (this._accDefSeed) rather than the
+fleet set, and reloads the account bundle on save. openAccDefaults
+calls loadSettings() so the recipe chips populate. Verified live: a
+full-access customer edited the timezone through the dialog (users
+array preserved through the merge), the DB row updated and the tab
+re-rendered; sites-only PUT denied server-side; admin sees the tab.
+Test data restored after.

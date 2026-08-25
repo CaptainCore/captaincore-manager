@@ -443,6 +443,7 @@ class Component extends DCLogic {
       accTabs: tabs,
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
+      accTabDefaults: s.accTab === 'defaults', accDefRows: [], openAccDefaults: () => {},
       accShowTransfer: true, accShowTrusted: true, accShowCancel: true,
       accShowDelete: true, accDelete: () => {},
       transferOpen: false, openTransfer: () => {}, closeTransfer: () => {}, transferEmpty: false,

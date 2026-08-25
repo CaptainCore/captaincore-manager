@@ -160,7 +160,7 @@ Object.assign(Component.prototype, {
       defDlgOpen: s.defDlgOpen, defEmail: s.defEmail, defTimezone: s.defTimezone,
       onDefEmail: e => this.setState({ defEmail: e.target.value }),
       onDefTimezone: e => this.setState({ defTimezone: e.target.value }),
-      openDefaults: () => this.setState({ defDlgOpen: true, defEmail: d.email || '', defTimezone: d.timezone || '',
+      openDefaults: () => this.setState({ defDlgOpen: true, defTarget: '', defEmail: d.email || '', defTimezone: d.timezone || '',
         defRecipes: (d.recipes || []).map(String),
         defUsers: (d.users || []).map(u => ({ ...u })) }),
       closeDefaults: () => this.setState({ defDlgOpen: false }),
@@ -294,17 +294,25 @@ Object.assign(Component.prototype, {
       .catch(() => this.updateToast(tid, 'Delete failed', { kind: 'error' }));
   },
 
+  // Shared with the per-account editor: state.defTarget (an account id set by
+  // openAccDefaults) routes the save to PUT /accounts/{id}/defaults, seeded
+  // from that account's defaults instead of the fleet-wide set.
   saveDefaultsReal() {
-    const set = this._set;
-    if (!set) return;
-    const body = { ...(set.defaults || {}),
+    const target = this.state.defTarget || '';
+    const base = target ? (this._accDefSeed || {}) : ((this._set && this._set.defaults) || {});
+    if (!target && !this._set) return;
+    const body = { ...base,
       email: (this.state.defEmail || '').trim(), timezone: (this.state.defTimezone || '').trim(),
       recipes: this.state.defRecipes || [],
       users: (this.state.defUsers || []).filter(u => (u.username || '').trim()) };
     this.setState({ defDlgOpen: false });
     const tid = this.toast('Saving site defaults…', { kind: 'loading' });
-    this.api('/defaults/global', { method: 'PUT', body })
-      .then(() => { this.updateToast(tid, 'Site defaults saved', { kind: 'success' }); this.loadSettings(true); })
+    const req = target
+      ? this.api('/accounts/' + target + '/defaults', { method: 'PUT', body: { defaults: body } })
+      : this.api('/defaults/global', { method: 'PUT', body });
+    req.then(() => { this.updateToast(tid, 'Site defaults saved', { kind: 'success' });
+      if (target) { this._account = null; this.loadAccountDetail(target); }
+      else this.loadSettings(true); })
       .catch(() => this.updateToast(tid, 'Save failed', { kind: 'error' }));
   },
 

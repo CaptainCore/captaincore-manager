@@ -2347,6 +2347,20 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-if>
 
+          <sc-if value="{{ accTabDefaults }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;max-width:640px">
+              <sc-for list="{{ accDefRows }}" as="r" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                  <span style="width:170px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
+                  <span style="font:400 var(--fs-125) var(--mono)">{{ r.v }}</span>
+                  <div style="flex:1"></div>
+                  <span onClick="{{ openAccDefaults }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);margin-top:10px;max-width:640px">Applied when a new site is created for this account: the default admin email, timezone, recipes to run, and users to seed.</div>
+          </sc-if>
+
           <sc-if value="{{ accTabDomains }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ accDomains }}" as="d" hint-placeholder-count="1">

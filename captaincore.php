@@ -1898,8 +1898,16 @@ function captaincore_accounts_defaults_func( WP_REST_Request $request ) {
 	$account_id = intval( $request['id'] );
 	$record     = (object) $request->get_json_params();
 
-	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
-		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	// Site defaults seed admin users onto new sites — full-access members and
+	// admins only; sites-only/domains-only tiers cannot write them.
+	if ( ! $user->is_admin() ) {
+		if ( ! $user->verify_accounts( [ $account_id ] ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
+		$level = $user->account_level( $account_id );
+		if ( ! in_array( $level, [ 'full-billing', 'full' ], true ) ) {
+			return new WP_Error( 'permission_denied', 'Your access level does not allow editing site defaults.', [ 'status' => 403 ] );
+		}
 	}
 
 	if ( ! isset( $record->defaults['users'] ) ) {

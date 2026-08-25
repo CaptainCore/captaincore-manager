@@ -273,7 +273,10 @@ Object.assign(Component.prototype, {
     // the name for everyone else, so full-access users get neither the tab
     // nor the data.
     const canPlan = isOp || !!d.owner || d.level === 'full-billing';
-    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ...(canPlan ? [['plan', 'Plan']] : []), ['activity', 'Activity']].map(([id, label]) => ({ label,
+    // Site defaults are visible AND editable for admins and full-access
+    // members (the PUT route enforces the same tiers server-side).
+    const canDefaults = isOp || !!d.owner || ['full-billing', 'full'].includes(d.level);
+    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ...(canDefaults ? [['defaults', 'Site defaults']] : []), ...(canPlan ? [['plan', 'Plan']] : []), ['activity', 'Activity']].map(([id, label]) => ({ label,
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
@@ -298,6 +301,24 @@ Object.assign(Component.prototype, {
         + (acc.err ? ' · ' + acc.err : ''),
       accTabs: tabs,
       accTabPlan: s.accTab === 'plan' && canPlan,
+      accTabDefaults: s.accTab === 'defaults' && canDefaults,
+      accDefRows: (() => { const def = a.defaults || {};
+        return [
+          ['Default email', def.email || '—'],
+          ['Timezone', def.timezone || '—'],
+          ['Recipes on new site', (def.recipes || []).length ? (def.recipes || []).length + ' recipe(s)' : '—'],
+          ['Default users', (def.users || []).length ? (def.users || []).length + ' user(s)' : '—']
+        ].map(([k, v]) => ({ k, v })); })(),
+      // Opens the SHARED Site defaults dialog (settings.js) with this
+      // account as the save target. loadSettings() supplies the recipe
+      // chips; the dialog paints once that fetch lands.
+      openAccDefaults: () => { const def = a.defaults || {};
+        this._accDefSeed = { ...def };
+        if (!this._set && !this._setLoading) this.loadSettings();
+        this.setState({ defDlgOpen: true, defTarget: String(acc.accountId),
+          defEmail: def.email || '', defTimezone: def.timezone || '',
+          defRecipes: (def.recipes || []).map(String),
+          defUsers: (def.users || []).map(u => ({ ...u })) }); },
       accShowTransfer: (d.users || []).some(u => (u.level || '') !== 'full-billing') && (d.owner || d.level === 'full-billing'),
       accShowTrusted: false, accShowCancel: false,
       // v1 parity (deleteAccount): admin-only; the route also kicks off the
