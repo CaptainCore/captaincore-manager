@@ -3635,9 +3635,19 @@ function captaincore_provider_new_site_func( $request ) {
 	// is not validated anywhere else in the tree. Resolve it to a CaptainCore
 	// site the caller can already reach, so it cannot name another tenant's.
 	if ( ! empty( $site->clone_site_id ) ) {
+		// Multiple rows can share a provider_site_id (imports, removed
+		// duplicates) — the caller is entitled to clone if ANY of them is a
+		// site they can reach, not just whichever row happens to sort first.
 		$clone_rows = CaptainCore\Sites::where( [ "provider_site_id" => $site->clone_site_id ] );
-		$clone_row  = ! empty( $clone_rows ) ? $clone_rows[0] : null;
-		if ( empty( $clone_row ) || ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions( $clone_row->site_id ) ) ) {
+		$clone_ok   = false;
+		$is_admin   = ( new CaptainCore\User )->is_admin();
+		foreach ( $clone_rows as $clone_row ) {
+			if ( $is_admin || captaincore_verify_permissions( $clone_row->site_id ) ) {
+				$clone_ok = true;
+				break;
+			}
+		}
+		if ( ! $clone_ok ) {
 			$errors[] = "Permission denied for the clone source";
 		}
 	}

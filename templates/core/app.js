@@ -53,7 +53,7 @@ class Component extends DCLogic {
     pmOpen: false, pmHours: 24, pmLoading: false, pmError: '', pmHover: -1,
     nsEnvs: 'Production only', nsImportSel: {},
     nsProvId: '', nsRemoteQ: '', nsImportAcc: '',
-    ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndZone: true, domList: null,
+    ndOpen: false, ndName: '', ndAcc: 'Bloom & Branch Floral', ndSite: '', ndZone: true, domList: null,
     naOpen: false, naName: '', naMsg: '', billAddrOpen: false, billAddrDraft: {},
     dnsEdit: 0, dnsEN: '', dnsEV: '', dnsETtl: '', dnsESubs: null,
     zoneOpen: false, zoneText: '', nsvOpen: false, nsvText: '', nsCustom: null,
@@ -1677,6 +1677,14 @@ class Component extends DCLogic {
       ddNdAccOpen: s.ddOpen === 'ndAcc',
       ddToggleNdAcc: () => this.setState(st => ({ ddOpen: st.ddOpen === 'ndAcc' ? '' : 'ndAcc', ddQ: '' })),
       ddNdAccOpts: this.ddOpts(this.ACCOUNTS.map(a => a.name), s.ndAcc, 'ndAcc'),
+      // Customers attach a domain to one of their WEBSITES — the server
+      // requires site_id for non-admins and pivots the domain to that site's
+      // customer account. Operators keep the account picker.
+      ndShowAcc: isOp, ndShowSite: !isOp,
+      ndSite: s.ndSite || 'Select a website…',
+      ddNdSiteOpen: s.ddOpen === 'ndSite',
+      ddToggleNdSite: () => this.setState(st => ({ ddOpen: st.ddOpen === 'ndSite' ? '' : 'ndSite', ddQ: '' })),
+      ddNdSiteOpts: this.ddOpts(this.FLEET.map(f => f.name), s.ndSite, 'ndSite'),
       ndZoneBg: s.ndZone ? 'var(--brand)' : 'var(--rule)',
       ndZoneJust: s.ndZone ? 'flex-end' : 'flex-start',
       ndZoneLabel: s.ndZone ? 'On — records editable here' : 'Off — DNS stays external',
@@ -1684,10 +1692,19 @@ class Component extends DCLogic {
       ndCreate: () => { const v = this.state.ndName.trim().toLowerCase(); if (!v) return;
         if (this._hydrated) {
           const acc = this.ACCOUNTS.find(a => a.name === this.state.ndAcc);
-          this.setState({ ndOpen: false, ndName: '' });
-          this.api('/domains', { method: 'POST', body: { name: v, account_id: acc ? acc.id : '', create_dns_zone: !!this.state.ndZone } })
+          const siteRow = !isOp ? this.FLEET.find(f => f.name === this.state.ndSite) : null;
+          if (!isOp && !siteRow) { this.toast('Pick the website this domain belongs to.', { kind: 'info' }); return; }
+          const tid = this.toast('Adding ' + v + '…', { kind: 'loading' });
+          this.api('/domains', { method: 'POST', body: { name: v, account_id: acc ? acc.id : '',
+            ...(siteRow ? { site_id: siteRow.id } : {}), create_dns_zone: !!this.state.ndZone } })
             .then(res => {
-              if (res && res.code) { console.warn('domain create failed', res); return; }
+              // Surface server-side rejections ({errors:[…]} or WP_Error) —
+              // these used to vanish into console.warn, reading as "nothing
+              // happened" (the Launch Kits report).
+              if (res && (res.code || (res.errors && res.errors.length))) {
+                this.updateToast(tid, String((res.errors && res.errors[0]) || res.message || 'Could not add the domain.'), { kind: 'error' }); return; }
+              this.updateToast(tid, v + ' added', { kind: 'success' });
+              this.setState({ ndOpen: false, ndName: '' });
               this.api('/domains/').then(domains => {
                 // Keep the registrar mapping in sync with data.js hydrate.
                 const rBrand = (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting';
@@ -1697,7 +1714,7 @@ class Component extends DCLogic {
                   forwarding: !!x.forwarding, sending: !!x.sending, expires: '—', auto: null, owned: true }));
                 this.setState({});
               }).catch(() => {});
-            }).catch(() => {});
+            }).catch(() => this.updateToast(tid, 'Could not add the domain.', { kind: 'error' }));
           return;
         }
         this.setState(st => ({ domList: [{ id: 'd' + Date.now(), name: v, account: st.ndAcc, registrar: 'Hover', dns: st.ndZone, expires: 'Jul 2027', auto: true, owned: true }, ...(st.domList || this.DOMAINS)], ndOpen: false, ndName: '' }));

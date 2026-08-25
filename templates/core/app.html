@@ -4713,6 +4713,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         </div>
         <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
           <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Domain</span><input value="{{ ndName }}" onInput="{{ onNdName }}" placeholder="example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
+          <sc-if value="{{ ndShowAcc }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Account</span>
             <div style="position:relative;flex:1">
               <div onClick="{{ ddToggleNdAcc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ ndAcc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
@@ -4729,6 +4730,25 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
           </div>
+          </sc-if>
+          <sc-if value="{{ ndShowSite }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Website</span>
+            <div style="position:relative;flex:1">
+              <div onClick="{{ ddToggleNdSite }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ ndSite }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <sc-if value="{{ ddNdSiteOpen }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
+                <div style="position:absolute;top:36px;left:0;z-index:40;width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                  <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search websites…" style="width:100%;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                  <div style="max-height:150px;overflow-y:auto">
+                    <sc-for list="{{ ddNdSiteOpts }}" as="o" hint-placeholder-count="4">
+                      <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+          </sc-if>
           <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">DNS zone</span>
             <span onClick="{{ ndZoneFlip }}" style="width:34px;height:20px;border-radius:99px;background:{{ ndZoneBg }};display:flex;align-items:center;padding:2px;justify-content:{{ ndZoneJust }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
             <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ ndZoneLabel }}</span>

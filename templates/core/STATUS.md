@@ -2284,3 +2284,26 @@ blind default-method confirm) now just open the invoice. Verified live
 with the token-filter bypass: no native dialog fires, confirm row names
 the card, Cancel restores the footer; a no-method customer sees neither
 header button nor Pay — only the add-card path. Fixtures removed after.
+
+### Customer domain-add fixed + clone-source check across duplicates (2026-08-25)
+A customer agency reported domains "not there" after adding and missing
+clone templates. Three findings. (1) v3's New-domain dialog was broken
+for customers: POST /domains REQUIRES site_id for non-admins (the domain
+pivots to that site's customer account) but the dialog only ever sent
+account_id, and ndCreate swallowed every server rejection with
+console.warn — adds silently failed. The dialog now shows a Website
+picker for customers (Account stays operator-only), sends site_id, keeps
+the dialog open until success, and surfaces every failure as an error
+toast. Verified live: customer add round-trips ("<domain> added", zone
+created), missing-site guard toasts, operator dialog unchanged; test
+domain + zone deleted after. (2) The kinsta new-site clone-source check
+resolved provider_site_id to the FIRST matching row only — it now passes
+if ANY row with that provider_site_id is reachable by the caller.
+(3) DATA root cause for the customer: 13 of their template sites had
+NULL provider_site_id, so v3's clone list filtered them out and legacy's
+hardened clone check rejected their UUIDs as unknown ("Permission denied
+for the clone source"). Backfilled 12 on prod by matching Kinsta display
+names (provider-sync auto-resolve was ambiguous for all of them — its
+first-label needle is too loose); one site has no Kinsta match at all
+(likely moved) and stays unmapped. Clone check simulated as the
+customer's owner: PASSES.
