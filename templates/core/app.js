@@ -1691,7 +1691,7 @@ class Component extends DCLogic {
                 const rBrand = (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting';
                 this.DOMAINS = (Array.isArray(domains) ? domains : []).map(x => ({ id: String(x.domain_id), name: x.name,
                   account: '', registrar: x.provider_id ? (isOp && x.provider ? x.provider : rBrand) : 'External',
-                  dns: !!x.remote_id,
+                  providerId: x.provider_id || '', dns: !!x.remote_id,
                   forwarding: !!x.forwarding, sending: !!x.sending, expires: '—', auto: null, owned: true }));
                 this.setState({});
               }).catch(() => {});
@@ -1825,7 +1825,9 @@ class Component extends DCLogic {
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgActive: true, mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
       regShowAuto: true,
-      domHasAccounts: false, domAccounts: [],
+      domHasAccounts: false, domAccounts: [], domCanAssign: false,
+      openDmaDlg: () => {}, dmaOpen: false, closeDma: () => {},
+      dmaQ: '', onDmaQ: () => {}, dmaRows: [], dmaHasRows: false, dmaEmpty: false,
       ...(this._hydrated ? this.realDomainVals(s, d) : {})
     };
   }

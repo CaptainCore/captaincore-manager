@@ -2215,3 +2215,19 @@ no query-carrying callers, so Constellix was the only breakage. Verified
 live: /dns/{id} returns 17 records + 4 nameservers for a real zone, the
 BIND export renders 45 lines, and `wp captaincore dns list` prints the
 record table again.
+
+### Domain account assignment (2026-08-25)
+The legacy Edit Domain dialog's account assignment, rebuilt for v3. On
+the domain detail header, operators see a ✕ on each account chip
+(unassign, with confirm) and a "+ Assign…" affordance opening a
+searchable account picker (mirrors the site assign dialog; separate
+dma* state keys). Both paths PUT the FULL desired list to
+/domains/{id}/account — assign_accounts() diffs against the
+AccountDomain pivot — with the domain's current provider_id riding
+along, because the endpoint writes provider_id unconditionally and
+omitting it would clear the registrar link (DOMAINS hydrate rows now
+carry providerId for this). The account row also renders for operators
+when EMPTY so an unassigned domain can be assigned. Customers see the
+plain chips, no controls. Verified live: assigned a second account to a
+real domain (pivot row created, chip + toast), unassigned it (pivot
+restored), customer view clean.

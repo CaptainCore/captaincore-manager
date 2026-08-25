@@ -78,7 +78,7 @@ Object.assign(Component.prototype, {
       const brandName = boot.name || 'Anchor Hosting';
       this.DOMAINS = (Array.isArray(domains) ? domains : []).map(d => ({ id: String(d.domain_id), name: d.name,
         account: '', registrar: d.provider_id ? (domIsOp && d.provider ? d.provider : brandName) : 'External',
-        dns: !!d.remote_id,
+        providerId: d.provider_id || '', dns: !!d.remote_id,
         forwarding: !!d.forwarding, sending: !!d.sending, expires: '\u2014', auto: null, owned: true }));
       this._hydrated = true;
       // Drop the design's sample jobs; only real dispatched jobs from here on.

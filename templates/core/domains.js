@@ -470,6 +470,25 @@ Object.assign(Component.prototype, {
       if (this.toast) this.toast('Mailgun deploy failed.', { kind: 'error' }); });
   },
 
+  // Sync a domain's full account list (v1's updateDomainAccount):
+  // PUT /domains/{id}/account { account_ids, provider_id }. assign_accounts()
+  // diffs against the pivot table, so the FULL desired list goes up each
+  // time. provider_id must ride along with its current value — the endpoint
+  // writes it unconditionally and omitting it would clear the registrar link.
+  saveDomainAccounts(ids, label) {
+    const dom = this._domain;
+    if (!dom) return;
+    const row = (this.state.domList || this.DOMAINS).find(x => x.id === String(dom.domainId)) || {};
+    const tid = this.toast('Saving account assignment…', { kind: 'loading' });
+    this.api('/domains/' + dom.domainId + '/account', { method: 'PUT',
+      body: { account_ids: ids, provider_id: row.providerId || null } }).then(res => {
+      if (res && (res.errors || res.code)) { this.updateToast(tid, 'Could not save the assignment', { kind: 'error' }); return; }
+      this.updateToast(tid, label, { kind: 'success' });
+      this.setState({ dmaOpen: false });
+      this.loadDomainDetail(dom.domainId);
+    }).catch(() => this.updateToast(tid, 'Could not save the assignment', { kind: 'error' }));
+  },
+
   // ── Binding overrides (spread at the end of computeDomain) ───
   realDomainVals(s, d) {
     const dom = (this._domain && this._domain.domainId === s.domainId) ? this._domain : null;
@@ -572,14 +591,39 @@ Object.assign(Component.prototype, {
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
         + (ev.recipient ? ' → ' + ev.recipient : '') }));
     const accs = (info.accounts || []).filter(a => a && (a.account_id || a.name));
+    // Operator-only account assignment (legacy Edit Domain parity): the ✕ on
+    // a chip unassigns, the Assign… link opens a searchable account picker.
+    const isOpDom = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    const accIds = accs.map(a => String(a.account_id));
+    const dmaQ = (s.dmaQ || '').toLowerCase();
+    const dmaRows = (s.dmaOpen ? this.ACCOUNTS : [])
+      .filter(a => !accIds.includes(String(a.id)))
+      .filter(a => !dmaQ || (a.name || '').toLowerCase().includes(dmaQ))
+      .slice(0, 100)
+      .map(a => ({
+        label: a.name,
+        sub: [a.sites + ' site' + (a.sites === 1 ? '' : 's'), a.plan].filter(Boolean).join(' · '),
+        pick: () => this.saveDomainAccounts([...accIds, String(a.id)], 'Assigned ' + a.name)
+      }));
     return {
       domTabs: lazyTabs,
       domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · Registered externally'),
-      domHasAccounts: accs.length > 0,
-      domAccounts: accs.map(a => ({
-        name: this.decodeHtml(a.name),
-        open: () => this.openAccount(String(a.account_id))
-      })),
+      domHasAccounts: accs.length > 0 || isOpDom,
+      domAccounts: accs.map(a => { const name = this.decodeHtml(a.name);
+        return {
+          name,
+          open: () => this.openAccount(String(a.account_id)),
+          canDrop: isOpDom,
+          drop: (e) => { e.stopPropagation();
+            if (!confirm('Remove ' + name + ' from this domain? Its members lose access to the domain.')) return;
+            this.saveDomainAccounts(accIds.filter(id => id !== String(a.account_id)), 'Removed ' + name); }
+        }; }),
+      domCanAssign: isOpDom,
+      openDmaDlg: () => this.setState({ dmaOpen: true, dmaQ: '' }),
+      dmaOpen: !!s.dmaOpen,
+      closeDma: () => this.setState({ dmaOpen: false }),
+      dmaQ: s.dmaQ || '', onDmaQ: e => this.setState({ dmaQ: e.target.value }),
+      dmaRows, dmaHasRows: dmaRows.length > 0, dmaEmpty: !!s.dmaOpen && dmaRows.length === 0,
       dnsRows,
       dnsNotice: !!dnsNote, dnsNoticeText: dnsNote,
       // Loading affordance: spinner in the notice bar + shimmer skeleton rows

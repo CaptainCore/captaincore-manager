@@ -1759,8 +1759,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
               <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Account</span>
               <sc-for list="{{ domAccounts }}" as="a" hint-placeholder-count="1">
-                <span onClick="{{ a.open }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ a.name }}</span>
+                <span onClick="{{ a.open }}" style="display:inline-flex;align-items:center;gap:5px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ a.name }}<sc-if value="{{ a.canDrop }}" hint-placeholder-val="{{ false }}"><span onClick="{{ a.drop }}" title="Unassign account" style="color:var(--ink-dim);font:500 var(--fs-115) var(--sans);width:15px;height:15px;display:grid;place-items:center;border-radius:4px" style-hover="background:var(--bad-soft);color:var(--bad)">✕</span></sc-if></span>
               </sc-for>
+              <sc-if value="{{ domCanAssign }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ openDmaDlg }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:1px 8px" style-hover="border-color:var(--brand);color:var(--brand-ink)">+ Assign…</span>
+              </sc-if>
             </div>
           </sc-if>
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
@@ -3905,6 +3908,37 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ asgRows }}" as="ag" hint-placeholder-count="4">
                 <div onClick="{{ ag.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                   <span style="min-width:0;flex:1"><span style="display:block;font:500 var(--fs-13) var(--sans)">{{ ag.label }}</span><span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ ag.sub }}</span></span>
+                  <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">Assign</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Assign domain to account dialog ══ -->
+  <sc-if value="{{ dmaOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDma }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:460px;max-width:100%;max-height:78vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">Assign an account</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeDma }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:none;padding:12px 18px 0">
+          <input ref="{{ leadFocusRef }}" value="{{ dmaQ }}" onInput="{{ onDmaQ }}" placeholder="Search accounts…" style="width:100%;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--panel);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:12px 18px 14px">
+          <sc-if value="{{ dmaEmpty }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No matching accounts — every account is either assigned already or filtered out by the search.</span>
+          </sc-if>
+          <sc-if value="{{ dmaHasRows }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+              <sc-for list="{{ dmaRows }}" as="dg" hint-placeholder-count="4">
+                <div onClick="{{ dg.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                  <span style="min-width:0;flex:1"><span style="display:block;font:500 var(--fs-13) var(--sans)">{{ dg.label }}</span><span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ dg.sub }}</span></span>
                   <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">Assign</span>
                 </div>
               </sc-for>
