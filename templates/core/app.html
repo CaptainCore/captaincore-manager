@@ -2554,6 +2554,33 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <span style="font:700 16px var(--mono)">{{ invTotal }}</span>
               </div>
             </div>
+            <sc-if value="{{ invCanPay }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;max-width:640px">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Payment</h2></div>
+                <sc-if value="{{ invPayLoadingMethods }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading payment methods…</div>
+                </sc-if>
+                <sc-for list="{{ invPayMethods }}" as="pm" hint-placeholder-count="1">
+                  <div onClick="{{ pm.pick }}" style="display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ pm.rowBg }}" style-hover="background:var(--panel-2)">
+                    <span style="width:15px;height:15px;border-radius:50%;border:2px solid {{ pm.dotBd }};display:grid;place-items:center;flex:none"><span style="width:7px;height:7px;border-radius:50%;background:{{ pm.dotBg }}"></span></span>
+                    <span style="min-width:0;flex:1"><span style="display:block;font:500 var(--fs-13) var(--sans)">{{ pm.label }}</span><span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ pm.sub }}</span></span>
+                    <sc-if value="{{ pm.isDefault }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 9px;flex:none">Default</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ invNoMethods }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No payment method on file yet — add a card below to pay this invoice.</div>
+                </sc-if>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel)">
+                  <span onClick="{{ openInvCard }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:6px 12px;background:var(--paper)" style-hover="border-color:var(--brand)">+ Pay with a new card</span>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ invHasMethods }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ invPayGo }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ invPayLabel }}</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
           </sc-if>
         </div>
       </sc-if>
@@ -4761,7 +4788,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     <div onClick="{{ closeAddCard }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
       <div onClick="{{ stopProp }}" style="width:440px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
         <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
-          <span style="font:600 var(--fs-15) var(--sans)">Add card</span>
+          <span style="font:600 var(--fs-15) var(--sans)">{{ cardDlgTitle }}</span>
           <div style="flex:1"></div>
           <span onClick="{{ closeAddCard }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
@@ -4775,7 +4802,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
           <div style="flex:1"></div>
           <span onClick="{{ closeAddCard }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
-          <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Add card</button>
+          <button onClick="{{ submitCard }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ cardSubmitLabel }}</button>
         </div>
       </div>
     </div>

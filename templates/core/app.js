@@ -518,6 +518,7 @@ class Component extends DCLogic {
         setPrimary: () => this.setState({ primaryPm: i }), remove: () => {} })),
       billShowAdd: true, billShowAch: false, billNotice: false, billNoticeText: '',
       addPaymentMethod: () => {}, addBankAch: () => {}, cardDlgOpen: false, cardErr: '', cardSaving: false, closeAddCard: () => {}, submitCard: () => {},
+      cardDlgTitle: 'Add card', cardSubmitLabel: 'Add card',
       achDlgOpen: false, achName: '', achErr: '', onAchName: () => {}, closeAddAch: () => {}, submitAch: () => {},
       verifyDlgOpen: false, verifyA1: '', verifyA2: '', verifyErr: '', onVerifyA1: () => {}, onVerifyA2: () => {}, closeVerifyAch: () => {}, submitVerifyAch: () => {},
       addrL1: 'Sarah Whitfield · Bloom & Branch LLC', addrL2: '412 Larkspur Lane',

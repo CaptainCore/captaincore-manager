@@ -2248,3 +2248,26 @@ full-access customer edited the timezone through the dialog (users
 array preserved through the merge), the DB row updated and the tab
 re-rendered; sites-only PUT denied server-side; admin sees the tab.
 Test data restored after.
+
+### Invoice payment section (2026-08-25)
+Payable invoices (pending/failed/on-hold) now end with a Payment card:
+the customer's saved methods as selectable radio rows (default
+preselected, "Default" chip, unverified ACH excluded), a "Pay $X"
+button that pays with the SELECTED method (pay-invoice's payment_id
+branch, which also sets it primary — richer than the v3 comment
+claimed), and "+ Pay with a new card" which reuses the Stripe add-card
+dialog in pay mode: submit hits pay-invoice's source_id branch (adds the
+card, pays, sets primary in one step). The dialog title/button flip to
+"Pay with a new card" / "Add card & pay" via cardPayInvoice (consumed
+from an instance var so the Billing screen's plain add-card is
+unaffected). /billing/ lazy-loads the first time a payable invoice
+renders. No saved methods → an inline prompt plus the add-card path.
+LOCAL VERIFICATION GOTCHA: WC Stripe's
+woocommerce_get_customer_payment_tokens filter re-validates tokens
+against the Stripe API and strips ALL saved cards in this offline env
+(the Billing screen's methods tab is equally empty locally) — verified
+by bypassing that filter with a temp mu-plugin + seeded token: section
+renders card row/chip/Pay button correctly; no-methods and pay-mode
+dialog (Stripe element mounted) verified without the bypass. Seeded
+token and mu-plugin removed after. Payment itself NOT test-fired
+locally (no live Stripe) — smoke the pay path on prod after deploy.

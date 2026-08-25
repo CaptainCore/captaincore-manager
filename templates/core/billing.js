@@ -23,10 +23,19 @@ Object.assign(Component.prototype, {
   },
 
   // ── Add card via Stripe Elements ─────────────────────────────
+  // Pay-mode variant: same dialog, but submit pays the invoice with the new
+  // card in one step (pay-invoice's source_id branch adds the method, pays,
+  // and sets it primary server-side).
+  openInvoiceCard(id) {
+    this._cardPayInvoice = String(id);
+    this.openAddCard();
+  },
+
   openAddCard() {
     const boot = window.CC_BOOT || {};
     if (!boot.stripeKey || !window.Stripe) { if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl; return; }
-    this.setState({ cardDlgOpen: true, cardErr: '', cardSaving: false });
+    this.setState({ cardDlgOpen: true, cardErr: '', cardSaving: false, cardPayInvoice: this._cardPayInvoice || '' });
+    this._cardPayInvoice = null;
     // Mount after the dialog paints.
     setTimeout(() => {
       try {
@@ -44,21 +53,27 @@ Object.assign(Component.prototype, {
 
   closeAddCard() {
     if (this._cardEl) { try { this._cardEl.unmount(); } catch (e) {} this._cardEl = null; }
-    this.setState({ cardDlgOpen: false, cardSaving: false, cardErr: '' });
+    this.setState({ cardDlgOpen: false, cardSaving: false, cardErr: '', cardPayInvoice: '' });
   },
 
   submitCard() {
     if (!this._stripe || !this._cardEl || this.state.cardSaving) return;
+    const payId = this.state.cardPayInvoice || '';
     this.setState({ cardSaving: true, cardErr: '' });
-    const tid = this.toast('Adding card…', { kind: 'loading' });
+    const tid = this.toast(payId ? 'Processing payment…' : 'Adding card…', { kind: 'loading' });
     this._stripe.createSource(this._cardEl, { type: 'card' }).then(result => {
       if (result.error) { this.setState({ cardSaving: false, cardErr: result.error.message }); this.dismissToast(tid); return; }
-      this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } }).then(res => {
-        if (res && res.error) { this.setState({ cardSaving: false, cardErr: res.error }); this.updateToast(tid, 'Card declined', { kind: 'error' }); return; }
+      const req = payId
+        ? this.api('/billing/pay-invoice', { method: 'POST', body: { value: payId, source_id: result.source.id } })
+        : this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } });
+      req.then(res => {
+        if (res && (res.error || res.code)) { const msg = res.error || res.message || 'Card declined';
+          this.setState({ cardSaving: false, cardErr: String(msg) }); this.updateToast(tid, payId ? 'Payment failed' : 'Card declined', { kind: 'error' }); return; }
         this.closeAddCard();
-        this.updateToast(tid, 'Card added', { kind: 'success' });
+        this.updateToast(tid, payId ? 'Payment submitted' : 'Card added', { kind: 'success' });
+        if (payId) { this._invoiceView = null; this.openInvoice(payId); }
         this.loadBilling(true);
-      }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not save the card.' }); this.updateToast(tid, 'Could not save the card', { kind: 'error' }); });
+      }).catch(() => { this.setState({ cardSaving: false, cardErr: payId ? 'Payment failed.' : 'Could not save the card.' }); this.updateToast(tid, payId ? 'Payment failed' : 'Could not save the card', { kind: 'error' }); });
     }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not process the card.' }); this.dismissToast(tid); });
   },
 
@@ -165,7 +180,48 @@ Object.assign(Component.prototype, {
     const status = d ? String(d.status || '') : '';
     const paid = /completed|processing|paid|refunded/i.test(status);
     const canPay = /pending|failed|on-hold/i.test(status);
+    // ── Payment section (payable invoices): saved methods with a selectable
+    // row (default preselected), Pay button, and add-card-and-pay. The
+    // methods ride /billing/ — load it the first time a payable invoice
+    // renders. Unverified ACH accounts cannot pay, so they are left out.
+    if (this._hydrated && canPay && !this._billing && !this._billingLoading) setTimeout(() => this.loadBilling(), 0);
+    const bill = this._hydrated ? this._billing : null;
+    const methods = this._hydrated
+      ? ((bill && !bill.error && Array.isArray(bill.payment_methods)) ? bill.payment_methods.filter(pm => !(pm.type === 'ach' && !pm.verified)) : [])
+      : [{ token: 'demo', is_default: true, type: 'card', expires: '12/27', method: { brand: 'Visa', last4: '4242' } }];
+    const defTok = (methods.find(m => m.is_default) || methods[0] || {}).token;
+    const selTok = s.invPaySel != null ? String(s.invPaySel) : (defTok != null ? String(defTok) : '');
+    const amount = d ? ('$' + (Number(String(d.total).replace(/[^0-9.]/g, '')) || 0).toFixed(2)) : '';
+    const invPayMethods = methods.map(pm => { const m = pm.method || {}; const on = String(pm.token) === selTok;
+      return {
+        label: (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????'),
+        sub: pm.type === 'ach' ? [m.bank_name, m.account_type].filter(Boolean).join(' · ') : (pm.expires ? 'Expires ' + pm.expires : ''),
+        isDefault: !!pm.is_default,
+        dotBd: on ? 'var(--brand)' : 'var(--rule)', dotBg: on ? 'var(--brand)' : 'transparent',
+        rowBd: on ? 'var(--brand)' : 'var(--rule)', rowBg: on ? 'var(--brand-soft)' : 'transparent',
+        pick: () => this.setState({ invPaySel: String(pm.token) })
+      }; });
     return {
+      invPayMethods,
+      invHasMethods: invPayMethods.length > 0,
+      invNoMethods: canPay && !!bill && !bill.error && invPayMethods.length === 0,
+      invPayLoadingMethods: this._hydrated && canPay && !bill,
+      invPayLabel: 'Pay ' + amount,
+      invPayGo: () => {
+        if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true } })); return; }
+        if (!selTok) { this.toast('Add a payment method first.', { kind: 'info' }); return; }
+        const pmRow = invPayMethods.find(r => r.rowBd === 'var(--brand)');
+        if (!confirm('Pay invoice #' + id + ' (' + amount + ') with ' + ((pmRow && pmRow.label) || 'the selected payment method') + '?')) return;
+        const tid = this.toast('Paying invoice #' + id + '…', { kind: 'loading' });
+        this.api('/billing/pay-invoice', { method: 'POST', body: { value: id, payment_id: selTok } }).then(res => {
+          if (res && (res.error || res.code)) { this.updateToast(tid, String(res.error || res.message || 'Payment failed'), { kind: 'error' }); return; }
+          this.updateToast(tid, 'Payment submitted', { kind: 'success' });
+          this._invoiceView = null;
+          this.openInvoice(id);
+          this.loadBilling(true);
+        }).catch(() => this.updateToast(tid, 'Payment failed', { kind: 'error' }));
+      },
+      openInvCard: () => this._hydrated ? this.openInvoiceCard(id) : null,
       invBack: back,
       invLoading: loading,
       invErr: err, invHasErr: !!err,
@@ -272,6 +328,8 @@ Object.assign(Component.prototype, {
       },
       addBankAch: () => this.openAddAch(),
       cardDlgOpen: !!s.cardDlgOpen, cardErr: s.cardErr || '', cardSaving: !!s.cardSaving,
+      cardDlgTitle: s.cardPayInvoice ? 'Pay with a new card' : 'Add card',
+      cardSubmitLabel: s.cardPayInvoice ? 'Add card & pay' : 'Add card',
       closeAddCard: () => this.closeAddCard(),
       submitCard: () => this.submitCard(),
       achDlgOpen: !!s.achDlgOpen, achName: s.achName || '', achErr: s.achErr || '',
