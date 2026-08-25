@@ -2325,3 +2325,15 @@ UI. Verified live: admin house connection lists 1,992 clone sources
 with zero agency-template sites, switching to the agency connection
 lists 707 including their templates; the agency's provider-owner user
 sees both options; a plain customer sees no Provider row.
+
+### Remove is always offered on payment methods (2026-08-25)
+The Payment methods row nested BOTH row actions inside the canPrimary
+gate, so the primary method — always the case for a customer's only
+method — showed neither Set primary nor Remove, leaving no way to take
+a card off file. Remove now renders on every row; Set primary stays
+non-primary-only. The server never had the restriction
+(delete_payment_method removes the default fine and promotes another
+token when one exists). Verified live with the token-filter bypass: a
+sole primary card shows the Primary chip + Remove (no Set primary),
+Remove deletes it (confirm → row gone, "No payment methods on file.",
+0 WC tokens). Fixture removed after.
