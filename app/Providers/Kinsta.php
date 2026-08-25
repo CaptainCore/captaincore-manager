@@ -1364,6 +1364,17 @@ class Kinsta {
 
             $record_type = strtolower( $record->type );
             $record_name = str_replace( '.' . $apex_domain, '', $record->name );
+            $record_value = (string) $record->value;
+
+            // Host-target values (CNAME/ANAME) must be stored as FQDNs —
+            // Kinsta returns them without the trailing dot, and Constellix
+            // treats a dotless target as relative to the zone, appending the
+            // origin ("…kinstavalidation.app" became
+            // "…kinstavalidation.app.<zone>."). TXT values stay verbatim.
+            if ( in_array( $record_type, [ 'cname', 'aname' ], true )
+                && $record_value !== '' && substr( $record_value, -1 ) !== '.' ) {
+                $record_value .= '.';
+            }
 
             // Check for duplicates
             $exists = false;
@@ -1408,7 +1419,7 @@ class Kinsta {
                 'type'  => $record_type,
                 'name'  => $record_name,
                 'ttl'   => 3600,
-                'value' => [[ 'value' => $record->value, 'enabled' => true ]],
+                'value' => [[ 'value' => $record_value, 'enabled' => true ]],
             ];
             \CaptainCore\Remote\Constellix::post( "domains/{$zone_id}/records", $post );
             $created++;
