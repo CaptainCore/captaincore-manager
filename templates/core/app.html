@@ -2526,9 +2526,6 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ invDate }}</span>
               <div style="flex:1"></div>
               <span onClick="{{ invPdf }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:5px 12px" style-hover="border-color:var(--brand)">Download PDF</span>
-              <sc-if value="{{ invCanPay }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ invPay }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Pay now</button>
-              </sc-if>
             </div>
             <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--panel);font:600 var(--fs-11) var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">
@@ -2572,13 +2569,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <sc-if value="{{ invNoMethods }}" hint-placeholder-val="{{ false }}">
                   <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No payment method on file yet — add a card below to pay this invoice.</div>
                 </sc-if>
-                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel)">
-                  <span onClick="{{ openInvCard }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:6px 12px;background:var(--paper)" style-hover="border-color:var(--brand)">+ Pay with a new card</span>
-                  <div style="flex:1"></div>
-                  <sc-if value="{{ invHasMethods }}" hint-placeholder-val="{{ true }}">
-                    <button onClick="{{ invPayGo }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ invPayLabel }}</button>
-                  </sc-if>
-                </div>
+                <sc-if value="{{ invPayNotConfirm }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel)">
+                    <span onClick="{{ openInvCard }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:6px 12px;background:var(--paper)" style-hover="border-color:var(--brand)">+ Pay with a new card</span>
+                    <div style="flex:1"></div>
+                    <sc-if value="{{ invHasMethods }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ invPayAsk }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ invPayLabel }}</button>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ invPayConfirm }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--brand-soft)">
+                    <span style="font:500 var(--fs-13) var(--sans)">{{ invPayConfirmText }}</span>
+                    <div style="flex:1"></div>
+                    <span onClick="{{ invPayCancel }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                    <button onClick="{{ invPayGo }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Confirm payment</button>
+                  </div>
+                </sc-if>
               </div>
             </sc-if>
           </sc-if>

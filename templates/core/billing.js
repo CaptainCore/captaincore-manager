@@ -143,7 +143,7 @@ Object.assign(Component.prototype, {
   // ── Invoice detail page (/account/billing/{order_id}) ────────
   openInvoice(id) {
     id = String(id).replace(/^#/, '');
-    this.setState({ route: 'invoice', invoiceId: id, paletteOpen: false });
+    this.setState({ route: 'invoice', invoiceId: id, paletteOpen: false, invPaySel: null, invPayConfirm: false });
     if (!this._hydrated) return;
     if (this._invoiceView && this._invoiceView.id === id && this._invoiceView.data) return;
     const view = this._invoiceView = { id, data: null };
@@ -201,17 +201,25 @@ Object.assign(Component.prototype, {
         rowBd: on ? 'var(--brand)' : 'var(--rule)', rowBg: on ? 'var(--brand-soft)' : 'transparent',
         pick: () => this.setState({ invPaySel: String(pm.token) })
       }; });
+    const selLabel = (methods.map(pm => pm).filter(pm => String(pm.token) === selTok).map(pm => {
+      const m = pm.method || {}; return (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????'); })[0]) || '';
     return {
       invPayMethods,
       invHasMethods: invPayMethods.length > 0,
       invNoMethods: canPay && !!bill && !bill.error && invPayMethods.length === 0,
       invPayLoadingMethods: this._hydrated && canPay && !bill,
       invPayLabel: 'Pay ' + amount,
+      // Two-step in-UI confirmation (no browser confirm): the Pay button
+      // swaps the footer into a confirm row naming the exact method.
+      invPayConfirm: !!s.invPayConfirm && invPayMethods.length > 0,
+      invPayNotConfirm: !s.invPayConfirm || invPayMethods.length === 0,
+      invPayConfirmText: 'Pay ' + amount + ' with ' + (selLabel || 'the selected method') + '?',
+      invPayAsk: () => this.setState({ invPayConfirm: true }),
+      invPayCancel: () => this.setState({ invPayConfirm: false }),
       invPayGo: () => {
-        if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true } })); return; }
-        if (!selTok) { this.toast('Add a payment method first.', { kind: 'info' }); return; }
-        const pmRow = invPayMethods.find(r => r.rowBd === 'var(--brand)');
-        if (!confirm('Pay invoice #' + id + ' (' + amount + ') with ' + ((pmRow && pmRow.label) || 'the selected payment method') + '?')) return;
+        if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true }, invPayConfirm: false })); return; }
+        if (!selTok) return;
+        this.setState({ invPayConfirm: false });
         const tid = this.toast('Paying invoice #' + id + '…', { kind: 'loading' });
         this.api('/billing/pay-invoice', { method: 'POST', body: { value: id, payment_id: selTok } }).then(res => {
           if (res && (res.error || res.code)) { this.updateToast(tid, String(res.error || res.message || 'Payment failed'), { kind: 'error' }); return; }
@@ -241,18 +249,7 @@ Object.assign(Component.prototype, {
       invPaidOn: d && d.paid_on ? String(d.paid_on) : '',
       invHasPaidOn: !!(d && d.paid_on),
       invCanPay: !!d && canPay,
-      invPdf: () => this._hydrated ? this.downloadInvoicePdf(id) : null,
-      invPay: () => {
-        if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true } })); return; }
-        if (!confirm('Pay invoice #' + id + ' with your default payment method?')) return;
-        const tid = this.toast('Paying invoice #' + id + '…', { kind: 'loading' });
-        this.api('/billing/pay-invoice', { method: 'POST', body: { value: id } }).then(() => {
-          this.updateToast(tid, 'Payment submitted', { kind: 'success' });
-          this._invoiceView = null;
-          this.openInvoice(id);
-          this.loadBilling(true);
-        }).catch(() => this.updateToast(tid, 'Payment failed', { kind: 'error' }));
-      }
+      invPdf: () => this._hydrated ? this.downloadInvoicePdf(id) : null
     };
   },
 
@@ -286,9 +283,10 @@ Object.assign(Component.prototype, {
         canPay,
         view: () => this.openInvoice(iv.order_id),
         pdf: () => this.downloadInvoicePdf(iv.order_id),
-        pay: () => { if (!confirm('Pay invoice #' + iv.order_id + ' ($' + iv.total + ') with your default payment method?')) return;
-          this.api('/billing/pay-invoice', { method: 'POST', body: { value: iv.order_id } })
-            .then(() => this.loadBilling(true)).catch(() => {}); } };
+        // Route to the invoice page — the one pay surface with method
+        // selection and its own confirm (no browser confirm, no blind
+        // "default payment method" that may not exist).
+        pay: () => this.openInvoice(iv.order_id) };
     });
     const payMethods = (b.payment_methods || []).map(pm => {
       const m = pm.method || {};

@@ -2271,3 +2271,16 @@ renders card row/chip/Pay button correctly; no-methods and pay-mode
 dialog (Stripe element mounted) verified without the bypass. Seeded
 token and mu-plugin removed after. Payment itself NOT test-fired
 locally (no live Stripe) — smoke the pay path on prod after deploy.
+
+### Invoice pay flow: single bottom surface + inline confirm (2026-08-25)
+The header "Pay now" button is gone — it fired the old browser confirm
+promising "your default payment method", which reads as broken for a
+customer with NO saved method. The Payment card at the bottom is now the
+only pay surface. Its Pay button no longer uses confirm(): it swaps the
+footer into an in-UI confirm row naming the exact method ("Pay $X with
+Visa ··NNNN?" · Cancel / Confirm payment). Selection + confirm state
+reset when opening an invoice. The billing-list row "Pay" buttons (same
+blind default-method confirm) now just open the invoice. Verified live
+with the token-filter bypass: no native dialog fires, confirm row names
+the card, Cancel restores the footer; a no-method customer sees neither
+header button nor Pay — only the add-card path. Fixtures removed after.
