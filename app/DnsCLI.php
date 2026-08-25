@@ -351,7 +351,9 @@ class DnsCLI {
 	 * Fetch DNS records from Constellix for a given remote domain ID.
 	 */
 	private function fetch_records( $remote_id ) {
-		$records = Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
+		// Query args go through the parameters array — endpoint_is_safe()
+		// rejects any endpoint containing "?".
+		$records = Remote\Constellix::get( "domains/$remote_id/records", [ "perPage" => 100 ] );
 
 		if ( ! empty( $records->errors ) ) {
 			\WP_CLI::error( "Error fetching DNS records: " . json_encode( $records->errors ) );
@@ -365,7 +367,7 @@ class DnsCLI {
 			$steps = ceil( $records->meta->pagination->total / 100 );
 			for ( $i = 1; $i < $steps; $i++ ) {
 				$page = $i + 1;
-				$additional = Remote\Constellix::get( "domains/$remote_id/records?page=$page&perPage=100" );
+				$additional = Remote\Constellix::get( "domains/$remote_id/records", [ "page" => $page, "perPage" => 100 ] );
 				if ( ! empty( $additional->data ) ) {
 					$all_records = array_merge( $all_records, $additional->data );
 				}

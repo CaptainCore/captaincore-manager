@@ -2199,3 +2199,19 @@ body is readable). Verified locally with captured mail on a customer
 site with an agency owner: agency full member sends and the invite row
 lands on the customer account; sites-only tier and unrelated users stay
 denied; admin unchanged.
+
+### DNS records restored after Constellix endpoint guard (2026-08-25)
+Every DNS read came back empty ({records: [], nameservers: [...]}) after
+the security-hardening pass added endpoint_is_safe() to the Constellix
+wrapper — it rejects any endpoint containing "?" (path/query smuggling
+guard), and six call sites passed their query string INSIDE the endpoint
+("records?perPage=100" → get() returned null, which read as "no records"
+with no error). Nameservers survived because that call has no query.
+Fixed by moving the query args to the wrapper's $parameters array (its
+sanctioned path — it appends http_build_query itself) in
+captaincore_dns_func, DnsCLI::fetch_records and Domain::zone. Mailgun
+builds its own query internally and Kinsta/Spaceship have the guard but
+no query-carrying callers, so Constellix was the only breakage. Verified
+live: /dns/{id} returns 17 records + 4 nameservers for a real zone, the
+BIND export renders 45 lines, and `wp captaincore dns list` prints the
+record table again.

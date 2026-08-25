@@ -4364,7 +4364,9 @@ function captaincore_dns_func( $request ) {
 	}
 
 	$domain  = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
-	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
+	// Query args go through the parameters array — the wrapper's
+	// endpoint_is_safe() guard rejects any endpoint containing "?".
+	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records", [ "perPage" => 100 ] );
 
 	// Check for errors from Constellix
 	if ( ! empty( $records->errors ) ) {
@@ -4376,7 +4378,7 @@ function captaincore_dns_func( $request ) {
 		$steps = ceil( $records->meta->pagination->total / 100 );
 		for ($i = 1; $i < $steps; $i++) {
 			$page = $i + 1;
-			$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?page=$page&perPage=100" );
+			$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records", [ "page" => $page, "perPage" => 100 ] );
 			if ( ! empty( $additional_records->data ) ) {
 				$records->data = array_merge($records->data, $additional_records->data);
 			}
