@@ -2356,3 +2356,24 @@ run_search_and_replace}) and the verification-records endpoint all
 match the spec. Verified live on a real Kinsta site: tool tile present,
 click lands on Domains with live mappings (Primary/System/Active chips,
 Make primary + Delete); tile absent on a non-provider site.
+
+### Verify button re-injects DNS on pending mappings (2026-08-25)
+Pending rows on the site Domains tab now carry a Verify action: POST
+/sites/{id}/{env}/domains/verify { domain_id } → the new
+Kinsta::verify_domain() re-fetches the domain's verification records
+(empty = verified now → success toast + immediate reload) and FORCE
+re-runs auto_provision_dns, bypassing its 1-day transient cache — the
+reason a failed or premature first pass could not be retried.
+auto_provision_dns now returns a status (no_creds / cached / not_ours /
+no_zone / provisioned / exists) and the toast tells the user what
+happened, including "DNS is not hosted here — add the records shown"
+when we do not run the zone. Env resolution extracted into
+resolve_env_id() shared with get_domains. Dispatch rides the standard
+Provider::call_static_method path so non-Kinsta providers return a
+clean not_supported. Verified live: verify_domain + the REST callback
+against a real ACTIVE Kinsta domain return {active:true}; the pending
+case was exercised manually on production for the customer site that
+prompted this — its hosted zone existed but was EMPTY, both
+verification records were injected via the exact same Constellix calls,
+zone now serves them. UI note: the button renders only for pending rows
+(none exist locally to screenshot).

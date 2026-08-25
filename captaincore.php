@@ -3705,6 +3705,36 @@ function captaincore_provider_actions_func( $request ) {
 /**
  * Generic REST callback to get domains for a site's environment.
  */
+// Re-check a pending domain mapping and force-provision its verification
+// records into the hosted DNS zone (bypasses the daily provisioning cache).
+function captaincore_site_domain_verify_func( WP_REST_Request $request ) {
+	$site_id   = $request['id'];
+	$env_name  = $request['environment'];
+	$domain_id = (string) $request->get_param( 'domain_id' );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	if ( $domain_id === '' ) {
+		return new WP_Error( 'missing_domain', 'domain_id is required.', [ 'status' => 400 ] );
+	}
+
+	$site = ( new CaptainCore\Sites )->get( $site_id );
+	if ( ! $site || empty( $site->provider ) ) {
+		return new WP_Error( 'no_provider', 'Site has no provider configured.', [ 'status' => 400 ] );
+	}
+	if ( empty( $site->provider_id ) ) {
+		$provider = ( new \CaptainCore\Provider( $site->provider ) );
+	} else {
+		$provider = new \CaptainCore\Provider( $site->provider_id );
+	}
+	$response = $provider->verify_domain( $site_id, $env_name, $domain_id );
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+	return new WP_REST_Response( $response, 200 );
+}
+
 function captaincore_site_domains_get_func( WP_REST_Request $request ) {
     $site_id = $request['id'];
     $env_name = $request['environment'];
@@ -8403,6 +8433,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains/primary', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_site_domain_primary_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains/verify', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_domain_verify_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]

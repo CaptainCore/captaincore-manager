@@ -182,6 +182,10 @@ class Provider {
         return $this->call_static_method( 'set_primary_domain', [ $site_id, $env_name, $params ] ); // Changed from self::call_static_method()
     }
 
+    public function verify_domain( $site_id, $env_name, $domain_id ) {
+        return $this->call_static_method( 'verify_domain', [ $site_id, $env_name, $domain_id ] );
+    }
+
     public function fetch_remote_sites() {
         $provider = self::get();
         if ( empty( $provider ) ) {

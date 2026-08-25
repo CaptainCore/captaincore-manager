@@ -271,6 +271,23 @@ Object.assign(Component.prototype, {
           name, system, primary,
           active: !!d.is_active,
           hasRecs: !system && !d.is_active && recs.length > 0, recs,
+          // Verify: re-check with Kinsta and force re-inject the verification
+          // records into the hosted zone (bypasses the daily provision cache).
+          canVerify: !system && !d.is_active,
+          verify: () => {
+            const tid = this.toast('Verifying ' + name + '…', { kind: 'loading' });
+            this.api(path + '/verify', { method: 'POST', body: { domain_id: d.id } }).then(res => {
+              if (res && res.code) { this.updateToast(tid, res.message || 'Verification failed', { kind: 'error' }); return; }
+              if (res && res.active) { this.updateToast(tid, name + ' is verified', { kind: 'success' }); this.loadEnvDomains(true); return; }
+              const p = (res && res.provision) || '';
+              const msg = p === 'provisioned' ? 'DNS records added to the hosted zone — Kinsta usually verifies within a few minutes.'
+                : p === 'exists' ? 'Records are in place — waiting on Kinsta to verify.'
+                : p === 'no_zone' || p === 'not_ours' ? 'DNS for this domain is not hosted here — add the records shown at its DNS host.'
+                : 'Still pending — records refreshed.';
+              this.updateToast(tid, msg, { kind: p === 'no_zone' || p === 'not_ours' ? 'info' : 'success' });
+              this._sdRefetchSoon();
+            }).catch(() => this.updateToast(tid, 'Verification failed', { kind: 'error' }));
+          },
           statusLabel: d.is_active ? 'Active' : 'Pending DNS',
           stBg: d.is_active ? 'var(--ok-soft)' : 'var(--warn-soft)',
           badge: system ? 'System' : primary ? 'Primary' : '',

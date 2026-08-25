@@ -1307,6 +1307,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       </sc-if>
                       <span style="font:500 var(--fs-115) var(--sans);background:{{ d.stBg }};border-radius:99px;padding:2px 9px">{{ d.statusLabel }}</span>
                       <div style="flex:1"></div>
+                      <sc-if value="{{ d.canVerify }}" hint-placeholder-val="{{ false }}">
+                        <span onClick="{{ d.verify }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Verify</span>
+                      </sc-if>
                       <sc-if value="{{ d.canPrimary }}" hint-placeholder-val="{{ false }}">
                         <span onClick="{{ d.setPrimary }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Make primary</span>
                       </sc-if>

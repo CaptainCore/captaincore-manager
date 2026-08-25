@@ -1187,10 +1187,9 @@ class Kinsta {
     }
 
     /**
-     * Get list of domains for a Kinsta environment.
+     * Resolve a CaptainCore site + environment to Kinsta's environment id.
      */
-    public static function get_domains( $site_id, $environment = 'production' ) {
-        
+    private static function resolve_env_id( $site_id, $environment = 'production' ) {
         $kinsta_env_name = ( $environment == 'production' ) ? 'live' : $environment;
         $site            = \CaptainCore\Sites::get( $site_id );
         $kinsta_site_id  = $site->provider_site_id;
@@ -1199,25 +1198,63 @@ class Kinsta {
             return new \WP_Error( 'kinsta_missing_id', 'Kinsta Remote ID not set for this site.' );
         }
 
-        // 1. Fetch Environments to find the specific Environment ID
         $env_response = \CaptainCore\Remote\Kinsta::get( "sites/{$kinsta_site_id}/environments" );
-
         if ( is_wp_error( $env_response ) ) {
             return $env_response;
         }
 
-        $env_id = null;
-        $environments = $env_response->site->environments ?? [];
-
-        foreach ( $environments as $env ) {
+        foreach ( ( $env_response->site->environments ?? [] ) as $env ) {
             if ( strtolower( $env->name ) === strtolower( $kinsta_env_name ) ) {
-                $env_id = $env->id;
+                return $env->id;
+            }
+        }
+        return new \WP_Error( 'kinsta_env_not_found', "Kinsta environment '{$kinsta_env_name}' not found." );
+    }
+
+    /**
+     * Re-check a pending domain and force-provision its verification records
+     * into the hosted DNS zone (when we host it). The regular listing path
+     * also provisions, but caches per record-set for a day — this is the
+     * "verify now" button, so it bypasses that cache.
+     */
+    public static function verify_domain( $site_id, $environment, $domain_id ) {
+        $env_id = self::resolve_env_id( $site_id, $environment );
+        if ( is_wp_error( $env_id ) ) {
+            return $env_id;
+        }
+        $verify_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/domains/{$domain_id}/verification-records" );
+        if ( is_wp_error( $verify_response ) ) {
+            return $verify_response;
+        }
+        $records = array_values( $verify_response->site_domain->verification_records ?? [] );
+        if ( empty( $records ) ) {
+            return [ 'active' => true ];
+        }
+        // The verification-records payload has no domain name — pull it from
+        // the environment's domain list.
+        $domain_name = '';
+        $list = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env_id}/domains" );
+        foreach ( ( $list->environment->site_domains ?? [] ) as $d ) {
+            if ( $d->id === $domain_id ) {
+                $domain_name = $d->name;
                 break;
             }
         }
+        if ( $domain_name === '' ) {
+            return new \WP_Error( 'kinsta_domain_not_found', 'Domain not found on this environment.' );
+        }
+        $provision = self::auto_provision_dns( $domain_name, $records, true );
+        return [ 'active' => false, 'provision' => $provision, 'records' => $records ];
+    }
 
-        if ( ! $env_id ) {
-            return new \WP_Error( 'kinsta_env_not_found', "Kinsta environment '{$kinsta_env_name}' not found." );
+    /**
+     * Get list of domains for a Kinsta environment.
+     */
+    public static function get_domains( $site_id, $environment = 'production' ) {
+
+        $env_id = self::resolve_env_id( $site_id, $environment );
+        if ( is_wp_error( $env_id ) ) {
+            return $env_id;
         }
 
         // 2. Fetch Domains for the specific environment
@@ -1268,15 +1305,18 @@ class Kinsta {
     /**
      * Auto-provision verification DNS records to Constellix zone if managed.
      */
-    private static function auto_provision_dns( $domain_name, $verification_records ) {
+    private static function auto_provision_dns( $domain_name, $verification_records, $force = false ) {
         if ( ! defined( 'CONSTELLIX_API_KEY' ) || ! defined( 'CONSTELLIX_SECRET_KEY' ) ) {
-            return;
+            return 'no_creds';
         }
 
-        // Skip if already provisioned (cached for 1 day, keyed by domain + records hash)
+        // Skip if already provisioned (cached for 1 day, keyed by domain +
+        // records hash). $force (the Verify button) bypasses the cache so a
+        // record deleted or a zone created after the first pass can be
+        // re-injected immediately.
         $transient_key = 'captaincore_dns_prov_' . md5( $domain_name . json_encode( $verification_records ) );
-        if ( get_transient( $transient_key ) ) {
-            return;
+        if ( ! $force && get_transient( $transient_key ) ) {
+            return 'cached';
         }
 
         // Get the apex domain
@@ -1291,13 +1331,13 @@ class Kinsta {
         $domain_rows = ( new \CaptainCore\Domains )->where( [ "name" => $apex_domain ] );
         $domain_row  = ! empty( $domain_rows ) ? $domain_rows[0] : null;
         if ( empty( $domain_row->domain_id ) || ! ( new \CaptainCore\Domains )->verify( $domain_row->domain_id ) ) {
-            return;
+            return 'not_ours';
         }
 
         // Look up Constellix zone
         $constellix_domains = \CaptainCore\Remote\Constellix::all( 'domains' );
         if ( empty( $constellix_domains ) ) {
-            return;
+            return 'no_zone';
         }
 
         $zone_id = null;
@@ -1309,13 +1349,14 @@ class Kinsta {
         }
 
         if ( ! $zone_id ) {
-            return;
+            return 'no_zone';
         }
 
         // Fetch existing records for duplicate checking
         $existing_records = \CaptainCore\Remote\Constellix::get( "domains/{$zone_id}/records", [ 'perPage' => 100 ] );
         $existing_data    = $existing_records->data ?? [];
 
+        $created = 0;
         foreach ( $verification_records as $record ) {
             if ( empty( $record->type ) || empty( $record->name ) || empty( $record->value ) ) {
                 continue;
@@ -1370,10 +1411,12 @@ class Kinsta {
                 'value' => [[ 'value' => $record->value, 'enabled' => true ]],
             ];
             \CaptainCore\Remote\Constellix::post( "domains/{$zone_id}/records", $post );
+            $created++;
         }
 
         // Mark as provisioned
         set_transient( $transient_key, true, DAY_IN_SECONDS );
+        return $created > 0 ? 'provisioned' : 'exists';
     }
 
     /**
