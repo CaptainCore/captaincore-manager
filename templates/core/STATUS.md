@@ -2390,3 +2390,26 @@ no primary action — Kinsta's change-primary accepts any mapped domain,
 so the gate is now just non-system/non-primary, with the confirm
 carrying an extra unreachable-until-DNS warning when the domain has not
 verified.
+
+### New-site chain: orphaned Kinsta creates diagnosed + fixed (2026-08-25)
+A customer's new site was created at Kinsta but never linked into
+CaptainCore (manual link needed). Root cause chain, confirmed in prod
+nginx error logs ("Undefined array key site_id" during
+/provider-actions/{id}/run, twice in one day): Site::create's hardened
+provider_id ownership check required verify_ownership(), which
+hard-rejects the HOUSE connection (user_id 0) for non-admins — so every
+customer-initiated Kinsta create failed validation with "Invalid
+provider", ProviderAction::run() read $response["site_id"] blind, and
+the chain marched on to "done" with the error discarded. Three fixes:
+(1) Site::create now applies the same policy as the new-site route —
+the house connection (user_id 0) is the shared default anyone may
+provision on; ownership is required only for other connections
+(validation matrix verified: customer+house passes, customer+foreign
+rejected, admin unrestricted). (2) ProviderAction::run() no longer
+reads create's result blind: no site_id → retry_or_fail_link() logs the
+error, stores it on the action (link_error), returns the chain to
+"waiting" so the next poll retries (heals transient gaps like SSH
+details not provisioned yet), and fails LOUDLY after 5 attempts.
+(3) check()'s 404/500 tolerance raised from 10 to 30 attempts (~5 min of
+polling) — Kinsta operations can 404 while queued, and a second create
+that day was marked failed at attempt 10 while Kinsta completed it.

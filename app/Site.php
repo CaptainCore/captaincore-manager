@@ -194,9 +194,19 @@ class Site {
             if ( ! empty( $site->customer_id ) && ! $user->verify_accounts( [ (int) $site->customer_id ] ) ) {
                 $response['errors'][] = "Error: Invalid customer account.";
             }
-            // provider_id selects which stored API credential is used.
-            if ( ! empty( $site->provider_id ) && ! ( new Provider( (int) $site->provider_id ) )->verify_ownership() ) {
-                $response['errors'][] = "Error: Invalid provider.";
+            // provider_id selects which stored API credential is used. The
+            // house connection (user_id 0) is the shared default every
+            // customer's provisioning runs on — the same policy the
+            // new-site route applies — so only OTHER connections require
+            // ownership. Requiring ownership of the house row silently
+            // orphaned every customer-initiated Kinsta create (the site
+            // existed at Kinsta but Site::create refused the record).
+            if ( ! empty( $site->provider_id ) ) {
+                $provider_row = Providers::get( (int) $site->provider_id );
+                $is_house     = $provider_row && (int) $provider_row->user_id === 0;
+                if ( ! $is_house && ! ( new Provider( (int) $site->provider_id ) )->verify_ownership() ) {
+                    $response['errors'][] = "Error: Invalid provider.";
+                }
             }
         }
 

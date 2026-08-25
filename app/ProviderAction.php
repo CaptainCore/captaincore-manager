@@ -82,7 +82,11 @@ class ProviderAction {
                 $update = [
                     "action" => json_encode( $action ),
                 ];
-                if ( $action->attempts >= 10 ) {
+                // Kinsta's operations endpoint can 404 for a while after the
+                // 202 while the operation queues — 10 attempts (~100s of
+                // polling) gave up on creates Kinsta later completed, leaving
+                // the site unlinked. 30 attempts ≈ 5 minutes of polling.
+                if ( $action->attempts >= 30 ) {
                     $update["status"] = "failed";
                 }
                 ProviderActions::update( $update, [ "provider_action_id" => $provider_action->provider_action_id ] );
@@ -110,6 +114,22 @@ class ProviderAction {
             }
         }
         return $actions;
+    }
+
+    // A new-site chain that cannot link the CaptainCore site record yet goes
+    // back to "waiting" so the next client poll re-runs it; after 5 attempts
+    // it fails LOUDLY with the error preserved on the action (previously the
+    // failure was silently discarded and the chain reported "done").
+    protected function retry_or_fail_link( $current_action, $errors, $time_now ) {
+        $current_action->link_attempts = empty( $current_action->link_attempts ) ? 1 : $current_action->link_attempts + 1;
+        $current_action->link_error    = $errors;
+        error_log( "CaptainCore new-site link attempt {$current_action->link_attempts} failed for " . ( $current_action->domain ?? $current_action->name ) . ": {$errors}" );
+        ( new ProviderActions )->update( [
+            'action'     => json_encode( $current_action ),
+            'updated_at' => $time_now,
+            'status'     => $current_action->link_attempts >= 5 ? "failed" : "waiting",
+        ], [ "provider_action_id" => $this->provider_action_id ] );
+        return self::active();
     }
 
     public function run() {
@@ -255,6 +275,9 @@ class ProviderAction {
             $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             $site_name   = $current_action->name;
+            if ( empty( $result->idSite ) ) {
+                return $this->retry_or_fail_link( $current_action, 'Kinsta operation result had no site id yet.', $time_now );
+            }
             if ( ! empty( $current_action ) ) {
                 $site        = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}" )->site;
                 $environment = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}/environments" )->site->environments[0];
@@ -308,6 +331,18 @@ class ProviderAction {
                     ],
                 ] );
     
+                // Site::create validates (name / slug / production address /
+                // username) and returns { errors } with NO site_id on failure.
+                // That result used to be read blind — the Kinsta site was left
+                // orphaned while the chain marched on to "done". A transient
+                // gap (e.g. the environment's SSH IP not provisioned yet makes
+                // the address empty) heals on a later poll, so retry before
+                // failing the chain.
+                if ( empty( $response["site_id"] ) ) {
+                    $errors = ! empty( $response["errors"] ) ? implode( '; ', (array) $response["errors"] ) : 'Unknown error creating the site record.';
+                    return $this->retry_or_fail_link( $current_action, $errors, $time_now );
+                }
+
                 $site_id = $response["site_id"];
                 $account = ( new Account ( $current_action->account_id, true ) );
                 $account->calculate_totals();
