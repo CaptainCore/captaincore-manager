@@ -4557,6 +4557,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" placeholder="mynewsite" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Domain</span><input value="{{ nsDomain }}" onInput="{{ onNsDomain }}" placeholder="mynewsite.com (defaults to site name)" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
             <sc-if value="{{ nsShowDc }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ nsProvShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Provider</span>
+              <div style="flex:1">
+                <div onClick="{{ ddToggleNsProv }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsProviderLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                <sc-if value="{{ ddNsProvOpen }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
+                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;z-index:40;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                    <sc-for list="{{ ddNsProvOpts }}" as="o" hint-placeholder-count="2">
+                      <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            </sc-if>
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Datacenter</span>
               <div style="flex:1">
                 <div onClick="{{ ddToggleNsDc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsDc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>

@@ -2307,3 +2307,21 @@ names (provider-sync auto-resolve was ambiguous for all of them — its
 first-label needle is too loose); one site has no Kinsta match at all
 (likely moved) and stays unmapped. Clone check simulated as the
 customer's owner: PASSES.
+
+### Kinsta provider picker in New site (2026-08-25)
+v1's Hosting Provider select, rebuilt: the New-site Kinsta path now
+offers a Provider row when the caller can use more than one Kinsta
+connection — the house connection (labeled with the configured business
+name) plus any kinsta provider rows /providers returns (self-scoped:
+an agency with its own Kinsta company sees theirs; admins see all).
+Selecting a connection re-verifies THAT provider's token, resets the
+clone source, and filters Clone-from to sites on the SAME connection
+(FLEET rows now carry providerConnId from /sites/) — Kinsta cannot
+clone across companies, which is why an agency's templates never
+appeared under the house connection. The create payload sends the
+chosen provider_id (server already enforces ownership for non-admins:
+provider row user_id must match). Single-connection users see no new
+UI. Verified live: admin house connection lists 1,992 clone sources
+with zero agency-template sites, switching to the agency connection
+lists 707 including their templates; the agency's provider-owner user
+sees both options; a plain customer sees no Provider row.

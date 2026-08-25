@@ -44,7 +44,7 @@ class Component extends DCLogic {
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
     deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
-    nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '',
+    nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
     nsProto: 'sftp', nsPort: '2222',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
     nsToken: '', nsVerify: 'ok', ddRect: null,
@@ -1116,7 +1116,7 @@ class Component extends DCLogic {
       openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
         // v1 parity (showNewSiteKinsta): customers default their first account as billing.
         if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;
-        this.setState(patch); this.verifyNsProvider(isOp); },
+        this.setState(patch); this.loadNsProviders(); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
       // Import and Connect manually are operator-only — they assign sites to
@@ -1141,12 +1141,35 @@ class Component extends DCLogic {
       ddNsAccOpen: s.ddOpen === 'nsAcc',
       ddToggleNsAcc: e => this.ddToggleAt('nsAcc', e),
       ddNsAccOpts: this.ddOpts(this.ACCOUNTS.map(a => a.name), s.nsAcc, 'nsAcc'),
+      // Provider connection picker (v1's Hosting Provider select). Shown only
+      // when the caller can use more than one Kinsta connection; changing it
+      // resets the clone source (cloning only works within one connection)
+      // and re-verifies that connection's token.
+      ...(() => {
+        const provOpts = this._nsProvList || [{ id: String(NS_KINSTA_PROVIDER), label: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting' }];
+        const provSel = String(s.nsProviderId || NS_KINSTA_PROVIDER);
+        const provCur = provOpts.find(o => o.id === provSel) || provOpts[0];
+        return {
+          nsProvShow: provOpts.length > 1,
+          nsProviderLabel: provCur.label,
+          ddNsProvOpen: s.ddOpen === 'nsProv',
+          ddToggleNsProv: e => this.ddToggleAt('nsProv', e),
+          ddNsProvOpts: provOpts.map(o => ({ label: o.label, mark: o.id === provSel ? '✓' : '',
+            bg: o.id === provSel ? 'var(--brand-soft)' : 'transparent',
+            pick: () => { this.setState({ nsProviderId: o.id, nsClone: 'None (fresh install)', ddOpen: '', ddQ: '' });
+              this.verifyNsProvider(isOp, o.id); } })),
+          nsProvSel: provSel
+        };
+      })(),
       nsClone: s.nsClone,
       ddNsCloneOpen: s.ddOpen === 'nsClone',
       ddToggleNsClone: e => this.ddToggleAt('nsClone', e),
-      // Clone sources must be Kinsta sites with a known provider_site_id — the
-      // clone API resolves source_env_id from sites/{clone_site_id}/environments.
-      ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.filter(f => f.provider === 'Kinsta' && f.providerSiteId).map(f => f.name)], s.nsClone, 'nsClone'),
+      // Clone sources must be Kinsta sites with a known provider_site_id on
+      // the SELECTED provider connection — the clone API resolves
+      // source_env_id from sites/{clone_site_id}/environments, and Kinsta
+      // cannot clone across companies.
+      ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.filter(f => f.provider === 'Kinsta' && f.providerSiteId
+        && String(f.providerConnId || String(NS_KINSTA_PROVIDER)) === String(s.nsProviderId || NS_KINSTA_PROVIDER)).map(f => f.name)], s.nsClone, 'nsClone'),
       nsDc: s.nsDc,
       // v1 parity: the clone API ignores region, so Datacenter hides while cloning.
       nsShowDc: s.nsClone.startsWith('None'),
@@ -1447,12 +1470,33 @@ class Component extends DCLogic {
 
   // v1 parity (showNewSiteKinsta): only administrators verify the Kinsta token
   // on dialog open; customers never see the check or the refresh prompt.
-  verifyNsProvider(isOp) {
+  verifyNsProvider(isOp, providerId) {
     if (!isOp || !this.api || !(window.CC_BOOT && window.CC_BOOT.nonce)) { this.setState({ nsVerify: 'ok' }); return; }
     this.setState({ nsVerify: 'checking', nsToken: '' });
-    this.api('/providers/' + NS_KINSTA_PROVIDER + '/verify')
+    this.api('/providers/' + (providerId || this.state.nsProviderId || NS_KINSTA_PROVIDER) + '/verify')
       .then(ok => this.setState({ nsVerify: ok ? 'ok' : 'outdated' }))
       .catch(() => this.setState({ nsVerify: 'outdated' }));
+  }
+
+  // Kinsta provider connections for the New-site dialog — v1's Hosting
+  // Provider select. The house connection plus any kinsta provider rows the
+  // caller can use (/providers is self-scoped for customers, so an agency
+  // with its own Kinsta company sees theirs; everyone else just gets ours).
+  loadNsProviders() {
+    if (this._nsProvList || this._nsProvLoading || !window.CC_BOOT) return;
+    this._nsProvLoading = true;
+    const house = { id: String(NS_KINSTA_PROVIDER), label: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting' };
+    this.api('/providers').then(rows => {
+      this._nsProvLoading = false;
+      const opts = [house];
+      (Array.isArray(rows) ? rows : []).forEach(p => {
+        if ((p.provider || '').toLowerCase() === 'kinsta' && String(p.provider_id) !== house.id) {
+          opts.push({ id: String(p.provider_id), label: p.name || ('Provider ' + p.provider_id) });
+        }
+      });
+      this._nsProvList = opts;
+      this.setState({});
+    }).catch(() => { this._nsProvLoading = false; this._nsProvList = [house]; });
   }
 
   connectNsProvider() {
@@ -1512,7 +1556,7 @@ class Component extends DCLogic {
     const site = {
       name, domain,
       clone_site_id: cloneSrc ? String(cloneSrc.providerSiteId) : '',
-      provider_id: String(NS_KINSTA_PROVIDER),
+      provider_id: String(st.nsProviderId || NS_KINSTA_PROVIDER),
       datacenter: (NS_DATACENTERS.find(d => d.title === st.nsDc) || {}).value || 'us-ashburn-1',
       // run() reads shared_with via array_column(…, "account_id") — send objects.
       shared_with: st.nsShared.map(id => ({ account_id: id })),
