@@ -291,9 +291,15 @@ Object.assign(Component.prototype, {
           statusLabel: d.is_active ? 'Active' : 'Pending DNS',
           stBg: d.is_active ? 'var(--ok-soft)' : 'var(--warn-soft)',
           badge: system ? 'System' : primary ? 'Primary' : '',
-          canPrimary: !system && !primary && !!d.is_active,
+          // Pending domains can be made primary too (Kinsta's change-primary
+          // takes any mapped domain) — the confirm carries an extra warning
+          // since the site may be unreachable on it until DNS verifies.
+          canPrimary: !system && !primary,
           setPrimary: () => {
-            if (!confirm('Set ' + name + ' as the primary domain? This runs a search-and-replace on the site.')) return;
+            const warn = d.is_active
+              ? 'Set ' + name + ' as the primary domain? This runs a search-and-replace on the site.'
+              : 'Set ' + name + ' as the primary domain? Its DNS has not verified yet, so the site may be unreachable on it until DNS is in place. This also runs a search-and-replace on the site.';
+            if (!confirm(warn)) return;
             const tid = this.toast('Setting ' + name + ' as primary…', { kind: 'loading' });
             this.api(path + '/primary', { method: 'PUT', body: { domain_id: d.id, run_search_and_replace: true } })
               .then(() => { this.updateToast(tid, name + ' is becoming primary (may take a few minutes)', { kind: 'success' }); this._sdRefetchSoon(); })

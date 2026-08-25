@@ -2377,3 +2377,16 @@ prompted this — its hosted zone existed but was EMPTY, both
 verification records were injected via the exact same Constellix calls,
 zone now serves them. UI note: the button renders only for pending rows
 (none exist locally to screenshot).
+
+### DNS injection trailing dot + make-primary on pending (2026-08-25)
+Two follow-ups from the first live use of the Verify flow. (1) The
+records injected into Constellix posted Kinsta's CNAME target verbatim
+("…kinstavalidation.app") — Constellix treats a dotless host target as
+relative to the zone and appended the origin, breaking resolution (a
+second session caught and fixed the live record). auto_provision_dns
+now appends the trailing dot to CNAME/ANAME values; TXT stays verbatim.
+(2) "Make primary" was gated on is_active, so a pending domain offered
+no primary action — Kinsta's change-primary accepts any mapped domain,
+so the gate is now just non-system/non-primary, with the confirm
+carrying an extra unreachable-until-DNS warning when the domain has not
+verified.
