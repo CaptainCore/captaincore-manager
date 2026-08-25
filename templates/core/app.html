@@ -1299,18 +1299,34 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
               <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <sc-for list="{{ sdRows }}" as="d" hint-placeholder-count="3">
-                  <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                    <span style="font:500 var(--fs-13) var(--mono)">{{ d.name }}</span>
-                    <sc-if value="{{ d.badge }}" hint-placeholder-val="{{ false }}">
-                      <span style="font:500 var(--fs-115) var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">{{ d.badge }}</span>
-                    </sc-if>
-                    <span style="font:500 var(--fs-115) var(--sans);background:{{ d.stBg }};border-radius:99px;padding:2px 9px">{{ d.statusLabel }}</span>
-                    <div style="flex:1"></div>
-                    <sc-if value="{{ d.canPrimary }}" hint-placeholder-val="{{ false }}">
-                      <span onClick="{{ d.setPrimary }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Make primary</span>
-                    </sc-if>
-                    <sc-if value="{{ d.canDel }}" hint-placeholder-val="{{ false }}">
-                      <span onClick="{{ d.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                  <div style="border-bottom:1px solid var(--rule)">
+                    <div style="display:flex;align-items:center;gap:11px;padding:12px 16px;flex-wrap:wrap">
+                      <span style="font:500 var(--fs-13) var(--mono)">{{ d.name }}</span>
+                      <sc-if value="{{ d.badge }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 var(--fs-115) var(--sans);background:var(--brand-soft);color:var(--brand-ink);border-radius:99px;padding:2px 9px">{{ d.badge }}</span>
+                      </sc-if>
+                      <span style="font:500 var(--fs-115) var(--sans);background:{{ d.stBg }};border-radius:99px;padding:2px 9px">{{ d.statusLabel }}</span>
+                      <div style="flex:1"></div>
+                      <sc-if value="{{ d.canPrimary }}" hint-placeholder-val="{{ false }}">
+                        <span onClick="{{ d.setPrimary }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Make primary</span>
+                      </sc-if>
+                      <sc-if value="{{ d.canDel }}" hint-placeholder-val="{{ false }}">
+                        <span onClick="{{ d.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ d.hasRecs }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding:0 16px 12px">
+                        <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);margin-bottom:6px">Add these DNS records at the domain's DNS host to verify (created automatically when its DNS zone is hosted here):</div>
+                        <sc-for list="{{ d.recs }}" as="r" hint-placeholder-count="1">
+                          <div style="display:flex;align-items:center;gap:9px;padding:4px 0;font:400 var(--fs-115) var(--mono);color:var(--ink-dim);flex-wrap:wrap">
+                            <span style="font:600 var(--fs-105) var(--sans);background:var(--panel-2);border-radius:5px;padding:2px 7px;flex:none">{{ r.type }}</span>
+                            <span style="overflow-wrap:anywhere">{{ r.rname }}</span>
+                            <span style="flex:none">→</span>
+                            <span style="overflow-wrap:anywhere">{{ r.value }}</span>
+                            <span onClick="{{ r.copy }}" style="font:500 var(--fs-105) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:5px;padding:1px 7px;flex:none" style-hover="border-color:var(--brand)">Copy</span>
+                          </div>
+                        </sc-for>
+                      </div>
                     </sc-if>
                   </div>
                 </sc-for>

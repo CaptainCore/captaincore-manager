@@ -222,6 +222,16 @@ Object.assign(Component.prototype, {
       { k: 'launch',  label: 'Launch site…',      desc: 'Go-live domain replacement',
         icon: 'M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.1 2.1 0 0 0-3-3Z M12 15l-3-3a22 22 0 0 1 8-10 10 10 0 0 1 5 5 22 22 0 0 1-10 8Z', go: on(() => this.openToolDialog('launch', real, s)) }
     ];
+    // Provider-backed domain mappings (Kinsta / Rocket.net) — jumps to the
+    // site's Domains tab, which is the mapping manager (list, add, delete,
+    // set primary, verification records).
+    const fRow = real ? this.FLEET.find(x => String(x.id) === String(real.siteId)) : null;
+    const sdProvider = ((real && real.site && real.site.provider) || (fRow && fRow.provider) || '').toLowerCase();
+    if (sdProvider === 'kinsta' || sdProvider === 'rocketdotnet') {
+      tools.push({ k: 'mappings', label: 'Configure domain mappings', desc: 'Add, remove or set the primary domain',
+        icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z',
+        go: on(() => { this.setState({ siteTab: 'sitedomains' }); this.loadEnvDomains(); }) });
+    }
 
     const dlg = s.toolDlg || '';
     return {

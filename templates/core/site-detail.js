@@ -261,9 +261,16 @@ Object.assign(Component.prototype, {
         const name = d.name || '';
         const system = name.includes('kinsta.cloud') || name.includes('onrocket.site');
         const primary = !!name && home.includes(name);
+        // Pending domains carry the DNS records Kinsta wants to see before it
+        // activates the mapping — show them so "Pending DNS" is actionable.
+        const recs = (Array.isArray(d.verification_records) ? d.verification_records : []).map(r => ({
+          type: String(r.type || '').toUpperCase(), rname: r.name || '', value: r.value || '',
+          copy: () => { try { navigator.clipboard.writeText(r.value || ''); } catch (e) {}
+            this.toast('Record value copied', { kind: 'success' }); } }));
         return {
           name, system, primary,
           active: !!d.is_active,
+          hasRecs: !system && !d.is_active && recs.length > 0, recs,
           statusLabel: d.is_active ? 'Active' : 'Pending DNS',
           stBg: d.is_active ? 'var(--ok-soft)' : 'var(--warn-soft)',
           badge: system ? 'System' : primary ? 'Primary' : '',

@@ -2337,3 +2337,22 @@ token when one exists). Verified live with the token-filter bypass: a
 sole primary card shows the Primary chip + Remove (no Set primary),
 Remove deletes it (confirm → row gone, "No payment methods on file.",
 0 WC tokens). Fixture removed after.
+
+### Domain mappings: tools entry + verification records (2026-08-25)
+The legacy "domain mapping" feature already landed in v3 as the site's
+Inventory › Domains tab (provider-backed list/add/delete/make-primary
+for Kinsta + Rocket.net, per-domain verification-record fetches on the
+server). Two additions finish it: (1) a "Configure domain mappings"
+tile in the site's Actions/tools grid (Kinsta/Rocket.net sites only)
+that jumps to that tab and triggers the load — one surface, no
+duplicate popup UI; (2) Pending DNS rows now SHOW the verification
+records Kinsta wants (type chip · name → value · copy button) — the
+server has always fetched and returned them (and auto-provisions them
+into Constellix when we host the zone), but the UI dropped them,
+leaving "Pending DNS" unactionable. Checked our calls against Kinsta's
+OpenAPI: add ({domain_name}, defaults quick/wildcardless), delete
+({domain_ids:[…]}), change-primary ({domain_id,
+run_search_and_replace}) and the verification-records endpoint all
+match the spec. Verified live on a real Kinsta site: tool tile present,
+click lands on Domains with live mappings (Primary/System/Active chips,
+Make primary + Delete); tile absent on a non-provider site.
