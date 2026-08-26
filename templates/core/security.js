@@ -137,7 +137,154 @@ Object.assign(Component.prototype, {
       coreFails, plugFails,
       ckEmptyCore: !coreFails.length, ckEmptyPlug: !plugFails.length,
       covTiles, covBars, covShowActions: false,
-      covNote: cov ? ((cov.without_hashes ? ((cov.without_hashes.plugin || 0) + (cov.without_hashes.theme || 0)) + ' components have no content hash yet.' : '')) : ''
+      covNote: cov ? ((cov.without_hashes ? ((cov.without_hashes.plugin || 0) + (cov.without_hashes.theme || 0)) + ' components have no content hash yet.' : '')) : '',
+      ...this.realCoreRunVals(s)
+    };
+  },
+
+  CORE_CLASS_LABEL: {
+    'widget-factory': 'Widget factory',
+    'php-fatal': 'PHP fatal',
+    'named-parameter': 'Named parameter',
+    'signature-mismatch': 'Signature mismatch',
+    'undefined-constant': 'Undefined constant',
+    'memory': 'CLI memory',
+    'not-wp-root': 'Not a WordPress root',
+    'http': 'HTTP probe',
+    'boot': 'Boot',
+    'render': 'Render',
+    'theme-abspath-require': 'Theme path',
+    'version': 'Version check',
+    'ssh': 'SSH',
+    'other': 'Other'
+  },
+  CORE_CLASS_STYLE: {
+    'widget-factory': ['var(--bad-soft)', 'var(--bad)'],
+    'php-fatal': ['var(--bad-soft)', 'var(--bad)'],
+    'named-parameter': ['var(--bad-soft)', 'var(--bad)'],
+    'signature-mismatch': ['var(--bad-soft)', 'var(--bad)'],
+    'undefined-constant': ['var(--bad-soft)', 'var(--bad)'],
+    'memory': ['var(--warn-soft)', 'var(--ink)'],
+    'boot': ['var(--warn-soft)', 'var(--ink)'],
+    'render': ['var(--warn-soft)', 'var(--ink)'],
+    'theme-abspath-require': ['var(--warn-soft)', 'var(--ink)'],
+    'not-wp-root': ['var(--panel-2)', 'var(--ink-dim)'],
+    'http': ['var(--panel-2)', 'var(--ink-dim)'],
+    'version': ['var(--panel-2)', 'var(--ink-dim)'],
+    'ssh': ['var(--panel-2)', 'var(--ink-dim)']
+  },
+
+  fmtDur(sec) {
+    sec = parseInt(sec, 10) || 0;
+    if (sec < 60) return sec + 's';
+    const m = Math.floor(sec / 60), r = sec % 60;
+    if (m < 60) return r ? (m + 'm ' + r + 's') : (m + 'm');
+    return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  },
+
+  loadCoreRuns(force) {
+    if (this._coreRunsLoading || (this._coreRuns && !force)) return;
+    this._coreRunsLoading = true;
+    this.api('/core-update-runs?per_page=5').then(runs => {
+      const list = Array.isArray(runs) ? runs : [];
+      const latest = list[0];
+      if (!latest) {
+        this._coreRunsLoading = false;
+        this._coreRuns = { runs: [], run: null, fails: [] };
+        this.setState({});
+        return;
+      }
+      const id = latest.core_update_run_id;
+      return Promise.all([
+        this.api('/core-update-runs/' + id),
+        this.api('/core-update-runs/' + id + '/results?result=fail')
+      ]).then(([run, fails]) => {
+        this._coreRunsLoading = false;
+        this._coreRuns = {
+          runs: list,
+          run: (run && !run.code) ? run : latest,
+          fails: Array.isArray(fails) ? fails : []
+        };
+        this.setState({});
+      });
+    }).catch(() => {
+      this._coreRunsLoading = false;
+      this._coreRuns = { runs: [], run: null, fails: [] };
+      this.setState({});
+    });
+  },
+
+  resolveCoreResult(id) {
+    this.api('/core-update-results/' + id, { method: 'PUT', body: { status: 'resolved' } })
+      .then(() => this.loadCoreRuns(true)).catch(() => {});
+  },
+
+  realCoreRunVals(s) {
+    if (s.route === 'security' && s.secTab === 'core' && !this._coreRuns && !this._coreRunsLoading) {
+      setTimeout(() => this.loadCoreRuns(), 0);
+    }
+    const data = this._coreRuns;
+    const loading = this._coreRunsLoading && !data;
+    if (!data) {
+      return {
+        coreHasRun: false, coreEmpty: true, coreEmptyText: loading ? 'Loading core probe runs…' : 'No core probe runs yet.',
+        coreTiles: [], coreMeta: '', coreGroups: []
+      };
+    }
+    const run = data.run;
+    if (!run) {
+      return {
+        coreHasRun: false, coreEmpty: true, coreEmptyText: 'No core probe runs yet. Fleet probe results land here after update-core finishes.',
+        coreTiles: [], coreMeta: '', coreGroups: []
+      };
+    }
+    const failed = parseInt(run.failed_count, 10) || 0;
+    const skipped = parseInt(run.skipped_count, 10) || 0;
+    const total = parseInt(run.total, 10) || 0;
+    const ver = run.version_resolved || run.version_requested || '—';
+    const tiles = [
+      { k: 'Sites', v: total.toLocaleString(), fg: 'var(--ink)' },
+      { k: 'Passed', v: skipped.toLocaleString(), fg: 'var(--ink)' },
+      { k: 'Failed', v: failed.toLocaleString(), fg: failed ? 'var(--bad)' : 'var(--ink)' },
+      { k: 'Version', v: ver, fg: 'var(--ink)' }
+    ];
+    let meta = (run.version_requested || '') + (run.version_resolved && run.version_requested && run.version_resolved !== run.version_requested ? ' resolved to ' + run.version_resolved : '');
+    if (run.duration_seconds) meta += (meta ? ' · ' : '') + this.fmtDur(run.duration_seconds);
+    if (run.created_at) meta += (meta ? ' · ' : '') + String(run.created_at).slice(0, 16).replace('T', ' ');
+    const fails = data.fails || [];
+    const rawGroups = Array.isArray(run.groups) ? run.groups.filter(g => g.result === 'fail') : [];
+    const groups = rawGroups.map(g => {
+      const key = g.error_class || 'other';
+      const [bg, fg] = this.CORE_CLASS_STYLE[key] || ['var(--panel-2)', 'var(--ink-dim)'];
+      const open = s.coreGroupOpen === key;
+      const sites = open ? fails.filter(f => (f.error_class || 'other') === key).map(f => {
+        const env = /-staging$/i.test(f.site || '') ? 'Staging' : (/production$/i.test(f.site || '') ? 'Production' : '');
+        const reason = (f.reason || f.excerpt || '').replace(/\s+/g, ' ').slice(0, 160);
+        const versions = (f.core_before || f.core_after)
+          ? ((f.core_before || '?') + ' \u2192 ' + (f.core_after || '?'))
+          : '';
+        return {
+          id: f.core_update_result_id,
+          name: (f.home_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || f.site,
+          env, envShow: !!env,
+          stage: f.stage || '',
+          versions, versionsShow: !!versions,
+          reason,
+          status: f.status || 'open',
+          canResolve: (f.status || 'open') !== 'resolved',
+          go: () => { if (f.site_id) this.openSite(String(f.site_id)); },
+          resolve: (e) => { e.stopPropagation(); this.resolveCoreResult(f.core_update_result_id); }
+        };
+      }) : [];
+      return {
+        key, label: this.CORE_CLASS_LABEL[key] || key || 'Other',
+        n: String(g.n), fg, bg, open, sites, sitesShow: open && sites.length > 0,
+        toggle: () => this.setState(st => ({ coreGroupOpen: st.coreGroupOpen === key ? '' : key }))
+      };
+    });
+    return {
+      coreHasRun: true, coreEmpty: false, coreEmptyText: '',
+      coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups
     };
   },
 

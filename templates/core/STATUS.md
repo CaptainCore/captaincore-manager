@@ -15,6 +15,13 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Security Core tab (2026-08-26)
+
+Fourth pill on `/account/security` next to Vulnerabilities / Checksums / Coverage.
+Reads the latest `core-update-runs` row: tiles for site/pass/fail/version, expandable
+error_class groups, per-site core before/after, Resolve. Admin REST only. Empty
+until a fleet probe has been stored.
+
 ## Design language: Minn Admin (2026-07-19)
 
 The UI was restyled to the Minn Admin design system (Austin's ask, mockup first at

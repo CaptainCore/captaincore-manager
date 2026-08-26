@@ -250,9 +250,13 @@ class CoreUpdateRun {
 		if ( ! $row ) {
 			return new \WP_Error( 'not_found', 'Result not found', [ 'status' => 404 ] );
 		}
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$params = [];
+		}
 		$update = [ 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ];
-		$status = $request->get_param( 'status' );
-		$notes  = $request->get_param( 'notes' );
+		$status = $params['status'] ?? $request->get_param( 'status' );
+		$notes  = array_key_exists( 'notes', $params ) ? $params['notes'] : $request->get_param( 'notes' );
 		if ( $status !== null && $status !== '' ) {
 			$allowed = [ 'open', 'triaged', 'resolved', 'ignored' ];
 			if ( ! in_array( $status, $allowed, true ) ) {

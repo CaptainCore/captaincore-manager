@@ -109,6 +109,7 @@ Object.assign(Component.prototype, {
       { label: 'Go to Billing \u2192 Invoices', sub: '', kind: 'command', icon: this.ICONS.billing, act: 'billing' },
       ...(role === 'operator' ? [
         { label: 'Go to Security \u2192 Coverage', sub: 'Fleet audit coverage', kind: 'command', icon: this.ICONS.security, act: 'security' },
+        { label: 'Go to Security \u2192 Core', sub: 'Core probe results', kind: 'command', icon: this.ICONS.security, act: 'security-core' },
         { label: 'Bulk tools on filtered sites\u2026', sub: 'sync \u00b7 deploy defaults \u00b7 https \u00b7 backup', kind: 'command', icon: this.ICONS.sites, act: 'sites' }
       ] : [])];
   },

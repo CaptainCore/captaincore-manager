@@ -66,7 +66,7 @@ class Component extends DCLogic {
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
     invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
-    secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '',
+    secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '',
     audits: null, audSite: 'bloomandbranch.com', audTypes: { Core: true, Plugins: true }, 
     repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
@@ -583,7 +583,7 @@ class Component extends DCLogic {
   ];
 
   computeSecurity(s) {
-    const tabs = [['vulns', 'Vulnerabilities'], ['checksums', 'Checksums'], ['coverage', 'Coverage']].map(([id, label]) => ({ label,
+    const tabs = [['vulns', 'Vulnerabilities'], ['checksums', 'Checksums'], ['coverage', 'Coverage'], ['core', 'Core']].map(([id, label]) => ({ label,
       fg: s.secTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.secTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ secTab: id }) }));
@@ -608,7 +608,7 @@ class Component extends DCLogic {
       markRes: () => { this.setState(st => ({ threatStatus: { ...st.threatStatus, [t.id]: 'Resolved' } }));
         this.runJob('threat-resolve', t.cve + ' — process log on ' + t.sites.length + ' sites'); } }; });
     return {
-      secTabs: tabs, secTabVulns: s.secTab === 'vulns', secTabCk: s.secTab === 'checksums', secTabCov: s.secTab === 'coverage',
+      secTabs: tabs, secTabVulns: s.secTab === 'vulns', secTabCk: s.secTab === 'checksums', secTabCov: s.secTab === 'coverage', secTabCore: s.secTab === 'core',
       threats, noteDraft: s.noteDraft, onNoteDraft: e => this.setState({ noteDraft: e.target.value }),
       coreFails: this.CORE_FAILS.map(c => ({ ...c, open: s.ckOpen === c.id,
         files: c.files.map(p => ({ p })),
@@ -633,6 +633,18 @@ class Component extends DCLogic {
         fill: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)' })),
       queueStale: () => this.runJob('audit-queue', '9 stale sites'),
       steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); },
+      coreTiles: [
+        { k: 'Sites', v: '4,160', fg: 'var(--ink)' },
+        { k: 'Passed', v: '3,938', fg: 'var(--ink)' },
+        { k: 'Failed', v: '209', fg: 'var(--bad)' },
+        { k: 'Version', v: '7.2-alpha', fg: 'var(--ink)' }
+      ],
+      coreMeta: 'next resolved to 7.2-alpha · 31m 34s',
+      coreGroups: [
+        { key: 'render', label: 'Render', n: '109', fg: 'var(--warn)', bg: 'var(--warn-soft)', open: false, toggle: () => {}, sites: [] },
+        { key: 'boot', label: 'Boot', n: '42', fg: 'var(--bad)', bg: 'var(--bad-soft)', open: false, toggle: () => {}, sites: [] }
+      ],
+      coreEmpty: false, coreEmptyText: '', coreHasRun: true,
       // Shimmer threat rows pre-hydration; realSecurityVals overrides while its
       // own fetch is in flight and clears once security data lands.
       secSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
@@ -2857,6 +2869,7 @@ class Component extends DCLogic {
       { label: 'Go to Billing → Invoices', sub: '', kind: 'command', icon: this.ICONS.billing, act: 'billing' },
       ...(role === 'operator' ? [
         { label: 'Go to Security → Coverage', sub: 'Fleet audit coverage', kind: 'command', icon: this.ICONS.security, act: 'security' },
+        { label: 'Go to Security → Core', sub: 'Core probe results', kind: 'command', icon: this.ICONS.security, act: 'security-core' },
         { label: 'Bulk tools on filtered sites…', sub: 'sync · deploy defaults · https · backup', kind: 'command', icon: this.ICONS.sites, act: 'sites' }
       ] : [])
     ];
@@ -2868,6 +2881,7 @@ class Component extends DCLogic {
     else if (r.act === 'dock') this.setState({ dockOpen: true, paletteOpen: false });
     else if (r.act === 'site') this.openSite(r.sid);
     else if (r.act === 'domain') this.openDomain(r.did);
+    else if (r.act === 'security-core') this.setState({ route: 'security', secTab: 'core', paletteOpen: false });
     else this.setState({ route: r.act, paletteOpen: false });
   }
 
@@ -2891,7 +2905,7 @@ class Component extends DCLogic {
     const launcher = (isOp ? [
       { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '128'), icon: this.ICONS.sites, act: 'sites', acc: 'sites' },
       { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
-      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
+      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage, core', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
       { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
       { label: 'Activity', desc: 'Fleet-wide event log', meta: this._activity ? String(this._activity.filter(a => a.t && !/\dd$/.test(a.t)).length) + ' today' : (booted ? '…' : '14 today'), icon: this.ICONS.activity, act: 'activity', acc: 'terminal' }
     ] : [
