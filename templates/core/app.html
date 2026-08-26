@@ -2772,11 +2772,26 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
           <sc-if value="{{ secTabCore }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ coreHasRun }}" hint-placeholder-val="{{ true }}">
-              <sc-if value="{{ coreRunChipsShow }}" hint-placeholder-val="{{ false }}">
-                <div class="cc-tabs" style="display:flex;flex-wrap:wrap;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px;margin-bottom:0">
-                  <sc-for list="{{ coreRunChips }}" as="r" hint-placeholder-count="2">
-                    <span onClick="{{ r.pick }}" style="padding:5px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:{{ r.fg }};background:{{ r.bg }}" style-hover="color:var(--ink)">{{ r.label }}</span>
-                  </sc-for>
+              <sc-if value="{{ coreRunPickerShow }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;margin-top:16px;max-width:520px">
+                  <div onClick="{{ ddToggleCore }}" style="display:flex;align-items:center;gap:8px;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);padding:0 12px;cursor:pointer" style-hover="border-color:var(--brand)">
+                    <span style="font:500 var(--fs-125) var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ coreRunLabel }}</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                  </div>
+                  <sc-if value="{{ ddCoreOpen }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
+                    <div style="position:absolute;top:40px;left:0;z-index:40;width:100%;min-width:320px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                      <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search runs…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                      <div style="max-height:220px;overflow-y:auto">
+                        <sc-for list="{{ ddCoreOpts }}" as="o" hint-placeholder-count="3">
+                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
+                            <span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span>
+                            <span style="font:500 var(--fs-12) var(--sans)">{{ o.label }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
                 </div>
               </sc-if>
               <div style="display:flex;align-items:stretch;margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">

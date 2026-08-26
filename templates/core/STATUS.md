@@ -18,7 +18,7 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 ## Security Core tab (2026-08-26)
 
 Fourth pill on `/account/security` next to Vulnerabilities / Checksums / Coverage.
-Shows stored `core-update-runs` (latest first, picker when more than one).
+Shows stored `core-update-runs` (latest first, searchable autocomplete to pick a prior run).
 Tiles for site/pass/fail/version, expandable error_class groups, per-site core
 before/after, Resolve. Live app never paints the design-sample 4160-site tiles.
 Deep link `/account/security/core` (and checksums/coverage) so recap emails open

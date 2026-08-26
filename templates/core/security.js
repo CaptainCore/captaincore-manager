@@ -240,14 +240,14 @@ Object.assign(Component.prototype, {
     if (!data) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: loading ? 'Loading core probe runs…' : 'No core probe runs yet.',
-        coreTiles: [], coreMeta: '', coreGroups: [], coreRunChips: [], coreRunChipsShow: false
+        coreTiles: [], coreMeta: '', coreGroups: [], coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
       };
     }
     const run = data.run;
     if (!run) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: 'No core probe runs yet. Fleet probe results land here after update-core finishes.',
-        coreTiles: [], coreMeta: '', coreGroups: [], coreRunChips: [], coreRunChipsShow: false
+        coreTiles: [], coreMeta: '', coreGroups: [], coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
       };
     }
     const failed = parseInt(run.failed_count, 10) || 0;
@@ -295,24 +295,32 @@ Object.assign(Component.prototype, {
       };
     });
     const selectedId = s.coreRunId || run.core_update_run_id;
-    const chips = (data.runs || []).map(r => {
-      const id = r.core_update_run_id;
-      const on = String(id) === String(selectedId);
+    const runLabel = r => {
       const when = String(r.created_at || '').slice(0, 16).replace('T', ' ');
       const failN = parseInt(r.failed_count, 10) || 0;
       const tgt = r.target || '';
+      const ver = r.version_resolved || r.version_requested || '';
+      return [when, tgt, ver, failN + ' failed'].filter(Boolean).join(' · ');
+    };
+    const nq = (s.ddQ || '').trim().toLowerCase();
+    const selected = (data.runs || []).find(r => String(r.core_update_run_id) === String(selectedId)) || run;
+    const ddCoreOpts = (data.runs || []).filter(r => !nq || runLabel(r).toLowerCase().includes(nq)).map(r => {
+      const on = String(r.core_update_run_id) === String(selectedId);
       return {
-        id, on,
-        bg: on ? 'var(--panel-2)' : 'transparent',
-        fg: on ? 'var(--ink)' : 'var(--ink-dim)',
-        label: when + (tgt ? ' · ' + tgt : '') + ' · ' + failN + ' failed',
-        pick: () => this.selectCoreRun(id)
+        label: runLabel(r),
+        mark: on ? '✓' : '',
+        bg: on ? 'var(--brand-soft)' : 'transparent',
+        pick: () => { this.setState({ ddOpen: '', ddQ: '' }); this.selectCoreRun(r.core_update_run_id); }
       };
     });
     return {
       coreHasRun: true, coreEmpty: false, coreEmptyText: '',
       coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups,
-      coreRunChips: chips, coreRunChipsShow: chips.length > 1
+      coreRunPickerShow: (data.runs || []).length > 0,
+      coreRunLabel: selected ? runLabel(selected) : 'Select a run',
+      ddCoreOpen: s.ddOpen === 'coreRun',
+      ddToggleCore: () => this.setState(st => ({ ddOpen: st.ddOpen === 'coreRun' ? '' : 'coreRun', ddQ: '' })),
+      ddCoreOpts
     };
   },
 

@@ -645,7 +645,7 @@ class Component extends DCLogic {
         { key: 'boot', label: 'Boot', n: '42', fg: 'var(--bad)', bg: 'var(--bad-soft)', open: false, toggle: () => {}, sites: [], sitesShow: false }
       ],
       coreEmpty: !!window.CC_BOOT, coreEmptyText: window.CC_BOOT ? 'Loading core probe runs…' : '',
-      coreHasRun: !window.CC_BOOT, coreRunChips: [], coreRunChipsShow: false,
+      coreHasRun: !window.CC_BOOT, coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: [],
       // Shimmer threat rows pre-hydration; realSecurityVals overrides while its
       // own fetch is in flight and clears once security data lands.
       secSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
