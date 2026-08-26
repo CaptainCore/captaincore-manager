@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 51;
+    const REQUIRED_VERSION = 52;
 
     private static function _table() {
         global $wpdb;
@@ -1206,6 +1206,58 @@ class DB {
         KEY injected_caps_count (injected_caps_count),
         KEY max_severity (max_severity),
         KEY alerted_at (alerted_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_core_update_runs` (
+            core_update_run_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            target varchar(255) NOT NULL DEFAULT '',
+            flags text,
+            version_requested varchar(50) NOT NULL DEFAULT '',
+            version_resolved varchar(50) NOT NULL DEFAULT '',
+            parallel int(11) NOT NULL DEFAULT 0,
+            duration_seconds int(11) NOT NULL DEFAULT 0,
+            total int(11) NOT NULL DEFAULT 0,
+            updated_count int(11) NOT NULL DEFAULT 0,
+            skipped_count int(11) NOT NULL DEFAULT 0,
+            failed_count int(11) NOT NULL DEFAULT 0,
+            probed_count int(11) NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'completed',
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (core_update_run_id),
+        KEY created_at (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_core_update_results` (
+            core_update_result_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            core_update_run_id bigint(20) UNSIGNED NOT NULL,
+            site varchar(191) NOT NULL DEFAULT '',
+            site_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            environment_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            home_url varchar(500) NOT NULL DEFAULT '',
+            result varchar(20) NOT NULL DEFAULT '',
+            action varchar(20) NOT NULL DEFAULT '',
+            stage varchar(40) NOT NULL DEFAULT '',
+            core_before varchar(50) NOT NULL DEFAULT '',
+            core_after varchar(50) NOT NULL DEFAULT '',
+            reason text,
+            excerpt text,
+            exit_code int(11) NOT NULL DEFAULT 0,
+            error_class varchar(100) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'open',
+            notes text,
+            created_at datetime NOT NULL,
+            updated_at datetime DEFAULT NULL,
+        PRIMARY KEY  (core_update_result_id),
+        KEY core_update_run_id (core_update_run_id),
+        KEY result (result),
+        KEY stage (stage),
+        KEY error_class (error_class),
+        KEY status (status),
+        KEY site_id (site_id)
         ) $charset_collate;";
 
         dbDelta($sql);

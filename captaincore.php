@@ -146,6 +146,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore remote', 'CaptainCore\RemoteCLI' );
 	WP_CLI::add_command( 'captaincore site-label', 'CaptainCore\SiteLabelCLI' );
 	WP_CLI::add_command( 'captaincore session-alerts', 'CaptainCore\SessionAlertsCLI' );
+	WP_CLI::add_command( 'captaincore core-update-runs', 'CaptainCore\CoreUpdateRunsCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -1133,6 +1134,17 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$post->data->download_url
 		);
 		$response = [ "response" => "Backup download notification sent" ];
+	}
+
+	// Store a fleet core-update probe/apply run (parent + per-site rows).
+	if ( $command == 'core-update-run' && ! empty( $post->data ) ) {
+		$payload  = json_decode( wp_json_encode( $post->data ), true );
+		$stored   = \CaptainCore\CoreUpdateRun::store( is_array( $payload ) ? $payload : [] );
+		$response = [
+			'response' => 'Core update run stored',
+			'run_id'   => $stored['run_id'],
+			'inserted' => $stored['inserted'],
+		];
 	}
 
 	// Send monitor alert notification email
@@ -9184,6 +9196,47 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	// Custom endpoint for recipes
+	register_rest_route(
+		'captaincore/v1', '/core-update-runs', [
+			'methods'             => 'GET',
+			'callback'            => [ 'CaptainCore\\CoreUpdateRun', 'rest_list' ],
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/core-update-runs/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => [ 'CaptainCore\\CoreUpdateRun', 'rest_get' ],
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/core-update-runs/(?P<id>[\d]+)/results', [
+			'methods'             => 'GET',
+			'callback'            => [ 'CaptainCore\\CoreUpdateRun', 'rest_results' ],
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/core-update-runs/(?P<id>[\d]+)/groups', [
+			'methods'             => 'GET',
+			'callback'            => [ 'CaptainCore\\CoreUpdateRun', 'rest_groups' ],
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/core-update-results/(?P<result_id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => [ 'CaptainCore\\CoreUpdateRun', 'rest_update_result' ],
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/processes/', [
 			'methods'             => 'GET',
