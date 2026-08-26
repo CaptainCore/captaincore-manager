@@ -19,8 +19,9 @@ Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 
 Fourth pill on `/account/security` next to Vulnerabilities / Checksums / Coverage.
 Reads the latest `core-update-runs` row: tiles for site/pass/fail/version, expandable
-error_class groups, per-site core before/after, Resolve. Admin REST only. Empty
-until a fleet probe has been stored.
+error_class groups, per-site core before/after, Resolve. Deep link
+`/account/security/core` (and checksums/coverage) so recap emails open the tab.
+Admin REST only. Empty until a fleet probe has been stored.
 
 ## Design language: Minn Admin (2026-07-19)
 
