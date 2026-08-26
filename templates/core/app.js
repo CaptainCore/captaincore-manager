@@ -66,7 +66,7 @@ class Component extends DCLogic {
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
     invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
-    secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '',
+    secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
     audits: null, audSite: 'bloomandbranch.com', audTypes: { Core: true, Plugins: true }, 
     repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
@@ -633,24 +633,26 @@ class Component extends DCLogic {
         fill: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)' })),
       queueStale: () => this.runJob('audit-queue', '9 stale sites'),
       steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); },
-      coreTiles: [
+      coreTiles: window.CC_BOOT ? [] : [
         { k: 'Sites', v: '4,160', fg: 'var(--ink)' },
         { k: 'Passed', v: '3,938', fg: 'var(--ink)' },
         { k: 'Failed', v: '209', fg: 'var(--bad)' },
         { k: 'Version', v: '7.2-alpha', fg: 'var(--ink)' }
       ],
-      coreMeta: 'next resolved to 7.2-alpha · 31m 34s',
-      coreGroups: [
-        { key: 'render', label: 'Render', n: '109', fg: 'var(--warn)', bg: 'var(--warn-soft)', open: false, toggle: () => {}, sites: [] },
-        { key: 'boot', label: 'Boot', n: '42', fg: 'var(--bad)', bg: 'var(--bad-soft)', open: false, toggle: () => {}, sites: [] }
+      coreMeta: window.CC_BOOT ? '' : 'next resolved to 7.2-alpha · 31m 34s',
+      coreGroups: window.CC_BOOT ? [] : [
+        { key: 'render', label: 'Render', n: '109', fg: 'var(--warn)', bg: 'var(--warn-soft)', open: false, toggle: () => {}, sites: [], sitesShow: false },
+        { key: 'boot', label: 'Boot', n: '42', fg: 'var(--bad)', bg: 'var(--bad-soft)', open: false, toggle: () => {}, sites: [], sitesShow: false }
       ],
-      coreEmpty: false, coreEmptyText: '', coreHasRun: true,
+      coreEmpty: !!window.CC_BOOT, coreEmptyText: window.CC_BOOT ? 'Loading core probe runs…' : '',
+      coreHasRun: !window.CC_BOOT, coreRunChips: [], coreRunChipsShow: false,
       // Shimmer threat rows pre-hydration; realSecurityVals overrides while its
       // own fetch is in flight and clears once security data lands.
       secSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
       secLoading: false, secEmpty: false, secEmptyText: '', ckEmptyCore: false, ckEmptyPlug: false,
       covShowActions: true, covNote: '',
-      ...(this._hydrated ? this.realSecurityVals(s) : {})
+      ...(this._hydrated ? this.realSecurityVals(s) : {}),
+      ...(window.CC_BOOT ? this.realCoreRunVals(s) : {})
     };
   }
 

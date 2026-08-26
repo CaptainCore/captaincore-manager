@@ -2772,6 +2772,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
           <sc-if value="{{ secTabCore }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ coreHasRun }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ coreRunChipsShow }}" hint-placeholder-val="{{ false }}">
+                <div class="cc-tabs" style="display:flex;flex-wrap:wrap;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px;margin-bottom:0">
+                  <sc-for list="{{ coreRunChips }}" as="r" hint-placeholder-count="2">
+                    <span onClick="{{ r.pick }}" style="padding:5px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:{{ r.fg }};background:{{ r.bg }}" style-hover="color:var(--ink)">{{ r.label }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
               <div style="display:flex;align-items:stretch;margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <sc-for list="{{ coreTiles }}" as="t" hint-placeholder-count="4">
                   <div style="flex:1;padding:13px 16px;border-right:1px solid var(--rule)">

@@ -182,19 +182,23 @@ Object.assign(Component.prototype, {
     return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
   },
 
-  loadCoreRuns(force) {
-    if (this._coreRunsLoading || (this._coreRuns && !force)) return;
+  loadCoreRuns(force, runId) {
+    if (this._coreRunsLoading) return;
+    if (this._coreRuns && !force && !runId) return;
     this._coreRunsLoading = true;
-    this.api('/core-update-runs?per_page=5').then(runs => {
+    const wanted = runId || this.state.coreRunId;
+    this.api('/core-update-runs?per_page=20').then(runs => {
       const list = Array.isArray(runs) ? runs : [];
-      const latest = list[0];
-      if (!latest) {
+      const pick = wanted
+        ? (list.find(r => String(r.core_update_run_id) === String(wanted)) || list[0])
+        : list[0];
+      if (!pick) {
         this._coreRunsLoading = false;
         this._coreRuns = { runs: [], run: null, fails: [] };
         this.setState({});
         return;
       }
-      const id = latest.core_update_run_id;
+      const id = pick.core_update_run_id;
       return Promise.all([
         this.api('/core-update-runs/' + id),
         this.api('/core-update-runs/' + id + '/results?result=fail')
@@ -202,7 +206,7 @@ Object.assign(Component.prototype, {
         this._coreRunsLoading = false;
         this._coreRuns = {
           runs: list,
-          run: (run && !run.code) ? run : latest,
+          run: (run && !run.code) ? run : pick,
           fails: Array.isArray(fails) ? fails : []
         };
         this.setState({});
@@ -214,9 +218,17 @@ Object.assign(Component.prototype, {
     });
   },
 
+  selectCoreRun(id) {
+    const current = this.state.coreRunId || (this._coreRuns && this._coreRuns.run && this._coreRuns.run.core_update_run_id);
+    if (String(current) === String(id)) return;
+    this.setState({ coreRunId: id, coreGroupOpen: '' });
+    this.loadCoreRuns(true, id);
+  },
+
   resolveCoreResult(id) {
+    const current = this.state.coreRunId || (this._coreRuns && this._coreRuns.run && this._coreRuns.run.core_update_run_id);
     this.api('/core-update-results/' + id, { method: 'PUT', body: { status: 'resolved' } })
-      .then(() => this.loadCoreRuns(true)).catch(() => {});
+      .then(() => this.loadCoreRuns(true, current)).catch(() => {});
   },
 
   realCoreRunVals(s) {
@@ -228,14 +240,14 @@ Object.assign(Component.prototype, {
     if (!data) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: loading ? 'Loading core probe runs…' : 'No core probe runs yet.',
-        coreTiles: [], coreMeta: '', coreGroups: []
+        coreTiles: [], coreMeta: '', coreGroups: [], coreRunChips: [], coreRunChipsShow: false
       };
     }
     const run = data.run;
     if (!run) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: 'No core probe runs yet. Fleet probe results land here after update-core finishes.',
-        coreTiles: [], coreMeta: '', coreGroups: []
+        coreTiles: [], coreMeta: '', coreGroups: [], coreRunChips: [], coreRunChipsShow: false
       };
     }
     const failed = parseInt(run.failed_count, 10) || 0;
@@ -282,9 +294,25 @@ Object.assign(Component.prototype, {
         toggle: () => this.setState(st => ({ coreGroupOpen: st.coreGroupOpen === key ? '' : key }))
       };
     });
+    const selectedId = s.coreRunId || run.core_update_run_id;
+    const chips = (data.runs || []).map(r => {
+      const id = r.core_update_run_id;
+      const on = String(id) === String(selectedId);
+      const when = String(r.created_at || '').slice(0, 16).replace('T', ' ');
+      const failN = parseInt(r.failed_count, 10) || 0;
+      const tgt = r.target || '';
+      return {
+        id, on,
+        bg: on ? 'var(--panel-2)' : 'transparent',
+        fg: on ? 'var(--ink)' : 'var(--ink-dim)',
+        label: when + (tgt ? ' · ' + tgt : '') + ' · ' + failN + ' failed',
+        pick: () => this.selectCoreRun(id)
+      };
+    });
     return {
       coreHasRun: true, coreEmpty: false, coreEmptyText: '',
-      coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups
+      coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups,
+      coreRunChips: chips, coreRunChipsShow: chips.length > 1
     };
   },
 
