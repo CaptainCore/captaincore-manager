@@ -452,7 +452,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <sc-for list="{{ usersRows }}" as="u" hint-placeholder-count="8">
               <div onClick="{{ u.edit }}" onContextMenu="{{ u.ctx }}" style="display:grid;grid-template-columns:40px 1.2fr 1.1fr 1fr 130px 120px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
-                <span style="width:32px;height:32px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 var(--fs-115) var(--sans)">{{ u.initials }}</span>
+                <span style="position:relative;width:32px;height:32px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 var(--fs-115) var(--sans)">{{ u.initials }}<sc-if value="{{ u.hasAvatar }}" hint-placeholder-val="{{ false }}"><img src="{{ u.avatar }}" ref="{{ u.avatarRef }}" alt="" loading="lazy" style="position:absolute;inset:0;width:32px;height:32px;border-radius:50%;object-fit:cover"></sc-if></span>
                 <span style="min-width:0"><span style="display:block;font:600 var(--fs-14) var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.name }}</span><span style="display:block;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.username }}</span></span>
                 <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.email }}</span>
                 <span style="display:flex;flex-wrap:wrap;gap:4px;min-width:0">

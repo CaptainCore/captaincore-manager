@@ -24,6 +24,32 @@ Object.assign(Component.prototype, {
     }).catch(err => { console.warn('CaptainCore v3 users failed.', err); this._users = []; this.setState({}); });
   },
 
+  // Gravatar thumbnails for the list monograms. Gravatar accepts SHA-256 of
+  // the trimmed lowercase email; crypto.subtle is async, so hashes land in a
+  // cache and the rows re-render once the batch resolves. ?d=404 makes a
+  // missing gravatar error the <img>, and thumbFallbackRef hides it so the
+  // initials monogram underneath stays.
+  gravatarFor(email) {
+    const key = String(email || '').trim().toLowerCase();
+    if (!key || !(window.crypto && crypto.subtle)) return '';
+    const cache = this._gravatarHash = this._gravatarHash || {};
+    const hit = cache[key];
+    if (hit && hit !== 'pending') return 'https://www.gravatar.com/avatar/' + hit + '?s=64&d=404';
+    if (!hit) {
+      cache[key] = 'pending';
+      (this._gravatarQueue = this._gravatarQueue || []).push(key);
+      if (!this._gravatarTimer) this._gravatarTimer = setTimeout(() => {
+        this._gravatarTimer = null;
+        const batch = (this._gravatarQueue || []).splice(0);
+        Promise.all(batch.map(e => crypto.subtle.digest('SHA-256', new TextEncoder().encode(e))
+          .then(buf => { cache[e] = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join(''); })
+          .catch(() => { delete cache[e]; })))
+          .then(() => this.setState({}));
+      }, 0);
+    }
+    return '';
+  },
+
   userDlgDefaults() {
     return { udOpen: false, udMode: 'create', udId: 0, udFirst: '', udLast: '', udEmail: '', udLogin: '', udName: '', udAccounts: [], udAcq: '', udErrors: [], udBusy: false };
   },
@@ -80,6 +106,9 @@ Object.assign(Component.prototype, {
       accounts: accountChips(u),
       name: u.name || u.username,
       initials: (((u.name || u.username || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('')) || '?').toUpperCase(),
+      avatar: this.gravatarFor(u.email),
+      hasAvatar: !!this.gravatarFor(u.email),
+      avatarRef: el => this.thumbFallbackRef(el),
       username: u.username,
       email: u.email,
       role: Array.isArray(u.roles) && u.roles.length ? u.roles[0] : '',

@@ -2452,3 +2452,29 @@ Verified live via Playwright on anchor.localhost: search "anchor" →
 toast "Terminal targeting 14 production environments · filtered sites";
 checking 2 rows → bulk bar shows Open in console → "@ 2 environments
 selected" with the selected-sites toast.
+
+### Fixture account default scrubbed from New domain / New site (2026-08-27)
+The design-mode dataset's fictional account survived hydration as the
+SELECTED value of two pickers ("Bloom & Branch Floral"): New domain's
+Account and New site's Request-tab account. The options list was always
+real (accounts are named after their primary domain, so they read like
+domains); only the preselected value was fake, and submitting untouched
+posted account_id:"" — server-guarded ("Account can't be empty." /
+"Pick an account" toast), so no mis-assigned records, just a dead end.
+Both dialog openers now reseed on open when hydrated: an unmatched value
+drops to "Select an account…" (a sole account preselects itself), and
+ndCreate gained the operator-side guard toast naming the fix before the
+round-trip. Verified live: New domain opens showing the placeholder.
+
+### Users page: deep link + Gravatar thumbnails (2026-08-27)
+Users joins the router maps (ROUTE_SEG/SEG_ROUTE), so /account/users is
+a real address — deep-linkable, back/forward-safe, synced when the
+sidebar navigates (Router.php already served the SPA for any /account/*
+path; the segment just wasn't mapped, so the URL sat at /account/). List
+monograms now try Gravatar first: emails hash with crypto.subtle SHA-256
+into a batched cache (one setState per batch), the <img> overlays the
+initials circle with ?d=404 + thumbFallbackRef, so a missing gravatar
+404s the img, hides it, and the monogram stays. Verified live via
+Playwright: direct load of /account/users lands on the page, sidebar
+round-trip keeps the URL in sync, and the first screen showed 10 real
+avatars with the rest falling back to initials.
