@@ -367,6 +367,23 @@ class Component extends DCLogic {
     this.toast('Terminal targeting ' + ids.length + ' environment' + (ids.length === 1 ? '' : 's') + ' across ' + sites + ' site' + (sites === 1 ? '' : 's') + ' · ' + accountName, { kind: 'success' });
   }
 
+  // Target a set of sites-list rows in the dock terminal — the sites-list
+  // counterpart to openAccountTerminal (filter the fleet down, then run
+  // across the matches). Selection is site-level, so each row resolves to its
+  // Production environment (first environment fallback), matching the
+  // bulk-tools convention; the @ picker shows (and can refine) the selection.
+  openSitesTerminal(rows, label) {
+    const ids = [];
+    (rows || []).forEach(f => {
+      const envs = f.environmentsRaw || [];
+      const prod = envs.find(e => e && (e.environment || 'Production') === 'Production') || envs[0];
+      if (prod && prod.environment_id) ids.push(String(prod.environment_id));
+    });
+    if (!ids.length) { this.toast('No environments resolved for ' + (label || 'these sites'), { kind: 'info' }); return; }
+    this.setState({ dockOpen: true, termSel: ids, tpOpen: false, cookOpen: false });
+    this.toast('Terminal targeting ' + ids.length + ' production environment' + (ids.length === 1 ? '' : 's') + (label ? ' · ' + label : ''), { kind: 'success' });
+  }
+
   computeAccounts(s, isOp) {
     const list = isOp ? this.ACCOUNTS : this.ACCOUNTS.filter(a => a.owned);
     const nq = s.aq.trim().toLowerCase();
@@ -1100,6 +1117,13 @@ class Component extends DCLogic {
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
       clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      // Filter-to-console (legacy parity): hand the whole filtered set — every
+      // page, not just the visible one — to the dock terminal as its target
+      // list. Only offered while a filter narrows the fleet, so a stray click
+      // can't target thousands of sites.
+      termFilterShow: (!!nq || conds.length > 0 || selLabels.length > 0) && filtered.length > 0,
+      termFilterLabel: 'Console · ' + filtered.length,
+      termFilterGo: () => this.openSitesTerminal(filtered, 'filtered sites'),
       hasSel: selIds.length > 0, selCount: selIds.length,
       clearSel: () => this.setState({ sel: {} }),
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
@@ -1126,7 +1150,11 @@ class Component extends DCLogic {
               this.setState({ sel: {} });
             })
             .catch(() => this.updateToast(tid, label + ' failed to dispatch', { kind: 'error' }));
-        } })),
+        } })).concat([{ label: 'Open in console',
+        // Checked-subset variant of filter-to-console: preselect the checked
+        // sites as the terminal target set. Selection is kept so the set can
+        // be adjusted and re-sent.
+        go: () => this.openSitesTerminal(filtered.filter(x => s.sel[x.id]), 'selected sites') }]),
       openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
         // v1 parity (showNewSiteKinsta): customers default their first account as billing.
         if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;

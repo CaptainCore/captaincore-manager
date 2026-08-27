@@ -594,6 +594,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
               <span onClick="{{ clearFilters }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">Clear</span>
             </sc-if>
+            <sc-if value="{{ termFilterShow }}" hint-placeholder-val="{{ false }}">
+              <span onClick="{{ termFilterGo }}" title="Target these sites in the console" style="display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);background:var(--paper);border-radius:20px;padding:4px 11px;cursor:pointer" style-hover="border-color:var(--brand)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6M12 19h8"></path></svg>
+                {{ termFilterLabel }}</span>
+            </sc-if>
             <div style="flex:1"></div>
             <div onContextMenu="{{ viewCtx }}" title="Right-click to set your default view" class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;flex:none">
               <span onClick="{{ setViewTable }}" style="padding:6px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ tblBg }};color:{{ tblFg }}">Table</span>

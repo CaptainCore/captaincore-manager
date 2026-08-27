@@ -2432,3 +2432,23 @@ section re-renders. Verified live with the token-filter bypass: a sole
 default card shows Remove beside the Default chip; removing it empties
 the WC tokens, the section falls back to the no-methods prompt and the
 Pay button disappears (only add-card-and-pay remains). Fixtures removed.
+
+### Filter-to-console on the Sites list (2026-08-27)
+The legacy "filter sites, then target them in the console" flow, rebuilt
+for v3 with two entry points on the Sites list. (1) A "Console · N" chip
+appears beside Clear whenever any filter narrows the fleet (search,
+facets, or label chips) — clicking hands the WHOLE filtered set (every
+page, not just the visible one) to the dock terminal. (2) "Open in
+console" joins the bulk-selection bar's actions for a hand-checked
+subset (selection is kept for refining). Both call openSitesTerminal(),
+the sites-list counterpart to openAccountTerminal(): each site row
+resolves to its Production environment (first-environment fallback,
+matching the bulk-tools convention), termSel is preselected, the dock
+opens, and a toast names the count — the @ picker shows the selection
+and can refine it before running. The chip is deliberately absent with
+no filters active so a stray click can't target thousands of sites.
+Verified live via Playwright on anchor.localhost: search "anchor" →
+"Console · 14" chip → dock opens with "@ 14 environments selected",
+toast "Terminal targeting 14 production environments · filtered sites";
+checking 2 rows → bulk bar shows Open in console → "@ 2 environments
+selected" with the selected-sites toast.
