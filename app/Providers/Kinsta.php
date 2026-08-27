@@ -307,9 +307,12 @@ class Kinsta {
         return true;
     }
 
-    public static function new_site( $site ) {
-        $user        = ( new \CaptainCore\User )->profile();
-        $token       = self::credentials("token");
+    // Builds and sends the Kinsta create request (plain add or clone). Shared
+    // by the initial create, the rate-limit re-post, and the one-shot retry
+    // after an operation "failed in the background" — keep the payloads here
+    // so the three callers cannot drift apart.
+    public static function create_site_request( $site ) {
+        $site        = (object) $site;
         $company_id  = self::credentials("company_id");
         $username    = self::credentials("username");
 
@@ -320,30 +323,22 @@ class Kinsta {
             \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
         }
 
-        $site        = (object) $site;
-
         if ( ! empty( $site->clone_site_id ) ) {
-            $environments = \CaptainCore\Remote\Kinsta::get( "sites/{$site->clone_site_id}/environments" );
-            foreach( $environments->site->environments as $environment ) {
+            $environments   = \CaptainCore\Remote\Kinsta::get( "sites/{$site->clone_site_id}/environments" );
+            $environment_id = $environments->site->environments[0]->id ?? "";
+            foreach( $environments->site->environments ?? [] as $environment ) {
                 if ( $environment->name == "live" ) {
                     $environment_id = $environment->id;
                 }
             }
-            $environment  = $environments->site->environments[0]->id;
-            $new_site = [
-                "company"                => $company_id,
-                "display_name"           => $site->name,
-                "source_env_id"          => $environment_id,
-            ];
-            $response      = \CaptainCore\Remote\Kinsta::post( "sites/clone", $new_site );
-            $site->command = "new-site";
-            $site->intial_response = $response;
-            $site->message = "Creating site $site->name at Kinsta via site clone";
-    
-            self::add_action( $response->operation_id, $site );
-            return $response->operation_id;
+            return \CaptainCore\Remote\Kinsta::post( "sites/clone", [
+                "company"       => $company_id,
+                "display_name"  => $site->name,
+                "source_env_id" => $environment_id,
+            ] );
         }
-        $new_site    = [
+
+        return \CaptainCore\Remote\Kinsta::post( "sites", [
             "company"                => $company_id,
             "display_name"           => $site->name,
             "region"                 => $site->datacenter,
@@ -357,15 +352,20 @@ class Kinsta {
             "woocommerce"            => false,
             "wordpressseo"           => false,
             "wp_language"            => "en_US"
-        ];
-        $response      = \CaptainCore\Remote\Kinsta::post( "sites", $new_site );
+        ] );
+    }
+
+    public static function new_site( $site ) {
+        $site          = (object) $site;
+        $response      = self::create_site_request( $site );
         $site->command = "new-site";
         $site->intial_response = $response;
-        $site->message = "Creating site $site->name at Kinsta datacenter $site->datacenter";
+        $site->message = empty( $site->clone_site_id )
+            ? "Creating site $site->name at Kinsta datacenter $site->datacenter"
+            : "Creating site $site->name at Kinsta via site clone";
 
-        self::add_action( $response->operation_id, $site );
-        return $response->operation_id;
-
+        self::add_action( $response->operation_id ?? "", $site );
+        return $response->operation_id ?? null;
     }
 
     public static function environments( $kinsta_id ) {

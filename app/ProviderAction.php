@@ -22,37 +22,14 @@ class ProviderAction {
             $provider = Providers::get( $provider_action->provider_id );
             $action   = json_decode( $provider_action->action );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
+            $status          = '';
+            $operation_error = '';
             if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" || $action->command == "push_environment" ) {
                 if ( $action->command == "new-site" && ! empty( $action->intial_response->message ) && $action->intial_response->message == "Too many requests, please try again later." && empty( $provider_action->provider_key )) {
-                    $site        = $action;
-                    $user        = ( new \CaptainCore\User )->profile();
-                    $token       = $class_name::credentials("token");
-                    $company_id  = $class_name::credentials("company_id");
-                    $username    = $class_name::credentials("username");
-
-                    if ( ! empty( $site->provider_id ) ) {
-                        $api_key     = $class_name::credentials("api", $site->provider_id);
-                        $company_id  = $class_name::credentials("company_id", $site->provider_id);
-                        $username    = $class_name::credentials("username", $site->provider_id);
-                        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+                    $response = $class_name::create_site_request( $action );
+                    if ( ! empty( $response->operation_id ) ) {
+                        ProviderActions::update( [ "provider_key" => $response->operation_id ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                     }
-                    $new_site    = [
-                        "company"                => $company_id,
-                        "display_name"           => $site->name,
-                        "region"                 => $site->datacenter,
-                        "is_subdomain_multisite" => false,
-                        "install_mode"           => "new",
-                        "admin_email"            => get_option( 'admin_email' ),
-                        "admin_password"         => wp_generate_password( 24, true, true ),
-                        "admin_user"             => $username,
-                        "is_multisite"           => false,
-                        "site_title"             => $site->name,
-                        "woocommerce"            => false,
-                        "wordpressseo"           => false,
-                        "wp_language"            => "en_US"
-                    ];
-                    $response      = \CaptainCore\Remote\Kinsta::post( "sites", $new_site );
-                    ProviderActions::update( [ "provider_key" => $response->operation_id ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                     continue;
                 }
                 $api = \CaptainCore\Providers\Kinsta::credentials("api");
@@ -64,12 +41,51 @@ class ProviderAction {
                 $response         = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
                 $action->response = $response;
                 $status           = $response->status ?? '';
+                // A 500 that carries data.message is the operation's own
+                // terminal verdict ("Operation failed in the background…",
+                // "A site with the name … already exists.") — unlike a bare
+                // 404/500 from the poll itself, re-polling it can never
+                // turn into a success.
+                $operation_error  = $status == "500" ? ( $response->data->message ?? '' ) : '';
             }
             if ( empty( $status ) && ! empty( $action->provider_action_id ) ) {
                 $status = $class_name::action_check( $action->provider_action_id );
             }
             if ( $status == "200" ) {
                 ProviderActions::update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                continue;
+            }
+            // Once the CaptainCore site record exists, the remaining CDN steps
+            // are cosmetic — their failure must not fail the whole chain.
+            $cosmetic_step = ! empty( $action->site_id )
+                && in_array( $action->step ?? '', [ "disable_edge_caching", "set_image_optimization" ], true );
+            if ( ! empty( $operation_error ) ) {
+                $entity_name = $action->domain ?? $action->name ?? '';
+                if ( $cosmetic_step ) {
+                    $action->step_error = $operation_error;
+                    error_log( "CaptainCore new-site step {$action->step} failed for {$entity_name} (site {$action->site_id}): {$operation_error}" );
+                    ProviderActions::update( [ "action" => json_encode( $action ), "status" => "done" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                    continue;
+                }
+                // Kinsta provisioning occasionally dies with a generic
+                // background failure and the identical request succeeds on a
+                // re-submit — retry the create once before giving up.
+                if ( $action->command == "new-site" && empty( $action->step ) && empty( $action->create_retried )
+                    && stripos( $operation_error, "failed in the background" ) !== false
+                    && method_exists( $class_name, "create_site_request" ) ) {
+                    $retry = $class_name::create_site_request( $action );
+                    if ( ! empty( $retry->operation_id ) ) {
+                        $action->create_retried = 1;
+                        $action->attempts       = 1;
+                        $action->retry_response = $retry;
+                        ProviderActions::update( [ "provider_key" => $retry->operation_id, "action" => json_encode( $action ) ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                        continue;
+                    }
+                }
+                $action->error = $operation_error;
+                error_log( "CaptainCore {$action->command} failed for {$entity_name}: {$operation_error}" );
+                ActivityLog::log( 'failed', 'site', null, $entity_name, "Provisioning failed for {$entity_name}: {$operation_error}", [], $action->account_id ?? null );
+                ProviderActions::update( [ "action" => json_encode( $action ), "status" => "failed" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                 continue;
             }
             if ( empty ( $action->attempts ) ) {
@@ -87,7 +103,10 @@ class ProviderAction {
                 // polling) gave up on creates Kinsta later completed, leaving
                 // the site unlinked. 30 attempts ≈ 5 minutes of polling.
                 if ( $action->attempts >= 30 ) {
-                    $update["status"] = "failed";
+                    $update["status"] = $cosmetic_step ? "done" : "failed";
+                    if ( $cosmetic_step ) {
+                        error_log( "CaptainCore new-site step {$action->step} never resolved for " . ( $action->domain ?? $action->name ?? '' ) . " (site {$action->site_id}) — marking the chain done." );
+                    }
                 }
                 ProviderActions::update( $update, [ "provider_action_id" => $provider_action->provider_action_id ] );
             }
