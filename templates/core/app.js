@@ -1158,6 +1158,12 @@ class Component extends DCLogic {
       openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
         // v1 parity (showNewSiteKinsta): customers default their first account as billing.
         if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;
+        // The design-mode fixture account survives hydration as the Request
+        // tab's selected value — reseed so the dialog never presents an
+        // account that doesn't exist (sole account preselects itself).
+        if (this._hydrated && !this.ACCOUNTS.find(a => a.name === this.state.nsAcc)) {
+          patch.nsAcc = this.ACCOUNTS.length === 1 ? this.ACCOUNTS[0].name : 'Select an account…';
+        }
         this.setState(patch); this.loadNsProviders(); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
@@ -1755,7 +1761,13 @@ class Component extends DCLogic {
       ...this.pagerVals('dom', 'domPage', filtered.length, pageNum, totalPages, 'domains'),
       ...(s.route === 'domains' ? { screenSub: domSkel ? 'Loading domains…' : filtered.length + ' domains', screenSubDisplay: 'inline-block' } : {}),
       dq: s.dq, onDq: e => this.setState({ dq: e.target.value, domPage: 1 }),
-      openNewDomain: () => this.setState({ ndOpen: true }),
+      openNewDomain: () => { const patch = { ndOpen: true };
+        // Same fixture-default reseed as openNewSite: the demo account string
+        // otherwise shows as the selected value after hydration.
+        if (this._hydrated && !this.ACCOUNTS.find(a => a.name === this.state.ndAcc)) {
+          patch.ndAcc = this.ACCOUNTS.length === 1 ? this.ACCOUNTS[0].name : 'Select an account…';
+        }
+        this.setState(patch); },
       closeNd: () => this.setState({ ndOpen: false }),
       ndOpen: s.ndOpen,
       ndName: s.ndName, onNdName: e => this.setState({ ndName: e.target.value }),
@@ -1780,6 +1792,7 @@ class Component extends DCLogic {
           const acc = this.ACCOUNTS.find(a => a.name === this.state.ndAcc);
           const siteRow = !isOp ? this.FLEET.find(f => f.name === this.state.ndSite) : null;
           if (!isOp && !siteRow) { this.toast('Pick the website this domain belongs to.', { kind: 'info' }); return; }
+          if (isOp && !acc) { this.toast('Pick the account this domain belongs to.', { kind: 'info' }); return; }
           const tid = this.toast('Adding ' + v + '…', { kind: 'loading' });
           this.api('/domains', { method: 'POST', body: { name: v, account_id: acc ? acc.id : '',
             ...(siteRow ? { site_id: siteRow.id } : {}), create_dns_zone: !!this.state.ndZone } })
