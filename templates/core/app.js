@@ -6,22 +6,24 @@
 // New-site dialog: v1's Kinsta datacenter list (core.php `datacenters`) and the
 // default Kinsta provider row (v1 hardcodes provider_id "1" the same way).
 const NS_KINSTA_PROVIDER = 1;
+// City-center coordinates feed the nearest-datacenter picker (great-circle
+// distance is a proxy for latency; plenty for choosing between regions).
 const NS_DATACENTERS = [
-  ['us-ashburn-1', 'Ashburn (US East)'], ['us-chicago-1', 'Chicago (US Central)'],
-  ['us-phoenix-1', 'Phoenix (US West)'], ['us-sanjose-1', 'San Jose (US West)'],
-  ['ca-montreal-1', 'Montreal (CA East)'], ['ca-toronto-1', 'Toronto (CA East)'],
-  ['af-johannesburg-1', 'Johannesburg (ZA)'], ['ap-batam-1', 'Batam (ID)'],
-  ['ap-melbourne-1', 'Melbourne (AU)'], ['ap-mumbai-1', 'Mumbai (IN)'],
-  ['ap-osaka-1', 'Osaka (JP)'], ['ap-seoul-1', 'Seoul (KR)'],
-  ['ap-singapore-2', 'Singapore (SG)'], ['ap-sydney-1', 'Sydney (AU)'],
-  ['ap-tokyo-1', 'Tokyo (JP)'], ['eu-amsterdam-1', 'Amsterdam (NL)'],
-  ['eu-frankfurt-1', 'Frankfurt (DE)'], ['eu-madrid-1', 'Madrid (ES)'],
-  ['eu-milan-1', 'Milan (IT)'], ['eu-paris-1', 'Paris (FR)'],
-  ['eu-stockholm-1', 'Stockholm (SE)'], ['eu-zurich-1', 'Zurich (CH)'],
-  ['il-jerusalem-1', 'Jerusalem (IL)'], ['me-riyadh-1', 'Riyadh (SA)'],
-  ['sa-santiago-1', 'Santiago (CL)'], ['sa-saopaulo-1', 'Sao Paulo (BR)'],
-  ['uk-london-1', 'London (GB)']
-].map(([value, title]) => ({ value, title }));
+  ['us-ashburn-1', 'Ashburn (US East)', 39.04, -77.49], ['us-chicago-1', 'Chicago (US Central)', 41.88, -87.63],
+  ['us-phoenix-1', 'Phoenix (US West)', 33.45, -112.07], ['us-sanjose-1', 'San Jose (US West)', 37.34, -121.89],
+  ['ca-montreal-1', 'Montreal (CA East)', 45.50, -73.57], ['ca-toronto-1', 'Toronto (CA East)', 43.65, -79.38],
+  ['af-johannesburg-1', 'Johannesburg (ZA)', -26.20, 28.05], ['ap-batam-1', 'Batam (ID)', 1.05, 104.03],
+  ['ap-melbourne-1', 'Melbourne (AU)', -37.81, 144.96], ['ap-mumbai-1', 'Mumbai (IN)', 19.08, 72.88],
+  ['ap-osaka-1', 'Osaka (JP)', 34.69, 135.50], ['ap-seoul-1', 'Seoul (KR)', 37.57, 126.98],
+  ['ap-singapore-2', 'Singapore (SG)', 1.35, 103.82], ['ap-sydney-1', 'Sydney (AU)', -33.87, 151.21],
+  ['ap-tokyo-1', 'Tokyo (JP)', 35.68, 139.69], ['eu-amsterdam-1', 'Amsterdam (NL)', 52.37, 4.90],
+  ['eu-frankfurt-1', 'Frankfurt (DE)', 50.11, 8.68], ['eu-madrid-1', 'Madrid (ES)', 40.42, -3.70],
+  ['eu-milan-1', 'Milan (IT)', 45.46, 9.19], ['eu-paris-1', 'Paris (FR)', 48.86, 2.35],
+  ['eu-stockholm-1', 'Stockholm (SE)', 59.33, 18.07], ['eu-zurich-1', 'Zurich (CH)', 47.38, 8.54],
+  ['il-jerusalem-1', 'Jerusalem (IL)', 31.77, 35.21], ['me-riyadh-1', 'Riyadh (SA)', 24.71, 46.68],
+  ['sa-santiago-1', 'Santiago (CL)', -33.45, -70.67], ['sa-saopaulo-1', 'Sao Paulo (BR)', -23.55, -46.63],
+  ['uk-london-1', 'London (GB)', 51.51, -0.13]
+].map(([value, title, lat, lng]) => ({ value, title, lat, lng }));
 
 class Component extends DCLogic {
   state = {
@@ -365,6 +367,46 @@ class Component extends DCLogic {
     if (!ids.length) { this.toast('No sites with environments found for ' + (accountName || 'this account'), { kind: 'info' }); return; }
     this.setState({ dockOpen: true, termSel: ids, tpOpen: false, cookOpen: false });
     this.toast('Terminal targeting ' + ids.length + ' environment' + (ids.length === 1 ? '' : 's') + ' across ' + sites + ' site' + (sites === 1 ? '' : 's') + ' · ' + accountName, { kind: 'success' });
+  }
+
+  // ── Nearest-datacenter picker (New site › Datacenter) ─────────
+  // The customer's location, not the operator's, decides the region — so no
+  // geolocation: the operator types the customer's city/address, Photon
+  // (komoot's keyless OSM geocoder — Nominatim itself denies browser traffic)
+  // resolves it, and the datacenters rank by great-circle distance with the
+  // nearest auto-selected. Search fires on Enter / the Search button only.
+  dcpGeocode() {
+    const q = (this.state.dcpQ || '').trim();
+    if (q.length < 3 || this.state.dcpBusy) return;
+    const token = this._dcpToken = (this._dcpToken || 0) + 1;
+    this.setState({ dcpBusy: true, dcpErr: '' });
+    fetch('https://photon.komoot.io/api/?limit=6&lang=en&q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(res => {
+        if (token !== this._dcpToken) return;
+        this._dcpResults = ((res && res.features) || [])
+          .filter(f => f && f.geometry && Array.isArray(f.geometry.coordinates))
+          .map(f => {
+            const p = f.properties || {};
+            const parts = [p.name, p.city, p.state, p.country].filter(Boolean)
+              .filter((v, i, a) => a.indexOf(v) === i);
+            return { label: parts.join(', ') || q, lat: +f.geometry.coordinates[1], lng: +f.geometry.coordinates[0] };
+          });
+        this.setState({ dcpBusy: false, dcpErr: this._dcpResults.length ? '' : 'No places matched that search.' });
+      })
+      .catch(() => { if (token === this._dcpToken) this.setState({ dcpBusy: false, dcpErr: 'Place search failed — try again.' }); });
+  }
+
+  dcpPick(place) {
+    const toRad = d => d * Math.PI / 180;
+    this._dcpRanked = NS_DATACENTERS.map(d => {
+      const sLat = Math.sin(toRad(d.lat - place.lat) / 2), sLng = Math.sin(toRad(d.lng - place.lng) / 2);
+      const a = sLat * sLat + Math.cos(toRad(place.lat)) * Math.cos(toRad(d.lat)) * sLng * sLng;
+      return { ...d, miles: Math.round(2 * 3959 * Math.asin(Math.sqrt(a))) };
+    }).sort((x, y) => x.miles - y.miles);
+    this._dcpResults = null;
+    // Nearest wins immediately; the ranked list stays up for overriding.
+    this.setState({ dcpPlace: place.label, nsDc: this._dcpRanked[0].title, dcpQ: '' });
   }
 
   // Target a set of sites-list rows in the dock terminal — the sites-list
@@ -1224,6 +1266,23 @@ class Component extends DCLogic {
       ddNsDcOpen: s.ddOpen === 'nsDc',
       ddToggleNsDc: e => this.ddToggleAt('nsDc', e),
       ddNsDcOpts: this.ddOpts(NS_DATACENTERS.map(d => d.title), s.nsDc, 'nsDc'),
+      // Nearest-datacenter picker panel (dcpGeocode/dcpPick above).
+      dcpOpen: !!s.dcpOpen,
+      dcpToggle: () => this.setState(st => ({ dcpOpen: !st.dcpOpen, dcpErr: '', ddOpen: '' })),
+      dcpQ: s.dcpQ || '', onDcpQ: e => this.setState({ dcpQ: e.target.value }),
+      dcpKey: e => { if (e.key === 'Enter') this.dcpGeocode(); },
+      dcpSearch: () => this.dcpGeocode(),
+      dcpSearchLabel: s.dcpBusy ? 'Searching…' : 'Search',
+      dcpErr: s.dcpErr || '', dcpErrShow: !!s.dcpErr,
+      dcpResults: (this._dcpResults || []).map(p => ({ label: p.label, pick: () => this.dcpPick(p) })),
+      dcpResultsShow: !!(this._dcpResults && this._dcpResults.length),
+      dcpPlace: s.dcpPlace || '',
+      dcpPlaceShow: !!s.dcpPlace && (this._dcpRanked || []).length > 0,
+      dcpRanked: (s.dcpPlace ? (this._dcpRanked || []) : []).map(d => ({
+        title: d.title, miles: d.miles.toLocaleString() + ' mi',
+        mark: s.nsDc === d.title ? '✓' : '',
+        bg: s.nsDc === d.title ? 'var(--brand-soft)' : 'transparent',
+        pick: () => this.setState({ nsDc: d.title, dcpOpen: false }) })),
       ddRectTop: (s.ddRect || {}).top || 0, ddRectLeft: (s.ddRect || {}).left || 0, ddRectWidth: (s.ddRect || {}).width || 0,
       // v1 parity (new-site dialog admin section): assign shared-access accounts,
       // optionally marking ONE as customer contact and ONE as billing contact.

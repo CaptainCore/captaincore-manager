@@ -4675,6 +4675,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             </sc-if>
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Datacenter</span>
+              <div style="flex:1;display:flex;gap:6px">
               <div style="flex:1">
                 <div onClick="{{ ddToggleNsDc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsDc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
                 <sc-if value="{{ ddNsDcOpen }}" hint-placeholder-val="{{ false }}">
@@ -4689,7 +4690,40 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </div>
                 </sc-if>
               </div>
+              <div onClick="{{ dcpToggle }}" title="Find the nearest datacenter to the customer's location" style="width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--rule);border-radius:7px;cursor:pointer;color:var(--ink-dim);background:var(--paper)" style-hover="border-color:var(--brand);color:var(--brand-ink)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+              </div>
             </div>
+            <sc-if value="{{ dcpOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:12px"><span style="width:110px;flex:none"></span>
+                <div style="flex:1;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px">
+                  <div style="display:flex;gap:6px">
+                    <input value="{{ dcpQ }}" onInput="{{ onDcpQ }}" onKeyDown="{{ dcpKey }}" placeholder="Customer city or address…" style="flex:1;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
+                    <span onClick="{{ dcpSearch }}" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;background:var(--brand);color:#fff;font:600 var(--fs-125) var(--sans);cursor:pointer">{{ dcpSearchLabel }}</span>
+                  </div>
+                  <sc-if value="{{ dcpErrShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:8px;font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ dcpErr }}</div>
+                  </sc-if>
+                  <sc-if value="{{ dcpResultsShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:8px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:3px;max-height:170px;overflow-y:auto">
+                      <sc-for list="{{ dcpResults }}" as="p" hint-placeholder-count="3">
+                        <div onClick="{{ p.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer;font:500 var(--fs-125) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="background:var(--panel-2)">{{ p.label }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ dcpPlaceShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:10px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Distances from {{ dcpPlace }}</div>
+                    <div style="margin-top:6px;max-height:190px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:3px">
+                      <sc-for list="{{ dcpRanked }}" as="d" hint-placeholder-count="5">
+                        <div onClick="{{ d.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ d.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ d.mark }}</span><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ d.title }}</span><span style="font:500 var(--fs-11) var(--mono);color:var(--ink-dim)">{{ d.miles }}</span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <div style="margin-top:8px;font:400 10.5px var(--sans);color:var(--ink-dim)">Place search by Photon · OpenStreetMap data</div>
+                </div>
+              </div>
+            </sc-if>
             </sc-if>
             <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Clone from</span>
               <div style="flex:1">

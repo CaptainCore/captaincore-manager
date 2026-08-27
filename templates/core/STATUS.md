@@ -2478,3 +2478,20 @@ initials circle with ?d=404 + thumbFallbackRef, so a missing gravatar
 Playwright: direct load of /account/users lands on the page, sidebar
 round-trip keeps the URL in sync, and the first screen showed 10 real
 avatars with the rest falling back to initials.
+
+### Nearest-datacenter picker in New site (2026-08-27)
+A customer-suggested flow: pick the datacenter from the CUSTOMER's
+location (which can be anywhere — browser geolocation is deliberately
+not used). A map-pin button beside the Datacenter dropdown opens an
+inline panel: type the customer's city or address, Search (Enter works;
+fires only on demand) geocodes it through Photon (komoot's keyless
+CORS-friendly OSM geocoder — Nominatim itself answers browser/curl
+traffic with "Access denied", found the hard way), pick the right match
+from the suggestions, and every datacenter renders ranked by
+great-circle distance with miles per row. The nearest auto-selects into
+nsDc immediately; clicking any ranked row overrides. NS_DATACENTERS
+entries now carry city-center lat/lng. Distance is a latency proxy, not
+a measurement — plenty for choosing between regions. Verified live via
+Playwright: "Lancaster, Pennsylvania" → Ashburn (US East) 93 mi
+auto-selected (Toronto 295, Montreal 402, Chicago 604 behind it);
+"Berlin, Germany" → Frankfurt (DE) 263 mi (Amsterdam 358, Zurich 415).
