@@ -1729,6 +1729,13 @@ class Component extends DCLogic {
           if (!still && act.command === 'deploy-to-staging') {
             this.toast(`Staging environment ready for ${act.name}`, { kind: 'success' });
             if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
+            // Legacy parity (syncSiteEnvironment): pull the new environment's
+            // stats/inventory right away so the Staging tab isn't empty.
+            if (act.site_id && this.startJob) this.startJob({
+              label: 'sync-data', target: act.name + ' · Staging', command: 'syncSite', siteId: act.site_id,
+              dispatch: () => this.api('/sites/' + act.site_id + '/staging/sync/data'),
+              onFinish: () => { if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail(); }
+            });
           }
         }).catch(() => {})), Promise.resolve());
       chain.then(() => { if (list.length) this._paTimer = setTimeout(() => this.pollProviderActions(), 10000); });

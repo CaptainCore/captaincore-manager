@@ -268,8 +268,25 @@ class ProviderAction {
             
             // Resync staging info if needed
             if ( $current_action->step == 2 ) {
+                $cli_synced = true;
                 if ( empty( $current_action->environment_staging_id ) || ! empty( $current_action->connect_staging ) ) {
-                    \CaptainCore\Providers\Kinsta::connect_staging( $current_action->site_id );
+                    $cli_synced = \CaptainCore\Providers\Kinsta::connect_staging( $current_action->site_id ) !== false;
+                }
+                // The Manager row exists but the CLI never received it (core
+                // server unreachable). Leave the action 'waiting' so the next
+                // client poll re-runs this step — connect_staging is idempotent —
+                // rather than marking the chain done with a half-linked site.
+                if ( ! $cli_synced ) {
+                    $current_action->cli_sync_attempts = empty( $current_action->cli_sync_attempts ) ? 1 : $current_action->cli_sync_attempts + 1;
+                    if ( $current_action->cli_sync_attempts < 10 ) {
+                        ( new ProviderActions )->update( [
+                            'action'     => json_encode( $current_action ),
+                            'updated_at' => $time_now,
+                            'status'     => "waiting",
+                        ], [ "provider_action_id" => $this->provider_action_id ] );
+                        return self::active();
+                    }
+                    error_log( "CaptainCore deploy-to-staging: giving up pushing site #{$current_action->site_id} to the CLI after {$current_action->cli_sync_attempts} attempts; run Sync data on the site to repair." );
                 }
                 $current_action->step = 3;
                 $action   = [

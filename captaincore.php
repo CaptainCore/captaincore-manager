@@ -6444,6 +6444,17 @@ function captaincore_site_sync_data_func( $request ) {
 	}
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
 
+	// Safety net: an environment added in the last day may never have reached
+	// the CLI (its push is one request with no queue behind it — a wedged core
+	// server drops it). Re-push before dispatching, or sync-data answers
+	// "Site '<slug>-staging' not found". Synchronous so the task sees it.
+	foreach ( ( new CaptainCore\Environments )->where( [ "site_id" => $site_id ] ) as $env ) {
+		if ( strtolower( $env->environment ) === $environment && strtotime( $env->created_at ) > time() - DAY_IN_SECONDS ) {
+			CaptainCore\Run::CLI( "site sync $site_id" );
+			break;
+		}
+	}
+
 	return CaptainCore\Run::task( "sync-data {$site->site}-{$environment}" );
 }
 

@@ -1378,7 +1378,7 @@ class Site {
             return [ 'status' => 'exists', 'message' => 'A Staging environment is already connected' ];
         }
 
-        $provider_class::connect_staging( $this->site_id );
+        $cli_synced = $provider_class::connect_staging( $this->site_id );
         // connect_staging() is a no-op when the provider has no staging to
         // link, so confirm against the table rather than trusting a return.
         $connected = in_array( 'Staging', array_column( ( new Environments )->where( [ "site_id" => $this->site_id ] ), 'environment' ), true );
@@ -1388,6 +1388,9 @@ class Site {
 
         Sites::update_environments_cache( $this->site_id );
         ActivityLog::log( 'created', 'site', $this->site_id, $site->name, "Linked existing {$site->provider} staging environment for {$site->name}", [], $site->customer_id ? $site->customer_id : null );
+        if ( $cli_synced === false ) {
+            return [ 'status' => 'connected', 'message' => 'Staging environment connected, but the core server could not be reached — run Sync data on Staging once it is back' ];
+        }
         return [ 'status' => 'connected', 'message' => 'Staging environment connected' ];
     }
 

@@ -401,8 +401,15 @@ class Kinsta {
             return;
         }
 
+        // Idempotent: a retry (chain re-run, second Link click) must never
+        // insert a second Staging row — but it still re-pushes to the CLI.
+        $has_staging = in_array( 'Staging', array_column( $environments, 'environment' ), true );
+
         foreach( $response->site->environments as $kinsta_environment ) {
             if ( $kinsta_environment->name == "staging" ) {
+                if ( $has_staging ) {
+                    return self::push_site_to_cli( $site_id );
+                }
                 $new_environment = [
                     'site_id'                 => $site_id,
                     'created_at'              => $time_now,
@@ -427,9 +434,30 @@ class Kinsta {
                     'updates_exclude_themes'  => "",
                 ];
                 ( new \CaptainCore\Environments )->insert( $new_environment );
-                \CaptainCore\Run::CLI("site sync $site_id");
+                \CaptainCore\Sites::update_environments_cache( $site_id );
+                return self::push_site_to_cli( $site_id );
             }
         }
+        return null;
+    }
+
+    /**
+     * Hand a site's current record (incl. every environment) to the CLI so its
+     * SQLite mirror + ssh/rclone configs exist. The Manager row is the truth;
+     * the CLI only learns about a new environment through this call, so a
+     * dropped request (core server wedged/restarting) leaves the CLI blind to
+     * the environment until something re-syncs it. Callers decide whether to
+     * retry — this just reports whether the request was accepted.
+     *
+     * @return bool true when the CLI answered, false when it was unreachable.
+     */
+    public static function push_site_to_cli( $site_id ) {
+        $body = \CaptainCore\Run::CLI( "site sync $site_id" );
+        if ( is_array( $body ) ) {
+            error_log( "CaptainCore: CLI unreachable while pushing site #$site_id after linking staging — will retry." );
+            return false;
+        }
+        return true;
     }
 
     public static function sync_environments( $site_id ) {
