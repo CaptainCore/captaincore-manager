@@ -3055,11 +3055,15 @@ class Component extends DCLogic {
         this.setState(j.session ? { jobSel: j.id, termSel: j.session.split(',') } : { jobSel: j.id });
         if (this._termEl) this._termEl.focus({ preventScroll: true });
       },
-      // Right-click on a RUNNING job → Cancel (v1's killCommand). Finished
-      // rows keep the browser menu. (j is the source entry: state, not the
-      // mapped `running` flag.)
-      ctx: (e) => { if (!(j.state === 'running' && j.real)) return;
-        this.openCtxMenu(e, [{ label: 'Cancel job', danger: true, act: () => this.cancelJob(j.id) }]); } }));
+      // Right-click on a real job → Copy output (v1's copyJobStream) once the
+      // stream has anything, plus Cancel while RUNNING (v1's killCommand).
+      // Preview rows keep the browser menu. (j is the source entry: state,
+      // not the mapped `running` flag.)
+      ctx: (e) => { if (!j.real) return;
+        const entries = [];
+        if (this.jobOutputText(j.id)) entries.push({ label: 'Copy output', act: () => this.copyJobOutput(j.id) });
+        if (j.state === 'running') entries.push({ label: 'Cancel job', danger: true, act: () => this.cancelJob(j.id) });
+        if (entries.length) this.openCtxMenu(e, entries); } }));
     // Dock job strip (Minn mockup): running rows first. The dock is
     // bottom-anchored with height:auto, so every row grows it UPWARD; the
     // strip caps at a few rows ("+ N more" expands) so a busy fleet can't
@@ -3134,6 +3138,9 @@ class Component extends DCLogic {
         consoleLines.push({ text, fg: k === 'ok' ? 'var(--ok)' : k === 'dim' ? 'var(--ink-dim)' : 'var(--ink)' });
       }
     }
+    // Each console line carries its own copy action (the legacy terminal's
+    // per-line copy icon); the row's hover-revealed ⧉ button calls it.
+    consoleLines = consoleLines.map(ln => ({ ...ln, copy: (e) => { e.stopPropagation(); this.ctxCopy(ln.text, 'line'); } }));
     const liveTail = consoleLines.length ? consoleLines[consoleLines.length - 1].text : 'No jobs running';
 
     // Fleet bulk runs from the CLI dispatch server (processes.js poll) count

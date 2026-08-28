@@ -136,6 +136,24 @@ Object.assign(Component.prototype, {
     }
   },
 
+  // Full stream as plain text (v1's copyJobStream): every chunk, not the
+  // console's 200-line window; the socket's trailing "Finished." sentinel
+  // is dropped like the console does. Empty string when there is nothing yet.
+  jobOutputText(id) {
+    const job = this._jobObjs && this._jobObjs[id];
+    if (!job || !job.stream.length) return '';
+    return job.stream
+      .flatMap(chunk => String(chunk).split('\n'))
+      .filter(l => l.trim() !== 'Finished.')
+      .join('\n').trim();
+  },
+
+  copyJobOutput(id) {
+    const text = this.jobOutputText(id);
+    if (!text) { if (this.toast) this.toast('No output to copy yet.', { kind: 'info' }); return; }
+    this.ctxCopy(text, 'job output');
+  },
+
   // Console feed: the user-selected job, else the most recent running real
   // job, else the last real job with output.
   activeJob() {

@@ -662,6 +662,11 @@ contacts"):
 - **Assign… button** (operator, beside Share) → searchable picker dialog
   (`asg*` bindings in site-detail.js `computeAssignAccount`, spread GUARDED in
   computeDetail) listing hydrated ACCOUNTS minus already-assigned.
+- **Job row context menu + per-line copy** (dock job strip, all roles): right-click a real
+  job → `Copy output` (full stream via `jobOutputText()`, `Finished.` sentinel dropped;
+  v1's copyJobStream) plus `Cancel job` while running. Console lines carry a hover-revealed
+  `⧉` (`.cc-ln-cp`) that copies that one line (v1's per-line copy). Verified live with an
+  injected job: menu entries, clipboard contents, Cancel disappears once finished.
 - **Immediate commit per action** (DNS-per-record pattern): each action PUTs
   the NEW SCOPED ROUTE `PUT /sites/{id}/accounts` `{customer_id, account_id,
   shared_with}` — `captaincore_site_accounts_update_func` in captaincore.php
