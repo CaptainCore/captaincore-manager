@@ -281,7 +281,10 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   (registrar `provider`, accounts, mailgun `details`) + `GET /dns/{id}` (Constellix zone;
   `no_zone` → Activate flow). DNS edits stage locally, then commit per-record via
   `POST|PUT|DELETE /dns/{domain_id}/records[/{rid}]` — **not** v1's bulk endpoint, whose
-  `{id}` is the Constellix `remote_id` (audited trap). Forwarding/Sending tabs lazy-load
+  `{id}` is the Constellix `remote_id` (audited trap). `dnsNormalizeValue()` applies the
+  legacy editor's pre-save autocorrect to the API-shaped value: CNAME/ANAME value, MX
+  `server` and SRV `host` get a missing trailing `.`; bare TXT values are quote-wrapped
+  (nothing server-side fixes these; Constellix rejects them). Forwarding/Sending tabs lazy-load
   Mailgun routes / sending-domain records; registrar toggles hit `lock_`/`privacy_` routes.
 - **`accounts.js`** — Accounts/Users/Access. `openAccount()` loads `GET /accounts/{id}`
   (tier-gated bundle: users w/ levels, pending invites, sites, domains, plan

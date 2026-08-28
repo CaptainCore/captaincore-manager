@@ -143,6 +143,27 @@ Object.assign(Component.prototype, {
     return parts.map(s => ({ value: s }));
   },
 
+  // Legacy-editor autocorrect, applied to the API-shaped value right before
+  // save: hostname targets (CNAME/ANAME value, MX server, SRV host) must be
+  // fully qualified, so a missing trailing "." is added; TXT values are
+  // wrapped in double quotes when the user left them bare. Constellix rejects
+  // (or silently mis-stores) both shapes, and nothing server-side fixes them.
+  dnsNormalizeValue(type, value) {
+    const t = String(type).toUpperCase();
+    const fqdn = h => { h = String(h == null ? '' : h).trim(); return h && !h.endsWith('.') ? h + '.' : h; };
+    if (!Array.isArray(value)) return value;
+    if (t === 'CNAME' || t === 'ANAME') return value.map(x => ({ ...x, value: fqdn(x.value) }));
+    if (t === 'MX') return value.map(x => ({ ...x, server: fqdn(x.server) }));
+    if (t === 'SRV') return value.map(x => ({ ...x, host: fqdn(x.host) }));
+    if (t === 'TXT') return value.map(x => {
+      let v = String(x.value == null ? '' : x.value).trim();
+      if (!v.startsWith('"')) v = '"' + v;
+      if (v.length < 2 || !v.endsWith('"')) v = v + '"';
+      return { ...x, value: v };
+    });
+    return value;
+  },
+
   saveDnsReal() {
     const dom = this._domain;
     if (!dom || dom.saving) return;
@@ -152,9 +173,9 @@ Object.assign(Component.prototype, {
     const calls = [];
     (s.dnsRecs || []).forEach(r => {
       const body = { type: r.type, name: r.name === '@' ? '' : r.name,
-        value: (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
+        value: this.dnsNormalizeValue(r.type, (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
           ? this.dnsSubsForApi(r.type, r.subs)
-          : this.dnsValueForApi(r.type, r.value), ttl: parseInt(r.ttl, 10) || 3600 };
+          : this.dnsValueForApi(r.type, r.value)), ttl: parseInt(r.ttl, 10) || 3600 };
       if (!r.recId) calls.push(this.api('/dns/' + dom.domainId + '/records', { method: 'POST', body }));
       else if (r.edited) calls.push(this.api('/dns/' + dom.domainId + '/records/' + r.recId, { method: 'PUT', body }));
     });
