@@ -194,8 +194,25 @@ class ProviderAction {
 
             // Check if the "Set Image Optimization" step just finished
             if ( $current_action->step == "set_image_optimization" ) {
-                // This was the last API step, now run the background sync
-                \CaptainCore\Run::CLI("site sync {$current_action->site_id} --update-extras", true);
+                // This was the last API step, now run the background sync.
+                // The CLI only learns about the new site through this push; if
+                // the core server is unreachable (wedged/restarting) keep the
+                // action 'waiting' so the next poll retries instead of finishing
+                // the chain with a site the CLI has never heard of.
+                $pushed = \CaptainCore\Run::CLI("site sync {$current_action->site_id} --update-extras", true);
+                if ( is_array( $pushed ) ) {
+                    $current_action->cli_sync_attempts = empty( $current_action->cli_sync_attempts ) ? 1 : $current_action->cli_sync_attempts + 1;
+                    if ( $current_action->cli_sync_attempts < 10 ) {
+                        error_log( "CaptainCore new-site: CLI unreachable pushing site #{$current_action->site_id} (attempt {$current_action->cli_sync_attempts}); will retry." );
+                        ( new ProviderActions )->update( [
+                            'action'     => json_encode( $current_action ),
+                            'updated_at' => $time_now,
+                            'status'     => "waiting",
+                        ], [ "provider_action_id" => $this->provider_action_id ] );
+                        return self::active();
+                    }
+                    error_log( "CaptainCore new-site: giving up pushing site #{$current_action->site_id} to the CLI after {$current_action->cli_sync_attempts} attempts; run Sync data on the site to repair." );
+                }
                 
                 // Now we can finally mark the whole chain as "done"
                 $action = [
