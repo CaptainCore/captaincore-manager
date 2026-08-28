@@ -27,7 +27,7 @@ const NS_DATACENTERS = [
 
 class Component extends DCLogic {
   state = {
-    route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null,
+    route: 'home', theme: null, dockOpen: false, paletteOpen: false, ctxMenu: null, helpOpen: false,
     palQuery: '', palIdx: 0, tick: 0,
     // Sites view (Table/Cards/List) boots from the user's stored default
     // (right-click the view toggle to set it).
@@ -1417,7 +1417,7 @@ class Component extends DCLogic {
   // won't cancel it. Closing is always a cancel — no dialog saves on close.
   closeAllDialogs() {
     return {
-      paletteOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
+      paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
       ptoOpen: false, epOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
       zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
@@ -2979,10 +2979,15 @@ class Component extends DCLogic {
       ] : [])
     ];
     const needle = q.trim().toLowerCase();
-    return (needle ? items.filter(i => (i.label + ' ' + i.sub + ' ' + i.kind).toLowerCase().includes(needle)) : items).slice(0, 8);
+    if (!needle) return items.slice(0, 8);
+    const hits = items.filter(i => (i.label + ' ' + i.sub + ' ' + i.kind).toLowerCase().includes(needle));
+    // Commands rank ahead of sites/domains once a query is typed: a fleet with
+    // eight "help…" domains would otherwise bury "Help & shortcuts" past the cap.
+    return [...hits.filter(i => i.kind === 'command'), ...hits.filter(i => i.kind !== 'command')].slice(0, 8);
   }
   runPal(r) {
     if (r.act === 'navtoggle') { this.toggleNav(); this.setState({ paletteOpen: false }); }
+    else if (r.act === 'help') this.setState({ paletteOpen: false, helpOpen: true });
     else if (r.act === 'dock') this.setState({ dockOpen: true, paletteOpen: false });
     else if (r.act === 'site') this.openSite(r.sid);
     else if (r.act === 'domain') this.openDomain(r.did);
@@ -3271,6 +3276,13 @@ class Component extends DCLogic {
       openDock: () => this.setState({ dockOpen: true }),
       closeDock: () => this.setState({ dockOpen: false }),
       openPalette: () => this.setState({ paletteOpen: true, palQuery: '', palIdx: 0 }),
+      // Help & shortcuts — most people never discover ⌘K on their own, so the
+      // topbar ? and a palette command both open the same primer.
+      helpOpen: !!s.helpOpen,
+      helpVersion: (window.CC_BOOT && window.CC_BOOT.version) ? 'v' + window.CC_BOOT.version : '',
+      openHelp: () => this.setState({ helpOpen: true, ctxMenu: null }),
+      closeHelp: () => this.setState({ helpOpen: false }),
+      helpOpenPalette: () => this.setState({ helpOpen: false, paletteOpen: true, palQuery: '', palIdx: 0 }),
       closePalette: () => this.setState({ paletteOpen: false }),
       ddClose: () => this.setState({ ddOpen: '', ddQ: '' }),
       // Focus-on-mount ref for a screen's LEADING search/filter input (Users →

@@ -82,6 +82,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   .cc-plf-body{flex-direction:column !important}
   .cc-plf-side{width:100% !important;max-height:150px;border-right:none !important;border-bottom:1px solid var(--rule)}
 }
+.cc-kbd{display:inline-block;font:500 var(--fs-115) var(--mono);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;background:var(--panel);color:var(--ink);white-space:nowrap;vertical-align:baseline}
+.cc-help h4{margin:16px 0 4px;font:700 var(--fs-13) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
+.cc-help p{margin:0 0 4px}
+.cc-help-keys{display:grid;grid-template-columns:max-content 1fr;gap:7px 12px;align-items:baseline;margin:6px 0 10px}
 .cc-ln .cc-ln-cp{opacity:0;transition:opacity .1s}
 .cc-ln:hover .cc-ln-cp,.cc-ln .cc-ln-cp:focus-visible{opacity:1}
 @keyframes ccpulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -228,6 +232,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <sc-if value="{{ hasRunning }}" hint-placeholder-val="{{ false }}">
           <span style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);border:1.5px solid var(--canvas)"></span>
         </sc-if>
+      </div>
+      <div onClick="{{ openHelp }}" title="Help & shortcuts" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"></path><circle cx="12" cy="17" r=".6" fill="currentColor"></circle></svg>
       </div>
       <div onClick="{{ toggleTheme }}" onContextMenu="{{ themeMenu }}" title="{{ themeTitle }}" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
         <sc-if value="{{ themeIsSystem }}" hint-placeholder-val="{{ false }}">
@@ -3602,6 +3609,44 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
           <button onClick="{{ schedClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Cancel</button>
           <button onClick="{{ schedConfirm }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ schedLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Help & shortcuts (topbar ? button · ⌘K "Help & shortcuts") ══ -->
+  <sc-if value="{{ helpOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeHelp }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:75;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px;overflow-y:auto">
+      <div onClick="{{ stopProp }}" style="width:620px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:700 var(--fs-15) var(--sans)">Help & shortcuts</span>
+          <span style="font:500 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ helpVersion }}</span>
+          <span onClick="{{ closeHelp }}" title="Close" style="margin-left:auto;width:28px;height:28px;display:grid;place-items:center;border-radius:7px;cursor:pointer;color:var(--ink-dim);font:400 var(--fs-18) var(--sans)" style-hover="background:var(--panel-2);color:var(--ink)">×</span>
+        </div>
+        <div class="cc-help" style="padding:6px 18px 18px;font:400 var(--fs-14)/1.55 var(--sans);color:var(--ink)">
+          <h4>Go anywhere with the command palette</h4>
+          <p>Press <span class="cc-kbd">⌘K</span> from any screen and start typing. It searches every site and domain you can see and lists commands: open the terminal, jump to Billing or Security, run bulk tools on filtered sites, hide the sidebar. <span class="cc-kbd">↑</span> <span class="cc-kbd">↓</span> move through results and <span class="cc-kbd">⏎</span> picks one. The search box at the top of the sidebar opens the same palette.</p>
+
+          <h4>The terminal</h4>
+          <p><span class="cc-kbd">⌃`</span> opens the activity dock: a streamed console for every job plus a command line that runs against one site, a hand-picked set, or every site matching the current filter. <span class="cc-kbd">⌘⏎</span> runs the command. Hover any output line for a copy button, or right-click a job to copy its whole output or cancel it while it runs.</p>
+
+          <h4>Right-click almost anything</h4>
+          <p>Rows in Sites, Domains, Accounts and Users, jobs in the dock, the theme button, and the Sites view switcher all answer a right-click with quick actions. When in doubt, right-click.</p>
+
+          <h4>Keyboard shortcuts</h4>
+          <div class="cc-help-keys">
+            <span class="cc-kbd">⌘K</span><span>Command palette: sites, domains and commands</span>
+            <span class="cc-kbd">⌃`</span><span>Show or hide the terminal dock</span>
+            <span class="cc-kbd">⌘⏎</span><span>Run the terminal command · submit a timeline note</span>
+            <span class="cc-kbd">⌘.</span><span>Show or hide the sidebar</span>
+            <span class="cc-kbd">↑ ↓ ⏎</span><span>Move through palette results and pick one</span>
+            <span class="cc-kbd">Esc</span><span>Close menus and dialogs, one layer at a time</span>
+          </div>
+          <p style="color:var(--ink-dim);font-size:var(--fs-125)">On Windows and Linux, use <span class="cc-kbd">Ctrl</span> in place of <span class="cc-kbd">⌘</span>.</p>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ helpOpenPalette }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2)">Try ⌘K</button>
+          <button onClick="{{ closeHelp }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
         </div>
       </div>
     </div>

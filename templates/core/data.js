@@ -107,6 +107,7 @@ Object.assign(Component.prototype, {
       { label: 'Open terminal', sub: 'Streamed console on any site', kind: 'command', icon: this.ICONS.terminal, act: 'dock' },
       { label: (this.state.navHidden ? 'Show' : 'Hide') + ' sidebar', sub: '\u2318.', kind: 'command', icon: 'M3 3h18v18H3z M9 3v18', act: 'navtoggle' },
       { label: 'Go to Billing \u2192 Invoices', sub: '', kind: 'command', icon: this.ICONS.billing, act: 'billing' },
+      { label: 'Help & shortcuts', sub: 'What \u2318K, the terminal and right-click can do', kind: 'command', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7 M12 17h.01', act: 'help' },
       ...(role === 'operator' ? [
         { label: 'Go to Security \u2192 Coverage', sub: 'Fleet audit coverage', kind: 'command', icon: this.ICONS.security, act: 'security' },
         { label: 'Go to Security \u2192 Core', sub: 'Core probe results', kind: 'command', icon: this.ICONS.security, act: 'security-core' },

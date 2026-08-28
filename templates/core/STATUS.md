@@ -662,6 +662,12 @@ contacts"):
 - **Assign… button** (operator, beside Share) → searchable picker dialog
   (`asg*` bindings in site-detail.js `computeAssignAccount`, spread GUARDED in
   computeDetail) listing hydrated ACCOUNTS minus already-assigned.
+- **Help & shortcuts dialog** (topbar `?` between terminal and theme; ⌘K "Help &
+  shortcuts"; `helpOpen` in closeAllDialogs so Esc peels it): the Minn "About" primer
+  adapted — palette, terminal, right-click surfaces, shortcut table, version from
+  `CC_BOOT.version` (new boot key, CAPTAINCORE_VERSION). Palette ranking change rode
+  along: once a query is typed, matching COMMANDS list before sites/domains — with the
+  8-row cap, a fleet holding eight "help…" domains buried the command entirely.
 - **Job row context menu + per-line copy** (dock job strip, all roles): right-click a real
   job → `Copy output` (full stream via `jobOutputText()`, `Finished.` sentinel dropped;
   v1's copyJobStream) plus `Cancel job` while running. Console lines carry a hover-revealed
