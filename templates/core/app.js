@@ -1219,6 +1219,9 @@ class Component extends DCLogic {
       nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta',
       nsIsImport: s.nsPath === 'import' && isOp, nsIsManual: s.nsPath === 'manual' && isOp,
       nsName: s.nsName, onNsName: e => this.setState({ nsName: e.target.value }),
+      // Kinsta caps site names at 5–32 chars (MyKinsta enforces the same range).
+      nsNameCount: s.nsName.length + '/32',
+      nsNameCountColor: s.nsName.length > 32 || (s.nsName.length > 0 && s.nsName.trim().length < 5) ? 'var(--bad)' : 'var(--ink-dim)',
       nsDomain: s.nsDomain, onNsDomain: e => this.setState({ nsDomain: e.target.value }),
       nsErrors: s.nsErrors.map(text => ({ text })),
       nsNotes: s.nsNotes, onNsNotes: e => this.setState({ nsNotes: e.target.value }),

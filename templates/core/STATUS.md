@@ -2495,3 +2495,16 @@ a measurement — plenty for choosing between regions. Verified live via
 Playwright: "Lancaster, Pennsylvania" → Ashburn (US East) 93 mi
 auto-selected (Toronto 295, Montreal 402, Chicago 604 behind it);
 "Berlin, Germany" → Frankfurt (DE) 263 mi (Amsterdam 358, Zurich 415).
+
+### Kinsta site name limits enforced in the input (2026-08-27)
+The New site (Kinsta path) name field previously accepted any length and
+only errored on submit. It now matches what Kinsta actually enforces:
+maxlength=32 on the input (MyKinsta hard-caps the display name at 32;
+the API docs publish no constraint, but MyKinsta's own form and its
+"use at least 5 characters" floor are the live rules) plus a character
+counter beside the field (n/32, --bad red while the trimmed name is
+under 5 or over 32, ink-dim otherwise). The existing createKinstaSite
+5–32 submit validation is unchanged and stays the backstop for a long
+name carried over from another tab. Verified live via Playwright:
+typing 40 chars stops at 32 with a dim 32/32 counter; "abc" renders a
+red 3/32.
