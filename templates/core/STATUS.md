@@ -2602,4 +2602,8 @@ the primary button reads "Setup plan" instead of "Edit plan" — the same
 place v1 showed its "Hosting plan not active" alert. Operators get the
 longer prompt naming the fix (set a next renewal date); owners get the
 bare sentence, since the Edit plan button stays operator-only and their
-path is Request changes. Verified live in both roles.
+path is Request changes. The em-dash placeholder rows drop out while
+inactive too (Next renewal, Addons, Credits), so the card shrinks to what
+is actually configured instead of stacking blanks above the setup prompt;
+an active plan keeps the full grid, where a missing addon or credit line
+is information. Verified live in both roles.

@@ -511,6 +511,10 @@ Object.assign(Component.prototype, {
         ? 'Hosting plan not active. Set a next renewal date to start billing this account.'
         : 'Hosting plan not active.',
       planEditLabel: plan.next_renewal ? 'Edit plan' : 'Setup plan',
+      // On an inactive account the blank rows are just noise stacked above the
+      // setup prompt, so the em-dash placeholders drop out and the card
+      // shrinks to what is actually configured. An active plan keeps the full
+      // grid: there a missing addon or credit line is information.
       planRows: [
         { k: 'Plan', v: plan.name || '—' },
         { k: 'Price', v: plan.price ? '$' + plan.price + (plan.interval == 1 ? '/mo' : ' / ' + plan.interval + ' mo') : '—' },
@@ -518,7 +522,7 @@ Object.assign(Component.prototype, {
         { k: 'Auto-pay', v: plan.auto_pay === 'true' || plan.auto_pay === true ? 'On' : 'Off' },
         { k: 'Addons', v: (plan.addons || []).length ? (plan.addons || []).length + ' addon' + (plan.addons.length === 1 ? '' : 's') : '—' },
         { k: 'Credits', v: (plan.credits || []).length ? plan.credits.length + ' credit' + (plan.credits.length === 1 ? '' : 's') : '—' }
-      ],
+      ].filter( r => plan.next_renewal || r.v !== '—' ),
       accActivity: acc.activity || []
     };
   }
