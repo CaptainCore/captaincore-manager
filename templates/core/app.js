@@ -487,7 +487,7 @@ class Component extends DCLogic {
   computeAccount(s) {
     const acc = this.ACCOUNTS.find(a => a.id === s.accountId) || this.ACCOUNTS[0]
       || { id: '', name: '', users: 0, sites: 0, domains: 0, plan: '', owned: true, due: false };
-    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
+    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ['invoices', 'Invoices'], ['plan', 'Plan'], ['activity', 'Activity']].map(([id, label]) => ({ label,
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ accTab: id }) }));
@@ -503,6 +503,10 @@ class Component extends DCLogic {
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
       accTabDefaults: s.accTab === 'defaults', accDefRows: [], openAccDefaults: () => {},
+      accTabInvoices: s.accTab === 'invoices', accInvoicesEmpty: false,
+      accInvoiceRows: this.INVOICES.map(iv => ({ id: iv.id, name: (this.ACC_USERS[0] || {}).n || '', date: iv.date,
+        amount: iv.amount, status: iv.due ? 'Pending payment' : 'Completed',
+        stBg: iv.due ? 'var(--warn-soft)' : 'var(--ok-soft)', view: () => {}, pdf: () => {} })),
       accShowTransfer: true, accShowTrusted: true, accShowCancel: true,
       accShowDelete: true, accDelete: () => {},
       transferOpen: false, openTransfer: () => {}, closeTransfer: () => {}, transferEmpty: false,
@@ -543,6 +547,7 @@ class Component extends DCLogic {
         { k: 'Auto-pay', v: 'On · Visa ··4242' }, { k: 'Addons', v: 'Priority support +$10/mo' }, { k: 'Credits', v: '−$15.00' }
       ],
       planRequest: () => this.runJob('plan-request', acc.name + ' — change request sent'),
+      planInactive: false, planInactiveText: '', planEditLabel: 'Edit plan',
       // Edit plan is a live-data (operator) feature — inert in the DC editor,
       // realAccountVals overrides with the working implementation.
       accShowEditPlan: true, openEditPlan: () => {}, epOpen: false,

@@ -2406,6 +2406,35 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-if>
 
+          <sc-if value="{{ accTabInvoices }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+              <div style="display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule);font:500 var(--fs-11) var(--sans);color:var(--ink-dim);letter-spacing:.04em;text-transform:uppercase">
+                <span style="width:74px">Order</span>
+                <span style="width:170px">Date</span>
+                <span style="flex:1">Name</span>
+                <span style="width:96px;text-align:right">Total</span>
+                <span style="width:130px">Status</span>
+                <span style="width:74px"></span>
+              </div>
+              <sc-for list="{{ accInvoiceRows }}" as="iv" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
+                  <span onClick="{{ iv.view }}" style="width:74px;font:500 var(--fs-13) var(--mono);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ iv.id }}</span>
+                  <span style="width:170px;font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ iv.date }}</span>
+                  <span style="flex:1;min-width:0;font:400 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ iv.name }}</span>
+                  <span style="width:96px;text-align:right;font:600 var(--fs-13) var(--mono)">{{ iv.amount }}</span>
+                  <span style="width:130px"><span style="display:inline-block;font:500 var(--fs-12) var(--sans);background:{{ iv.stBg }};color:var(--ink);border-radius:99px;padding:3px 10px">{{ iv.status }}</span></span>
+                  <span style="width:74px;display:flex;gap:10px;justify-content:flex-end">
+                    <span onClick="{{ iv.view }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">View</span>
+                    <span onClick="{{ iv.pdf }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">PDF</span>
+                  </span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ accInvoicesEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:14px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No invoices yet.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+
           <sc-if value="{{ accTabPlan }}" hint-placeholder-val="{{ false }}">
             <div class="cc-cols" style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:16px;align-items:start">
               <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
@@ -2430,9 +2459,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <span style="font:400 var(--fs-125) var(--mono);text-align:right">{{ r.v }}</span>
                   </div>
                 </sc-for>
+                <sc-if value="{{ planInactive }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin:12px 16px 0;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 12px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ planInactiveText }}</div>
+                </sc-if>
                 <div style="display:flex;gap:12px;padding:12px 16px">
                   <sc-if value="{{ accShowEditPlan }}" hint-placeholder-val="{{ true }}">
-                    <button onClick="{{ openEditPlan }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-125) var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Edit plan</button>
+                    <button onClick="{{ openEditPlan }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-125) var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ planEditLabel }}</button>
                   </sc-if>
                   <button onClick="{{ planRequest }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Request changes</button>
                   <span style="flex:1"></span>
@@ -2580,7 +2612,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
       <sc-if value="{{ showInvoice }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:860px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
-          <span onClick="{{ invBack }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Invoices</span>
+          <span onClick="{{ invBack }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">{{ invBackLabel }}</span>
           <sc-if value="{{ invLoading }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Loading invoice…</div>
           </sc-if>

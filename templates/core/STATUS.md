@@ -2578,3 +2578,28 @@ under 5 or over 32, ink-dim otherwise). The existing createKinstaSite
 name carried over from another tab. Verified live via Playwright:
 typing 40 chars stops at 32 with a dim 32/32 counter; "abc" renders a
 red 3/32.
+
+### Account Invoices tab + Setup plan state (2026-08-31)
+The account page gains an Invoices tab, v1 parity with the legacy account
+dialog's invoice data table (Order / Date / Name / Total / Status, plus
+View and PDF per row). The rows were already in the bundle — Account::
+fetch attaches `invoices` only for an admin or a full-billing member — so
+the tab carries the same owner/administrator gate as Plan and needs no
+new route. View routes into the shared invoice page; openInvoice now
+takes a `from` origin so the back link reads "← <account name>" and
+returns to the account's Invoices tab instead of dumping an operator into
+their OWN Billing screen. Verified live via Playwright: operator sees the
+tab on an account with 321 orders, an account owner (customer role) sees
+it with real rows, a full-access non-owner sees neither Invoices nor
+Plan, an account with no orders shows "No invoices yet.", and the round
+trip account → invoice → back lands on the Invoices tab.
+
+The Plan card also learns the inactive state. An account with no
+next_renewal is deactivated (Accounts::update_plan and the renewal cron
+both read an empty renewal as inactive, and the estimate section already
+hid itself), so the card now shows a "Hosting plan not active" notice and
+the primary button reads "Setup plan" instead of "Edit plan" — the same
+place v1 showed its "Hosting plan not active" alert. Operators get the
+longer prompt naming the fix (set a next renewal date); owners get the
+bare sentence, since the Edit plan button stays operator-only and their
+path is Request changes. Verified live in both roles.

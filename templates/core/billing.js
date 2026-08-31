@@ -141,8 +141,12 @@ Object.assign(Component.prototype, {
   },
 
   // ── Invoice detail page (/account/billing/{order_id}) ────────
-  openInvoice(id) {
+  // `from` remembers where the invoice was opened from so the back link goes
+  // there instead of Billing — an operator reading a customer invoice off the
+  // account page should not land in their OWN billing screen.
+  openInvoice(id, from) {
     id = String(id).replace(/^#/, '');
+    this._invoiceFrom = from || null;
     this.setState({ route: 'invoice', invoiceId: id, paletteOpen: false, invPaySel: null, invPayConfirm: false });
     if (!this._hydrated) return;
     if (this._invoiceView && this._invoiceView.id === id && this._invoiceView.data) return;
@@ -159,7 +163,11 @@ Object.assign(Component.prototype, {
     // WooCommerce renders line totals as HTML price spans — flatten to text.
     const txt = h => String(h || '').replace(/<[^>]*>/g, '').replace(/&#36;/g, '$').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').trim();
     const id = s.invoiceId ? String(s.invoiceId) : '';
-    const back = () => this.setState({ route: 'billing', billTab: 'invoices' });
+    const from = this._invoiceFrom;
+    const back = (from && from.accountId)
+      ? () => { this._invoiceFrom = null; this.openAccount(String(from.accountId)); this.setState({ accTab: 'invoices' }); }
+      : () => this.setState({ route: 'billing', billTab: 'invoices' });
+    const backLabel = (from && from.accountId) ? ('\u2190 ' + (from.label || 'Account')) : '\u2190 Invoices';
     let d = null, loading = false, err = '';
     if (this._hydrated) {
       const view = this._invoiceView;
@@ -239,7 +247,7 @@ Object.assign(Component.prototype, {
         }).catch(() => this.updateToast(tid, 'Payment failed', { kind: 'error' }));
       },
       openInvCard: () => this._hydrated ? this.openInvoiceCard(id) : null,
-      invBack: back,
+      invBack: back, invBackLabel: backLabel,
       invLoading: loading,
       invErr: err, invHasErr: !!err,
       invReady: !!d,

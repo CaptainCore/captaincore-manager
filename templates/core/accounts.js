@@ -10,6 +10,9 @@
 // remove user: DELETE /accounts/{id}/users/{user_id} (server refuses the owner).
 // Trusted devices have NO REST surface (usermeta only) — section hidden when
 // real. Activity tab lazy-loads /activity-logs?account_id={id}.
+// Invoices ride in the same bundle (Account::fetch only attaches them for an
+// admin or tier_permissions['invoices'] = full-billing), so the Invoices tab
+// carries the same owner/administrator gate as Plan.
 
 Object.assign(Component.prototype, {
 
@@ -367,7 +370,10 @@ Object.assign(Component.prototype, {
     // Site defaults are visible AND editable for admins and full-access
     // members (the PUT route enforces the same tiers server-side).
     const canDefaults = isOp || !!d.owner || ['full-billing', 'full'].includes(d.level);
-    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ...(canDefaults ? [['defaults', 'Site defaults']] : []), ...(canPlan ? [['plan', 'Plan']] : []), ['activity', 'Activity']].map(([id, label]) => ({ label,
+    // Invoices are owner material too — Account::fetch only attaches them for
+    // an admin or a full-billing member, so the tab uses the Plan gate.
+    const canInvoices = canPlan;
+    const tabs = [['users', 'Users & access'], ['sites', 'Sites'], ['domains', 'Domains'], ...(canDefaults ? [['defaults', 'Site defaults']] : []), ...(canInvoices ? [['invoices', 'Invoices']] : []), ...(canPlan ? [['plan', 'Plan']] : []), ['activity', 'Activity']].map(([id, label]) => ({ label,
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => { this.setState({ accTab: id }); if (id === 'activity') this.loadAccountActivity(); } }));
@@ -393,6 +399,21 @@ Object.assign(Component.prototype, {
       accTabs: tabs,
       accTabPlan: s.accTab === 'plan' && canPlan,
       accTabDefaults: s.accTab === 'defaults' && canDefaults,
+      // Invoices tab — v1 parity with the legacy account dialog's Invoices
+      // data table (Order / Date / Name / Status / Total). Rows reuse the
+      // billing list's status palette and route into the shared invoice page.
+      accTabInvoices: s.accTab === 'invoices' && canInvoices,
+      accInvoiceRows: (d.invoices || []).map(iv => {
+        const paid = /completed|processing|paid|refunded/i.test(iv.status || '');
+        const payable = /pending|failed|on-hold/i.test(iv.status || '');
+        return { id: '#' + iv.order_id, name: iv.name || '', date: iv.date || '',
+          amount: '$' + (Number(iv.total) || 0).toFixed(2),
+          status: iv.status || '',
+          stBg: paid ? 'var(--ok-soft)' : payable ? 'var(--warn-soft)' : 'var(--panel-2)',
+          view: () => this.openInvoice(iv.order_id, { accountId: acc.accountId, label: (this.decodeHtml(a.name) || '').trim() }),
+          pdf: () => this.downloadInvoicePdf(iv.order_id) };
+      }),
+      accInvoicesEmpty: !acc.loading && !(d.invoices || []).length,
       accDefRows: (() => { const def = a.defaults || {};
         return [
           ['Default email', def.email || '—'],
@@ -481,6 +502,15 @@ Object.assign(Component.prototype, {
           .catch(() => { this.updateToast(tid, 'Could not send the request', { kind: 'error' }); });
       },
       ...this.computePlanEstimate(plan),
+      // No next_renewal = the account was never activated (Accounts::update_plan
+      // and the renewal cron both treat an empty renewal as inactive), so the
+      // Plan card flips to a setup call to action — v1 showed the same
+      // "Hosting plan not active" state on the Plan tab.
+      planInactive: !!a.account_id && !plan.next_renewal,
+      planInactiveText: isOp
+        ? 'Hosting plan not active. Set a next renewal date to start billing this account.'
+        : 'Hosting plan not active.',
+      planEditLabel: plan.next_renewal ? 'Edit plan' : 'Setup plan',
       planRows: [
         { k: 'Plan', v: plan.name || '—' },
         { k: 'Price', v: plan.price ? '$' + plan.price + (plan.interval == 1 ? '/mo' : ' / ' + plan.interval + ' mo') : '—' },
