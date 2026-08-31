@@ -53,12 +53,23 @@ since the preview is the point.
 
 ## Legacy UI light-mode canvas (2026-08-31)
 
-`core-legacy.php`'s `v-app` painted its background with the theme ACCENT, and the
-accent was restyled to a saturated brand blue (`#5C97F7`) for v3 — so the whole
-legacy page went blue in light mode and clashed with v3 next to it. Light mode now
-paints v3's canvas (`#f6f6f7`) so white cards still separate against it; dark mode
-still uses the accent (`#313131`) and is byte-for-byte unchanged. The app bar keeps
-`color="accent"`, so the brand-blue header stays.
+In `core-legacy.php` the theme's `accent` is a page/chrome TINT, not a brand fill.
+One value paints the `v-app` background, the app bar, every site-list header bar
+(`bg-accent`, :4342) and the new-site / edit-site dialog toolbars. The accent was
+restyled to a saturated brand blue (`#5C97F7`) for v3, so all of those went solid
+blue and clashed with v3 beside it.
+
+The fix is one line at the theme, not per-surface: the LIGHT theme gets
+`captainCoreLightColors` — the configured palette with `accent` overridden to v3's
+canvas `#f6f6f7`. Vuetify derives `on-accent` from luminance, so text on every one
+of those surfaces flips to dark on its own (no hardcoded white anywhere in the
+chrome). The `v-app` binding stays `rgb(var(--v-theme-accent))`, so page and chrome
+remain in sync — which is what a first pass at this got wrong: neutralizing ONLY
+the page background left the accent bars popping as blue stripes over a grey page.
+
+The configured accent is untouched (account portals on custom domains supply their
+own via `Configurations::colors()`), and the dark theme keeps its own hardcoded
+accent `#313131` — dark mode renders byte-for-byte as before.
 
 ## Security Core tab (2026-08-26)
 

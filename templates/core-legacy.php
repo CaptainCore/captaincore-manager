@@ -49,11 +49,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 </head>
 <body>
 <div id="app" v-cloak>
-	<!-- Light mode paints the v3 canvas (#f6f6f7) rather than the theme accent.
-	     The accent was restyled to a saturated brand blue for v3, which turned this
-	     whole page blue and clashed with the new UI; white cards still separate
-	     against the faint tint. Dark mode keeps the accent (#313131) as before. -->
-	<v-app :style="{ backgroundColor: theme === 'dark' ? 'rgb(var(--v-theme-accent))' : '#f6f6f7' }" :theme="theme">
+	<v-app :style="{backgroundColor: 'rgb(var(--v-theme-accent))'}" :theme="theme">
 	  <v-app-bar color="accent" density="compact" app flat class="pa-2">
 		<v-list flat bg-color="transparent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }" style="z-index: 10;">
 		<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active">
@@ -13257,6 +13253,16 @@ stripe = ""
 (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?php echo rawurlencode( (string) CaptainCore\Configurations::get()->intercom_embed_id ); ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
 const captainCoreColors = <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>;
 
+// In light mode `accent` is a page/chrome TINT, not a brand fill: it paints the
+// app background, the app bar, every site-list header bar (`bg-accent`) and the
+// dialog toolbars, all at once. The configured accent was restyled to a
+// saturated brand blue for v3, which turned every one of those surfaces solid
+// blue and clashed with the new UI beside it. Paint them with v3's canvas
+// (#f6f6f7) and let Vuetify derive `on-accent`, so the text on those surfaces
+// flips to dark on its own. The configured accent is left untouched for the
+// account portals, and the dark theme keeps its own accent (#313131).
+const captainCoreLightColors = Object.assign( {}, captainCoreColors, { accent: '#f6f6f7' } );
+
 const { createApp, ref, computed, reactive } = Vue;
 const { createVuetify, useDisplay, useGoTo } = Vuetify;
 
@@ -13269,7 +13275,7 @@ const vuetify = createVuetify({
 		themes: {
 			light: {
 				dark: false,
-				colors: captainCoreColors
+				colors: captainCoreLightColors
 			},
 			dark: {
 				dark: true,
