@@ -42,7 +42,23 @@ since the preview is the point.
   `captaincore_configurations_for_current_user()`, so this exposes nothing new.
 - Gated on `plan.next_renewal`, which is also the deactivation sentinel, and the
   plan payload only reaches full-billing/admin — customers below that tier get
-  `{name}` and no card.
+  `{name}` and no card. Verified in the browser against one account with three
+  identities: administrator and the full-billing owner both get the Plan tab and
+  the card; a `full` member gets no Plan tab AND an `account.plan` of `{name}`
+  only, so there is nothing to price even if the tab were forced.
+- Dates render as "December 1st 2026" (`fmtLongDate`, also used by the Plan
+  card's Next renewal row so the same date is not shown two ways on one screen).
+  The date part is split by regex rather than handed to `Date()` — the stored
+  string carries no zone and engine parsing can land the renewal a day early.
+
+## Legacy UI light-mode canvas (2026-08-31)
+
+`core-legacy.php`'s `v-app` painted its background with the theme ACCENT, and the
+accent was restyled to a saturated brand blue (`#5C97F7`) for v3 — so the whole
+legacy page went blue in light mode and clashed with v3 next to it. Light mode now
+paints v3's canvas (`#f6f6f7`) so white cards still separate against it; dark mode
+still uses the accent (`#313131`) and is byte-for-byte unchanged. The app bar keeps
+`color="accent"`, so the brand-blue header stays.
 
 ## Security Core tab (2026-08-26)
 

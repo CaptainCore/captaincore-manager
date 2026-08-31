@@ -49,7 +49,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 </head>
 <body>
 <div id="app" v-cloak>
-	<v-app :style="{backgroundColor: 'rgb(var(--v-theme-accent))'}" :theme="theme">
+	<!-- Light mode paints the v3 canvas (#f6f6f7) rather than the theme accent.
+	     The accent was restyled to a saturated brand blue for v3, which turned this
+	     whole page blue and clashed with the new UI; white cards still separate
+	     against the faint tint. Dark mode keeps the accent (#313131) as before. -->
+	<v-app :style="{ backgroundColor: theme === 'dark' ? 'rgb(var(--v-theme-accent))' : '#f6f6f7' }" :theme="theme">
 	  <v-app-bar color="accent" density="compact" app flat class="pa-2">
 		<v-list flat bg-color="transparent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }" style="z-index: 10;">
 		<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active">

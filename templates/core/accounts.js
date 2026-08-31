@@ -46,6 +46,19 @@ Object.assign(Component.prototype, {
 
   PLAN_INTERVAL_UNITS: { 1: 'month', 3: 'quarter', 6: 'biannually', 12: 'year' },
 
+  // "2026-12-01 05:00:00" -> "December 1st 2026". The date part is split by
+  // hand rather than handed to Date(): the stored string has no zone, and
+  // letting the engine parse it can land the renewal on the previous day.
+  fmtLongDate(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec( String( value || '' ) );
+    if ( !m ) return String( value || '' );
+    const d = new Date( +m[1], +m[2] - 1, +m[3] );
+    if ( isNaN( d ) ) return String( value );
+    const day = d.getDate(), tens = day % 100;
+    const suffix = ( tens >= 11 && tens <= 13 ) ? 'th' : ( { 1: 'st', 2: 'nd', 3: 'rd' }[ day % 10 ] || 'th' );
+    return d.toLocaleDateString( undefined, { month: 'long' } ) + ' ' + day + suffix + ' ' + d.getFullYear();
+  },
+
   // Next renewal estimate — v1's "Plan Estimate Breakdown" dialog, inlined into
   // the Plan tab. The line items mirror Account::generate_invoice() so the
   // preview matches the invoice that actually gets cut: base plan (or the
@@ -113,7 +126,7 @@ Object.assign(Component.prototype, {
       planEstShow: true,
       planEstTotal: money( est.total ),
       planEstUnit: est.unit ? 'per ' + est.unit : '',
-      planEstRenews: String( p.next_renewal ).slice( 0, 10 ),
+      planEstRenews: this.fmtLongDate( p.next_renewal ),
       planEstRows: est.rows.map( r => ({ type: r.type, name: r.name,
         qty: String( r.qty ),
         price: ( r.credit ? '-' : '' ) + money( r.price ),
@@ -471,7 +484,7 @@ Object.assign(Component.prototype, {
       planRows: [
         { k: 'Plan', v: plan.name || '—' },
         { k: 'Price', v: plan.price ? '$' + plan.price + (plan.interval == 1 ? '/mo' : ' / ' + plan.interval + ' mo') : '—' },
-        { k: 'Next renewal', v: (plan.next_renewal || '—').slice(0, 10) },
+        { k: 'Next renewal', v: plan.next_renewal ? this.fmtLongDate( plan.next_renewal ) : '—' },
         { k: 'Auto-pay', v: plan.auto_pay === 'true' || plan.auto_pay === true ? 'On' : 'Off' },
         { k: 'Addons', v: (plan.addons || []).length ? (plan.addons || []).length + ' addon' + (plan.addons.length === 1 ? '' : 's') : '—' },
         { k: 'Credits', v: (plan.credits || []).length ? plan.credits.length + ' credit' + (plan.credits.length === 1 ? '' : 's') : '—' }
