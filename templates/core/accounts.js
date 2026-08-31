@@ -44,6 +44,84 @@ Object.assign(Component.prototype, {
     this.setState({ epOpen: true });
   },
 
+  PLAN_INTERVAL_UNITS: { 1: 'month', 3: 'quarter', 6: 'biannually', 12: 'year' },
+
+  // Next renewal estimate — v1's "Plan Estimate Breakdown" dialog, inlined into
+  // the Plan tab. The line items mirror Account::generate_invoice() so the
+  // preview matches the invoice that actually gets cut: base plan (or the
+  // per-site count in per_site mode), usage overages priced from
+  // configurations.usage_pricing, then addons, charges and credits.
+  //
+  // Overage costs are quoted against their OWN interval in the config, so they
+  // are rescaled to the plan's billing interval before they are multiplied out.
+  // parseInt on a blank limit gives NaN and every overage test is a `> 0`, so
+  // a plan with no limit set (Custom) prices no overages rather than billing
+  // every site as extra.
+  planEstimate(plan) {
+    const p = plan || {};
+    const cfg = ( window.CC_BOOT || {} ).usagePricing || {};
+    const usage = p.usage || {}, limits = p.limits || {};
+    const interval = parseInt( p.interval, 10 ) || 12;
+    const num = v => { const n = parseFloat( v ); return isNaN( n ) ? 0 : n; };
+    const int = v => parseInt( v, 10 );
+    const unitPrice = key => { const c = cfg[ key ] || {};
+      const cost = num( c.cost ), ci = parseInt( c.interval, 10 );
+      return ( !ci || ci === interval ) ? cost : ( cost / ci ) * interval; };
+    const rows = [];
+
+    if ( p.billing_mode === 'per_site' ) {
+      const sites = int( usage.sites ) || 0;
+      rows.push({ type: 'Plan', name: 'Per site', qty: sites, price: num( p.price ), total: sites * num( p.price ) });
+    } else {
+      rows.push({ type: 'Plan', name: p.name || 'Plan', qty: 1, price: num( p.price ), total: num( p.price ) });
+
+      const extraSites = int( usage.sites ) - int( limits.sites );
+      if ( extraSites > 0 ) { const u = unitPrice( 'sites' );
+        rows.push({ type: 'Extra', name: 'Sites', qty: extraSites, price: u, total: extraSites * u }); }
+
+      const stepStorage = num( ( cfg.storage || {} ).quantity ) || 10;
+      const extraStorage = Math.ceil( ( ( num( usage.storage ) / 1073741824 ) - int( limits.storage ) ) / stepStorage );
+      if ( extraStorage > 0 ) { const u = unitPrice( 'storage' );
+        rows.push({ type: 'Extra', name: 'Storage (' + stepStorage + 'GB blocks)', qty: extraStorage, price: u, total: extraStorage * u }); }
+
+      const stepVisits = num( ( cfg.traffic || {} ).quantity ) || 1000000;
+      const extraVisits = Math.ceil( ( int( usage.visits ) - int( limits.visits ) ) / stepVisits );
+      if ( extraVisits > 0 ) { const u = unitPrice( 'traffic' );
+        rows.push({ type: 'Extra', name: 'Visits (' + Number( stepVisits ).toLocaleString() + ' blocks)', qty: extraVisits, price: u, total: extraVisits * u }); }
+    }
+
+    [ [ 'addons', 'Addon' ], [ 'charges', 'Charge' ] ].forEach( ( [ key, label ] ) => {
+      ( p[ key ] || [] ).forEach( it => rows.push({ type: label, name: it.name || '', qty: num( it.quantity ),
+        price: num( it.price ), total: num( it.quantity ) * num( it.price ) }) );
+    });
+    ( p.credits || [] ).forEach( it => rows.push({ type: 'Credit', name: it.name || '', qty: num( it.quantity ),
+      price: num( it.price ), total: num( it.quantity ) * num( it.price ), credit: true }) );
+
+    const total = Math.max( 0, rows.reduce( ( sum, r ) => sum + ( r.credit ? -r.total : r.total ), 0 ) );
+    return { rows, total, unit: this.PLAN_INTERVAL_UNITS[ interval ] || '' };
+  },
+
+  // Estimate rows/labels for the Plan tab. Gated on next_renewal the way v1
+  // was — an account with no renewal date is deactivated, so there is nothing
+  // upcoming to preview.
+  computePlanEstimate(plan) {
+    const p = plan || {};
+    if ( !p.next_renewal || typeof p.price === 'undefined' ) return { planEstShow: false, planEstRows: [] };
+    const est = this.planEstimate( p );
+    const money = n => '$' + Math.abs( n ).toFixed( 2 );
+    return {
+      planEstShow: true,
+      planEstTotal: money( est.total ),
+      planEstUnit: est.unit ? 'per ' + est.unit : '',
+      planEstRenews: String( p.next_renewal ).slice( 0, 10 ),
+      planEstRows: est.rows.map( r => ({ type: r.type, name: r.name,
+        qty: String( r.qty ),
+        price: ( r.credit ? '-' : '' ) + money( r.price ),
+        total: ( r.credit ? '-' : '' ) + money( r.total ),
+        fg: r.credit ? 'var(--ok)' : 'var(--ink)' }) )
+    };
+  },
+
   computeEditPlan(s, acc, a, plan, reload) {
     const users = ((acc.data || {}).users) || [];
     const ep = this._ep || {};
@@ -389,6 +467,7 @@ Object.assign(Component.prototype, {
           .then(() => { this.updateToast(tid, 'Change request sent', { kind: 'success' }); this.setState({ planReqOpen: false }); })
           .catch(() => { this.updateToast(tid, 'Could not send the request', { kind: 'error' }); });
       },
+      ...this.computePlanEstimate(plan),
       planRows: [
         { k: 'Plan', v: plan.name || '—' },
         { k: 'Price', v: plan.price ? '$' + plan.price + (plan.interval == 1 ? '/mo' : ' / ' + plan.interval + ' mo') : '—' },

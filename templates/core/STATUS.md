@@ -15,6 +15,35 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Next renewal estimate on the Plan tab (2026-08-31)
+
+Closes the last v1 Plan gap (PARITY.md's `dialog_breakdown`): the Plan tab showed
+the base price only, so an account whose real invoice is mostly overages and
+credits had no upcoming-cost preview at all. A full-width **Next renewal
+estimate** card now sits under Usage / Plan with the renewal date, the estimated
+total per interval, and the line items behind it — inline rather than v1's modal,
+since the preview is the point.
+
+- `planEstimate(plan)` (accounts.js) mirrors `Account::generate_invoice()` line
+  for line: base plan (or `usage.sites × price` in `per_site` mode), then extra
+  sites / storage / visits, then addons, charges and credits, floored at 0. The
+  required "Managed WordPress sites" addon rides in already — `Account::account()`
+  prepends it to `plan->addons`.
+- Overage costs are quoted against their OWN interval in `usage_pricing`, so each
+  is rescaled to the plan's interval before it is multiplied out (v1 parity).
+- Blank limits (Custom plans) price NO overages: every overage test is `> 0` on a
+  bare `parseInt`, and `parseInt("")` is NaN. Do not "fix" that into `|| 0` — it
+  would bill every site on a Custom plan as an extra site.
+- One deliberate divergence from v1's dialog: a partial storage overage bills a
+  full block. v1's JS gated the row on `>= 1` WHOLE GB over the limit and showed
+  nothing for a 0.5GB overage that the invoice generator does charge for.
+- `usage_pricing` reaches the client via `CC_BOOT.usagePricing` (core.php) rather
+  than a Plan-tab fetch. It is already in the public allow-list in
+  `captaincore_configurations_for_current_user()`, so this exposes nothing new.
+- Gated on `plan.next_renewal`, which is also the deactivation sentinel, and the
+  plan payload only reaches full-billing/admin — customers below that tier get
+  `{name}` and no card.
+
 ## Security Core tab (2026-08-26)
 
 Fourth pill on `/account/security` next to Vulnerabilities / Checksums / Coverage.

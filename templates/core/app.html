@@ -2442,6 +2442,41 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </section>
             </div>
+            <sc-if value="{{ planEstShow }}" hint-placeholder-val="{{ true }}">
+              <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--rule)">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Next renewal estimate</h2>
+                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Renews {{ planEstRenews }}</span>
+                  <span style="flex:1"></span>
+                  <span style="font:600 var(--fs-15) var(--mono)">{{ planEstTotal }}</span>
+                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ planEstUnit }}</span>
+                </div>
+                <div style="overflow-x:auto">
+                  <div style="min-width:520px">
+                    <div style="display:flex;gap:12px;padding:7px 16px;border-bottom:1px solid var(--rule);font:500 var(--fs-11) var(--sans);color:var(--ink-dim);letter-spacing:.04em;text-transform:uppercase">
+                      <span style="width:58px">Type</span>
+                      <span style="flex:1">Name</span>
+                      <span style="width:50px;text-align:right">Qty</span>
+                      <span style="width:86px;text-align:right">Price</span>
+                      <span style="width:96px;text-align:right">Total</span>
+                    </div>
+                    <sc-for list="{{ planEstRows }}" as="r" hint-placeholder-count="3">
+                      <div style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);align-items:baseline">
+                        <span style="width:58px;font:500 var(--fs-125) var(--sans);color:{{ r.fg }}">{{ r.type }}</span>
+                        <span style="flex:1;font:400 var(--fs-125) var(--sans);word-break:break-word">{{ r.name }}</span>
+                        <span style="width:50px;text-align:right;font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ r.qty }}</span>
+                        <span style="width:86px;text-align:right;font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ r.price }}</span>
+                        <span style="width:96px;text-align:right;font:500 var(--fs-125) var(--mono);color:{{ r.fg }}">{{ r.total }}</span>
+                      </div>
+                    </sc-for>
+                    <div style="display:flex;gap:12px;padding:10px 16px;align-items:baseline">
+                      <span style="flex:1;font:500 var(--fs-13) var(--sans)">Total</span>
+                      <span style="width:96px;text-align:right;font:600 var(--fs-13) var(--mono)">{{ planEstTotal }}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ accTabActivity }}" hint-placeholder-val="{{ false }}">

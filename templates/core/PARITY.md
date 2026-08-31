@@ -131,8 +131,7 @@ per-site) · `POST /me/email-subscriber` (Profile → Notifications section abse
 `/plugin-diff-preview` (checksum rows show the modified-file list as text, security.js:110-117) ·
 `/quicksaves/search` · `/sites/{id}/site-audits` (per-site audit history — the fleet Audits
 screen is operator-gated, so **customers lose access to their own audits**) ·
-`dialog_breakdown` (next-renewal overage estimate) · nonce-expiry retry (v1 re-scraped a
-nonce and replayed; v3 `api()` just throws, data.js:13 — a reload recovers) ·
+nonce-expiry retry (v1 re-scraped a nonce and replayed; v3 `api()` just throws, data.js:13 — a reload recovers) ·
 `/site-requests/back` + `/site-requests/update` (operator stepper conveniences).
 
 ## DROPPED — deliberate, with the reason

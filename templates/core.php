@@ -76,6 +76,11 @@ $cc_boot = [
     // Public screenshot bucket base (v1 parity) — thumbnails are
     // {uri}{site}_{site_id}/{env}/screenshots/{screenshot_base}_thumb-{size}.jpg
     'remoteUploadUri' => isset( $configurations->remote_upload_uri ) ? $configurations->remote_upload_uri : '',
+    // Usage overage pricing (sites / storage / traffic). Public config - the
+    // same keys captaincore_configurations_for_current_user() allow-lists - so
+    // the Plan tab can price a next-renewal estimate client-side with the same
+    // math Account::generate_invoice() uses server-side.
+    'usagePricing'    => isset( $configurations->usage_pricing ) ? $configurations->usage_pricing : (object) [],
 ];
 
 // Minn Admin escape — administrators only, and only while the Minn Admin
