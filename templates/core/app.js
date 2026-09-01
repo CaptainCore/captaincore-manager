@@ -2060,6 +2060,7 @@ class Component extends DCLogic {
       // a revealed password along.
       const rk = s.siteId + '|' + s.env + '|' + k;
       const isPass = /password/i.test(k);
+      const isUrl = /^https?:\/\//i.test(String(v || ''));
       const masked = isPass && !(s.credShow || {})[rk];
       return { k, v: masked ? '••••••••••••••' : v, isPass,
         vTitle: masked ? 'Show password' : 'Hide password',
@@ -2068,8 +2069,14 @@ class Component extends DCLogic {
           if (!isPass) return;
           this.setState(st => ({ credShow: { ...(st.credShow || {}), [rk]: !(st.credShow || {})[rk] } })); },
         mark: s.copied === k ? 'Copied ✓' : 'Copy',
-        copyTitle: s.copied === k ? 'Copied' : 'Copy ' + k,
-        copy: () => copyField(k, v) };
+        // URL rows (Site URL, WP admin) open in a new tab on row click; the
+        // Copy pill keeps copying via its own handler. Every other row copies
+        // on row click, as before.
+        isUrl,
+        copyTitle: isUrl ? 'Open ' + v + ' in a new tab' : (s.copied === k ? 'Copied' : 'Copy ' + k),
+        pillTitle: s.copied === k ? 'Copied' : 'Copy ' + k,
+        copy: () => isUrl ? this.safeOpen(v) : copyField(k, v),
+        copyPill: (e) => { if (e && e.stopPropagation) e.stopPropagation(); copyField(k, v); } };
     };
     const credRows = (real ? this.realCredPairs(real, s) : [
       ['Site URL', 'https://' + host], ['WP admin', 'https://' + host + '/wp-admin'],
