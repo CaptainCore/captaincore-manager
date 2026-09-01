@@ -368,6 +368,56 @@ class Kinsta {
         return $response->operation_id ?? null;
     }
 
+    /**
+     * Kick off a downloadable backup on every environment of a Kinsta site.
+     *
+     * Runs from the hard-delete path (captaincore_site_delete_func) so a last
+     * full snapshot is generated at Kinsta before an operator removes the site
+     * in MyKinsta. Nothing here deletes anything: the delete path only drops
+     * CaptainCore rows, and Kinsta emails the download link when the backup
+     * is ready. A failed request never blocks the delete; the per-environment
+     * outcome is returned so the caller can report it.
+     *
+     * @param int $site_id
+     * @return array One row per environment: environment, env_id, ok, operation_id, message.
+     */
+    public static function request_final_backups( $site_id ) {
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site ) || $site->provider !== 'kinsta' || empty( $site->provider_site_id ) ) {
+            return [];
+        }
+
+        $api_key = self::credentials( "api", $site->provider_id );
+        if ( empty( $api_key ) ) {
+            return [ [ 'environment' => '', 'env_id' => '', 'ok' => false, 'operation_id' => '', 'message' => 'No usable Kinsta API key for this site\'s provider connection' ] ];
+        }
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
+        if ( empty( $response->site->environments ) ) {
+            $message = ! empty( $response->message ) ? $response->message : 'Could not list environments at Kinsta';
+            return [ [ 'environment' => '', 'env_id' => '', 'ok' => false, 'operation_id' => '', 'message' => $message ] ];
+        }
+
+        $results = [];
+        foreach ( $response->site->environments as $environment ) {
+            if ( empty( $environment->id ) ) {
+                continue;
+            }
+            $name   = ( $environment->name === 'live' ) ? 'production' : $environment->name;
+            $result = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$environment->id}/downloadable-backups" );
+            $ok     = ! empty( $result->operation_id ) || ( isset( $result->status ) && (int) $result->status === 202 );
+            $results[] = [
+                'environment'  => $name,
+                'env_id'       => $environment->id,
+                'ok'           => $ok,
+                'operation_id' => $result->operation_id ?? '',
+                'message'      => ! empty( $result->message ) ? $result->message : ( $result === false ? 'Request to Kinsta failed' : '' ),
+            ];
+        }
+        return $results;
+    }
+
     public static function environments( $kinsta_id ) {
         $response = \CaptainCore\Remote\Kinsta::get( "sites/$kinsta_id/environments" );
         return $response->site->environments;

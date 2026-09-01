@@ -1392,15 +1392,21 @@ Object.assign(Component.prototype, {
 
   cancelSiteRemoval() { this.setSiteRemoved(false); },
 
-  // Admin-only hard delete. Typed confirmation, not a plain OK — v1 used a
-  // bare confirm() for an irreversible fleet-wide destructive action.
+  // Admin-only hard delete. Opens the in-app confirm dialog (delOpen) —
+  // no browser prompt, no typed site name. The dialog copy is honest about
+  // scope: this removes the site from CaptainCore only; nothing is deleted
+  // at the host, and Kinsta sites get a final downloadable backup requested
+  // for every environment first (captaincore_site_delete_func).
   deleteSiteHard() {
-    const s = this.state;
-    const site = this.FLEET.find(x => x.id === s.siteId);
+    const site = this.FLEET.find(x => x.id === this.state.siteId);
     if (!site) return;
-    const typed = prompt('DELETE ' + site.name + ' permanently?\n\nThis removes every environment at the host and cannot be undone.\nType the site name to confirm:');
-    if (typed == null) return;
-    if (typed.trim() !== site.name) { this.toast('Name did not match — nothing was deleted', { kind: 'error' }); return; }
+    this.setState({ delOpen: true });
+  },
+
+  confirmDeleteSite() {
+    const site = this.FLEET.find(x => x.id === this.state.siteId);
+    this.setState({ delOpen: false });
+    if (!site) return;
     const tid = this.toast('Deleting ' + site.name + '…', { kind: 'loading' });
     this.api('/sites/' + site.id, { method: 'DELETE' })
       .then(res => {
@@ -1425,7 +1431,14 @@ Object.assign(Component.prototype, {
       // same call, but the operator is queueing their own work, not asking.
       rmRequestLabel: isOp ? 'Mark for removal…' : 'Request site deletion…',
       rmCanDelete: isOp,
-      rmDelete: () => this.deleteSiteHard()
+      rmDelete: () => this.deleteSiteHard(),
+      // Delete confirm dialog (app.html "Delete site dialog").
+      delOpen: !!s.delOpen && !!site,
+      delSub: site ? site.name : '',
+      delKinsta: !!(site && String(site.provider || '').toLowerCase() === 'kinsta'),
+      delOther: !!site && String(site.provider || '').toLowerCase() !== 'kinsta',
+      closeDel: () => this.setState({ delOpen: false }),
+      delGo: () => this.confirmDeleteSite()
     };
   }
 

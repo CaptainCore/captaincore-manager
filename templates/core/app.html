@@ -4379,6 +4379,32 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
 
+  <!-- ══ Delete site dialog (operator hard delete; replaces the typed browser prompt) ══ -->
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDel }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:14vh 20px">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 var(--fs-15) var(--sans)">Delete site</span><span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ delSub }}</span></span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeDel }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:400 var(--fs-13)/1.55 var(--sans)">This permanently removes the site and every environment from CaptainCore. It cannot be undone.</span>
+          <sc-if value="{{ delKinsta }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Nothing is deleted at Kinsta. A final downloadable backup is requested for each Kinsta environment first; remove the site in MyKinsta once that backup has been downloaded.</span>
+          </sc-if>
+          <sc-if value="{{ delOther }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Nothing is deleted at the host. Remove the site there separately once its files are no longer needed.</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeDel }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>
+          <button onClick="{{ delGo }}" style="border:none;background:var(--bad);color:white;font:600 var(--fs-13) var(--sans);padding:7px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Delete site</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Edit plan dialog (operator; v1 parity: core.php dialog_modify_plan) ══ -->
   <sc-if value="{{ epOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeEp }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
