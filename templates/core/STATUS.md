@@ -15,6 +15,17 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Credentials: URL rows open the site (2026-09-01)
+
+On the site Overview, the Site URL and WP admin rows in the Credentials
+card now open the address in a new tab on row click (safeOpen, https only,
+noopener), with an "Open ↗" hint before the pill. The Copy pill got its
+own stopPropagation handler so copying still works on those rows; every
+other row keeps copy-on-row-click. mkCopy detects a URL row by value
+(`^https?://`), so the sample-data rows behave the same. Verified with
+Playwright: row click opened a popup for the site URL, the pill flipped to
+"Copied ✓" without opening anything, and the Address row still copied.
+
 ## Delete site: in-app confirm + final Kinsta backups (2026-09-01)
 
 The operator's "Delete site permanently…" action no longer uses a browser

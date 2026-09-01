@@ -926,7 +926,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <sc-if value="{{ c.isPass }}" hint-placeholder-val="{{ false }}">
                       <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">{{ c.revealMark }}</span>
                     </sc-if>
-                    <span style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px">{{ c.mark }}</span>
+                    <sc-if value="{{ c.isUrl }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim)">Open ↗</span>
+                    </sc-if>
+                    <span onClick="{{ c.copyPill }}" title="{{ c.pillTitle }}" style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="background:var(--panel-2)">{{ c.mark }}</span>
                   </div>
                 </sc-for>
               </section>
