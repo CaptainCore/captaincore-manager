@@ -15,6 +15,46 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Delete site: in-app confirm + final Kinsta backups (2026-09-01)
+
+The operator's "Delete site permanently…" action no longer uses a browser
+`prompt()` with a typed site name. It opens an in-app confirm dialog
+(`delOpen`, markup beside the deploy confirm dialog in app.html) in the
+Minn Admin style: title + site name subtitle, a plain-language body, and a
+red Delete site button beside Cancel. Escape and the backdrop close it
+through closeAllDialogs like every other dialog.
+
+The dialog copy was also corrected. The old prompt claimed the delete
+"removes every environment at the host"; it never did. The whole path is
+REST DELETE /sites/{id} → `captaincore_run_background_command("site
+delete <slug>")` → the CLI's siteDeleteNative (drops the local SQLite row,
+posts `site-delete`) → the Manager ingest deletes the Sites row, plus
+`mark_inactive`. The Kinsta provider class has no site or environment
+delete at all (its only DELETE verb is the domains endpoint). So the copy
+now says nothing is deleted at the host, and the Kinsta variant explains
+the backup step below.
+
+New on the server side: for a Kinsta site the delete handler first calls
+`Providers\Kinsta::request_final_backups( $site_id )`, which lists the
+site's environments at Kinsta (using the site's own provider connection)
+and POSTs `sites/environments/{env_id}/downloadable-backups` for each one
+(production and staging), so a final full snapshot is generating at Kinsta
+when the operator later removes the site in MyKinsta. A refused request
+(Kinsta allows one downloadable backup per environment per day) does not
+block the delete; the per-environment outcome goes into the response
+message (the success toast) and a `final_backup_requested` activity-log
+row with the raw results in context. `Remote\Kinsta::post` gained the same
+429 backoff `get` already had, since two POSTs in one second trip Kinsta's
+limiter. Note the delete handler reads `Sites::get()` for provider fields:
+the `Site->get()` bundle omits provider_site_id and customer_id.
+
+Verified locally: the helper run against a real customer Kinsta site with
+the backup POST intercepted via `pre_http_request` (env listing hit Kinsta
+for real) produced one request on a production-only site and two on a
+site with staging; Playwright opened the dialog on a Kinsta site, saw the
+Kinsta copy, and closed it via Cancel and via Escape. The live delete
+itself is the first production use.
+
 ## Next renewal estimate on the Plan tab (2026-08-31)
 
 Closes the last v1 Plan gap (PARITY.md's `dialog_breakdown`): the Plan tab showed

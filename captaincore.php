@@ -3989,6 +3989,36 @@ function captaincore_site_delete_func( $request ) {
 	$site = new CaptainCore\Site( $site_id );
 	$site_data = $site->get();
 	$name = $site_data->name;
+	// The get() bundle above omits provider_site_id and customer_id; read the raw row.
+	$site_row = CaptainCore\Sites::get( $site_id );
+
+	// Nothing below touches the host. `site delete` on the CLI drops the local
+	// SQLite row and posts `site-delete` back, which removes the Manager row;
+	// the Kinsta provider class has no site or environment delete at all. So
+	// for a Kinsta site, first kick off a downloadable backup on every
+	// environment (production + staging) so a final full snapshot is waiting
+	// at Kinsta when an operator removes the site in MyKinsta. A backup that
+	// Kinsta refuses does not block the delete; it is reported instead.
+	$backup_note = '';
+	if ( ( $site_row->provider ?? '' ) === 'kinsta' && ! empty( $site_row->provider_site_id ) ) {
+		$backups = CaptainCore\Providers\Kinsta::request_final_backups( $site_id );
+		$ok      = [];
+		$failed  = [];
+		foreach ( $backups as $backup ) {
+			if ( $backup['ok'] ) {
+				$ok[] = $backup['environment'];
+			} else {
+				$failed[] = trim( $backup['environment'] . ': ' . $backup['message'], ': ' );
+			}
+		}
+		if ( ! empty( $ok ) ) {
+			$backup_note .= ' Final Kinsta backup requested for ' . implode( ' and ', $ok ) . '.';
+		}
+		if ( ! empty( $failed ) ) {
+			$backup_note .= ' Kinsta backup not requested (' . implode( '; ', $failed ) . ').';
+		}
+		CaptainCore\ActivityLog::log( 'final_backup_requested', 'site', $site_id, $name, 'Requested final Kinsta backups for ' . $name . ' before delete.' . $backup_note, [ 'backups' => $backups ], $site_row->customer_id ?? null );
+	}
 
 	captaincore_run_background_command( "site delete {$site_data->site}" );
 
@@ -3997,7 +4027,7 @@ function captaincore_site_delete_func( $request ) {
 
 	return [ 
 		"site_id" => $site_id,
-		"message" => "Site $name deleted." 
+		"message" => "Site $name deleted." . $backup_note
 	];
 }
 
