@@ -942,6 +942,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       <span style="font:400 var(--fs-125) var(--mono)">{{ r.v }}</span>
                     </div>
                   </sc-for>
+                  <sc-if value="{{ umShow }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ umToggle }}" title="Uptime monitor (administrators only)" style="display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                      <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Uptime monitor</span>
+                      <div style="flex:1"></div>
+                      <span style="font:400 var(--fs-125) var(--mono)">{{ umText }}</span>
+                      <span style="width:34px;height:20px;border-radius:99px;background:{{ umBg }};display:flex;align-items:center;padding:2px;justify-content:{{ umJust }};flex:none;transition:background .15s"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                    </div>
+                  </sc-if>
                   <sc-if value="{{ usShow }}" hint-placeholder-val="{{ false }}">
                     <div onClick="{{ openUpdSettings }}" style="padding:9px 16px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:var(--brand-ink)" style-hover="background:var(--panel-2)">Update settings…</div>
                   </sc-if>

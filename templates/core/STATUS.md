@@ -15,6 +15,27 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Uptime monitor switch on the Environment card (2026-09-01)
+
+v1 parity for the legacy site card's "Up-time Monitor" v-switch. For
+operators the Environment card's read-only "Uptime monitor: On/Off" row is
+replaced by a switch row (umShow / umToggle in site-detail.js
+computeUptimeMonitor; realEnvRows drops the static row when isOp) that
+POSTs `/sites/{id}/{env}/monitor { monitor: "1"|"0" }` with an optimistic
+flip that reverts on failure. Customers keep the read-only row.
+
+The route is now administrator-only server-side: the legacy UI only
+showed the switch to operators but the handler accepted any site owner.
+`captaincore_site_environment_monitor_update_func` gates on
+`User::is_admin()`, normalises the flag to "1"/"0", 404s on an unknown
+environment, writes a `monitor_on` / `monitor_off` activity-log row, keeps
+dispatching `site sync`, and returns the new state (it returned nothing
+before). Verified: a non-admin user gets 403 from the handler; Playwright
+as the operator flipped a customer site On → Off → On (two 200 POSTs, the
+row repainted each time, DB back to 1) and both activity rows landed.
+Note for local testing: `Sites::verify` lists real rows only, so a site id
+from a production screenshot 403s locally if the local DB lacks it.
+
 ## Credentials: URL rows open the site (2026-09-01)
 
 On the site Overview, the Site URL and WP admin rows in the Credentials
