@@ -6088,22 +6088,43 @@ function captaincore_site_remote_sync_func( $request ) {
 function captaincore_site_environment_monitor_update_func( $request ) {
 	$site_id = $request['id'];
 
+	// Administrators only. The uptime monitor is an operator concern (it
+	// pages the operator, not the customer), and the legacy UI only surfaced
+	// the switch to operators; the route itself was never gated that way.
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Only administrators can change the uptime monitor.', [ 'status' => 403 ] );
+	}
+
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
 	$environment     = $request['environment'];
 	$environment_id  = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	if ( empty( $environment_id ) ) {
+		return new WP_Error( 'not_found', 'Environment not found', [ 'status' => 404 ] );
+	}
+	$monitor         = filter_var( $request['monitor'], FILTER_VALIDATE_BOOLEAN ) ? '1' : '0';
 	$time_now        = date("Y-m-d H:i:s");
 	$environment_update = [
-		'monitor_enabled' => $request['monitor'],
+		'monitor_enabled' => $monitor,
 		'updated_at'      => $time_now,
 	];
 
 	( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
 
+	$site_row = CaptainCore\Sites::get( $site_id );
+	$name     = $site_row->name ?? "site {$site_id}";
+	$state    = $monitor === '1' ? 'on' : 'off';
+	CaptainCore\ActivityLog::log( 'monitor_' . $state, 'site', $site_id, $name, "Turned uptime monitor {$state} for {$name} ({$environment})", [ 'environment' => $environment ], $site_row->customer_id ?? null );
+
 	captaincore_run_background_command( "site sync $site_id" );
 
+	return [
+		'site_id'         => (int) $site_id,
+		'environment'     => $environment,
+		'monitor_enabled' => $monitor,
+	];
 }
 
 function captaincore_site_environment_performance_monitor_toggle_func( $request ) {

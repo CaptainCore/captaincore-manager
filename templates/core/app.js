@@ -2322,9 +2322,12 @@ class Component extends DCLogic {
       // Site removal — request (any role) vs hard delete (operators only).
       ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false }),
       usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator',
+      ...(this.computeUptimeMonitor ? this.computeUptimeMonitor(real, s, isOp) : { umShow: false }),
       openUpdSettings: () => this.openUpdSettings(real, s),
       ...this.updSettingsVals(real, s),
-      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({
+      // Operators get the Uptime monitor as a switch row (umShow) instead of
+      // the static value; customers keep the read-only row.
+      envRows: (real ? this.realEnvRows(real, s).filter(([k]) => !(isOp && k === 'Uptime monitor')) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)

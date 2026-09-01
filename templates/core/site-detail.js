@@ -141,6 +141,45 @@ Object.assign(Component.prototype, {
     return rows.filter(([, v]) => v !== '');
   },
 
+  // ── Uptime monitor switch (Environment card; administrators only) ──
+  // v1 parity: the legacy site card's "Up-time Monitor" v-switch →
+  // POST /sites/{id}/{env}/monitor { monitor }. The route is admin-gated
+  // server-side; the row is only rendered for operators (umShow).
+  toggleUptimeMonitor() {
+    const real = this._detail;
+    const s = this.state;
+    const env = this.currentEnv(real, s);
+    if (!real || !env) return;
+    const was = !!(env.monitor_enabled && env.monitor_enabled !== '0');
+    const next = !was;
+    env.monitor_enabled = next ? '1' : '0';   // optimistic; reverted on failure
+    this.setState({});
+    const tid = this.toast((next ? 'Enabling' : 'Disabling') + ' uptime monitor…', { kind: 'loading' });
+    this.api('/sites/' + real.siteId + '/' + String(env.environment || 'Production').toLowerCase() + '/monitor',
+      { method: 'POST', body: { monitor: next ? '1' : '0' } })
+      .then(res => {
+        if (res && res.code) throw new Error(res.message || 'refused');
+        this.updateToast(tid, 'Uptime monitor ' + (next ? 'ON' : 'OFF') + ' for ' + (env.home_url || 'this environment'), { kind: 'success' });
+      })
+      .catch(err => {
+        env.monitor_enabled = was ? '1' : '0';
+        this.updateToast(tid, (err && err.message && err.message !== 'refused') ? err.message : 'Could not change the uptime monitor', { kind: 'error' });
+        this.setState({});
+      });
+  },
+
+  computeUptimeMonitor(real, s, isOp) {
+    const env = real && isOp ? this.currentEnv(real, s) : null;
+    const on = !!(env && env.monitor_enabled && env.monitor_enabled !== '0');
+    return {
+      umShow: !!env,
+      umBg: on ? 'var(--ok)' : 'var(--rule)',
+      umJust: on ? 'flex-end' : 'flex-start',
+      umText: on ? 'On' : 'Off',
+      umToggle: () => this.toggleUptimeMonitor()
+    };
+  },
+
   // ── Managed-update settings dialog (v1 parity: dialog_update_settings) ──
   // PUT /sites/{id}/settings { environment, value: { updates_enabled,
   // updates_exclude_plugins: [], updates_exclude_themes: [] } }; the handler
