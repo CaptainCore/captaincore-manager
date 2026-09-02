@@ -1997,7 +1997,7 @@ class Component extends DCLogic {
       // Design preview shows the connected-registrar variant; the real layer
       // flips these off for externally registered domains.
       regConnected: true, regExternal: false, nsCanEdit: true,
-      regCanEdit: false, openRgDlg: () => {}, rgOpen: false, closeRg: () => {}, rgLoading: false, rgRows: [],
+      regCanEdit: false, openDrgDlg: () => {}, drgOpen: false, closeDrg: () => {}, drgLoading: false, drgRows: [],
       togAuto: mkTog('auto', 'Auto-renew'), togLock: mkTog('lock', 'Transfer lock'), togPriv: mkTog('priv', 'WHOIS privacy'),
       authMark: s.copied === 'auth' ? 'Copied ✓' : 'Copy',
       authCopy: () => { try { navigator.clipboard.writeText('XK7-99Q2-RRB1'); } catch (e) {}

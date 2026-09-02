@@ -1952,7 +1952,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span style="width:130px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Registrar</span>
                   <span style="font:400 var(--fs-13) var(--sans);flex:1">{{ regRegistrar }}</span>
                   <sc-if value="{{ regCanEdit }}" hint-placeholder-val="{{ false }}">
-                    <span onClick="{{ openRgDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:1px 8px" style-hover="border-color:var(--brand)">Edit</span>
+                    <span onClick="{{ openDrgDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:1px 8px" style-hover="border-color:var(--brand)">Edit</span>
                   </sc-if>
                 </div>
                 <sc-if value="{{ regExternal }}" hint-placeholder-val="{{ false }}">
@@ -4231,24 +4231,24 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   </sc-if>
 
   <!-- ══ Edit registrar dialog (legacy Edit Domain → Provider) ══ -->
-  <sc-if value="{{ rgOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeRg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+  <sc-if value="{{ drgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrg }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
       <div onClick="{{ stopProp }}" style="width:460px;max-width:100%;max-height:78vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccpop .14s ease-out">
         <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
           <span style="font:600 var(--fs-15) var(--sans)">Where is this domain registered?</span>
           <div style="flex:1"></div>
-          <span onClick="{{ closeRg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+          <span onClick="{{ closeDrg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="flex:1;overflow-y:auto;padding:12px 18px 14px">
           <div style="font:400 var(--fs-125)/1.55 var(--sans);color:var(--ink-dim);margin-bottom:10px">Linking a registrar connection marks the domain as registered through Anchor Hosting and enables renewals, transfer lock, privacy and contacts on this tab.</div>
-          <sc-if value="{{ rgLoading }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ drgLoading }}" hint-placeholder-val="{{ false }}">
             <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading registrar connections…</span>
           </sc-if>
           <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
-            <sc-for list="{{ rgRows }}" as="rg" hint-placeholder-count="3">
-              <div onClick="{{ rg.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
-                <span style="min-width:0;flex:1"><span style="display:block;font:500 var(--fs-13) var(--sans)">{{ rg.label }}</span><span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ rg.sub }}</span></span>
-                <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">{{ rg.action }}</span>
+            <sc-for list="{{ drgRows }}" as="drg" hint-placeholder-count="3">
+              <div onClick="{{ drg.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                <span style="min-width:0;flex:1"><span style="display:block;font:500 var(--fs-13) var(--sans)">{{ drg.label }}</span><span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ drg.sub }}</span></span>
+                <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">{{ drg.action }}</span>
               </div>
             </sc-for>
           </div>
