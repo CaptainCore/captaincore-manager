@@ -21,8 +21,10 @@ Legacy Edit Domain parity, second half: the accounts half shipped earlier as
 the Account chips + Assign… picker; this adds the Provider field. The
 Registrar tab's Registration card gets an operator-only Edit link on the
 Registrar row (`regCanEdit` / `openRgDlg` in domains.js realDomainVals) that
-opens a picker (`rgOpen` / `rgRows`, markup beside the Assign-account dialog
-in app.html) listing every registrar connection from `GET /providers`
+opens a picker (`drgOpen` / `drgRows`, markup beside the Assign-account dialog
+in app.html; the `drg` prefix is deliberate: `rgOpen`/`rgLoading` already belong
+to the Registry detail dialog, and the first cut reused `rgOpen`, which opened
+that dialog as a ghost panel behind the picker on prod) listing every registrar connection from `GET /providers`
 filtered to `REGISTRAR_KINDS` (hoverdotcom, spaceship — the legacy
 autocomplete's filter) plus a "Registered externally" row that clears the
 link. Picking one calls `saveDomainRegistrar()` → the same

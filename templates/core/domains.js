@@ -585,7 +585,7 @@ Object.assign(Component.prototype, {
       const registrar = providerId ? (isOp && prov ? prov.name : brand) : 'External';
       const patch = r => String(r.id) === String(dom.domainId) ? { ...r, providerId: providerId || '', registrar } : r;
       this.DOMAINS = (this.DOMAINS || []).map(patch);
-      this.setState(st => ({ rgOpen: false, domList: st.domList ? st.domList.map(patch) : st.domList }));
+      this.setState(st => ({ drgOpen: false, domList: st.domList ? st.domList.map(patch) : st.domList }));
       this.loadDomainDetail(dom.domainId);
     }).catch(() => this.updateToast(tid, 'Could not save the registrar', { kind: 'error' }));
   },
@@ -715,7 +715,7 @@ Object.assign(Component.prototype, {
     const regProv = curProviderId ? (this._regProviders || []).find(p => String(p.provider_id) === curProviderId) : null;
     const regLabel = !curProviderId ? 'External'
       : (regProv ? regProv.name : (listRow.registrar || 'Connected')) + (provider && provider.status ? ' · ' + provider.status : '');
-    const rgRows = !s.rgOpen ? [] : [
+    const drgRows = !s.drgOpen ? [] : [
       ...(this._regProviders || []).map(p => ({
         label: p.name, sub: p.provider === 'hoverdotcom' ? 'Hover.com connection' : p.provider === 'spaceship' ? 'Spaceship connection' : p.provider,
         current: String(p.provider_id) === curProviderId, action: String(p.provider_id) === curProviderId ? 'Current' : 'Select',
@@ -816,11 +816,11 @@ Object.assign(Component.prototype, {
       // Operator-only registrar edit (legacy Edit Domain's Provider field):
       // pick a registrar connection or mark the domain registered externally.
       regCanEdit: isOpDom,
-      openRgDlg: () => { this.loadRegistrarProviders(); this.setState({ rgOpen: true }); },
-      rgOpen: !!s.rgOpen,
-      closeRg: () => this.setState({ rgOpen: false }),
-      rgLoading: !!s.rgOpen && this._regProviders === null,
-      rgRows,
+      openDrgDlg: () => { this.loadRegistrarProviders(); this.setState({ drgOpen: true }); },
+      drgOpen: !!s.drgOpen,
+      closeDrg: () => this.setState({ drgOpen: false }),
+      drgLoading: !!s.drgOpen && this._regProviders === null,
+      drgRows,
       nsCanEdit: !!provider,
       // Seed the edit dialog from the CURRENT nameservers (the design mock
       // seeded sample values into real sessions).
