@@ -854,6 +854,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <sc-if value="{{ showSite }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:24px 32px 120px;animation:ccfade .25s ease">
           <span onClick="{{ backToSites }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Sites</span>
+          <sc-if value="{{ siteMissing }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:28px;max-width:560px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);padding:26px 28px">
+              <div style="font:600 var(--fs-17) var(--sans);letter-spacing:-.01em">This site is no longer here</div>
+              <div style="margin-top:8px;font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim)">Site <span style="font:500 var(--fs-13) var(--mono);color:var(--ink)">{{ siteMissingId }}</span> is not in your fleet. It may have been deleted, or your account may not have access to it.</div>
+              <div style="display:flex;gap:8px;margin-top:18px">
+                <button onClick="{{ backToSites }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Back to Sites</button>
+                <sc-if value="{{ siteMissingShowArchives }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ siteMissingArchives }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-13) var(--sans);padding:8px 14px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Open Archives</button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ siteFound }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>
             <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
@@ -1735,6 +1748,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-if>
             </sc-if>
+          </sc-if>
           </sc-if>
         </div>
       </sc-if>

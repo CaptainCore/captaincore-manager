@@ -15,6 +15,23 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Site detail for an id not in the fleet (2026-09-02)
+
+Bug: `/account/sites/{id}` for a deleted site (or one the user cannot see)
+rendered ANOTHER site's header — `computeDetail()` fell back to `FLEET[0]`
+when the id was not in the fleet, so the page wore the first fleet row's name,
+stats and domains while its own detail fetches 404'd and the cards sat on
+"Loading". Fix: once hydrated, a miss resolves to the empty placeholder, and
+the template shows a not-found panel (`siteMissing` / `siteFound` /
+`siteMissingId` in the global vals; the rest of the site block is wrapped in
+`siteFound`, the "← Sites" link stays). Copy: "This site is no longer here.
+Site #N is not in your fleet. It may have been deleted, or your account may
+not have access to it." with Back to Sites and, for operators, Open Archives
+(deleted sites' final backups live there). The FLEET[0] fallback remains only
+for the pre-hydration demo shell. Verified with Playwright: operator on a
+bogus id → panel + Archives button, no h1; customer on a site they do not
+own → panel without the Archives button; real sites unchanged in both roles.
+
 ## No more window.confirm(): one in-app confirm for everything (2026-09-02)
 
 All 36 browser `confirm()` calls across the modules (domain / zone / account /

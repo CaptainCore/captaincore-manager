@@ -2020,7 +2020,12 @@ class Component extends DCLogic {
   }
 
   computeDetail(s) {
-    const site = this.FLEET.find(x => x.id === s.siteId) || this.FLEET[0]
+    // A site id that is not in the fleet (deleted, or not shared with this
+    // user) must NOT fall back to FLEET[0] once hydrated — that wore another
+    // site's header over a page whose own loads 404. The template shows the
+    // siteMissing panel instead (global vals); the FLEET[0] fallback remains
+    // only for the pre-hydration demo shell.
+    const site = this.FLEET.find(x => x.id === s.siteId) || (this._hydrated ? null : this.FLEET[0])
       || { id: '', name: '', provider: '', account: '', core: '', visits: '', storage: '', envs: '', updates: 0, vuln: 0, labels: [], plugins: {}, theme: '', backup: '' };
     const real = this._detail && this._detail.siteId === s.siteId ? this._detail : null;
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
@@ -3284,6 +3289,14 @@ class Component extends DCLogic {
       themeMenu: (e) => this.openThemeMenu(e),
       toasts: this.toastVals(),
       goHome: this.go('home'), goSites: this.go('sites'), goActivity: this.go('activity'),
+      // Site detail for an id that is not in the (hydrated) fleet: deleted, or
+      // not shared with this user. Renders a not-found panel instead of a
+      // borrowed header (see computeDetail).
+      siteMissing: s.route === 'site' && !!this._hydrated && !this.FLEET.some(x => x.id === s.siteId),
+      siteFound: !(s.route === 'site' && !!this._hydrated && !this.FLEET.some(x => x.id === s.siteId)),
+      siteMissingId: s.siteId ? '#' + s.siteId : '',
+      siteMissingShowArchives: isOp,
+      siteMissingArchives: this.go('archives'),
       ctxOpen: !!s.ctxMenu,
       ctxX: s.ctxMenu ? s.ctxMenu.x + 'px' : '0px',
       ctxY: s.ctxMenu ? s.ctxMenu.y + 'px' : '0px',
