@@ -36,7 +36,13 @@ opens `rmOpen` (site-detail.js computeRemoval: rmTitle / rmSub / rmGoLabel /
 closeRm / rmGo; markup beside the Delete site dialog in app.html). Title and
 button follow the role: "Request site deletion" / "Request deletion" for
 customers, "Mark for removal" / "Mark for removal" for operators. app.js
-resets `rmOpen` on route change with the other dialogs. Verified as a customer
+resets `rmOpen` on route change with the other dialogs. Follow-up the same
+day: instead of "Every environment will be removed", the dialog lists the
+environments the request covers as rows (`rmEnvs`: PRODUCTION / STAGING badge
++ host, from `this._detail.envs` name + home_url, falling back to the list
+row's env summary while the bundle loads) under a count line (`rmEnvCount`),
+and the removal banner names them ("The Production and Staging environments
+will be removed…"). Verified as a customer
 (user-switched session) on a local site: no browser dialog fired, the in-app
 dialog rendered, the POST returned `{"success":true,…,"removed":true}` with
 the success toast and the removal banner, and Cancel removal request returned
