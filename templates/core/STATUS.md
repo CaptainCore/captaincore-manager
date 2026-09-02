@@ -15,6 +15,32 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Edit registrar on the domain page (2026-09-02)
+
+Legacy Edit Domain parity, second half: the accounts half shipped earlier as
+the Account chips + Assign… picker; this adds the Provider field. The
+Registrar tab's Registration card gets an operator-only Edit link on the
+Registrar row (`regCanEdit` / `openRgDlg` in domains.js realDomainVals) that
+opens a picker (`rgOpen` / `rgRows`, markup beside the Assign-account dialog
+in app.html) listing every registrar connection from `GET /providers`
+filtered to `REGISTRAR_KINDS` (hoverdotcom, spaceship — the legacy
+autocomplete's filter) plus a "Registered externally" row that clears the
+link. Picking one calls `saveDomainRegistrar()` → the same
+`PUT /domains/{id}/account { account_ids, provider_id }` the legacy dialog
+used (the handler writes both fields unconditionally, so the current account
+ids ride along), toasts, patches the Domains list row's registrar column in
+place (same mapping as data.js hydrate: provider name for operators, brand
+for customers, "External" when unlinked) and reloads the detail.
+`saveDomainAccounts()` now sends the provider_id from the loaded detail
+(`domainProviderId()`), not the possibly-stale list row. The Registrar row
+and the header status read "Spaceship · registered" / "Registered through
+Spaceship" instead of the raw provider status. Demo-mode defaults for the new
+bindings live in app.js computeDomain. Verified with Playwright on
+austinginder.com: Spaceship → Registered externally (row "External", header
+"Registered externally", list column "External", DB provider_id NULL) →
+Spaceship again (all three restored, DB back to 8); one GET /providers and
+one PUT per change, no page errors.
+
 ## DNS add bar merges into the existing name+type record (2026-09-02)
 
 Constellix keeps ONE record per name+type and stacks the values inside it, so

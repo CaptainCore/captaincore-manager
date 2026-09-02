@@ -535,15 +535,59 @@ Object.assign(Component.prototype, {
   saveDomainAccounts(ids, label) {
     const dom = this._domain;
     if (!dom) return;
-    const row = (this.state.domList || this.DOMAINS).find(x => x.id === String(dom.domainId)) || {};
     const tid = this.toast('Saving account assignment…', { kind: 'loading' });
     this.api('/domains/' + dom.domainId + '/account', { method: 'PUT',
-      body: { account_ids: ids, provider_id: row.providerId || null } }).then(res => {
+      body: { account_ids: ids, provider_id: this.domainProviderId(dom) } }).then(res => {
       if (res && (res.errors || res.code)) { this.updateToast(tid, 'Could not save the assignment', { kind: 'error' }); return; }
       this.updateToast(tid, label, { kind: 'success' });
       this.setState({ dmaOpen: false });
       this.loadDomainDetail(dom.domainId);
     }).catch(() => this.updateToast(tid, 'Could not save the assignment', { kind: 'error' }));
+  },
+
+  // The domain's current registrar provider id: the loaded detail
+  // (GET /domain/{id} returns provider_id) first, else the list row.
+  domainProviderId(dom) {
+    if (dom.info && dom.info.provider_id != null && dom.info.provider_id !== '') return String(dom.info.provider_id);
+    const row = (this.state.domList || this.DOMAINS).find(x => x.id === String(dom.domainId)) || {};
+    return row.providerId ? String(row.providerId) : null;
+  },
+
+  // Registrar providers for the Edit registrar picker (legacy Edit Domain's
+  // Provider autocomplete, which listed hoverdotcom + spaceship connections).
+  // GET /providers is operator-only; fetched once per session.
+  REGISTRAR_KINDS: ['hoverdotcom', 'spaceship'],
+  loadRegistrarProviders() {
+    if (this._regProviders !== undefined) return;
+    this._regProviders = null; // loading
+    this.api('/providers').then(list => {
+      this._regProviders = (Array.isArray(list) ? list : []).filter(p => this.REGISTRAR_KINDS.includes(p.provider));
+      this.setState({});
+    }).catch(() => { this._regProviders = []; this.setState({}); });
+  },
+
+  // Set (or clear) where the domain is registered. Same endpoint as the
+  // account assignment — it writes both fields unconditionally, so the
+  // current account list rides along unchanged. providerId null = external.
+  saveDomainRegistrar(providerId, label) {
+    const dom = this._domain;
+    if (!dom) return;
+    const ids = ((dom.info && dom.info.accounts) || []).filter(a => a && a.account_id).map(a => String(a.account_id));
+    const tid = this.toast('Saving registrar…', { kind: 'loading' });
+    this.api('/domains/' + dom.domainId + '/account', { method: 'PUT',
+      body: { account_ids: ids, provider_id: providerId } }).then(res => {
+      if (res && (res.errors || res.code)) { this.updateToast(tid, 'Could not save the registrar', { kind: 'error' }); return; }
+      this.updateToast(tid, label, { kind: 'success' });
+      // Keep the Domains list column in step (same mapping as data.js hydrate).
+      const prov = providerId ? (this._regProviders || []).find(p => String(p.provider_id) === String(providerId)) : null;
+      const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+      const brand = (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting';
+      const registrar = providerId ? (isOp && prov ? prov.name : brand) : 'External';
+      const patch = r => String(r.id) === String(dom.domainId) ? { ...r, providerId: providerId || '', registrar } : r;
+      this.DOMAINS = (this.DOMAINS || []).map(patch);
+      this.setState(st => ({ rgOpen: false, domList: st.domList ? st.domList.map(patch) : st.domList }));
+      this.loadDomainDetail(dom.domainId);
+    }).catch(() => this.updateToast(tid, 'Could not save the registrar', { kind: 'error' }));
   },
 
   // ── Binding overrides (spread at the end of computeDomain) ───
@@ -662,9 +706,27 @@ Object.assign(Component.prototype, {
         sub: [a.sites + ' site' + (a.sites === 1 ? '' : 's'), a.plan].filter(Boolean).join(' · '),
         pick: () => this.saveDomainAccounts([...accIds, String(a.id)], 'Assigned ' + a.name)
       }));
+    // Registrar row: the connection's name (Hover.com / Spaceship) for
+    // operators, the brand for customers, "External" when unlinked. The
+    // provider_id link is what says "registered through us"; the remote
+    // lookup may still be loading or erroring, so it is only decoration.
+    const curProviderId = this.domainProviderId(dom);
+    const listRow = (s.domList || this.DOMAINS || []).find(x => String(x.id) === String(dom.domainId)) || {};
+    const regProv = curProviderId ? (this._regProviders || []).find(p => String(p.provider_id) === curProviderId) : null;
+    const regLabel = !curProviderId ? 'External'
+      : (regProv ? regProv.name : (listRow.registrar || 'Connected')) + (provider && provider.status ? ' · ' + provider.status : '');
+    const rgRows = !s.rgOpen ? [] : [
+      ...(this._regProviders || []).map(p => ({
+        label: p.name, sub: p.provider === 'hoverdotcom' ? 'Hover.com connection' : p.provider === 'spaceship' ? 'Spaceship connection' : p.provider,
+        current: String(p.provider_id) === curProviderId, action: String(p.provider_id) === curProviderId ? 'Current' : 'Select',
+        pick: () => { if (String(p.provider_id) !== curProviderId) this.saveDomainRegistrar(String(p.provider_id), 'Registered through ' + p.name); } })),
+      { label: 'Registered externally', sub: 'Managed at another registrar; no Anchor registrar connection',
+        current: !curProviderId, action: !curProviderId ? 'Current' : 'Select',
+        pick: () => { if (curProviderId) this.saveDomainRegistrar(null, 'Marked as registered externally'); } }
+    ];
     return {
       domTabs: lazyTabs,
-      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (provider ? ' · Registrar ' + (provider.status || 'connected') : ' · Registered externally'),
+      domStatus: (dom.noZone ? 'DNS inactive' : 'DNS active') + (curProviderId ? ' · Registered through ' + (regProv ? regProv.name : (listRow.registrar || 'Anchor Hosting')) : ' · Registered externally'),
       domHasAccounts: accs.length > 0 || isOpDom,
       domAccounts: accs.map(a => { const name = this.decodeHtml(a.name);
         return {
@@ -749,8 +811,16 @@ Object.assign(Component.prototype, {
       // code), the Contacts card, and the nameserver Edit (POST /nameservers
       // needs a connected registrar). The nameserver list stays — it comes
       // from the DNS zone and is informational.
-      regRegistrar: provider ? (provider.status || 'Connected') : 'External',
+      regRegistrar: regLabel,
       regConnected: !!provider, regExternal: !provider,
+      // Operator-only registrar edit (legacy Edit Domain's Provider field):
+      // pick a registrar connection or mark the domain registered externally.
+      regCanEdit: isOpDom,
+      openRgDlg: () => { this.loadRegistrarProviders(); this.setState({ rgOpen: true }); },
+      rgOpen: !!s.rgOpen,
+      closeRg: () => this.setState({ rgOpen: false }),
+      rgLoading: !!s.rgOpen && this._regProviders === null,
+      rgRows,
       nsCanEdit: !!provider,
       // Seed the edit dialog from the CURRENT nameservers (the design mock
       // seeded sample values into real sessions).
