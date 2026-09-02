@@ -1422,11 +1422,12 @@ Object.assign(Component.prototype, {
       .catch(() => this.updateToast(tid, 'Could not update the removal request', { kind: 'error' }));
   },
 
+  // Opens the in-app confirm (rmOpen, app.html "Request removal dialog") —
+  // no browser confirm(). rmGo → setSiteRemoved(true).
   requestSiteRemoval() {
     const site = this.FLEET.find(x => x.id === this.state.siteId);
     if (!site) return;
-    if (!confirm('Mark ' + site.name + ' for removal?\n\nEvery environment will be removed once an operator processes the request. Nothing is deleted right now, and you can cancel until then.')) return;
-    this.setSiteRemoved(true);
+    this.setState({ rmOpen: true });
   },
 
   cancelSiteRemoval() { this.setSiteRemoved(false); },
@@ -1469,6 +1470,13 @@ Object.assign(Component.prototype, {
       // "Request deletion" for customers vs "Mark for removal" for operators —
       // same call, but the operator is queueing their own work, not asking.
       rmRequestLabel: isOp ? 'Mark for removal…' : 'Request site deletion…',
+      // Request-removal confirm dialog (in-app, replaces the browser confirm).
+      rmOpen: !!s.rmOpen && !!site,
+      rmTitle: isOp ? 'Mark for removal' : 'Request site deletion',
+      rmSub: site ? site.name : '',
+      rmGoLabel: isOp ? 'Mark for removal' : 'Request deletion',
+      closeRm: () => this.setState({ rmOpen: false }),
+      rmGo: () => { this.setState({ rmOpen: false }); this.setSiteRemoved(true); },
       rmCanDelete: isOp,
       rmDelete: () => this.deleteSiteHard(),
       // Delete confirm dialog (app.html "Delete site dialog").

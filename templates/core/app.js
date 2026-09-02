@@ -45,7 +45,7 @@ class Component extends DCLogic {
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
-    deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false, delOpen: false,
+    deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false, delOpen: false, rmOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
     nsProto: 'sftp', nsPort: '2222',
@@ -1417,7 +1417,7 @@ class Component extends DCLogic {
   closeAllDialogs() {
     return {
       paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
-      ptoOpen: false, epOpen: false, delOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
+      ptoOpen: false, epOpen: false, delOpen: false, rmOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
       zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
       // Settings
@@ -2315,7 +2315,7 @@ class Component extends DCLogic {
       // Performance monitor (performance.js) — guarded, later mixin.
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
-      ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false }),
+      ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false, rmOpen: false, closeRm: () => {}, rmGo: () => {} }),
       usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator',
       ...(this.computeUptimeMonitor ? this.computeUptimeMonitor(real, s, isOp) : { umShow: false }),
       openUpdSettings: () => this.openUpdSettings(real, s),

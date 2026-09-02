@@ -15,6 +15,33 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Request removal: in-app confirm + the "Could not update" false alarm (2026-09-02)
+
+Two fixes on the site page's Request site deletion / Mark for removal action.
+
+**False error toast.** Every removal request (and cancel) showed "Could not
+update the removal request" for customers AND operators, yet the flag saved
+and the operator email went out. Root cause: `captaincore_site_update_func`
+ended in a bare `return;`, which on this WordPress build serialises to a
+200 with an EMPTY body (not the JSON `null`), and data.js `api()` called
+`r.json()` on it, which throws → the `.catch` toast. Confirmed by fetching
+the route from both roles (`len: 0`, content-type json). Fixed on both ends:
+the handler now returns `{ success, site_id, removed }`, and `api()` reads
+`text()` and treats an empty body as `null` so any other bare-return route
+stops masquerading as a failure. The legacy UI ignored this response, so the
+new shape breaks nothing there.
+
+**In-app confirm.** `requestSiteRemoval()` no longer calls `confirm()`; it
+opens `rmOpen` (site-detail.js computeRemoval: rmTitle / rmSub / rmGoLabel /
+closeRm / rmGo; markup beside the Delete site dialog in app.html). Title and
+button follow the role: "Request site deletion" / "Request deletion" for
+customers, "Mark for removal" / "Mark for removal" for operators. app.js
+resets `rmOpen` on route change with the other dialogs. Verified as a customer
+(user-switched session) on a local site: no browser dialog fired, the in-app
+dialog rendered, the POST returned `{"success":true,…,"removed":true}` with
+the success toast and the removal banner, and Cancel removal request returned
+`removed:false` and restored the Request link. No page errors.
+
 ## Version IS / IS NOT, and the popover on the Theme chip too (2026-09-02)
 
 The plugin chip's Version list gains the same IS / IS NOT toggle the Status
