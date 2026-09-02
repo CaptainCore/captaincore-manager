@@ -1461,9 +1461,21 @@ Object.assign(Component.prototype, {
 
   computeRemoval(s, site, isOp) {
     const marked = !!(site && site.removed);
+    // Environments that the request covers — from the loaded detail bundle
+    // (name + home_url), falling back to the list row's env summary while the
+    // bundle is still in flight. Shown as rows in the confirm dialog and
+    // named in the banner, so "every environment" is never left vague.
+    const detail = (site && this._detail && this._detail.siteId === site.id) ? this._detail : null;
+    const envList = detail && Array.isArray(detail.envs) && detail.envs.length
+      ? detail.envs.map(e => ({ name: e.environment || 'Production', url: String(e.home_url || e.address || '').replace(/^https?:\/\//, '').replace(/\/$/, '') }))
+      : (site ? String(site.envs || 'Prod').split(' · ').filter(Boolean).map(n => ({ name: n === 'Prod' ? 'Production' : n, url: '' })) : []);
+    const envNames = envList.map(e => e.name);
+    const envPhrase = envNames.length > 1 ? envNames.slice(0, -1).join(', ') + ' and ' + envNames[envNames.length - 1] : (envNames[0] || 'Production');
     return {
       rmMarked: marked,
-      rmBannerText: site ? site.name + ' is marked for removal. Every environment will be removed once an operator processes the request.' : '',
+      rmBannerText: site ? site.name + ' is marked for removal. The ' + envPhrase + ' environment' + (envNames.length > 1 ? 's' : '') + ' will be removed once an operator processes the request.' : '',
+      rmEnvs: envList.map(e => ({ name: e.name, url: e.url, hasUrl: !!e.url })),
+      rmEnvCount: envList.length === 1 ? 'This environment will be removed once an operator processes the request:' : 'These ' + envList.length + ' environments will be removed once an operator processes the request:',
       rmCancel: () => this.cancelSiteRemoval(),
       rmRequest: () => this.requestSiteRemoval(),
       rmRequestShow: !marked,

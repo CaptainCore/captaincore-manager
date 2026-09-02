@@ -4464,7 +4464,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeRm }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:14px 18px;display:flex;flex-direction:column;gap:8px">
-          <span style="font:400 var(--fs-13)/1.55 var(--sans)">Every environment will be removed once an operator processes the request.</span>
+          <span style="font:400 var(--fs-13)/1.55 var(--sans)">{{ rmEnvCount }}</span>
+          <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+            <sc-for list="{{ rmEnvs }}" as="re" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--rule)">
+                <span style="font:600 var(--fs-115) var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--bad);background:var(--bad-soft);border-radius:6px;padding:2px 7px;flex:none">{{ re.name }}</span>
+                <sc-if value="{{ re.hasUrl }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ re.url }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
           <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Nothing is deleted right now. An operator takes a final backup first, and you can cancel the request until then.</span>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">

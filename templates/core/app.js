@@ -2315,7 +2315,7 @@ class Component extends DCLogic {
       // Performance monitor (performance.js) — guarded, later mixin.
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
-      ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false, rmOpen: false, closeRm: () => {}, rmGo: () => {} }),
+      ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false, rmOpen: false, closeRm: () => {}, rmGo: () => {}, rmEnvs: [], rmEnvCount: '' }),
       usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator',
       ...(this.computeUptimeMonitor ? this.computeUptimeMonitor(real, s, isOp) : { umShow: false }),
       openUpdSettings: () => this.openUpdSettings(real, s),
