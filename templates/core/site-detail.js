@@ -334,19 +334,19 @@ Object.assign(Component.prototype, {
           // takes any mapped domain) — the confirm carries an extra warning
           // since the site may be unreachable on it until DNS verifies.
           canPrimary: !system && !primary,
-          setPrimary: () => {
+          setPrimary: async () => {
             const warn = d.is_active
               ? 'Set ' + name + ' as the primary domain? This runs a search-and-replace on the site.'
               : 'Set ' + name + ' as the primary domain? Its DNS has not verified yet, so the site may be unreachable on it until DNS is in place. This also runs a search-and-replace on the site.';
-            if (!confirm(warn)) return;
+            if (!(await this.uiConfirm(warn, { label: 'Set as primary' }))) return;
             const tid = this.toast('Setting ' + name + ' as primary…', { kind: 'loading' });
             this.api(path + '/primary', { method: 'PUT', body: { domain_id: d.id, run_search_and_replace: true } })
               .then(() => { this.updateToast(tid, name + ' is becoming primary (may take a few minutes)', { kind: 'success' }); this._sdRefetchSoon(); })
               .catch(() => this.updateToast(tid, 'Could not set primary', { kind: 'error' }));
           },
           canDel: !system && !primary,
-          del: () => {
-            if (!confirm('Delete the domain ' + name + '? This cannot be undone.')) return;
+          del: async () => {
+            if (!(await this.uiConfirm('Delete the domain ' + name + '? This cannot be undone.'))) return;
             const tid = this.toast('Deleting ' + name + '…', { kind: 'loading' });
             this.api(path, { method: 'DELETE', body: { domain_ids: [d.id] } })
               .then(() => { this.updateToast(tid, name + ' is being deleted', { kind: 'success' }); this._sdRefetchSoon(); })
@@ -837,12 +837,12 @@ Object.assign(Component.prototype, {
   // Kinsta clones live → staging server-side; the response is an operation id,
   // not a finished environment. pollProviderActions drives the rest of the
   // chain (its last step links the new environment) and toasts on completion.
-  createProviderStaging() {
+  async createProviderStaging() {
     const real = this._detail;
     if (!real || !real.site || this.state.edsEnvBusy) return;
     const provider = real.site.provider;
     const name = real.site.name || 'this site';
-    if (!confirm('Create a staging environment for ' + name + ' at ' + provider + '?\n\nThe host copies production into a new staging environment. This can take several minutes.')) return;
+    if (!(await this.uiConfirm('Create a staging environment for ' + name + ' at ' + provider + '?\n\nThe host copies production into a new staging environment. This can take several minutes.', { label: 'Create staging' }))) return;
     this.setState({ edsEnvBusy: 'create' });
     this.api('/providers/' + provider + '/deploy-to-staging', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
       this.setState({ edsEnvBusy: '' });
@@ -945,11 +945,11 @@ Object.assign(Component.prototype, {
     }).catch(() => { this.setState({ eeSaving: false }); this.toast('Could not add environment', { kind: 'error' }); });
   },
 
-  deleteEnvRecord() {
+  async deleteEnvRecord() {
     const real = this._detail, d = this._ee || {};
     if (!real || !d.environment_id) return;
     const name = (real.site && real.site.name) || '';
-    if (!confirm('Delete the ' + d.envName + ' environment record for ' + name + '? This removes it from CaptainCore only — the hosting environment itself is not touched.')) return;
+    if (!(await this.uiConfirm('Delete the ' + d.envName + ' environment record for ' + name + '? This removes it from CaptainCore only — the hosting environment itself is not touched.'))) return;
     this.api('/sites/' + real.siteId + '/environments/' + d.environment_id, { method: 'DELETE' }).then(res => {
       if (!res || res.code) { this.toast((res && res.message) || 'Could not delete environment', { kind: 'error' }); return; }
       this.setState({ eeOpen: false, env: 'Production' });
@@ -1065,13 +1065,13 @@ Object.assign(Component.prototype, {
     });
   },
 
-  realDeleteAddon(a, real, s) {
+  async realDeleteAddon(a, real, s) {
     const e = this.currentEnv(real, s);
     if (!e) return;
     const kind = s.addonKind === 'plugins' ? 'plugin' : 'theme';
     const name = (real.site && real.site.name) || '';
     if (kind === 'theme' && a.active) { this.toast("The active theme can't be deleted — activate another theme first.", { kind: 'error' }); return; }
-    if (!confirm('Delete ' + a.slug + ' from ' + name + ' (' + s.env + ')? Its files are removed from the site.')) return;
+    if (!(await this.uiConfirm('Delete ' + a.slug + ' from ' + name + ' (' + s.env + ')? Its files are removed from the site.'))) return;
     // Deactivate an active plugin first so delete never races a request
     // still running its code (v1 parity: wp plugin delete, no uninstall hooks).
     const code = (kind === 'plugin' && a.active ? 'wp plugin deactivate ' + a.slug + ' --skip-themes --skip-plugins && ' : '')
@@ -1139,11 +1139,11 @@ Object.assign(Component.prototype, {
 
   // v1 parity (core.php deleteUser): reassign is REQUIRED — wp user delete
   // --reassign=<ID> over /run/code (--yes: the daemon shell is non-interactive).
-  deleteSiteUser() {
+  async deleteSiteUser() {
     const real = this._detail, s = this.state, d = s.dsu || {};
     const env = this.currentEnv(real, s);
     if (!real || !env || !d.reassign) return;
-    if (!confirm('Delete user ' + d.username + ' from ' + env.environment + '? Content will be reassigned to ' + (d.reassignLogin || 'the selected user') + '.')) return;
+    if (!(await this.uiConfirm('Delete user ' + d.username + ' from ' + env.environment + '? Content will be reassigned to ' + (d.reassignLogin || 'the selected user') + '.'))) return;
     const cli = "wp user delete '" + this.termArg(d.username) + "' --reassign=" + (Number(d.reassign) || 0) + ' --yes --skip-themes --skip-plugins';
     this.setState({ dsuOpen: false });
     this.startJob({ label: 'delete-user',
@@ -1423,7 +1423,7 @@ Object.assign(Component.prototype, {
   },
 
   // Opens the in-app confirm (rmOpen, app.html "Request removal dialog") —
-  // no browser confirm(). rmGo → setSiteRemoved(true).
+  // no browser await this.uiConfirm(). rmGo → setSiteRemoved(true).
   requestSiteRemoval() {
     const site = this.FLEET.find(x => x.id === this.state.siteId);
     if (!site) return;

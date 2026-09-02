@@ -4454,6 +4454,30 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </div>
   </sc-if>
 
+  <!-- ══ Generic confirm dialog (toast.js uiConfirm — replaces window.confirm) ══ -->
+  <sc-if value="{{ ucOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeUc }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:80;display:flex;justify-content:center;align-items:flex-start;padding:14vh 20px">
+      <div onClick="{{ stopProp }}" style="width:440px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 var(--fs-15)/1.35 var(--sans)">{{ ucTitle }}</span><sc-if value="{{ ucHasSub }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ucSub }}</span></sc-if></span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeUc }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ ucHasBody }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:14px 18px;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ ucParas }}" as="up" hint-placeholder-count="1">
+              <span style="font:400 var(--fs-13)/1.55 var(--sans)">{{ up.t }}</span>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <button onClick="{{ closeUc }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>
+          <button onClick="{{ ucGo }}" style="border:none;background:{{ ucBtnBg }};color:white;font:600 var(--fs-13) var(--sans);padding:7px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ ucLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Request removal dialog (in-app confirm; setSiteRemoved) ══ -->
   <sc-if value="{{ rmOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeRm }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:14vh 20px">

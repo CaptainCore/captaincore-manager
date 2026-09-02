@@ -48,8 +48,8 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this.state.bpPid === pid) this.setState({ bpLoading: false }); });
   },
 
-  killBulkOp(op) {
-    if (!confirm('Kill "' + op.command + '" (PID ' + op.pid + ')? ' + (op.total - op.completed) + ' sites are still pending.')) return;
+  async killBulkOp(op) {
+    if (!(await this.uiConfirm('Kill "' + op.command + '" (PID ' + op.pid + ')? ' + (op.total - op.completed) + ' sites are still pending.', { label: 'Kill process', danger: true }))) return;
     this.setState({ bpKilling: true });
     this.api('/progress/' + op.pid, { method: 'DELETE' }).then(() => {
       this.setState({ bpKilling: false, bpPid: 0, bpDetail: null });

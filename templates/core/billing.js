@@ -209,8 +209,8 @@ Object.assign(Component.prototype, {
         dotBd: on ? 'var(--brand)' : 'var(--rule)', dotBg: on ? 'var(--brand)' : 'transparent',
         rowBd: on ? 'var(--brand)' : 'var(--rule)', rowBg: on ? 'var(--brand-soft)' : 'transparent',
         pick: () => this.setState({ invPaySel: String(pm.token) }),
-        remove: (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation();
-          if (!confirm('Remove ' + label + ' from your payment methods?')) return;
+        remove: async (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation();
+          if (!(await this.uiConfirm('Remove ' + label + ' from your payment methods?'))) return;
           const tid = this.toast('Removing ' + label + '…', { kind: 'loading' });
           this.api('/billing/payment-methods/' + pm.token, { method: 'DELETE' }).then(() => {
             this.updateToast(tid, label + ' removed', { kind: 'success' });
@@ -317,7 +317,7 @@ Object.assign(Component.prototype, {
         needsVerify, verify: () => this.openVerifyAch(pm.token),
         setPrimary: () => this.api('/billing/payment-methods/' + pm.token + '/primary', { method: 'PUT' })
           .then(() => this.loadBilling(true)).catch(() => {}),
-        remove: () => { if (!confirm('Remove ' + (m.brand || 'payment method') + ' ··' + (m.last4 || '') + '?')) return;
+        remove: async () => { if (!(await this.uiConfirm('Remove ' + (m.brand || 'payment method') + ' ··' + (m.last4 || '') + '?'))) return;
           this.api('/billing/payment-methods/' + pm.token, { method: 'DELETE' })
             .then(() => this.loadBilling(true)).catch(() => {}); } };
     });

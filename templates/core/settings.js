@@ -78,7 +78,7 @@ Object.assign(Component.prototype, {
       ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—']
     ].map(([k, v]) => ({ k, v, editable: true }));
     const keyRows = set.keys.map(k => ({ name: k.title, fp: 'SHA256:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
-      del: () => { if (!confirm('Delete SSH key "' + k.title + '"? This affects fleet site access.')) return;
+      del: async () => { if (!(await this.uiConfirm('Delete SSH key "' + k.title + '"? This affects fleet site access.'))) return;
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
     // Customers manage only their OWN recipes: list() marks non-owned rows
     // user_id "system" (content-stripped) — those get no Edit, and running a
@@ -284,9 +284,9 @@ Object.assign(Component.prototype, {
       .catch(() => this.updateToast(tid, 'Save failed', { kind: 'error' }));
   },
 
-  deleteProviderReal(reload) {
+  async deleteProviderReal(reload) {
     const id = this.state.provEditId;
-    if (!id || !confirm('Delete this provider?')) return;
+    if (!id || !(await this.uiConfirm('Delete this provider?'))) return;
     this.setState({ provDlgOpen: false });
     const tid = this.toast('Deleting provider…', { kind: 'loading' });
     this.api('/providers/' + id, { method: 'DELETE' })
@@ -332,9 +332,9 @@ Object.assign(Component.prototype, {
     req.then(() => this.loadSettings(true)).catch(() => {});
   },
 
-  deleteRecipeReal() {
+  async deleteRecipeReal() {
     const id = this.state.recipeEditId;
-    if (!id || !confirm('Delete this recipe?')) return;
+    if (!id || !(await this.uiConfirm('Delete this recipe?'))) return;
     this.setState({ recipeDlgOpen: false });
     this.api('/recipes/' + id, { method: 'DELETE' }).then(() => this.loadSettings(true)).catch(() => {});
   },

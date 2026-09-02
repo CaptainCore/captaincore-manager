@@ -158,7 +158,7 @@ Object.assign(Component.prototype, {
     this.aaRunCode(code, item.slug + ' on ' + name);
   },
 
-  aaUninstall(item) {
+  async aaUninstall(item) {
     const st = this._addon, real = this._detail;
     if (!st || !real) return;
     const name = (real.site && real.site.name) || '';
@@ -168,7 +168,7 @@ Object.assign(Component.prototype, {
       .find(x => x.slug === item.slug);
     if (cur && cur.mu) { this.toast(item.slug + " is a must-use plugin — it can't be deleted here.", { kind: 'error' }); return; }
     if (st.kind === 'themes' && cur && cur.active) { this.toast("The active theme can't be deleted — activate another theme first.", { kind: 'error' }); return; }
-    if (!confirm('Delete ' + item.slug + ' from ' + name + '? Its files are removed from the site.')) return;
+    if (!(await this.uiConfirm('Delete ' + item.slug + ' from ' + name + '? Its files are removed from the site.'))) return;
     const code = st.kind === 'themes'
       ? 'wp theme delete ' + item.slug + ' --skip-themes --skip-plugins'
       : (cur && cur.active ? 'wp plugin deactivate ' + item.slug + ' --skip-themes --skip-plugins && ' : '')

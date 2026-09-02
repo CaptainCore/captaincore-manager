@@ -117,14 +117,14 @@ Object.assign(Component.prototype, {
 
   // Delete one regular file (the remote script refuses directories and
   // symlinks). Optimistically drops the row + caches, then re-fetches for truth.
-  deleteFmFile(name) {
+  async deleteFmFile(name) {
     const fm = this._fm;
     const real = this._detail;
     if (!fm || !real) return;
     const path = fm.path;
     const p = (path ? path + '/' : '') + name;
     const site = (real.site && real.site.name) || '';
-    if (!confirm('Delete ' + p + ' from ' + site + '? The file is removed from the server.')) return;
+    if (!(await this.uiConfirm('Delete ' + p + ' from ' + site + '? The file is removed from the server.'))) return;
     this.api('/environment/' + fm.envId + '/files?path=' + encodeURIComponent(p), { method: 'DELETE' }).then(res => {
       if (!res || res.code || !res.deleted) {
         if (this.toast) this.toast((res && res.message) || 'Could not delete ' + name + '.', { kind: 'error' });
