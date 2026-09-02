@@ -95,8 +95,8 @@ Object.assign(Component.prototype, {
     }).catch(() => this.toast('Could not create the password', { kind: 'error' }));
   },
 
-  apRevokeReal(p) {
-    if (!confirm('Revoke "' + p.name + '"? Anything authenticating with it stops working immediately.')) return;
+  async apRevokeReal(p) {
+    if (!(await this.uiConfirm('Revoke "' + p.name + '"? Anything authenticating with it stops working immediately.'))) return;
     this.api('/me/application-passwords/' + p.uuid, { method: 'DELETE' }).then(res => {
       if (res && res.error) { this.toast(res.error, { kind: 'error' }); return; }
       this._appPws = (this._appPws || []).filter(x => x.uuid !== p.uuid);

@@ -377,7 +377,7 @@ Object.assign(Component.prototype, {
         copyLink: () => { try { navigator.clipboard.writeText(a.report_url || ''); } catch (e) {}
           this.setState({ copied: 'aud' + a.site_audit_id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
         mark: s.copied === 'aud' + a.site_audit_id ? 'Copied ✓' : 'Copy link',
-        cancel: () => { if (!confirm('Cancel this audit request?')) return;
+        cancel: async () => { if (!(await this.uiConfirm('Cancel this audit request?', { label: 'Cancel request', danger: true }))) return;
           this.api('/site-audits/' + a.site_audit_id + '/cancel', { method: 'POST', body: {} }).then(reload).catch(() => {}); }
       };
     });

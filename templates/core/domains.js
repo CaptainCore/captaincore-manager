@@ -237,10 +237,11 @@ Object.assign(Component.prototype, {
   // ── Admin zone teardown (v1 parity; each has a v1 DELETE route) ──
   // DNS zone → Constellix, forwarding → Mailgun routes, sending → Mailgun
   // sending domain. All destructive, so each confirms with the domain name.
-  deleteZone(kind) {
+  async deleteZone(kind) {
     const dom = this._domain;
     if (!dom) return;
-    const name = (dom.info && dom.info.name) || 'this domain';
+    // GET /domain/{id} carries no name; fall back to the Domains list row.
+    const name = (dom.info && dom.info.name) || ((this.state.domList || this.DOMAINS || []).find(x => String(x.id) === String(dom.domainId)) || {}).name || 'this domain';
     const spec = {
       dns:     { path: '/domain/' + dom.domainId + '/dns-zone',        label: 'DNS zone',
                  warn: 'Delete the DNS zone for ' + name + '? Every record is removed at Constellix and the domain stops resolving through Anchor.' },
@@ -249,7 +250,7 @@ Object.assign(Component.prototype, {
       sending: { path: '/domain/' + dom.domainId + '/mailgun',          label: 'Email sending',
                  warn: 'Delete the sending zone for ' + name + '? Any site using these SMTP credentials will stop sending mail.' }
     }[kind];
-    if (!spec || !confirm(spec.warn)) return;
+    if (!spec || !(await this.uiConfirm(spec.warn))) return;
     this.setState({ zoneBusy: kind });
     this.api(spec.path, { method: 'DELETE' }).then(() => {
       if (this._domain !== dom) return;
@@ -294,7 +295,7 @@ Object.assign(Component.prototype, {
   // DNS zone, Mailgun forwarding (apex), and Mailgun sending zone. Does not
   // cancel a registrar registration. extras is optional: when we already
   // know which linked services exist (detail page), the confirm names them.
-  deleteDomain(id, name, extras) {
+  async deleteDomain(id, name, extras) {
     if (!id) return;
     const bits = [];
     if (extras) {
@@ -305,7 +306,7 @@ Object.assign(Component.prototype, {
     const cascade = bits.length
       ? 'This also deletes ' + (bits.length === 1 ? bits[0] : bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1]) + '.'
       : 'This also deletes the linked DNS zone, email forwarding, and Mailgun sending zone if they exist.';
-    if (!confirm('Delete domain ' + name + '?\n\n' + cascade + '\n\nThe registrar registration is not cancelled. This cannot be undone.')) return;
+    if (!(await this.uiConfirm('Delete domain ' + name + '?\n\n' + cascade + '\n\nThe registrar registration is not cancelled. This cannot be undone.'))) return;
     if (!this._hydrated) {
       this.DOMAINS = (this.DOMAINS || []).filter(d => String(d.id) !== String(id));
       this.setState(st => ({
@@ -398,16 +399,16 @@ Object.assign(Component.prototype, {
   // the activate route runs — so re-running activation is how you (re)push the
   // Mailgun records into an Anchor-managed zone. Needed when the zone was
   // created AFTER forwarding was switched on, or when records were edited away.
-  injectForwardingDns() {
+  async injectForwardingDns() {
     const dom = this._domain;
     if (!dom) return;
-    if (!confirm('Add the Mailgun verification records to this domain’s Anchor DNS zone?\n\nExisting Mailgun TXT/CNAME/MX entries are updated in place.')) return;
+    if (!(await this.uiConfirm('Add the Mailgun verification records to this domain’s Anchor DNS zone?\n\nExisting Mailgun TXT/CNAME/MX entries are updated in place.', { label: 'Add records' }))) return;
     const tid = this.toast('Adding records to the DNS zone…', { kind: 'loading' });
-    this.api('/domain/' + dom.domainId + '/activate-forward-email', { method: 'POST', body: {} }).then(res => {
+    this.api('/domain/' + dom.domainId + '/activate-forward-email', { method: 'POST', body: {} }).then(async res => {
       if (this._domain !== dom) return;
       if (res && res.code === 'mx_conflict') {
         this.updateToast(tid, 'Existing MX records found', { kind: 'info' });
-        if (confirm('This domain already has MX records. Replace them with Mailgun’s forwarding MX records?')) this.activateForwarding(true);
+        if (await this.uiConfirm('This domain already has MX records. Replace them with Mailgun’s forwarding MX records?', { label: 'Replace MX records', danger: true })) this.activateForwarding(true);
         return;
       }
       if (res && res.code) { this.updateToast(tid, res.message || 'Could not add the records', { kind: 'error' }); return; }
@@ -422,12 +423,12 @@ Object.assign(Component.prototype, {
     if (!dom) return;
     dom.fwdLoading = true; dom.fwdErr = '';
     this.setState({});
-    this.api('/domain/' + dom.domainId + '/activate-forward-email', { method: 'POST', body: overwrite ? { overwrite_mx: true } : {} }).then(res => {
+    this.api('/domain/' + dom.domainId + '/activate-forward-email', { method: 'POST', body: overwrite ? { overwrite_mx: true } : {} }).then(async res => {
       if (this._domain !== dom) return;
       dom.fwdLoading = false;
       if (res && res.code === 'mx_conflict') {
         this.setState({});
-        if (confirm('This domain already has MX records. Overwrite them with Mailgun forwarding MX records?')) this.activateForwarding(true);
+        if (await this.uiConfirm('This domain already has MX records. Overwrite them with Mailgun forwarding MX records?', { label: 'Overwrite MX records', danger: true })) this.activateForwarding(true);
         return;
       }
       if (res && res.code) { dom.fwdErr = res.message || 'Activation failed.'; this.setState({}); return; }
@@ -491,12 +492,12 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this._domain === dom) { dom.suppLoading = false; dom.suppErr = 'Could not load suppressions.'; this.setState({}); } });
   },
 
-  deleteMailgunSuppression(item) {
+  async deleteMailgunSuppression(item) {
     const dom = this._domain;
     if (!dom) return;
     const type = dom.suppType || 'bounces';
     const identifier = type === 'whitelists' ? item.value : item.address;
-    if (!identifier || !confirm('Remove ' + identifier + ' from the ' + (type === 'whitelists' ? 'allowlist' : type) + '?')) return;
+    if (!identifier || !(await this.uiConfirm('Remove ' + identifier + ' from the ' + (type === 'whitelists' ? 'allowlist' : type) + '?'))) return;
     dom.suppLoading = true;
     this.setState({});
     this.api('/domain/' + dom.domainId + '/mailgun/suppressions/' + type + '?address=' + encodeURIComponent(identifier), { method: 'DELETE' })
@@ -733,8 +734,8 @@ Object.assign(Component.prototype, {
           name,
           open: () => this.openAccount(String(a.account_id)),
           canDrop: isOpDom,
-          drop: (e) => { e.stopPropagation();
-            if (!confirm('Remove ' + name + ' from this domain? Its members lose access to the domain.')) return;
+          drop: async (e) => { e.stopPropagation();
+            if (!(await this.uiConfirm('Remove ' + name + ' from this domain? Its members lose access to the domain.'))) return;
             this.saveDomainAccounts(accIds.filter(id => id !== String(a.account_id)), 'Removed ' + name); }
         }; }),
       domCanAssign: isOpDom,

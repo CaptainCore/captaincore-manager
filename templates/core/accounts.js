@@ -324,11 +324,11 @@ Object.assign(Component.prototype, {
         bd: sel === u.user_id ? 'var(--brand)' : 'var(--rule)',
         bg: sel === u.user_id ? 'var(--brand-soft)' : 'var(--paper)',
         pick: () => this.setState({ transferPick: u.user_id }) })),
-      confirmTransfer: () => {
+      confirmTransfer: async () => {
         const uid = this.state.transferPick;
         if (!uid || !acc) return;
         const u = candidates.find(x => x.user_id === uid);
-        if (!confirm('Make ' + (u ? (u.name || u.email) : 'this user') + ' the billing owner? You will be demoted to Full access.')) return;
+        if (!(await this.uiConfirm('Make ' + (u ? (u.name || u.email) : 'this user') + ' the billing owner? You will be demoted to Full access.', { label: 'Transfer ownership' }))) return;
         this.setState({ transferOpen: false });
         this.api('/accounts/' + acc.accountId + '/users/' + uid + '/level', { method: 'PUT', body: { level: 'full-billing' } })
           .then(reload).catch(() => {});
@@ -436,8 +436,8 @@ Object.assign(Component.prototype, {
       // v1 parity (deleteAccount): admin-only; the route also kicks off the
       // CLI's background "account delete" cleanup.
       accShowDelete: (window.CC_BOOT || {}).dcRole === 'operator',
-      accDelete: () => {
-        if (!confirm('Delete account "' + (this.decodeHtml(a.name) || '') + '"? This cannot be undone.')) return;
+      accDelete: async () => {
+        if (!(await this.uiConfirm('Delete account "' + (this.decodeHtml(a.name) || '') + '"? This cannot be undone.'))) return;
         this.api('/accounts/' + acc.accountId, { method: 'DELETE' }).then(() => {
           this.ACCOUNTS = this.ACCOUNTS.filter(x => x.id !== String(acc.accountId));
           this._account = null;
@@ -455,7 +455,7 @@ Object.assign(Component.prototype, {
           lvlFg: label === 'Owner' ? 'var(--brand-ink)' : 'var(--ink-dim)',
           canSwitch: false, removable: label !== 'Owner',
           switchTo: () => {},
-          remove: () => { if (!confirm('Remove ' + u.email + ' from this account?')) return;
+          remove: async () => { if (!(await this.uiConfirm('Remove ' + u.email + ' from this account?'))) return;
             this.api('/accounts/' + acc.accountId + '/users/' + u.user_id, { method: 'DELETE' })
               .then(reload).catch(() => {}); } }; }),
       accInvites: (s.accInvites || []).map(iv => ({ ...iv,

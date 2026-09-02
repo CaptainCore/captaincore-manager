@@ -45,7 +45,7 @@ class Component extends DCLogic {
     qsOpen: '', bkOpen: '', logFile: 'error.log', copied: '',
     qsFile: '', diffMode: 'unified', bkDirs: { 'wp-content/': true }, bkPreview: '', bkSel: {},
     qsDialog: '', qsView: 'components', rbComp: '', bkDialog: '', shared: null, shareDraft: '',
-    deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false, delOpen: false, rmOpen: false,
+    deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false, delOpen: false, rmOpen: false, ucOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
     nsProto: 'sftp', nsPort: '2222',
@@ -1170,7 +1170,7 @@ class Component extends DCLogic {
       selAllMark: allSel ? '✓' : '', selAllBg: allSel ? 'var(--brand)' : 'var(--paper)',
       toggleAll: () => this.setState({ sel: allSel ? {} : Object.fromEntries(filtered.map(x => [x.id, true])) }),
       bulkActions: [['Sync data', 'sync-data'], ['Update WP', 'update'], ['Back up', 'backup'], ['Apply HTTPS', 'apply-https'], ['Scan errors', 'scan-errors']].map(([label, tool]) => ({ label,
-        go: () => {
+        go: async () => {
           if (!this._hydrated) { this.runJob(label.toLowerCase().replace(/ /g, '-'), selIds.length + ' sites'); this.setState({ sel: {}, dockOpen: true }); return; }
           // Selection is site-level; bulk-tools wants environment ids — use
           // each selected site's Production environment.
@@ -1182,7 +1182,7 @@ class Component extends DCLogic {
             if (prod && prod.environment_id) envIds.push(prod.environment_id);
           });
           if (!envIds.length) { this.toast('No environments resolved for the selection', { kind: 'error' }); return; }
-          if (!confirm(label + ' on ' + envIds.length + ' site' + (envIds.length === 1 ? '' : 's') + ' (production)?')) return;
+          if (!(await this.uiConfirm(label + ' on ' + envIds.length + ' site' + (envIds.length === 1 ? '' : 's') + ' (production)?', { label }))) return;
           const tid = this.toast(label + ' · dispatching to ' + envIds.length + ' sites…', { kind: 'loading' });
           this.api('/sites/bulk-tools', { method: 'POST', body: { tool, environments: envIds, params: {} } })
             .then(res => {
@@ -2360,8 +2360,8 @@ class Component extends DCLogic {
             ...(!sh.isCust ? [{ label: 'Set as customer contact', act: () => this.saveSiteAccounts({ customer_id: sh.accId }, sh.name + ' is now the customer contact') }] : []),
             ...(!sh.isBill ? [{ label: 'Set as billing contact', act: () => this.saveSiteAccounts({ account_id: sh.accId }, sh.name + ' is now the billing contact') }] : []),
             { label: 'Open account', act: () => this.openAccount(sh.accId) },
-            ...(!sh.isCust && !sh.isBill ? [{ label: 'Remove from site', act: () => {
-              if (confirm('Remove ' + sh.name + ' from this site?')) this.saveSiteAccounts({ shared_with: this.siteAcctIds(real).filter(id => id !== sh.accId) }, 'Removed ' + sh.name); } }] : [])
+            ...(!sh.isCust && !sh.isBill ? [{ label: 'Remove from site', act: async () => {
+              if (await this.uiConfirm('Remove ' + sh.name + ' from this site?')) this.saveSiteAccounts({ shared_with: this.siteAcctIds(real).filter(id => id !== sh.accId) }, 'Removed ' + sh.name); } }] : [])
           ]);
         },
         open: () => { if (sh.accId) this.openAccount(sh.accId); },
@@ -2380,9 +2380,9 @@ class Component extends DCLogic {
       aktBg: s.addonKind === 'themes' ? 'var(--panel-2)' : 'transparent', aktFg: s.addonKind === 'themes' ? 'var(--ink)' : 'var(--ink-dim)',
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
       addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
-      doUpdateAll: () => {
+      doUpdateAll: async () => {
         if (!real) { this.runJob('update-wp', site.name + ' · ' + updCount + ' components'); return; }
-        if (!confirm('Run a managed update on ' + site.name + '? Updates pending components with quicksaves before and after.')) return;
+        if (!(await this.uiConfirm('Run a managed update on ' + site.name + '? Updates pending components with quicksaves before and after.', { label: 'Run update' }))) return;
         this.runTool({ label: 'update', real, s,
           dispatch: () => this.bulkTool('update', real, s),
           onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
@@ -3316,7 +3316,9 @@ class Component extends DCLogic {
       mainRef: el => { this._mainEl = el; },
       ddQ: s.ddQ, onDdQ: e => this.setState({ ddQ: e.target.value }),
       stopProp: (e) => e.stopPropagation(),
-      onPalInput: (e) => this.setState({ palQuery: e.target.value, palIdx: 0 })
+      onPalInput: (e) => this.setState({ palQuery: e.target.value, palIdx: 0 }),
+      // Generic in-app confirm dialog (toast.js uiConfirm) — guarded, later mixin.
+      ...(this.confirmVals ? this.confirmVals(s) : { ucOpen: false, ucParas: [], ucHasBody: false, ucGo: () => {}, closeUc: () => {} })
     };
   }
 }

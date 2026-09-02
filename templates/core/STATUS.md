@@ -15,6 +15,41 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## No more window.confirm(): one in-app confirm for everything (2026-09-02)
+
+All 36 browser `confirm()` calls across the modules (domain / zone / account /
+addon / file / env / user deletes, payment-method removal, app-password
+revoke, bulk-op kill, bulk tool runs, report send, ownership transfer, MX
+overwrite prompts, maintenance mode, staging create, …) now go through
+`this.uiConfirm(message, opts)` in toast.js, which returns a Promise<boolean>
+and renders ONE dialog (`ucOpen` / `ucTitle` / `ucParas` / `ucLabel` /
+`ucBtnBg` / `ucGo` / `closeUc`, bound via `confirmVals()` spread into the
+global vals in app.js; markup beside the Request-removal dialog in app.html,
+z-index 80 so it sits above other dialogs). Each call site became
+`if (!(await this.uiConfirm(…))) return;` and its enclosing function was
+marked async — node --check on every module is the proof each await is legal.
+
+Message handling: a plain string splits at its first "?" into title + body
+(a leading statement before the question drops into the body, e.g. "This
+domain already has MX records." + "Replace them…?"); blank lines start new
+paragraphs; the body section collapses when there is none. The action button
+defaults to the title's verb for Delete / Remove / Revoke, else "Confirm",
+and 16 call sites pass an explicit label (Transfer ownership, Send report,
+Kill process, Cancel request, Deploy defaults, Reset permissions, Migrate
+and overwrite, Enable maintenance / Restore site, Cancel script, the bulk
+action's own label, Run update, Add records, Replace / Overwrite MX records,
+Set as primary, Create staging). Red button when the verb is destructive
+(Delete/Remove/Revoke/Kill/Cancel/Overwrite/Migrate) or the text says
+"cannot be undone" / "OVERWRITES"; blue otherwise. A newer uiConfirm while
+one is open resolves the older one false. Side fix: the zone-delete confirm
+said "this domain" because GET /domain/{id} carries no name; it now falls
+back to the Domains list row. Verified with Playwright as the operator:
+Delete domain (two-paragraph body, red Delete), Delete DNS zone (named
+domain), Deploy defaults (no body, blue button) — each cancelled, zero
+mutating requests, zero browser dialogs, no page errors. Anything that needs
+a typed input or a picker (delete site, request removal, new-site flows)
+keeps its purpose-built dialog.
+
 ## Request removal: in-app confirm + the "Could not update" false alarm (2026-09-02)
 
 Two fixes on the site page's Request site deletion / Mark for removal action.

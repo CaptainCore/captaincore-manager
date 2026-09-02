@@ -49,15 +49,15 @@ Object.assign(Component.prototype, {
   },
 
   // ── One-click tools (confirm only) ───────────────────────────
-  toolDeployDefaults(real, s) {
-    if (!confirm('Deploy defaults on ' + this.toolSiteName(real, s) + '?')) return;
+  async toolDeployDefaults(real, s) {
+    if (!(await this.uiConfirm('Deploy defaults on ' + this.toolSiteName(real, s) + '?', { label: 'Deploy defaults' }))) return;
     this.runTool({ label: 'deploy-defaults', real, s,
       dispatch: () => this.bulkTool('deploy-defaults', real, s),
       onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
   },
 
-  toolResetPermissions(real, s) {
-    if (!confirm('Reset file permissions to defaults on ' + this.toolSiteName(real, s) + '?')) return;
+  async toolResetPermissions(real, s) {
+    if (!(await this.uiConfirm('Reset file permissions to defaults on ' + this.toolSiteName(real, s) + '?', { label: 'Reset permissions' }))) return;
     this.runTool({ label: 'reset-permissions', real, s,
       dispatch: () => this.cliTool({ command: 'reset-permissions' }, real, s) });
   },
@@ -101,10 +101,10 @@ Object.assign(Component.prototype, {
       onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
   },
 
-  toolMigrate(real, s) {
+  async toolMigrate(real, s) {
     const url = (this.state.mgUrl || '').trim();
     if (!url) return;
-    if (!confirm('Migrate from backup URL? This OVERWRITES the existing site at ' + this.toolSiteName(real, s) + '.')) return;
+    if (!(await this.uiConfirm('Migrate from backup URL? This OVERWRITES the existing site at ' + this.toolSiteName(real, s) + '.', { label: 'Migrate and overwrite', danger: true }))) return;
     const updateUrls = !!this.state.mgUpdateUrls;
     this.setState({ toolDlg: '' });
     this.runTool({ label: 'migrate', real, s,
@@ -113,11 +113,11 @@ Object.assign(Component.prototype, {
       onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
   },
 
-  toolMaintenance(real, s, enable) {
+  async toolMaintenance(real, s, enable) {
     const st = this.state;
     const name = this.toolSiteName(real, s);
-    if (!confirm(enable ? 'Put ' + name + ' into maintenance mode? Visitors will see the notice below.'
-      : 'Restore ' + name + ' and remove the maintenance notice?')) return;
+    if (!(await this.uiConfirm(enable ? 'Put ' + name + ' into maintenance mode? Visitors will see the notice below.'
+      : 'Restore ' + name + ' and remove the maintenance notice?', { label: enable ? 'Enable maintenance' : 'Restore site' }))) return;
     this.setState({ toolDlg: '' });
     this.runTool({ label: enable ? 'maintenance-on' : 'maintenance-off', real, s,
       dispatch: () => this.cliTool(enable
@@ -154,8 +154,8 @@ Object.assign(Component.prototype, {
       .catch(() => this.setState({ esBusy: false, esErr: 'Could not save. Try again.' }));
   },
 
-  deleteScript(real, sc) {
-    if (!confirm('Cancel this scheduled script?')) return;
+  async deleteScript(real, sc) {
+    if (!(await this.uiConfirm('Cancel this scheduled script?', { label: 'Cancel script', danger: true }))) return;
     this.api('/scripts/' + sc.script_id, { method: 'DELETE' })
       .then(() => {
         this.toast('Scheduled script cancelled.', { kind: 'success' });

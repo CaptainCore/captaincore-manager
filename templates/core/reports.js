@@ -58,11 +58,11 @@ Object.assign(Component.prototype, {
       .catch(() => this.setState({ repPreviewHtml: '<p style="padding:24px;font-family:sans-serif">Preview failed.</p>', repPreviewLoading: false }));
   },
 
-  sendReport() {
+  async sendReport() {
     const body = this.reportTargetBody();
     const recipient = (this.state.repEmail || '').trim();
     if (!body || !recipient) { this.setState({ repSendMsg: 'Enter a recipient email first.' }); return; }
-    if (!confirm('Send this report to ' + recipient + '?')) return;
+    if (!(await this.uiConfirm('Send this report to ' + recipient + '?', { label: 'Send report' }))) return;
     this.setState({ repSendMsg: 'Sending…' });
     this.api(this.reportBase() + '/send', { method: 'POST', body: { ...body, ...this.reportRange(this.state.repRange), recipient } })
       .then(res => this.setState({ repSendMsg: (res && res.message) || 'Report sent.', repPreviewOpen: false }))
