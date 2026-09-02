@@ -2325,9 +2325,11 @@ class Component extends DCLogic {
       ...(this.computeUptimeMonitor ? this.computeUptimeMonitor(real, s, isOp) : { umShow: false }),
       openUpdSettings: () => this.openUpdSettings(real, s),
       ...this.updSettingsVals(real, s),
-      // Operators get the Uptime monitor as a switch row (umShow) instead of
-      // the static value; customers keep the read-only row.
-      envRows: (real ? this.realEnvRows(real, s).filter(([k]) => !(isOp && k === 'Uptime monitor')) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']]).map(([k, v]) => ({
+      // Uptime monitor and Managed updates are operator-only rows: operators
+      // get the monitor as a switch row (umShow) plus the Managed updates
+      // value and its Update settings link; everyone else sees neither.
+      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']])
+        .filter(([k]) => k === 'Uptime monitor' ? false : (k === 'Managed updates' ? isOp : true)).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)

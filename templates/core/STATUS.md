@@ -22,7 +22,10 @@ operators the Environment card's read-only "Uptime monitor: On/Off" row is
 replaced by a switch row (umShow / umToggle in site-detail.js
 computeUptimeMonitor; realEnvRows drops the static row when isOp) that
 POSTs `/sites/{id}/{env}/monitor { monitor: "1"|"0" }` with an optimistic
-flip that reverts on failure. Customers keep the read-only row.
+flip that reverts on failure. Follow-up the same day: the Uptime monitor
+and Managed updates rows are hidden for everyone except operators (the
+envRows filter in computeDetail), so a customer's Environment card stops
+at Visits / wk. Verified with Playwright in both roles.
 
 The route is now administrator-only server-side: the legacy UI only
 showed the switch to operators but the handler accepted any site owner.
