@@ -3967,8 +3967,11 @@ function captaincore_site_update_func( $request ) {
 		}
 	}
 
-	$query = CaptainCore\Sites::update(["details" => json_encode( $details ) ], [ "site_id" => $site_id ]);
-	return;
+	CaptainCore\Sites::update(["details" => json_encode( $details ) ], [ "site_id" => $site_id ]);
+	// Always answer with JSON. A bare `return;` serialises to an EMPTY body on
+	// this WordPress build, which the SPA's fetch().json() rejects, so every
+	// removal request showed "Could not update" even though the flag saved.
+	return [ 'success' => true, 'site_id' => (int) $site_id, 'removed' => ! empty( $details->removed ) ];
 }
 function captaincore_site_delete_func( $request ) {
 	$site_id = $request['id'];

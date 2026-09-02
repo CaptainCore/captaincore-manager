@@ -11,7 +11,10 @@ Object.assign(Component.prototype, {
       body: opts.body ? JSON.stringify(opts.body) : undefined
     }).then(r => {
       if (r.status === 401 || r.status === 403) throw new Error('auth');
-      return r.json();
+      // Some routes answer 200 with an empty body (a handler that ends in a
+      // bare `return;`). Treat that as null instead of a JSON parse failure,
+      // which used to surface as a spurious "Could not …" toast.
+      return r.text().then(t => (t && t.trim()) ? JSON.parse(t) : null);
     });
   },
 
