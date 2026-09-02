@@ -42,22 +42,67 @@ Object.assign(Component.prototype, {
   },
 
   // Version/status options for the selected plugin, fetched fleet-wide.
-  loadPluginSubfilters(name) {
-    const token = this._subToken = (this._subToken || 0) + 1;
-    this.PLUGVER_OPTIONS = [];
-    this.PLUGSTATUS_OPTIONS = [];
+  // Sub-facet state keys per chip kind. Ver/Status pick a value, VerIs/Is
+  // flip that value between IS and IS NOT (server: per-entry include/exclude).
+  SUB_KEYS: {
+    theme:  { name: 'fTheme',  ver: 'fThemeVer', verIs: 'fThemeVerIs', status: 'fThemeStatus', statusIs: 'fThemeIs', type: 'themes',  label: 'theme' },
+    plugin: { name: 'fPlugin', ver: 'fPlugVer',  verIs: 'fPlugVerIs',  status: 'fPlugStatus', statusIs: 'fPlugIs',  type: 'plugins', label: 'plugin' }
+  },
+  subFacetReset(kind) {
+    const k = this.SUB_KEYS[kind];
+    return { [k.ver]: 'Any', [k.verIs]: 'IS', [k.status]: 'Any', [k.statusIs]: 'IS' };
+  },
+
+  // Version + status option lists for one theme/plugin name. The two
+  // endpoints search plugins AND themes by name, so pick the row whose
+  // entries carry this chip's type (a theme and a plugin can share a slug).
+  loadSubfilters(kind, name) {
+    const k = this.SUB_KEYS[kind];
+    this._sub = this._sub || {};
+    const slot = this._sub[kind] = { name, token: ((this._sub[kind] || {}).token || 0) + 1, vers: [], stats: [] };
     const enc = encodeURIComponent(name);
+    const pickRow = (rows, listKey) => { const cands = (Array.isArray(rows) ? rows : []).filter(x => x && x.name === name);
+      return cands.find(x => (x[listKey] || []).some(e => e.type === k.type)) || cands[0]; };
     Promise.all([this.api('/filters/' + enc + '/versions/'), this.api('/filters/' + enc + '/statuses/')]).then(([vers, stats]) => {
-      if (token !== this._subToken) return;
-      const vRow = (Array.isArray(vers) ? vers : []).find(x => x && x.name === name);
-      const sRow = (Array.isArray(stats) ? stats : []).find(x => x && x.name === name);
-      this.PLUGVER_OPTIONS = (vRow && vRow.versions) || [];
-      this.PLUGSTATUS_OPTIONS = (sRow && sRow.statuses) || [];
+      if (this._sub[kind] !== slot) return;
+      const vRow = pickRow(vers, 'versions'), sRow = pickRow(stats, 'statuses');
+      slot.vers = ((vRow && vRow.versions) || []).filter(e => !e.type || e.type === k.type);
+      slot.stats = ((sRow && sRow.statuses) || []).filter(e => !e.type || e.type === k.type);
       this.setState({});
     }).catch(() => {});
   },
 
-  // Rows for a version/status sub-facet inside the plugin chip popover:
+  // Chip suffix so a negated sub-filter is legible without opening the
+  // popover: "Plugin · elementor-pro · ≠ 4.2.3 · inactive".
+  subFacetSuffix(s, kind) {
+    const k = this.SUB_KEYS[kind]; const out = [];
+    if (s[k.ver] && s[k.ver] !== 'Any') out.push((s[k.verIs] === 'IS NOT' ? '≠ ' : '') + s[k.ver]);
+    if (s[k.status] && s[k.status] !== 'Any') out.push((s[k.statusIs] === 'IS NOT' ? 'not ' : '') + s[k.status]);
+    return out.length ? ' · ' + out.join(' · ') : '';
+  },
+
+  // Per-chip popover bindings (spread into the facet row in app.js).
+  subFacetVals(s, kind, demoVerCnt, demoStatCnt) {
+    const k = this.SUB_KEYS[kind];
+    const slot = (this._sub && this._sub[kind] && this._sub[kind].name === s[k.name]) ? this._sub[kind] : null;
+    const demo = kind === 'plugin' && !this._hydrated;
+    const vers = this._hydrated ? (slot ? slot.vers : []) : (demo ? Object.keys(demoVerCnt || {}).map(x => ({ name: x, count: demoVerCnt[x] })) : []);
+    const stats = this._hydrated ? (slot ? slot.stats : []) : (demo ? Object.keys(demoStatCnt || {}).map(x => ({ name: x, count: demoStatCnt[x] })) : []);
+    const chips = key => ['IS', 'IS NOT'].map(label => ({ label,
+      bg: s[key] === label ? 'var(--panel-2)' : 'transparent',
+      fg: s[key] === label ? 'var(--ink)' : 'var(--ink-dim)',
+      go: () => { this.setState({ [key]: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } }));
+    return {
+      verOpts: this.subFacetOpts(vers, s[k.ver], k.ver),
+      statusOpts: this.subFacetOpts(stats, s[k.status], k.status),
+      verIsChips: chips(k.verIs),
+      isChips: chips(k.statusIs),
+      removeLabel: '✕ Remove ' + k.label + ' filter',
+      clearSub: () => { this.setState({ [k.name]: 'Any', ...this.subFacetReset(kind), ddOpen: '', sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); }
+    };
+  },
+
+  // Rows for a version/status sub-facet inside a theme/plugin chip popover:
   // largest site count first; picking keeps the popover open for stacking.
   subFacetOpts(options, cur, key) {
     const sorted = (options || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0) || String(a.name).localeCompare(String(b.name)));
@@ -74,19 +119,31 @@ Object.assign(Component.prototype, {
       const s = this.state;
       const themeSel = s.fTheme && s.fTheme !== 'Any';
       const plugSel = s.fPlugin && s.fPlugin !== 'Any';
-      if (plugSel && this._subFor !== s.fPlugin) { this._subFor = s.fPlugin; this.loadPluginSubfilters(s.fPlugin); }
-      if (!plugSel) { this._subFor = null; this.PLUGVER_OPTIONS = []; this.PLUGSTATUS_OPTIONS = []; }
+      this._sub = this._sub || {};
+      // (Re)load the version/status option lists when a chip's name changes.
+      [['theme', themeSel, s.fTheme], ['plugin', plugSel, s.fPlugin]].forEach(([kind, sel, name]) => {
+        if (sel && (!this._sub[kind] || this._sub[kind].name !== name)) this.loadSubfilters(kind, name);
+        if (!sel) delete this._sub[kind];
+      });
       if (!themeSel && !plugSel) { this._filterMatch = null; this.setState({}); return; }
-      const verSel = plugSel && s.fPlugVer && s.fPlugVer !== 'Any';
-      const statSel = plugSel && s.fPlugStatus && s.fPlugStatus !== 'Any';
+      const versions = [], statuses = [];
+      [['theme', themeSel], ['plugin', plugSel]].forEach(([kind, sel]) => {
+        if (!sel) return;
+        const k = this.SUB_KEYS[kind];
+        const mode = key => s[key] === 'IS NOT' ? 'exclude' : 'include';
+        if (s[k.ver] && s[k.ver] !== 'Any') versions.push({ name: s[k.ver], slug: s[k.name], type: k.type, mode: mode(k.verIs) });
+        if (s[k.status] && s[k.status] !== 'Any') statuses.push({ name: s[k.status], slug: s[k.name], type: k.type, mode: mode(k.statusIs) });
+      });
       const body = {
         logic: s.fOp || 'AND',
         themes: themeSel ? [pluck(this.filterOptionByName(this.THEME_OPTIONS, s.fTheme))] : [],
         plugins: plugSel ? [pluck(this.filterOptionByName(this.PLUGIN_OPTIONS, s.fPlugin))] : [],
         core: [],
-        versions: verSel ? [{ name: s.fPlugVer, slug: s.fPlugin, type: 'plugins' }] : [],
-        statuses: statSel ? [{ name: s.fPlugStatus, slug: s.fPlugin, type: 'plugins' }] : [],
-        status_mode: s.fPlugIs === 'IS NOT' ? 'exclude' : 'include'
+        versions, statuses,
+        // Legacy request-wide modes for older servers; each entry also carries
+        // its own mode, which DB.php prefers when present.
+        version_mode: versions.some(v => v.mode === 'exclude') && versions.every(v => v.mode === 'exclude') ? 'exclude' : 'include',
+        status_mode: statuses.some(v => v.mode === 'exclude') && statuses.every(v => v.mode === 'exclude') ? 'exclude' : 'include'
       };
       const token = this._filterToken = (this._filterToken || 0) + 1;
       this._filterMatch = 'loading';

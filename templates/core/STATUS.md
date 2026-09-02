@@ -15,6 +15,32 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Version IS / IS NOT, and the popover on the Theme chip too (2026-09-02)
+
+The plugin chip's Version list gains the same IS / IS NOT toggle the Status
+list had, and the whole Version/Status popover now also opens from the Theme
+chip (the versions/statuses endpoints already searched themes by name; only
+the UI was plugin-only). Sub-facet state is described once in
+`SUB_KEYS` (sites-filters.js: name/ver/verIs/status/statusIs keys + the
+component type per kind) and the popover bindings are per chip
+(`subFacetVals()` spread into the facet row: `fc.verOpts`, `fc.verIsChips`,
+`fc.statusOpts`, `fc.isChips`, `fc.clearSub`, `fc.removeLabel`) instead of the
+old plugin-only globals. `loadSubfilters(kind, name)` picks the endpoint row
+whose entries carry the chip's type, so a theme and a plugin sharing a slug do
+not cross-feed. The chip label now appends the sub-filter so a negation is
+legible without opening the popover: `Theme · astra · ≠ 4.12.3 · parent`.
+
+Server: each `versions[]` / `statuses[]` entry may carry its own `mode`
+(`include` | `exclude`), which `DB::query_sites_matching_versions_statuses`
+prefers over the request-wide `version_mode` / `status_mode` (still sent, for
+older servers, as the all-exclude summary). That is what lets a theme version
+be included while a plugin version is excluded in one request. Verified with
+Playwright locally: plugin 10 sites → 7 on the picked version → 3 with IS NOT
+(exact complement); theme chip lists versions and statuses, IS NOT flips the
+set, status stacks independently, the body carried
+`{type:"themes", mode:"exclude"}` for the version and `mode:"include"` for the
+status, and Remove theme filter restored the full list. No page errors.
+
 ## Edit registrar on the domain page (2026-09-02)
 
 Legacy Edit Domain parity, second half: the accounts half shipped earlier as
