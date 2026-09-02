@@ -120,6 +120,40 @@ Object.assign(Component.prototype, {
       .map(({ suid, ...rest }) => rest);
   },
 
+  // Sub-values for a row WITHOUT editor suids — the row's own subs when it
+  // has them, else its display string parsed once (rows from the add bar /
+  // zone import carry only `value`).
+  dnsSubsPlain(r) {
+    if (r.subs && r.subs.length) return r.subs.map(({ suid, ...rest }) => rest);
+    const parsed = this.dnsValueForApi(r.type, r.value);
+    return (Array.isArray(parsed) ? parsed : []).map(x => typeof x === 'object'
+      ? Object.fromEntries(Object.entries(x).map(([k, val]) => [k, String(val == null ? '' : val)]))
+      : { value: String(x) });
+  },
+
+  // Legacy groupDNS() port. Constellix keeps ONE record per name+type and
+  // stacks the values inside it, so a second TXT "@" (or A / MX / …) row must
+  // fold into the existing row rather than POST as a new record — the API
+  // rejects the duplicate. Every multi-value type groups; CNAME/HTTP are
+  // single by definition. Later rows merge into the first row with the same
+  // key: values append, the survivor is marked edited when it exists at
+  // Constellix, and a swallowed row that had its own record id is queued for
+  // deletion (the legacy editor only dropped it locally).
+  dnsGroupRecs(recs, del) {
+    const key = r => r.type + '|' + (String(r.name || '@').trim().toLowerCase() || '@');
+    const out = []; const byKey = {}; const extraDel = [];
+    (recs || []).forEach(r => {
+      if (this.DNS_SINGLE_TYPES.includes(r.type)) { out.push(r); return; }
+      const k = key(r); const t = byKey[k];
+      if (!t) { byKey[k] = r; out.push(r); return; }
+      const subs = this.dnsCleanSubs([...this.dnsSubsPlain(t), ...this.dnsSubsPlain(r)]);
+      const merged = { ...t, subs, value: this.dnsSubsToText(t.type, subs), edited: !!t.recId };
+      byKey[k] = merged; out[out.indexOf(t)] = merged;
+      if (r.recId) extraDel.push(r.recId);
+    });
+    return { recs: out, del: [...(del || []), ...extraDel] };
+  },
+
   dnsSubsToText(type, subs) {
     if (type === 'MX') return subs.map(x => x.priority + ' ' + x.server).join(', ');
     if (type === 'SRV') return subs.map(x => [x.priority, x.weight, x.port, x.host].join(' ')).join(', ');
@@ -168,10 +202,12 @@ Object.assign(Component.prototype, {
     const dom = this._domain;
     if (!dom || dom.saving) return;
     dom.saving = true;
-    this.setState({});
-    const s = this.state;
+    // Fold duplicate name+type rows before building calls (zone import and
+    // edit-renames can create them; the add bar already merges on entry).
+    const s = this.dnsGroupRecs(this.state.dnsRecs, this.state.dnsDel);
+    this.setState({ dnsRecs: s.recs, dnsDel: s.del });
     const calls = [];
-    (s.dnsRecs || []).forEach(r => {
+    s.recs.forEach(r => {
       const body = { type: r.type, name: r.name === '@' ? '' : r.name,
         value: this.dnsNormalizeValue(r.type, (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
           ? this.dnsSubsForApi(r.type, r.subs)
@@ -179,7 +215,7 @@ Object.assign(Component.prototype, {
       if (!r.recId) calls.push(this.api('/dns/' + dom.domainId + '/records', { method: 'POST', body }));
       else if (r.edited) calls.push(this.api('/dns/' + dom.domainId + '/records/' + r.recId, { method: 'PUT', body }));
     });
-    (s.dnsDel || []).forEach(id => calls.push(this.api('/dns/' + dom.domainId + '/records/' + id, { method: 'DELETE' })));
+    s.del.forEach(id => calls.push(this.api('/dns/' + dom.domainId + '/records/' + id, { method: 'DELETE' })));
     Promise.allSettled(calls).then(rs => {
       if (this._domain !== dom) return;
       dom.saving = false;
@@ -693,6 +729,14 @@ Object.assign(Component.prototype, {
         this._suid = (this._suid || 0) + 1;
         return { dnsESubs: [...(st.dnsESubs || []), { ...blank, suid: 's' + this._suid }] };
       }),
+      // Add bar: a value for a name+type that already has a row lands inside
+      // that row (Constellix one-record-per-name+type; see dnsGroupRecs).
+      addRec: () => { if (!this.state.dnsV.trim()) return;
+        this.setState(st => {
+          const row = { uid: 'n' + Date.now(), type: st.dnsT, name: st.dnsN.trim() || '@', value: st.dnsV.trim(), ttl: '3600' };
+          const grouped = this.dnsGroupRecs([...(st.dnsRecs || []), row], st.dnsDel);
+          return { dnsRecs: grouped.recs, dnsDel: grouped.del, dnsDirty: true, dnsN: '', dnsV: '' };
+        }); },
       saveDns: () => this.saveDnsReal(),
       discardDns: () => this.loadDnsZone(),
       zoneReplace: () => this.setState(st => ({
