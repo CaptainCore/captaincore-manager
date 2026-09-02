@@ -15,6 +15,26 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## DNS add bar merges into the existing name+type record (2026-09-02)
+
+Constellix keeps ONE record per name+type and stacks the values inside it, so
+adding a second TXT `@` (or MX / A / SRV / … for a name that already has one)
+must fold into the existing row; posting it as a new record is rejected. The
+legacy editor's `groupDNS()` did this silently on save. Ported as
+`dnsGroupRecs(recs, del)` in domains.js: every multi-value type groups by
+`type|lowercased name` (blank == `@`), later rows append their sub-values to
+the first, the survivor is marked `edited` when it exists at Constellix, and a
+swallowed row that had its own record id is queued for DELETE (legacy only
+dropped it locally). CNAME/HTTP (`DNS_SINGLE_TYPES`) never group. Applied in
+two places: the add bar (`addRec` override in realDomainVals, so the value
+visibly lands under the existing row the moment you click Add record) and at
+the top of `saveDnsReal()` as a safety net for zone import and edit-renames.
+Verified live on austinginder.com: add bar TXT `@` → row count unchanged,
+Save sent a single `PUT /dns/94/records/{rid}` (200) with the new value
+quote-wrapped alongside the existing two; removing it via the edit pane put
+the record back (second PUT 200). Node harness covered MX merge, CNAME
+non-merge, and the rename-onto-existing → DELETE queue case.
+
 ## Uptime monitor switch on the Environment card (2026-09-01)
 
 v1 parity for the legacy site card's "Up-time Monitor" v-switch. For
@@ -415,7 +435,8 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   `{id}` is the Constellix `remote_id` (audited trap). `dnsNormalizeValue()` applies the
   legacy editor's pre-save autocorrect to the API-shaped value: CNAME/ANAME value, MX
   `server` and SRV `host` get a missing trailing `.`; bare TXT values are quote-wrapped
-  (nothing server-side fixes these; Constellix rejects them). Forwarding/Sending tabs lazy-load
+  (nothing server-side fixes these; Constellix rejects them). `dnsGroupRecs()` folds same
+  name+type rows into one multi-value record (legacy `groupDNS()`), on add and on save. Forwarding/Sending tabs lazy-load
   Mailgun routes / sending-domain records; registrar toggles hit `lock_`/`privacy_` routes.
 - **`accounts.js`** — Accounts/Users/Access. `openAccount()` loads `GET /accounts/{id}`
   (tier-gated bundle: users w/ levels, pending invites, sites, domains, plan
