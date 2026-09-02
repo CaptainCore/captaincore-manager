@@ -34,7 +34,8 @@ class Component extends DCLogic {
     view: (() => { try { const v = localStorage.getItem('cc-sites-view'); return ['table', 'cards', 'list'].includes(v) ? v : 'table'; } catch (e) { return 'table'; } })(),
     q: '', fProv: 'Any', fHealth: 'All', sel: {},
     fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
-    fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fOp: 'AND', labelsSel: {},
+    fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS',
+    fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
     capSel: '', capLimit: 60,
     rgHash: '', rgDetail: null, rgLoading: false, rgOpenIdx: -1,
@@ -962,7 +963,7 @@ class Component extends DCLogic {
       if (!inactive(s.fTheme)) conds.push(x => x.theme === s.fTheme);
       if (!inactive(s.fPlugin)) conds.push(x => { const p = (x.plugins || {})[s.fPlugin];
         if (!p) return false;
-        if (!inactive(s.fPlugVer) && p.v !== s.fPlugVer) return false;
+        if (!inactive(s.fPlugVer)) { const eq = p.v === s.fPlugVer; if (s.fPlugVerIs === 'IS' ? !eq : eq) return false; }
         if (!inactive(s.fPlugStatus)) { const eq = p.status === s.fPlugStatus; if (s.fPlugIs === 'IS' ? !eq : eq) return false; }
         return true; });
     }
@@ -994,10 +995,12 @@ class Component extends DCLogic {
       { id: 'fProv', base: 'Provider', cur: s.fProv, opts: () => facetOpts(cntBy(x => x.provider), s.fProv, 'fProv') },
       { id: 'fBackup', base: 'Backup', cur: s.fBackup, opts: () => facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup') },
       { id: 'fCore', base: 'Core', cur: s.fCore, opts: () => facetOpts(cntBy(x => x.core), s.fCore, 'fCore') },
-      { id: 'fTheme', base: 'Theme', cur: s.fTheme, opts: () => this._hydrated
-          ? this.filterFacetOpts(this.THEME_OPTIONS, s.fTheme, 'fTheme')
-          : facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme') },
-      { id: 'fPlugin', base: 'Plugin', cur: s.fPlugin, plugin: true, opts: () => this._hydrated
+      // Theme and Plugin chips open a Version/Status popover (sub: 'theme' |
+      // 'plugin'); the sub-facet state keys live on SUB_KEYS in sites-filters.js.
+      { id: 'fTheme', base: 'Theme', cur: s.fTheme, sub: 'theme', opts: () => this._hydrated
+          ? this.filterFacetOpts(this.THEME_OPTIONS, s.fTheme, 'fTheme', { fThemeVer: 'Any', fThemeStatus: 'Any' })
+          : facetOpts(cntBy(x => x.theme), s.fTheme, 'fTheme', { fThemeVer: 'Any', fThemeStatus: 'Any' }) },
+      { id: 'fPlugin', base: 'Plugin', cur: s.fPlugin, sub: 'plugin', opts: () => this._hydrated
           ? this.filterFacetOpts(this.PLUGIN_OPTIONS, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' })
           : facetOpts(plugCnt, s.fPlugin, 'fPlugin', { fPlugVer: 'Any', fPlugStatus: 'Any' }) }
     ];
@@ -1096,10 +1099,12 @@ class Component extends DCLogic {
       q: s.q, onQ: (e) => this.setState({ q: e.target.value, sitesPage: 1 }),
       ...this.pagerVals('sites', 'sitesPage', filtered.length, pageNum, totalPages, 'sites'),
       facets: activeFacets.map(d => ({
-        ...mkFacet(d.id, d.base, d.cur, d.plugin ? [] : d.opts()),
-        isPlugin: !!d.plugin, notPlugin: !d.plugin,
+        ...mkFacet(d.id, d.base, d.cur, d.sub ? [] : d.opts()),
+        ...(d.sub && this.subFacetVals ? { label: mkFacet(d.id, d.base, d.cur, []).label + this.subFacetSuffix(s, d.sub) } : {}),
+        isPlugin: !!d.sub, notPlugin: !d.sub,
+        ...(d.sub && this.subFacetVals ? this.subFacetVals(s, d.sub, verCnt, statCnt) : {}),
         clear: (e) => { e.stopPropagation();
-          this.setState({ [d.id]: 'Any', ddOpen: '', ddQ: '', sitesPage: 1, ...(d.plugin ? { fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS' } : {}) });
+          this.setState({ [d.id]: 'Any', ddOpen: '', ddQ: '', sitesPage: 1, ...(d.sub && this.subFacetReset ? this.subFacetReset(d.sub) : {}) });
           if (this._hydrated) this.applyServerFilter(); }
       })),
       addFilterOpen: s.ddOpen === 'addFilter',
@@ -1116,17 +1121,6 @@ class Component extends DCLogic {
         bg: s.fOp === label ? 'var(--panel-2)' : 'transparent',
         fg: s.fOp === label ? 'var(--ink)' : 'var(--ink-dim)',
         go: () => { this.setState({ fOp: label }); if (this._hydrated) this.applyServerFilter(); } })),
-      plugVerOpts: this.subFacetOpts ? this.subFacetOpts(this._hydrated
-        ? this.PLUGVER_OPTIONS
-        : Object.keys(verCnt).map(k => ({ name: k, count: verCnt[k] })), s.fPlugVer, 'fPlugVer') : [],
-      plugStatusOpts: this.subFacetOpts ? this.subFacetOpts(this._hydrated
-        ? this.PLUGSTATUS_OPTIONS
-        : Object.keys(statCnt).map(k => ({ name: k, count: statCnt[k] })), s.fPlugStatus, 'fPlugStatus') : [],
-      isChips: ['IS', 'IS NOT'].map(label => ({ label,
-        bg: s.fPlugIs === label ? 'var(--panel-2)' : 'transparent',
-        fg: s.fPlugIs === label ? 'var(--ink)' : 'var(--ink-dim)',
-        go: () => { this.setState({ fPlugIs: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } })),
-      clearPlugin: () => { this.setState({ fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddOpen: '', sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); },
       hasLabels: Object.keys(labelCnt).length > 0 || (isOp && (unassignedCnt > 0 || removedCnt > 0)),
       labelChips: [
         // Pending-removal queue: operator-only pseudo-label, same shape as
@@ -1163,7 +1157,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       // Filter-to-console (legacy parity): hand the whole filtered set — every
       // page, not just the visible one — to the dock terminal as its target
       // list. Only offered while a filter narrows the fleet, so a stray click

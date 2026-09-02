@@ -527,9 +527,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   </sc-if>
                   <sc-if value="{{ fc.isPlugin }}" hint-placeholder-val="{{ false }}">
                     <div style="position:absolute;top:36px;left:0;z-index:40;width:260px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:8px;animation:ccfade .12s ease">
-                      <div style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);padding:2px 5px 6px">Version</div>
+                      <div style="display:flex;align-items:center;gap:8px;padding:2px 5px 6px">
+                        <span style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">Version</span>
+                        <div style="flex:1"></div>
+                        <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:2px">
+                          <sc-for list="{{ fc.verIsChips }}" as="c" hint-placeholder-count="2">
+                            <span onClick="{{ c.go }}" style="padding:2px 8px;border-radius:20px;cursor:pointer;font:600 var(--fs-11) var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
                       <div style="max-height:150px;overflow-y:auto">
-                        <sc-for list="{{ plugVerOpts }}" as="o" hint-placeholder-count="3">
+                        <sc-for list="{{ fc.verOpts }}" as="o" hint-placeholder-count="3">
                           <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
                             <span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
                             <span style="font:500 var(--fs-125) var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
@@ -541,13 +549,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                         <span style="font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">Status</span>
                         <div style="flex:1"></div>
                         <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:2px">
-                          <sc-for list="{{ isChips }}" as="c" hint-placeholder-count="2">
+                          <sc-for list="{{ fc.isChips }}" as="c" hint-placeholder-count="2">
                             <span onClick="{{ c.go }}" style="padding:2px 8px;border-radius:20px;cursor:pointer;font:600 var(--fs-11) var(--sans);background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</span>
                           </sc-for>
                         </div>
                       </div>
                       <div style="max-height:120px;overflow-y:auto">
-                        <sc-for list="{{ plugStatusOpts }}" as="o" hint-placeholder-count="3">
+                        <sc-for list="{{ fc.statusOpts }}" as="o" hint-placeholder-count="3">
                           <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
                             <span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink);flex:none">{{ o.mark }}</span>
                             <span style="font:500 var(--fs-125) var(--sans);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
@@ -556,7 +564,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                         </sc-for>
                       </div>
                       <div style="border-top:1px solid var(--rule);margin-top:8px;padding:8px 5px 2px">
-                        <span onClick="{{ clearPlugin }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">✕ Remove plugin filter</span>
+                        <span onClick="{{ fc.clearSub }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">{{ fc.removeLabel }}</span>
                       </div>
                     </div>
                   </sc-if>

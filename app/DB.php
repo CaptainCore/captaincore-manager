@@ -496,7 +496,10 @@ class DB {
                 $type_column = self::sanitize_component_column( $version['type'] ?? '' );
                 if ( empty( $type_column ) ) { continue; }
                 $pattern  = $create_pattern( $version['slug'], $version['name'] );
-                $operator = $version_mode === 'exclude' ? 'NOT REGEXP' : 'REGEXP';
+                // A per-entry mode wins over the request-wide one, so a theme
+                // version can be included while a plugin version is excluded.
+                $entry_mode = ( ! empty( $version['mode'] ) && $version['mode'] === 'exclude' ) ? 'exclude' : ( empty( $version['mode'] ) ? $version_mode : 'include' );
+                $operator   = $entry_mode === 'exclude' ? 'NOT REGEXP' : 'REGEXP';
                 $version_sub_clauses[] = "{$environments_table}.{$type_column} {$operator} '{$pattern}'";
             }
             if ( ! empty( $version_sub_clauses ) ) {
@@ -510,7 +513,8 @@ class DB {
                 $type_column = self::sanitize_component_column( $status['type'] ?? '' );
                 if ( empty( $type_column ) ) { continue; }
                 $pattern  = $create_pattern( $status['slug'], null, $status['name'] );
-                $operator = $status_mode === 'exclude' ? 'NOT REGEXP' : 'REGEXP';
+                $entry_mode = ( ! empty( $status['mode'] ) && $status['mode'] === 'exclude' ) ? 'exclude' : ( empty( $status['mode'] ) ? $status_mode : 'include' );
+                $operator   = $entry_mode === 'exclude' ? 'NOT REGEXP' : 'REGEXP';
                 $status_sub_clauses[] = "{$environments_table}.{$type_column} {$operator} '{$pattern}'";
             }
             if ( ! empty( $status_sub_clauses ) ) {
