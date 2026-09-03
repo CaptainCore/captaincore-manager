@@ -74,6 +74,11 @@ class SiteAuditCoverage {
 				'version'    => $c['version'],
 				'hash'       => $c['hash'],
 				'short_hash' => substr( $c['hash'], 0, 12 ),
+				// WP's own activation state ('active', 'inactive', 'must-use',
+				// 'dropin', 'active-network'; themes add 'parent'). Severity is a
+				// property of the CODE — this is what says whether that code runs
+				// on this site, which is the other half of the risk.
+				'state'      => $c['state'] ?? '',
 			];
 
 			if ( $entry === null ) {
@@ -166,6 +171,7 @@ class SiteAuditCoverage {
 					'name'    => isset( $p->title ) && $p->title !== '' ? html_entity_decode( $p->title ) : $p->name,
 					'version' => $p->version ?? '',
 					'hash'    => $p->hash,
+					'state'   => $p->status ?? '',
 				];
 			}
 		}
@@ -179,6 +185,7 @@ class SiteAuditCoverage {
 					'name'    => isset( $t->title ) && $t->title !== '' ? html_entity_decode( $t->title ) : $t->name,
 					'version' => $t->version ?? '',
 					'hash'    => $t->hash,
+					'state'   => $t->status ?? '',
 				];
 			}
 		}
@@ -194,6 +201,7 @@ class SiteAuditCoverage {
 						'name'    => $path,
 						'version' => '',
 						'hash'    => $hash,
+						'state'   => '',
 					];
 				}
 			}

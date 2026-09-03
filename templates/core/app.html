@@ -1413,6 +1413,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <span onClick="{{ rc.go }}" style="font:500 var(--fs-12) var(--sans);color:{{ rc.fg }};background:{{ rc.bg }};border:1.5px solid {{ rc.bd }};border-radius:99px;padding:4px 11px;cursor:pointer;user-select:none" style-hover="border-color:{{ rc.fg }}"><strong style="font-weight:700">{{ rc.n }}</strong> {{ rc.label }}</span>
                   </sc-for>
                 </div>
+                <sc-if value="{{ regRiskShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px;font:500 var(--fs-13) var(--sans)"><span style="color:{{ regRiskFg }}">{{ regRiskStrong }}</span><span style="color:var(--ink-dim);font-weight:400">{{ regRiskTail }}</span></div>
+                </sc-if>
                 <sc-if value="{{ regCoverageShow }}" hint-placeholder-val="{{ false }}">
                   <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);margin-top:12px">{{ regCoverage }}</div>
                   <div style="height:5px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:6px">
@@ -1429,12 +1432,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule)">
                   <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ rg.label }}</h2>
                   <span style="font:500 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ rg.count }}</span>
+                  <sc-if value="{{ rg.dimNoteShow }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">· {{ rg.dimNote }}</span>
+                  </sc-if>
                 </div>
                 <sc-for list="{{ rg.rows }}" as="r" hint-placeholder-count="4">
-                  <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:{{ r.rowCursor }}" style-hover="background:var(--panel-2)">
+                  <sc-if value="{{ r.dividerShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:9px 16px;border-bottom:1px solid var(--rule);background:var(--panel)">
+                      <span style="font:600 var(--fs-11) var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">{{ r.dividerLabel }}</span>
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-left:8px">{{ r.dividerNote }}</span>
+                    </div>
+                  </sc-if>
+                  <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:{{ r.rowCursor }};opacity:{{ r.dim }}" style-hover="background:var(--panel-2)">
                     <span style="flex:none;min-width:70px;text-align:center;font:600 var(--fs-11) var(--sans);color:{{ r.chipFg }};background:{{ r.chipBg }};border-radius:99px;padding:3px 9px">{{ r.label }}</span>
                     <span style="min-width:0;flex:1">
-                      <span style="display:block;font:500 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }} <span style="color:var(--ink-dim);font-weight:400">{{ r.version }}</span> <code style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ r.hash }}</code></span>
+                      <span style="display:block;font:500 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }} <span style="color:var(--ink-dim);font-weight:400">{{ r.version }}</span> <sc-if value="{{ r.pillShow }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:99px;padding:2px 8px;vertical-align:1px">{{ r.pill }}</span></sc-if> <code style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ r.hash }}</code></span>
                       <sc-if value="{{ r.issueShow }}" hint-placeholder-val="{{ false }}">
                         <span style="display:block;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim);margin-top:2px">{{ r.issue }}</span>
                       </sc-if>
