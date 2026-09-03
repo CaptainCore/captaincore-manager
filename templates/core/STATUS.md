@@ -2866,10 +2866,13 @@ component's activation state in `$environment->plugins` / `->themes`, and
 carries `state` through to each coverage row (`active`, `inactive`, `must-use`,
 `dropin`, `active-network`, and a theme's `parent`).
 
-The tab reads that as loaded / not loaded. Everything but `inactive` loads: a
-parent theme of the active child still runs, and must-use plugins and drop-ins
-cannot be switched off at all, so those wear their own pill rather than being
-dimmed. Within each kind group, code that runs sorts above code that does not
+The tab reads that as loaded / not loaded. Everything but `inactive` loads,
+including a parent theme of the active child. A pill is spent only where it
+changes how the row reads: `inactive` says the code does not run, `must-use`
+and `dropin` say it runs and cannot be switched off, so neither has the usual
+deactivate mitigation. A parent theme loads exactly like any active component
+and takes no pill, since a badge in that slot reads as a caveat. Within each
+kind group, code that runs sorts above code that does not
 (the server's severity order is preserved inside each half), the deactivated
 tail is dimmed behind a "Deactivated" divider, and a `not loaded` filter chip
 isolates them. Above the coverage bar a headline states the thing the chip row
