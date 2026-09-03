@@ -23,12 +23,16 @@ Object.assign(Component.prototype, {
   },
 
   // Severity is a property of the code; this is whether the code RUNS. WP's
-  // status is the second axis of site risk — everything but 'inactive' loads
-  // (a parent theme of the active child still runs, and must-use plugins and
-  // drop-ins cannot be switched off at all).
+  // status is the second axis of site risk — everything but 'inactive' loads.
   //
-  // "Not loaded" is NOT "unreachable": a plugin's standalone PHP files stay
-  // web-reachable while deactivated, so a missing-ABSPATH direct-request bug is
+  // A pill is only worth the space when it changes how the row should be read:
+  // 'inactive' says the code does not run, 'must-use' and 'dropin' say it runs
+  // and CANNOT be switched off, so neither has the usual deactivate mitigation.
+  // A parent theme of the active child just loads, exactly like any active
+  // component, so it takes no pill — a badge there would read as a caveat.
+  //
+  // "Not loaded" is NOT "unreachable": a deactivated component's standalone PHP
+  // files stay web-reachable, so a missing-ABSPATH direct-request bug is
   // unaffected by activation state. Deactivated rows are therefore demoted in
   // order and weight, never relabelled to a lower severity.
   regLoadState(c) {
@@ -37,7 +41,6 @@ Object.assign(Component.prototype, {
     if (st === 'inactive') return { loaded: false, pill: 'inactive' };
     if (st === 'must-use') return { loaded: true, pill: 'must-use' };
     if (st === 'dropin')   return { loaded: true, pill: 'drop-in' };
-    if (st === 'parent')   return { loaded: true, pill: 'parent theme' };
     return { loaded: true, pill: '' };
   },
 
@@ -105,7 +108,7 @@ Object.assign(Component.prototype, {
         dim: ls.loaded ? '1' : '.55',
         dividerShow: !!firstOff,
         dividerLabel: 'Deactivated',
-        dividerNote: 'WordPress does not load these, so most findings cannot fire. Plugin files can still be reached directly over HTTP.',
+        dividerNote: 'WordPress does not load these, so most findings cannot fire. Their files can still be reached directly over HTTP.',
         open: () => { if (audited) this.openRegFindings(c); },
         ctx: (e) => this.openCtxMenu(e, [
           ...(audited ? [{ label: 'View findings', act: () => this.openRegFindings(c) },
