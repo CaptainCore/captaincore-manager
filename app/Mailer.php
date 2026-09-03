@@ -1425,13 +1425,18 @@ class Mailer {
         // Decode HTML entities in title for subject line (e.g., &#8211; -> –)
         $subject_title = html_entity_decode( $post_title, ENT_QUOTES, 'UTF-8' );
 
+        // Replies to the blast go to the WordPress admin email (Settings →
+        // General), not the SMTP sending address.
+        $admin_email = get_option( 'admin_email' );
+        $headers     = $admin_email ? [ 'Reply-To: ' . get_bloginfo( 'name' ) . " <{$admin_email}>" ] : [];
+
         self::send_email_with_layout(
             $user->user_email,
             "{$subject_prefix} {$subject_title}",
             $post_title,
             "{$post_date} &bull; By {$author}",
             $content_html,
-            [],
+            $headers,
             $unsubscribe,
             false  // Hide support footer for blog posts
         );
