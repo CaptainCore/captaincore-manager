@@ -2842,3 +2842,17 @@ inactive too (Next renewal, Addons, Credits), so the card shrinks to what
 is actually configured instead of stacking blanks above the setup prompt;
 an active plan keeps the full grid, where a missing addon or credit line
 is information. Verified live in both roles.
+
+The Sending tab's DNS verification table now lists the **MX records** too.
+Mailgun splits its requirements into `sending_dns_records` (SPF, DKIM, the
+tracking CNAME) and `receiving_dns_records` (the two MX rows), and the table
+was only rendering the first set, so a domain could show every row Verified
+while the MX pair it also needs was nowhere on screen. Both lists render in
+one table now, with an MX row's priority riding in front of its value the way
+a zone file writes it (`10 mxa.mailgun.org`). The card header also gained a
+**Copy DNS records** button, the v1 `copyMailgunRecordsToClipboard()` parity
+piece — same plain-text block (Type / Name / [Priority] / Value per record,
+under a "Mailgun DNS Records for <domain>:" heading) so it can be pasted
+straight into a ticket or handed to a customer's DNS provider. Verified live
+via Playwright on a customer domain: five rows (TXT, TXT, CNAME, MX, MX) and
+the clipboard round trip matching the legacy format.

@@ -639,12 +639,19 @@ Object.assign(Component.prototype, {
         this.api('/domain/' + dom.domainId + '/' + path + '_' + (next ? 'on' : 'off')).catch(() => {}); } });
     const fwdActive = !!details.mailgun_forwarding_id;
     const mgActive = !!details.mailgun_id;
-    const mgRecs = ((dom.mailgun && dom.mailgun.sending_dns_records) || []).map(r => ({
-      type: String(r.record_type || '').toUpperCase(), host: r.name || '', value: r.value || '',
+    // Mailgun splits what it needs into sending records (SPF/DKIM/CNAME) and
+    // receiving records (the two MX rows). Both have to land in DNS before the
+    // zone verifies, so show them in one table — MX carries a priority, which
+    // rides in the value column the way a zone file writes it.
+    const mgRec = (r, withPriority) => ({
+      type: String(r.record_type || '').toUpperCase(), host: r.name || '',
+      value: (withPriority && r.priority != null && r.priority !== '' ? r.priority + ' ' : '') + (r.value || ''),
       stLabel: r.valid === 'valid' ? 'Verified' : 'Pending', stFg: r.valid === 'valid' ? 'var(--ok)' : 'var(--warn)',
       pending: r.valid !== 'valid',
       verify: () => { this.api('/domain/' + dom.domainId + '/mailgun/verify', { method: 'POST', body: {} })
-        .then(() => { dom.mgLoading = false; dom.mailgun = null; this.loadMailgun(); }).catch(() => {}); } }));
+        .then(() => { dom.mgLoading = false; dom.mailgun = null; this.loadMailgun(); }).catch(() => {}); } });
+    const mgRecs = ((dom.mailgun && dom.mailgun.sending_dns_records) || []).map(r => mgRec(r, false))
+      .concat(((dom.mailgun && dom.mailgun.receiving_dns_records) || []).map(r => mgRec(r, true)));
     const usage = dom.mgUsage;
     const usageSeries = (usage && usage.series) || [];
     const usagePeak = usageSeries.reduce((m, b) => Math.max(m, b.sent), 0) || 1;
@@ -910,6 +917,20 @@ Object.assign(Component.prototype, {
       mgHost: details.mailgun_zone || 'mg.' + d.name,
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
+      mgHasRecs: mgRecs.length > 0,
+      // Same plain-text block the legacy UI copied, so it can be pasted
+      // straight into a ticket or handed to a customer's DNS provider.
+      mgCopyRecs: () => {
+        const mg = dom.mailgun || {};
+        const lines = [ 'Mailgun DNS Records for ' + d.name + ':', '' ];
+        (mg.sending_dns_records || []).forEach(r => {
+          lines.push('Type: ' + (r.record_type || ''), 'Name: ' + (r.name || ''), 'Value: ' + (r.value || ''), '');
+        });
+        (mg.receiving_dns_records || []).forEach(r => {
+          lines.push('Type: ' + (r.record_type || ''), 'Name: ' + (r.name || ''), 'Priority: ' + (r.priority ?? ''), 'Value: ' + (r.value || ''), '');
+        });
+        this.ctxCopy(lines.join('\n'), 'Mailgun DNS records');
+      },
       mgUsagePeriods, mgUsageStats, mgUsageBars,
       mgChartLeave: () => this.setState({ mgHoverIdx: -1 }),
       mgTipShow: !!mgHovered,

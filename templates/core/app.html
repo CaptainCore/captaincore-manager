@@ -2149,7 +2149,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
             <sc-if value="{{ mgActive }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-              <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">DNS verification</h2></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule)">
+                <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">DNS verification</h2>
+                <div style="flex:1"></div>
+                <sc-if value="{{ mgHasRecs }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ mgCopyRecs }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Copy DNS records</button>
+                </sc-if>
+              </div>
               <sc-for list="{{ mgRecs }}" as="r" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)">
                   <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:var(--panel-2);border-radius:6px;padding:3px 0">{{ r.type }}</span>
