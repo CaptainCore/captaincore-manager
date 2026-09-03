@@ -2856,3 +2856,39 @@ under a "Mailgun DNS Records for <domain>:" heading) so it can be pasted
 straight into a ticket or handed to a customer's DNS provider. Verified live
 via Playwright on a customer domain: five rows (TXT, TXT, CNAME, MX, MX) and
 the clipboard round trip matching the legacy format.
+
+The Registry tab learns the second axis of risk: **whether the code runs**.
+Severity is a property of the component, and the tab was sorting by it alone,
+so a deactivated plugin with a long scary key_issue could sit second on the
+page above every vulnerability that can actually fire. WP already reports each
+component's activation state in `$environment->plugins` / `->themes`, and
+`SiteAuditCoverage::extract_components()` was dropping it on the floor; it now
+carries `state` through to each coverage row (`active`, `inactive`, `must-use`,
+`dropin`, `active-network`, and a theme's `parent`).
+
+The tab reads that as loaded / not loaded. Everything but `inactive` loads: a
+parent theme of the active child still runs, and must-use plugins and drop-ins
+cannot be switched off at all, so those wear their own pill rather than being
+dimmed. Within each kind group, code that runs sorts above code that does not
+(the server's severity order is preserved inside each half), the deactivated
+tail is dimmed behind a "Deactivated" divider, and a `not loaded` filter chip
+isolates them. Above the coverage bar a headline states the thing the chip row
+cannot: "1 critical, 9 high on code that loads · 5 flagged components
+deactivated", counted off `components` rather than the possibly-cached summary
+so the sentence and the rows can never disagree.
+
+Deactivated is deliberately NOT relabelled to a lower severity. A plugin's
+standalone PHP files stay reachable over HTTP while it is deactivated, so a
+missing-ABSPATH direct-request bug is unaffected by activation state; the
+divider says so in as many words, and the demotion is order and weight only.
+Doing this precisely would need a per-finding reachability flag from the
+registry (does this path require the plugin active?) — `vuln_type` is already
+on the per-hash detail, so that is the natural follow-on.
+
+A deactivated vulnerable plugin is attack surface with no upside, so its
+right-click menu gains "Delete plugin…" (themes too), reusing the Plugins
+tab's own confirm + job + resync path rather than a second delete flow.
+Verified live on a customer site: 7 not-loaded components split out of 92
+plugins, three highs moved below the fold, the pills render for `inactive`,
+`must-use` and `parent theme`, the chip filters to exactly the deactivated
+set, and the delete item appears only on not-loaded rows.
