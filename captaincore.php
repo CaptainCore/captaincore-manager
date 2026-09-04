@@ -1014,7 +1014,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	$archive       = empty( $post->archive ) ? "" : $post->archive;
-	$command       = empty( $post->command ) ? "" : $post->command;
+	// A non-string command (a JSON `true`) would type-juggle past every loose
+	// comparison in the ladder below at once - `true == 'site-delete'` is true -
+	// firing every branch on a single request. Require a string up front.
+	$command       = empty( $post->command ) || ! is_string( $post->command ) ? "" : $post->command;
 	$environment   = empty( $post->environment ) ? "" : $post->environment;
 	$storage       = empty( $post->storage ) ? "" : $post->storage;
 	$visits        = empty( $post->visits ) ? "" : $post->visits;
@@ -1037,7 +1040,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Error if site not valid
 	$current_site = CaptainCore\Sites::get( $site_id );
-	if ( empty( $current_site ) && $site_id != "" && $command != "default-get" && $command != "configuration-get" && $command != "providers-list-raw" ) {
+	if ( empty( $current_site ) && $site_id != "" && $command !== "default-get" && $command !== "configuration-get" && $command !== "providers-list-raw" ) {
 		return new WP_Error( 'command_invalid', "Invalid Command for $site_id", [ 'status' => 404 ] );
 	}
 
@@ -1046,7 +1049,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$environment_id = ! empty( $site_id ) ? ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment ) : "";
 
 	// Copy site
-	if ( $command == 'copy' and $email ) {
+	if ( $command === 'copy' and $email ) {
 
 		$site_source      = get_the_title( $post->site_source_id );
 		$site_destination = get_the_title( $post->site_destination_id );
@@ -1064,7 +1067,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Production deploy to staging
-	if ( $command == 'production-to-staging' and $email ) {
+	if ( $command === 'production-to-staging' and $email ) {
 
 		$business_name = get_field('business_name', 'option');
 		$domain_name   = get_the_title( $site_id );
@@ -1083,7 +1086,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Kinsta staging deploy to production
-	if ( $command == 'staging-to-production' and $email ) {
+	if ( $command === 'staging-to-production' and $email ) {
 
 		$business_name = get_field('business_name', 'option');
 		$domain_name   = get_the_title( $site_id );
@@ -1102,7 +1105,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Generate a new snapshot.
-	if ( $command == 'snapshot-add' ) {
+	if ( $command === 'snapshot-add' ) {
 
 		$snapshot_check = ( new CaptainCore\Snapshots )->get( $post->data->snapshot_id );
 		// Insert new snapshot
@@ -1124,7 +1127,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Send backup download notification email
-	if ( $command == 'backup-download-notify' ) {
+	if ( $command === 'backup-download-notify' ) {
 		\CaptainCore\Mailer::send_backup_download_ready(
 			$post->data->email,
 			$domain_name,
@@ -1137,7 +1140,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Store a fleet core-update probe/apply run (parent + per-site rows).
-	if ( $command == 'core-update-run' && ! empty( $post->data ) ) {
+	if ( $command === 'core-update-run' && ! empty( $post->data ) ) {
 		$payload  = json_decode( wp_json_encode( $post->data ), true );
 		$stored   = \CaptainCore\CoreUpdateRun::store( is_array( $payload ) ? $payload : [] );
 		$response = [
@@ -1148,7 +1151,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Send monitor alert notification email
-	if ( $command == 'monitor-notify' ) {
+	if ( $command === 'monitor-notify' ) {
 		\CaptainCore\Mailer::send_monitor_alert(
 			$post->data->email,
 			$post->data->subject,
@@ -1158,7 +1161,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Send malware alert notification email
-	if ( $command == 'malware-alert' ) {
+	if ( $command === 'malware-alert' ) {
 		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
 		\CaptainCore\Mailer::send_malware_alert(
 			$site_name,
@@ -1170,7 +1173,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Send capture injection alert notification email
-	if ( $command == 'capture-alert' ) {
+	if ( $command === 'capture-alert' ) {
 		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
 		\CaptainCore\Mailer::send_capture_alert(
 			$site_name,
@@ -1182,13 +1185,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Load Token Key
-	if ( $command == 'token' and isset( $token_key ) ) {
+	if ( $command === 'token' and isset( $token_key ) ) {
 		( new CaptainCore\Sites )->update( [ "token" => $token_key ], [ "site_id" => $site_id ] );
 		echo "Adding token key. \n";
 	}
 
 	// Update Fathom
-	if ( $command == 'update-fathom' and ! empty( $post->data ) ) {
+	if ( $command === 'update-fathom' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment         = strtolower( $current_environment->environment );
@@ -1205,7 +1208,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
-	if ( $command == 'update-site' and ! empty( $post->data ) ) {
+	if ( $command === 'update-site' and ! empty( $post->data ) ) {
 
 		$current_site = ( new CaptainCore\Sites )->get( $post->data->site_id );
 
@@ -1231,7 +1234,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 
-	if ( $command == 'update-environment' and ! empty( $post->data ) ) {
+	if ( $command === 'update-environment' and ! empty( $post->data ) ) {
 
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 
@@ -1273,7 +1276,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Sync site data
-	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
+	if ( $command === 'sync-data' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment_name    = strtolower( $current_environment->environment );
@@ -1397,7 +1400,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// independent of total user count). Summary columns are extracted for fast querying; the
 	// full collector JSON is retained in `payload`. Detection compares this snapshot to the
 	// previous one for the same environment and records any anomalies on the row + timeline.
-	if ( $command == 'session-snapshot' and ! empty( $post->data ) ) {
+	if ( $command === 'session-snapshot' and ! empty( $post->data ) ) {
 
 		// data may arrive as a JSON object or a JSON-encoded string; normalize to object.
 		$signal = is_string( $post->data ) ? json_decode( $post->data ) : $post->data;
@@ -1460,7 +1463,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Add capture
-	if ( $command == 'new-capture' ) {
+	if ( $command === 'new-capture' ) {
 
 		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
 		$captures       = new CaptainCore\Captures();
@@ -1528,7 +1531,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
-	if ( $command == 'site-get-raw' ) {
+	if ( $command === 'site-get-raw' ) {
 		$site = new CaptainCore\Site( $post->site_id );
 		$response = [
 			"response" => "Fetching site {$post->site_id}",
@@ -1536,14 +1539,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	if ( $command == 'site-delete' ) {
+	if ( $command === 'site-delete' ) {
 		( new CaptainCore\Sites )->delete( $post->site_id );
 		$response = [
 			"response" => "Delete site {$post->site_id}"
 		];
 	}
 
-	if ( $command == 'account-get-raw' ) {
+	if ( $command === 'account-get-raw' ) {
 		$account = new CaptainCore\Account( $post->account_id, true );
 		$response = [
 			"response" => "Fetching account {$post->account_id}",
@@ -1551,7 +1554,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	if ( $command == 'configuration-get' ) {
+	if ( $command === 'configuration-get' ) {
 		$configurations = ( new CaptainCore\Configurations )->get();
 		$response       = [
 			"response"       => "Fetching configurations",
@@ -1559,7 +1562,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	if ( $command == 'default-get' ) {
+	if ( $command === 'default-get' ) {
 		$defaults = ( new CaptainCore\Defaults )->get();
 		$response = [
 			"response" => "Fetching global defaults",
@@ -1567,7 +1570,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	if ( $command == 'providers-list-raw' ) {
+	if ( $command === 'providers-list-raw' ) {
 		$providers = ( new CaptainCore\Providers )->all();
 		$response  = [
 			"response"  => "Fetching providers",
@@ -1576,7 +1579,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Updates visits and storage usage
-	if ( $command == 'usage-update' ) {
+	if ( $command === 'usage-update' ) {
 
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 
@@ -2131,8 +2134,21 @@ function captaincore_billing_request_plan_changes_func( WP_REST_Request $request
 	$user         = new CaptainCore\User;
 	$current_user = $user->fetch();
 	$subscription = (object) $request->get_param( 'subscription' );
-	CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
-	return [ 'success' => true ];
+	if ( empty( $subscription->account_id ) || empty( $subscription->name ) ) {
+		return new WP_Error( 'missing_data', 'Missing required data.', [ 'status' => 400 ] );
+	}
+	// The request is mailed to staff as a plan change on a named account, so the
+	// caller has to actually hold that subscription. Without this, any signed-in
+	// customer could raise a change request against someone else's account. The
+	// cancel-plan peer below has always checked this; this one was missed.
+	$billing = $user->billing();
+	foreach ( $billing->subscriptions as $owned ) {
+		if ( $owned->account_id == $subscription->account_id && $owned->name == $subscription->name ) {
+			CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
+			return [ 'success' => true ];
+		}
+	}
+	return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 }
 
 function captaincore_billing_update_func( WP_REST_Request $request ) {
@@ -5966,31 +5982,6 @@ function captaincore_filter_statuses_func( $request ) {
 	return $response;
 }
 
-function captaincore_filters_func( $request ) {
-
-	$themes  = empty( $request['themes'] ) ? [] : $request['themes'];
-	$plugins = empty( $request['plugins'] ) ? [] : $request['plugins'];
-	$core    = empty( $request['core'] ) ? [] : $request['core'];
-	if ( is_string( $core ) ) {
-		$core = [ $core ];
-	}
-
-	$theme_filters  = ( new CaptainCore\Environments )->filters_for_themes( $themes );
-	$plugin_filters = ( new CaptainCore\Environments )->filters_for_plugins( $plugins );
-	$core_filters   = ( new CaptainCore\Environments )->filters_for_core();
-	$sites          = ( new CaptainCore\Sites )->fetch_sites_matching_filters( $request['themes'], $request['plugins'], $core );
-	$response = [
-		"filters" => [
-			"themes"        => $theme_filters,
-			"plugins"       => $plugin_filters,
-			"core"          => $core_filters,
-			"core_versions" => $core
-		],
-		"sites" => $sites
-	];
-	return $response;
-}
-
 function captaincore_filter_sites_func( $request ) {
 	$name     = str_replace( "%20", " ", $request['name'] ?? '' );
 	$statuses = $request['statuses'] ?? '';
@@ -8932,15 +8923,6 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_%)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_filter_sites_func',
-			'permission_callback' => 'captaincore_permission_check',
-			'show_in_index'       => false,
-		]
-	);
-
-	register_rest_route(
-		'captaincore/v1', '/filters', [
-			'methods'             => 'POST',
-			'callback'            => 'captaincore_filters_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
