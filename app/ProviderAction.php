@@ -48,8 +48,12 @@ class ProviderAction {
                 // turn into a success.
                 $operation_error  = $status == "500" ? ( $response->data->message ?? '' ) : '';
             }
-            if ( empty( $status ) && ! empty( $action->provider_action_id ) ) {
-                $status = $class_name::action_check( $action->provider_action_id );
+            if ( empty( $status ) && ! empty( $provider_action->provider_action_id ) ) {
+                // Keyed off the row, not $action->provider_action_id: $action is
+                // the decoded action JSON seeded by the request body, and
+                // ProviderActions::get() inside action_check() is unscoped, so a
+                // caller-supplied id read another tenant's provisioning job.
+                $status = $class_name::action_check( $provider_action->provider_action_id );
             }
             if ( $status == "200" ) {
                 ProviderActions::update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
@@ -199,7 +203,7 @@ class ProviderAction {
                 // the core server is unreachable (wedged/restarting) keep the
                 // action 'waiting' so the next poll retries instead of finishing
                 // the chain with a site the CLI has never heard of.
-                $pushed = \CaptainCore\Run::CLI("site sync {$current_action->site_id} --update-extras", true);
+                $pushed = \CaptainCore\Run::CLI( [ "site", "sync", (string) (int) $current_action->site_id, "--update-extras" ], true );
                 if ( is_array( $pushed ) ) {
                     $current_action->cli_sync_attempts = empty( $current_action->cli_sync_attempts ) ? 1 : $current_action->cli_sync_attempts + 1;
                     if ( $current_action->cli_sync_attempts < 10 ) {
@@ -324,7 +328,11 @@ class ProviderAction {
                 $api_key = \CaptainCore\Providers\Kinsta::credentials("api", $current_action->provider_id);
                 \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
             }
-            $result      = empty( $current_action->result ) ? ( \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data ?? null ) : $current_action->result;
+            // Always derive the operation result from the recorded provider_key.
+            // This used to fall back to $current_action->result, which is part of
+            // the action JSON seeded by the new-site request body - letting the
+            // caller name an idSite and have the steps below run against it.
+            $result      = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data ?? null;
             $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             $site_name   = $current_action->name;
@@ -355,7 +363,7 @@ class ProviderAction {
                 $current_action->shared_with = array_column( $current_action->shared_with, "account_id" );
                 $address        = $environment->ssh_connection->ssh_ip->external_ip;
                 $port           = $environment->ssh_connection->ssh_port;
-                $home_directory = \CaptainCore\Run::CLI( "ssh-detect $site->name $address $port" );
+                $home_directory = \CaptainCore\Run::CLI( [ "ssh-detect", (string) $site->name, (string) $address, (string) $port ] );
 
                 $response = ( new Site )->create( [
                     "name"             => $current_action->domain,
@@ -414,7 +422,7 @@ class ProviderAction {
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
                 ActivityLog::log( 'created', 'site', $site_id, $current_action->domain, "Provisioned new site {$current_action->domain}", [], $current_action->account_id );
-                \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
+                \CaptainCore\Run::CLI( [ "site", "sync", (string) (int) $site_id, "--update-extras" ], true );
                 
                 if ($provider->provider == "kinsta") {
                     $response = \CaptainCore\Remote\Kinsta::put( 
