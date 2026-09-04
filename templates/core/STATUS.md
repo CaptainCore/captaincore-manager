@@ -2905,3 +2905,35 @@ runtime no-op that just stops the notice. The fourth was `${var}` string
 interpolation in the logged-in `wpApiSettings` inline script, now `{$var}`.
 Deprecated since 8.0 and 8.2 respectively, both slated for removal, so this
 is also PHP 9 groundwork. `php -l` across every non-vendor file is now silent.
+
+Schema migrations now run automatically from every context that matters, not
+just wp-admin. `captaincore_maybe_upgrade_db()` was hooked to `admin_init`
+alone, and almost nothing here is a wp-admin request: operators work in the
+/account SPA (a front-end rewrite), the CLI posts to the REST ingest, and the
+fleet cron shells out to `wp captaincore ...`. None of those reach admin_init,
+so a schema release could sit un-migrated until somebody happened to open
+wp-admin — and a WP-CLI command would meanwhile run against the old tables.
+The guard now also hooks `init`, which covers all four, with WP-CLI allowed
+through the capability gate (no user context, already root-equivalent) and
+everything else still required to be an authenticated network administrator,
+because init and admin_init both run BEFORE the authentication check in
+admin-ajax, admin-post and the REST API. The gates are ordered cheapest-first
+so anonymous front-end traffic never reaches the option read.
+
+`DB::upgrade()` returns its result instead of echoing it. The echo was being
+swallowed by an output buffer at one call site and not at the other: the
+activation hook called it bare, so activating the plugin printed migration
+text into WP's "the plugin generated N characters of unexpected output"
+check. `wp eval 'echo CaptainCore\DB::upgrade();'` still prints, because it
+echoes the return value itself, and it now reports the already-current case
+too. The automatic path decides success by re-reading the schema version
+rather than parsing the message, wraps the pass in catch(Throwable) so a
+failed migration cannot white-screen the page it fired on, and moves
+ob_end_clean into the finally so a throw cannot leak a half-open buffer.
+
+Verified live by rolling captaincore_db_version back to 50 and watching each
+context: a plain `wp` command migrates to 52 with no stray stdout, /account as
+a network admin migrates with nothing leaked into the HTML, and an anonymous
+front-end hit and an unauthenticated REST ingest both correctly leave it at 50.
+(Reading the option needs `wp --skip-plugins`, or the read triggers the
+migration it is measuring.)

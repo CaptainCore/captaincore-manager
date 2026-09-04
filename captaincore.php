@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore Manager
  * Plugin URI:        https://captaincore.io
  * Description:       WordPress management toolkit for geeky maintenance professionals.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            Austin Ginder
  * Author URI:        https://austinginder.com
  * License:           MIT License
@@ -31,7 +31,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // Keep in sync with the Version plugin header above and manifest.json.
-define( 'CAPTAINCORE_VERSION', '1.0.0' );
+define( 'CAPTAINCORE_VERSION', '1.1.0' );
 
 function activate_captaincore() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-activator.php';
@@ -68,23 +68,36 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-manager-update
 
 /**
  * Run any pending database migrations automatically. DB::upgrade() self-gates
- * on the captaincore_db_version site option, so this costs a single option
- * read when the schema is current. Hooked to admin_init rather than the
- * upgrader hooks because after a plugin update the OLD code is still loaded
- * in memory; the new schema definition only exists on the request AFTER the
- * update completes. Output-buffered because upgrade() echoes its result for
- * WP-CLI callers.
+ * on the captaincore_db_version site option, so a current schema costs one
+ * option read and nothing else.
+ *
+ * NOT hooked to the upgrader hooks: after a plugin update the OLD code is still
+ * loaded in memory, so the new schema definition only exists on the request
+ * AFTER the update completes. This is that next request.
+ *
+ * Hooked to BOTH init and admin_init, because admin_init fires only on
+ * /wp-admin requests and almost nothing here is one. Operators work in the
+ * /account SPA (a front-end rewrite), the CLI posts to the REST ingest, and the
+ * fleet cron shells out to `wp captaincore ...` — none of those reach
+ * admin_init, so on admin_init alone a schema release could sit un-migrated
+ * until somebody happened to open wp-admin. init covers all four.
  */
 function captaincore_maybe_upgrade_db() {
-	// admin_init runs before the authentication check in admin-ajax.php and
-	// admin-post.php, so this needs a gate of its own - otherwise an
-	// unauthenticated request triggers the migration pass, and concurrent
-	// requests all run it at once against the same tables.
-	if ( wp_doing_ajax() || wp_doing_cron() || ! is_user_logged_in() ) {
-		return;
-	}
-	if ( ! current_user_can( is_multisite() ? 'manage_network' : 'manage_options' ) ) {
-		return;
+	// Cheapest gates first: on init this runs for every front-end request, and
+	// anonymous traffic must not pay for the option read below.
+	//
+	// WP-CLI has no user context and is already root-equivalent. Everything else
+	// has to be an authenticated network administrator, because init and
+	// admin_init BOTH run before the authentication check in admin-ajax.php,
+	// admin-post.php and the REST API — without this an unauthenticated request
+	// could trigger the migration pass.
+	if ( ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+		if ( wp_doing_ajax() || wp_doing_cron() || ! is_user_logged_in() ) {
+			return;
+		}
+		if ( ! current_user_can( is_multisite() ? 'manage_network' : 'manage_options' ) ) {
+			return;
+		}
 	}
 	if ( (int) get_site_option( 'captaincore_db_version' ) >= CaptainCore\DB::REQUIRED_VERSION ) {
 		return;
@@ -99,17 +112,26 @@ function captaincore_maybe_upgrade_db() {
 		}
 		update_site_option( 'captaincore_db_upgrade_lock', time() );
 	}
+	$result = '';
 	try {
+		// upgrade() returns rather than echoes, but dbDelta itself can emit a
+		// warning, and this may be running mid-page. Swallow anything printed.
 		ob_start();
 		$result = CaptainCore\DB::upgrade();
-		ob_end_clean();
-		if ( is_string( $result ) && $result !== '' ) {
-			error_log( 'CaptainCore schema upgrade reported: ' . $result );
-		}
+	} catch ( \Throwable $e ) {
+		// A failed migration must not white-screen the dashboard it fired on.
+		$result = $e->getMessage();
 	} finally {
+		ob_end_clean();
 		delete_site_option( 'captaincore_db_upgrade_lock' );
 	}
+	// Success and failure both come back as strings, so ask the schema itself
+	// whether the pass landed rather than trying to read the message.
+	if ( (int) get_site_option( 'captaincore_db_version' ) < CaptainCore\DB::REQUIRED_VERSION ) {
+		error_log( 'CaptainCore schema upgrade did not complete: ' . (string) $result );
+	}
 }
+add_action( 'init', 'captaincore_maybe_upgrade_db' );
 add_action( 'admin_init', 'captaincore_maybe_upgrade_db' );
 
 function captaincore_cron_run() {

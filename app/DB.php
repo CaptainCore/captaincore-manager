@@ -691,7 +691,7 @@ class DB {
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
-            return;
+            return "CaptainCore database already at v{$required_version}.";
         }
     
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -1277,7 +1277,13 @@ class DB {
         }
 
         update_site_option( 'captaincore_db_version', $required_version );
-        echo "Updated `captaincore_db_version` to v$required_version";
+
+        // RETURN, never echo. This runs from the activation hook (where stray
+        // output makes WP report "the plugin generated N characters of
+        // unexpected output"), from the automatic migration on init, and from
+        // `wp eval 'echo CaptainCore\DB::upgrade();'` — only the last of those
+        // wants the text on stdout, and it echoes the return value itself.
+        return "Updated `captaincore_db_version` to v{$required_version}";
     }
 
 }
