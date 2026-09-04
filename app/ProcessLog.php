@@ -175,7 +175,7 @@ class ProcessLog {
         }
     }
 
-    public static function insert( $message = "", $site_id ) {
+    public static function insert( $message, $site_id ) {
         $time_now        = date( 'Y-m-d H:i:s' );
         $site_ids        = is_array( $site_id ) ? $site_id : [ $site_id ];
         $process_log_new = (object) [

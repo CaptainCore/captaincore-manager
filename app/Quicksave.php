@@ -45,12 +45,12 @@ class Quicksave {
         return Run::CLI( [ 'quicksave', 'show-changes', "{$this->site_id}-{$environment}", $hash, $match ] );
     }
 
-    public function filediff( $hash, $environment = "production", $file ) {
+    public function filediff( $hash, $environment, $file ) {
         $environment = $this->safe_environment( $environment );
         return Run::CLI( [ 'quicksave', 'file-diff', "{$this->site_id}-{$environment}", $hash, $file, '--html' ] );
     }
 
-    public function rollback( $hash, $environment = "production", $version, $type, $value = "" ) {
+    public function rollback( $hash, $environment, $version, $type, $value = "" ) {
         $environment = $this->safe_environment( $environment );
         if ( $type == "all" ) {
             return Run::task( [ 'quicksave', 'rollback', "{$this->site_id}-{$environment}", $hash, '--version=' . $version, '--all' ] );

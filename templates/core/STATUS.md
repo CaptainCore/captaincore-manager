@@ -2895,3 +2895,13 @@ Verified live on a customer site: 7 not-loaded components split out of 92
 plugins, three highs moved below the fold, the pills render for `inactive`,
 `must-use` and `parent theme`, the chip filters to exactly the deactivated
 set, and the delete item appears only on not-loaded rows.
+
+Cleared the four PHP 8.x deprecation notices the whole tree emitted under
+`php -l`. Three were optional parameters declared before required ones
+(`Quicksave::filediff`, `Quicksave::rollback`, `ProcessLog::insert`) — PHP
+already treated those defaults as required, so no caller could ever omit them
+and every call site passes all arguments; dropping the dead defaults is a
+runtime no-op that just stops the notice. The fourth was `${var}` string
+interpolation in the logged-in `wpApiSettings` inline script, now `{$var}`.
+Deprecated since 8.0 and 8.2 respectively, both slated for removal, so this
+is also PHP 9 groundwork. `php -l` across every non-vendor file is now silent.
