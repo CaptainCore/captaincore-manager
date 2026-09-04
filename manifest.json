@@ -5,7 +5,7 @@
   "author_profile": "https://profiles.wordpress.org/austinginder",
   "version": "1.1.0",
   "download_url": "https://github.com/CaptainCore/captaincore-manager/releases/download/v1.1.0/captaincore-manager.zip",
-  "sha256": "",
+  "sha256": "f62941d7aacc657445fe72d9130bc69602390010d8c2dd3181da7e42a8f583e0",
   "requires": "6.0",
   "tested": "7.0",
   "requires_php": "7.4",
