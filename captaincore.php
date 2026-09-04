@@ -1954,7 +1954,12 @@ function captaincore_accounts_invite_func( WP_REST_Request $request ) {
 		$invite_level = 'full';
 	}
 	$account  = new CaptainCore\Account( $account_id );
-	$invite   = $request->get_param( 'invite' );
+	// The invite is mailed from the platform's own sender, so the recipient has
+	// to be an address and nothing else.
+	$invite   = sanitize_email( (string) $request->get_param( 'invite' ) );
+	if ( empty( $invite ) || ! is_email( $invite ) ) {
+		return new WP_Error( 'invalid_email', 'Enter a valid email address to invite.', [ 'status' => 400 ] );
+	}
 	$response = $account->invite( $invite, $invite_level );
 	return $response;
 }
@@ -2298,7 +2303,9 @@ function captaincore_accounts_update_func( WP_REST_Request $request ) {
 	// rename must not null out billing_user_id (v1 always sends both).
 	$update = [];
 	if ( isset( $account->name ) && trim( (string) $account->name ) !== '' ) {
-		$update['name'] = trim( $account->name );
+		// The account name is set by the billing contact and then rendered in
+		// staff emails and notices, so store it as text rather than markup.
+		$update['name'] = sanitize_text_field( trim( (string) $account->name ) );
 	}
 	if ( isset( $account->billing_user_id ) ) {
 		$update['billing_user_id'] = $account->billing_user_id;

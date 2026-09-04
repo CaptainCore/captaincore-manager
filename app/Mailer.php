@@ -168,11 +168,21 @@ class Mailer {
     private static function send_email_with_layout( $to, $subject, $headline, $subheadline, $main_content_html, $extra_headers = [], $unsubscribe_url = '', $show_support_footer = true ) {
         self::prepare();
 
+        // The heading slots are plain text in every caller, but several carry a
+        // site, account or subscription name a customer can set, and these go to
+        // staff. Escaping here means no caller has to remember.
+        // $main_content_html is deliberately markup and is left alone, and
+        // $subject is NOT escaped here - it is also the real mail subject, which
+        // wp_mail() sends as text. It is escaped at the <title> sink instead.
+        $headline    = esc_html( (string) $headline );
+        $subheadline = esc_html( (string) $subheadline );
+        $subject_html = esc_html( (string) $subject );
+
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
-        $logo_url    = $config->email_logo ?? $config->logo ?? '';
-        $site_name   = get_bloginfo( 'name' );
-        $site_url    = home_url();
+        $logo_url    = esc_url( $config->email_logo ?? $config->logo ?? '' );
+        $site_name   = esc_html( get_bloginfo( 'name' ) );
+        $site_url    = esc_url( home_url() );
 
         // Build unsubscribe link if provided
         $unsubscribe_html = '';
@@ -201,7 +211,7 @@ class Mailer {
         <head>
             <meta charset='UTF-8'>
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-            <title>{$subject}</title>
+            <title>{$subject_html}</title>
         </head>
         <body style='margin: 0; padding: 0; background-color: #F5F7FA; font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #565C66;'>
             <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>

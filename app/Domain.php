@@ -162,6 +162,12 @@ class Domain {
         $domain = Domains::get( $this->domain_id );
         $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
         unset( $details->provider_cache );
+        // A working SMTP credential for the domain. The dialog never shows it -
+        // the legacy UI nulled it client-side after receiving it - so it should
+        // not be in the response at all. It outlives the reader's access to the
+        // account and can send mail as the domain. Only stripped from the
+        // response; clear_provider_cache() below writes $details back to the DB.
+        unset( $details->mailgun_smtp_password );
         return [
             "provider"        => self::fetch_remote(),
             "accounts"        => self::accounts(),
