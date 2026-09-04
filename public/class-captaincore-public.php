@@ -100,7 +100,7 @@ class Captaincore_Public {
 				'root' => esc_url_raw( rest_url() ),
 				'nonce' => wp_create_nonce( 'wp_rest' )
 			 ] );
-			$wpApiSettings = "var wpApiSettings = ${wpApiSettings};";
+			$wpApiSettings = "var wpApiSettings = {$wpApiSettings};";
 			wp_register_script( 'captaincore-wp-api', '' );
 			wp_enqueue_script( 'captaincore-wp-api' );
 			wp_add_inline_script( 'captaincore-wp-api', $wpApiSettings );
