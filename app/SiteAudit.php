@@ -316,7 +316,10 @@ class SiteAudit {
         } else {
             // Default dashboard
             $fs_class  = $audit->filesystem_status === 'clean' ? 'clean' : ( $audit->filesystem_status === 'critical' ? 'critical' : 'warn' );
-            $fs_label  = strtoupper( esc_html( $audit->filesystem_status ?: 'N/A' ) );
+            // Escape last: uppercasing an already-escaped value rewrites &lt; and
+            // &amp; to &LT; and &AMP;, which browsers still decode, so escaping
+            // first and uppercasing after undoes the escaping.
+            $fs_label  = esc_html( strtoupper( $audit->filesystem_status ?: 'N/A' ) );
             $wp_ver    = esc_html( $audit->wp_version ?: 'N/A' );
             $issues    = (int) $audit->issues_count;
             $issues_cl = $issues === 0 ? 'clean' : 'warn';
