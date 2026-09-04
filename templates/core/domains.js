@@ -31,6 +31,7 @@ Object.assign(Component.prototype, {
       dnsDirty: false, dnsDel: [], dnsT: 'A', dnsN: '', dnsV: '', dnsEdit: 0,
       fwds: this._hydrated ? [] : this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',
       mgSuppOpen: false, mgDeployOpen: false, mgDepQ: '', mgDepTarget: null, mgDepFrom: '', mgDepBusy: false,
+      mgSub: 'mg',
       reg: { auto: false, lock: false, priv: false } });
     if (this._hydrated) this.loadDomainDetail(id);
   },
@@ -912,17 +913,29 @@ Object.assign(Component.prototype, {
           .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}) })),
       mgActive, mgInactive: !mgActive, mgLoading: dom.mgLoading,
       mgNotice: !!dom.mgErr, mgNoticeText: dom.mgErr,
+      // The sending host is a subdomain of this domain, and which one matters:
+      // Mailgun names are unique platform-wide, so when mg. is already held
+      // elsewhere another label is the way through. The legacy dialog asked for
+      // it; this keeps that, defaulted to mg.
+      mgSub: s.mgSub === undefined ? 'mg' : s.mgSub,
+      mgSubSuffix: '.' + d.name,
+      onMgSub: e => this.setState({ mgSub: String(e.target.value || '').toLowerCase().replace(/[^a-z0-9.-]/g, '') }),
       // api() resolves with the WP_Error body on a non-2xx, so a bare catch
       // never saw it and a failed setup looked like nothing happened. Show the
       // server's reason in the notice the panel already renders.
-      mgSetup: () => { dom.mgErr = ''; this.setState({});
-        this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: 'mg.' + d.name } })
+      mgSetup: () => {
+        const sub = String(s.mgSub === undefined ? 'mg' : s.mgSub).replace(/^[.-]+|[.-]+$/g, '');
+        if (!sub) { dom.mgErr = 'Enter a subdomain to send from.'; this.setState({}); return; }
+        dom.mgErr = ''; this.setState({});
+        this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: sub + '.' + d.name } })
           .then(res => {
             if (res && res.code) { dom.mgErr = res.message || 'Could not set up Mailgun sending.'; this.setState({}); return; }
             this.loadDomainDetail(dom.domainId);
           })
           .catch(() => { dom.mgErr = 'Could not set up Mailgun sending.'; this.setState({}); }); },
-      mgHost: details.mailgun_zone || 'mg.' + d.name,
+      // Before setup there is no zone yet, so the header follows the subdomain
+      // being chosen below rather than always claiming mg.
+      mgHost: details.mailgun_zone || (String(s.mgSub === undefined ? 'mg' : s.mgSub).replace(/^[.-]+|[.-]+$/g, '') || 'mg') + '.' + d.name,
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
       mgHasRecs: mgRecs.length > 0,

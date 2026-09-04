@@ -2151,9 +2151,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
             <sc-if value="{{ mgInactive }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px">
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
                 <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Mailgun sending is not set up for this domain.</span>
-                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up mg.{{ domName }}</button>
+                <div style="display:flex;align-items:center;height:28px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 9px">
+                  <input value="{{ mgSub }}" onInput="{{ onMgSub }}" placeholder="mg" title="Sending subdomain" style="width:78px;padding:0;margin:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 var(--fs-12) var(--mono);text-align:right">
+                  <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ mgSubSuffix }}</span>
+                </div>
+                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up sending</button>
               </div>
             </sc-if>
             <sc-if value="{{ mgNotice }}" hint-placeholder-val="{{ false }}">
