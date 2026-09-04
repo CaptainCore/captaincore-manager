@@ -9,6 +9,45 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Mailgun {
 
+    /**
+     * Look for a sending domain in the connected Mailgun account.
+     *
+     * The lookup by name (v4/domains/<name>) is the normal way to find one, so
+     * this is the fallback for when that returns nothing but a create reports
+     * the name is taken. Paging the account's own list answers whether the zone
+     * is ours to adopt or belongs to an account we do not hold.
+     *
+     * @param string $name
+     * @return object|null The matching domain object, or null when absent.
+     */
+    private static function find_domain_in_account( $name ) {
+        $name = strtolower( trim( (string) $name ) );
+        if ( $name === '' ) {
+            return null;
+        }
+        $skip  = 0;
+        $limit = 1000;
+        // Guard the loop: the account list is finite, but a malformed response
+        // must not spin here.
+        for ( $page = 0; $page < 50; $page++ ) {
+            $response = \CaptainCore\Remote\Mailgun::get( "v4/domains", [ "limit" => $limit, "skip" => $skip ] );
+            $items    = isset( $response->items ) && is_array( $response->items ) ? $response->items : [];
+            if ( empty( $items ) ) {
+                return null;
+            }
+            foreach ( $items as $item ) {
+                if ( isset( $item->name ) && strtolower( (string) $item->name ) === $name ) {
+                    return $item;
+                }
+            }
+            if ( count( $items ) < $limit ) {
+                return null;
+            }
+            $skip += $limit;
+        }
+        return null;
+    }
+
     public static function setup( $mailgun_subdomain = "" ) {
         // Prep to handle remote responses
         $responses = '';
@@ -31,6 +70,26 @@ class Mailgun {
         if ( ! empty( $mailgun_domain->message ) && $mailgun_domain->message == "Domain not found" ) {
             // Create domain in Mailgun
             $mailgun_domain = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $mailgun_subdomain ] );
+
+            // The lookup above found nothing and the create says it is taken.
+            // Before reporting that, make sure it is not a zone this account
+            // already holds: the lookup by name is what failed, and a zone the
+            // account owns should be adopted rather than refused. Only when it
+            // is genuinely absent from the account is it someone else's -
+            // Mailgun sending domains are unique across the whole platform, so
+            // it cannot be created here until it is released there.
+            if ( ! empty( $mailgun_domain->message ) && stripos( $mailgun_domain->message, 'already exists' ) !== false ) {
+                $owned = self::find_domain_in_account( $mailgun_subdomain );
+                if ( ! empty( $owned->name ) ) {
+                    $mailgun_domain = \CaptainCore\Remote\Mailgun::get( "v4/domains/{$owned->name}" );
+                }
+                if ( empty( $mailgun_domain->sending_dns_records ) ) {
+                    return (object) [
+                        'error'   => true,
+                        'message' => "$mailgun_subdomain already exists in a different Mailgun account, so it cannot be created here. Mailgun sending domains are unique across the platform - remove it from the account that owns it, then set it up again.",
+                    ];
+                }
+            }
         }
 
         // Bail if Mailgun didn't return a usable response (e.g. account has disabled domains, rate-limited, auth failure)

@@ -912,8 +912,16 @@ Object.assign(Component.prototype, {
           .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}) })),
       mgActive, mgInactive: !mgActive, mgLoading: dom.mgLoading,
       mgNotice: !!dom.mgErr, mgNoticeText: dom.mgErr,
-      mgSetup: () => { this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: 'mg.' + d.name } })
-        .then(() => this.loadDomainDetail(dom.domainId)).catch(() => {}); },
+      // api() resolves with the WP_Error body on a non-2xx, so a bare catch
+      // never saw it and a failed setup looked like nothing happened. Show the
+      // server's reason in the notice the panel already renders.
+      mgSetup: () => { dom.mgErr = ''; this.setState({});
+        this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: 'mg.' + d.name } })
+          .then(res => {
+            if (res && res.code) { dom.mgErr = res.message || 'Could not set up Mailgun sending.'; this.setState({}); return; }
+            this.loadDomainDetail(dom.domainId);
+          })
+          .catch(() => { dom.mgErr = 'Could not set up Mailgun sending.'; this.setState({}); }); },
       mgHost: details.mailgun_zone || 'mg.' + d.name,
       mgSupp: dom.mailgun && dom.mailgun.state ? 'state: ' + dom.mailgun.state : '',
       mgRecs, mgEvents,
