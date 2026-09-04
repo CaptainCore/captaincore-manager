@@ -120,22 +120,51 @@ class DB {
         return $wpdb->get_results( $sql );
     }
 
+    /**
+     * Constrain an ORDER BY / column identifier and its direction.
+     *
+     * Neither can be bound by prepare(), so they are scrubbed the same way
+     * where() and prepared_where() already scrub condition keys. No caller
+     * passes request input today - this is here so that the day one does, the
+     * base class every model inherits does not become an injection primitive.
+     *
+     * @param string $identifier
+     * @param string $fallback Used when the identifier scrubs down to nothing.
+     * @return string
+     */
+    private static function safe_identifier( $identifier, $fallback = 'created_at' ) {
+        $identifier = preg_replace( '/[^a-zA-Z0-9_]/', '', (string) $identifier );
+        return $identifier === '' ? $fallback : $identifier;
+    }
+
+    private static function safe_sort_order( $sort_order ) {
+        return strtoupper( (string) $sort_order ) === 'ASC' ? 'ASC' : 'DESC';
+    }
+
     static function all( $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
+        $sort       = self::safe_identifier( $sort );
+        $sort_order = self::safe_sort_order( $sort_order );
         $sql = 'SELECT * FROM ' . self::_table() . ' order by `' . $sort . '` '. $sort_order;
         return $wpdb->get_results( $sql );
     }
 
     static function mine( $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
-        $user_id = get_current_user_id();
+        $user_id    = (int) get_current_user_id();
+        $sort       = self::safe_identifier( $sort );
+        $sort_order = self::safe_sort_order( $sort_order );
         $sql = 'SELECT * FROM ' . self::_table() . " WHERE user_id = '{$user_id}' order by `{$sort}` {$sort_order}";
         return $wpdb->get_results( $sql );
     }
 
     static function select( $field = "site_id", $where = "status", $value = "active", $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
-        $value = esc_sql( $value );
+        $value      = esc_sql( $value );
+        $field      = self::safe_identifier( $field, 'site_id' );
+        $where      = self::safe_identifier( $where, 'status' );
+        $sort       = self::safe_identifier( $sort );
+        $sort_order = self::safe_sort_order( $sort_order );
         $sql = "SELECT $field FROM " . self::_table() . " WHERE $where = '{$value}' order by `{$sort}` {$sort_order}";
         $results = array_column( $wpdb->get_results( $sql ), $field );
         return $results;
@@ -143,6 +172,9 @@ class DB {
 
     static function select_domains( $field = "domain_id", $sort = "name", $sort_order = "ASC" ) {
         global $wpdb;
+        $field      = self::safe_identifier( $field, 'domain_id' );
+        $sort       = self::safe_identifier( $sort, 'name' );
+        $sort_order = self::safe_sort_order( $sort_order );
         $sql = "SELECT $field FROM " . self::_table() . " order by `{$sort}` {$sort_order}";
         $results = array_column( $wpdb->get_results( $sql ), $field );
         return $results;
@@ -150,6 +182,7 @@ class DB {
     
     static function select_all( $field = "site_id" ) {
         global $wpdb;
+        $field = self::safe_identifier( $field, 'site_id' );
         $sql = "SELECT $field FROM " . self::_table() . " order by `created_at` DESC";
         $results = array_column( $wpdb->get_results( $sql ), $field );
         return $results;
@@ -393,13 +426,20 @@ class DB {
 
         // Helper: build a REGEXP that matches a single JSON object containing the given key-value pairs.
         $create_pattern = function( $name, $version = null, $status = null ) {
-            // esc_sql() each request-supplied value so it cannot break out of the REGEXP string literal.
-            $conditions = [ '"name":"' . esc_sql( $name ) . '"' ];
+            // esc_sql() keeps a request-supplied value inside the REGEXP string
+            // literal; quoting the regex metacharacters keeps it inside the
+            // literal part of the PATTERN. Without the second step a filter
+            // value is still a regex - ".*" widens the match, and a nested
+            // quantifier makes MySQL backtrack over every environments row.
+            $quote = function( $value ) {
+                return esc_sql( preg_replace( '/[.*+?()\[\]{}|^$\\\\]/', '\\\\$0', (string) $value ) );
+            };
+            $conditions = [ '"name":"' . $quote( $name ) . '"' ];
             if ( $version !== null ) {
-                $conditions[] = '"version":"' . esc_sql( $version ) . '"';
+                $conditions[] = '"version":"' . $quote( $version ) . '"';
             }
             if ( $status !== null ) {
-                $conditions[] = '"status":"' . esc_sql( $status ) . '"';
+                $conditions[] = '"status":"' . $quote( $status ) . '"';
             }
 
             $permutations = function( $items ) use ( &$permutations ) {
@@ -631,7 +671,9 @@ class DB {
 
     static function fetch_recipes( $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
-        $user_id = get_current_user_id();
+        $user_id    = (int) get_current_user_id();
+        $sort       = self::safe_identifier( $sort );
+        $sort_order = self::safe_sort_order( $sort_order );
         $sql = 'SELECT * FROM ' . self::_table() . " WHERE user_id = '{$user_id}' or `public` = '1' order by `{$sort}` {$sort_order}";
         return $wpdb->get_results( $sql );
     }
