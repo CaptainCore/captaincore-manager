@@ -105,23 +105,6 @@ class DB {
         return (int) $wpdb->get_var( $wpdb->prepare( $sql, $values ) );
     }
 
-    static function where_compare( $conditions ) {
-        global $wpdb;
-        $allowed_compare  = [ '=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE' ];
-        $where_statements = [];
-        foreach ( $conditions as $condition ) {
-            // Defense-in-depth: column identifier, operator, and value are all
-            // hardened in case a caller ever forwards request input here.
-            $key     = str_replace( '`', '', $condition["key"] );
-            $compare = in_array( strtoupper( $condition["compare"] ), $allowed_compare, true ) ? strtoupper( $condition["compare"] ) : '=';
-            $value   = esc_sql( $condition["value"] );
-            $where_statements[] = "`{$key}` {$compare} '{$value}'";
-        }
-        $where_statements = implode( " AND ", $where_statements );
-        $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC";
-        return $wpdb->get_results( $sql );
-    }
-
     static function fetch( $value ) {
         global $wpdb;
         $value = intval( $value );
@@ -158,19 +141,6 @@ class DB {
         return $results;
     }
 
-    static function select_by_conditions( $field = "environment_id", $conditions = [] ) {
-        global $wpdb;
-        $table = self::_table();
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
-            $where_statements[] =  "{$table}.{$row} = '" . esc_sql( $value ) . "'";
-        }
-        $where_statements = implode( " AND ", $where_statements );
-        $sql = "SELECT {$table}.{$field} FROM {$table} WHERE $where_statements";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
-        return $results;
-    }
-
     static function select_domains( $field = "domain_id", $sort = "name", $sort_order = "ASC" ) {
         global $wpdb;
         $sql = "SELECT $field FROM " . self::_table() . " order by `{$sort}` {$sort_order}";
@@ -193,17 +163,9 @@ class DB {
         if ( $where === null ) {
             return [];
         }
-        $sql = "SELECT {$table}.{$field} FROM {$table} INNER JOIN wp_captaincore_sites ON {$table}.site_id = wp_captaincore_sites.site_id WHERE {$where[0]} AND wp_captaincore_sites.status = 'active'";
+        $sites = "{$wpdb->prefix}captaincore_sites";
+        $sql = "SELECT {$table}.{$field} FROM {$table} INNER JOIN {$sites} ON {$table}.site_id = {$sites}.site_id WHERE {$where[0]} AND {$sites}.status = 'active'";
         $results = array_column( $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) ), $field );
-        return $results;
-    }
-
-    static function select_domains_for_account( $account_ids = [] ) {
-        global $wpdb;
-        $table   = self::_table();
-        $ids     = implode( ",", $account_ids );
-        $sql     = "SELECT {$table}.domain_id FROM {$table} INNER JOIN wp_captaincore_domains ON {$table}.domain_id = wp_captaincore_domains.domain_id WHERE {$table}.account_id in ({$ids})";
-        $results = array_column( $wpdb->get_results( $sql ), 'domain_id' );
         return $results;
     }
 
@@ -310,19 +272,6 @@ class DB {
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_process_logs.`created_at` DESC";
         $results = $wpdb->get_results( $wpdb->prepare( $sql, $where[1] ) );
-        return $results;
-    }
-
-    static function fetch_sites_for_account( $account_id = "" ) {
-        global $wpdb;
-        $table = self::_table();
-        $sql = "SELECT *
-                FROM {$table}
-                INNER JOIN {$wpdb->prefix}captaincore_account_site ON {$wpdb->prefix}captaincore_account_site.account_id = {$table}.account_id
-                INNER JOIN {$wpdb->prefix}captaincore_accounts ON {$wpdb->prefix}captaincore_accounts.account_id = {$table}.account_id
-                WHERE {$table}.account_id = $account_id OR {$wpdb->prefix}captaincore_account_site.account_id = $account_id
-                order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-        $results = $wpdb->get_results( $sql );
         return $results;
     }
 
