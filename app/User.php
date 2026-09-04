@@ -72,8 +72,22 @@ class User {
                 'activity' => false, 'users' => false, 'invites' => false,
                 'invoices' => false, 'plan' => false,
             ],
+            // account_level() returns false for a user with no account_user row,
+            // i.e. not a member of this account at all. That has to be the most
+            // restrictive tier, not the most permissive: defaulting to full made
+            // "not a member" and "full member" produce the same permission set,
+            // which the invite preview then handed to anyone holding one valid
+            // unaccepted invite.
+            'none' => [
+                'sites' => false, 'domains' => false, 'timeline' => false,
+                'activity' => false, 'users' => false, 'invites' => false,
+                'invoices' => false, 'plan' => false,
+            ],
         ];
-        return isset( $tiers[ $level ] ) ? $tiers[ $level ] : $tiers['full'];
+        if ( ! is_string( $level ) || ! isset( $tiers[ $level ] ) ) {
+            return $tiers['none'];
+        }
+        return $tiers[ $level ];
     }
 
     public function set_as_primary( $token_id ) {

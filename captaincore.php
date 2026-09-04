@@ -5543,6 +5543,14 @@ function captaincore_invites_accept_func( WP_REST_Request $request ) {
 	] );
 
 	if ( count( $results ) == "1" && captaincore_invite_is_valid( $results[0] ) ) {
+		// The invite is addressed to an email, so the account it grants belongs
+		// to whoever owns that address - not simply to whoever presents the
+		// token. Without this, a token seen by anyone else joins them instead.
+		$current_email = strtolower( trim( (string) wp_get_current_user()->user_email ) );
+		$invited_email = strtolower( trim( (string) ( $results[0]->email ?? '' ) ) );
+		if ( $invited_email === '' || $current_email !== $invited_email ) {
+			return new WP_Error( 'permission_denied', 'This invite was sent to a different email address.', [ 'status' => 403 ] );
+		}
 		$user       = new CaptainCore\User;
 		$accounts   = $user->accounts();
 		$accounts[] = $invite->account;
