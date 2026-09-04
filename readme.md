@@ -14,7 +14,7 @@ It's published here so other developers can see how a WordPress hosting business
 
 CaptainCore is two cooperating halves:
 
-- **CaptainCore Manager** (this repo). A WordPress plugin that holds the fleet's state. It provides custom database tables, a 298-route REST API, a single page interface served at `/account`, and a set of WP-CLI commands for scheduled fleet operations.
+- **CaptainCore Manager** (this repo). A WordPress plugin that holds the fleet's state. It provides custom database tables, a 304-route REST API, a single page interface served at `/account`, and a set of WP-CLI commands for scheduled fleet operations.
 - **[CaptainCore CLI](https://github.com/CaptainCore/captaincore)**. A Go binary that connects to managed sites over SSH, collects data with WP-CLI and bash remote scripts, and posts the results back to the Manager's token-authenticated API.
 
 The Manager never touches customer servers directly. It asks the CLI to do that, then stores and presents what comes back. That split keeps the WordPress side stateless about credentials for day-to-day syncs and keeps the heavy lifting on a dedicated server.
