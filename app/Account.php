@@ -329,18 +329,30 @@ class Account {
         // Cache author display names and avatars
         $author_cache = [];
 
+        // fetch_process_logs() returns one row per (process log, site) pair, so a
+        // log touching many of this account's sites arrives many times over - one
+        // here appears 729 times. Each pass rewrote the SAME object out of
+        // $logs_map, so created_at went through strtotime() twice and came back
+        // false, description was rendered from already-rendered HTML, and the
+        // duplicate was pushed onto the response again. Walk distinct logs once.
+        $seen         = [];
+        // in_array() over the account's site ids is a linear scan, and the site
+        // rows for a fleet-wide log run to the hundreds. Keyed lookup instead.
+        $site_id_keys = array_flip( $site_ids );
+
         $process_logs = [];
         foreach ( $fetch_process_logs as $result ) {
             $plid = $result->process_log_id;
-            if ( ! isset( $logs_map[ $plid ] ) ) {
+            if ( ! isset( $logs_map[ $plid ] ) || isset( $seen[ $plid ] ) ) {
                 continue;
             }
+            $seen[ $plid ] = true;
 
             // Filter sites to only those the account has access to
             $websites = [];
             if ( isset( $sites_map[ $plid ] ) ) {
                 foreach ( $sites_map[ $plid ] as $site ) {
-                    if ( in_array( $site->site_id, $site_ids ) ) {
+                    if ( isset( $site_id_keys[ $site->site_id ] ) ) {
                         $websites[] = $site;
                     }
                 }
