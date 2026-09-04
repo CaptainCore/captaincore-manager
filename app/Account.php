@@ -198,7 +198,19 @@ class Account {
 
     public function invites() {
         $invites = new Invites();
-        return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
+        $records = $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
+        // where() is SELECT *, and the invites table carries the token that
+        // accepts the invite. The pending-invite list only needs to say who was
+        // invited and at what level, so the token does not leave the server.
+        return array_map( function( $invite ) {
+            return (object) [
+                "invite_id"  => $invite->invite_id ?? null,
+                "account_id" => $invite->account_id ?? null,
+                "email"      => $invite->email ?? "",
+                "level"      => $invite->level ?? "",
+                "created_at" => $invite->created_at ?? "",
+            ];
+        }, $records );
     }
 
     public function domains() {
