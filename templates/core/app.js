@@ -2239,7 +2239,15 @@ class Component extends DCLogic {
       .map((l, i) => ({ ...l, segs: this.logSegments(l.text || ''), n: l.ph ? '' : String(i + 1) }));
     return {
       dName: site.name,
-      dMeta: site.provider + ' · ' + site.account + ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
+      // Split so the account name can be its own clickable segment. Design-mode
+      // fixtures carry an account name but no id, so the link only renders when
+      // there is somewhere to go; otherwise the name stays plain text.
+      dMetaPre: site.provider + ' · ',
+      dAcct: site.account,
+      dAcctIsLink: !!( site.account && site.accountId ),
+      dAcctPlain: !( site.account && site.accountId ),
+      dAcctGo: () => this.openAccount(site.accountId),
+      dMetaPost: ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
       setEnvProd: () => this.setEnv('Production'), setEnvStag: () => this.setEnv('Staging'),

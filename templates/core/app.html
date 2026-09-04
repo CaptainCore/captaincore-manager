@@ -891,7 +891,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);height:36px;padding:0 16px;display:inline-flex;align-items:center;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
             </div>
           </div>
-          <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMeta }}</div>
+          <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMetaPre }}<sc-if value="{{ dAcctIsLink }}" hint-placeholder-val="{{ false }}"><span onClick="{{ dAcctGo }}" title="Open account" style="color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ dAcct }}</span></sc-if><sc-if value="{{ dAcctPlain }}" hint-placeholder-val="{{ true }}">{{ dAcct }}</sc-if>{{ dMetaPost }}</div>
           <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:12px;margin-top:14px;border:1px solid var(--bad);background:var(--bad-soft);border-radius:11px;padding:12px 16px;flex-wrap:wrap">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
