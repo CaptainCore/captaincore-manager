@@ -9,6 +9,9 @@
 #
 # What is excluded and why:
 #   .git, .gitignore, .DS_Store          repository plumbing
+#   */.git*, */.github/                  the same, inside vendor packages -
+#                                        CI workflows and VCS metadata are not
+#                                        runtime code and are never autoloaded
 #   .claude/                             agent config, dev only
 #   bin/                                 the release toolchain, dev only
 #   roadmap.md, to-do.md                 planning docs, dev only
@@ -21,8 +24,23 @@
 # templates/ SHIPS (core.php + core/ UI). manifest.json SHIPS (updater
 # fallback). changelog.md and api-docs.md SHIP (public docs).
 #
-# Usage: bin/build-zip.sh   → ../captaincore-manager.zip (from wp-content/plugins/)
+# Usage: bin/build-zip.sh          → ../captaincore-manager.zip (release build)
+#        bin/build-zip.sh --dev    → same zip, without the release gates
+#
+# --dev is for deploying the development branch to production mid-cycle, where
+# the manifest legitimately still points at the last release. It skips ONLY the
+# version-consistency and download_url checks. The exclusion list and the leak
+# and required-file assertions still run - a dev deploy is if anything more
+# likely to carry a stray planning doc than a release cut is.
 set -euo pipefail
+
+DEV_BUILD=0
+for arg in "$@"; do
+	case "$arg" in
+		--dev) DEV_BUILD=1 ;;
+		*) echo "unknown argument: $arg" >&2; exit 1 ;;
+	esac
+done
 
 HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT="$( cd "$HERE/.." && pwd )"
@@ -35,26 +53,37 @@ command -v zip >/dev/null || { echo "zip is required" >&2; exit 1; }
 # The version lives in three places and the self-updater compares it against the
 # manifest, so a build whose header disagrees with its own manifest either offers
 # an update forever or never offers one. Fail the build rather than ship that.
+if [ "$DEV_BUILD" = "1" ]; then
+	echo "Dev build: skipping the version and manifest release checks."
+fi
 header_version="$( sed -n 's/^ \* Version:[[:space:]]*\(.*\)$/\1/p' "$ROOT/captaincore.php" | head -1 | tr -d '[:space:]' )"
 const_version="$( sed -n "s/^define( 'CAPTAINCORE_VERSION', '\(.*\)' );$/\1/p" "$ROOT/captaincore.php" | head -1 )"
 manifest_version="$( sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/manifest.json" | head -1 )"
 
 [ -n "$header_version" ] || { echo "FAIL: could not read the plugin header version" >&2; exit 1; }
-if [ "$header_version" != "$const_version" ] || [ "$header_version" != "$manifest_version" ]; then
-	echo "FAIL: version mismatch — header=$header_version CAPTAINCORE_VERSION=$const_version manifest=$manifest_version" >&2
-	exit 1
+if [ "$DEV_BUILD" = "0" ]; then
+	if [ "$header_version" != "$const_version" ] || [ "$header_version" != "$manifest_version" ]; then
+		echo "FAIL: version mismatch — header=$header_version CAPTAINCORE_VERSION=$const_version manifest=$manifest_version" >&2
+		exit 1
+	fi
+	if ! grep -q "/v${header_version}/" "$ROOT/manifest.json"; then
+		echo "FAIL: manifest download_url does not point at the v${header_version} release asset" >&2
+		exit 1
+	fi
+	echo "Version $header_version consistent across header, constant and manifest."
+else
+	echo "Building $header_version (constant $const_version, manifest $manifest_version)."
 fi
-if ! grep -q "/v${header_version}/" "$ROOT/manifest.json"; then
-	echo "FAIL: manifest download_url does not point at the v${header_version} release asset" >&2
-	exit 1
-fi
-echo "Version $header_version consistent across header, constant and manifest."
 
 rm -f "$OUT"
 cd "$PARENT"
 zip -r -q -X "$OUT" "$NAME" \
 	-x "$NAME/.git/*" \
 	-x "$NAME/.gitignore" \
+	-x "*/.git/*" \
+	-x "*/.github/*" \
+	-x "*/.gitignore" \
+	-x "*/.gitattributes" \
 	-x "$NAME/.claude/*" \
 	-x "$NAME/bin/*" \
 	-x "$NAME/roadmap.md" \
@@ -74,10 +103,10 @@ zip -r -q -X "$OUT" "$NAME" \
 # the first hit, unzip takes SIGPIPE, and the pipeline inherits its status.
 listing="$( unzip -l "$OUT" )"
 
-leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md" <<< "$listing" || true )"
+leaked="$( grep -cE "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md|public/faker\.js|/\.git(hub|ignore|attributes)?/|/\.gitignore$|/\.gitattributes$" <<< "$listing" || true )"
 [ "$leaked" = "0" ] || {
 	echo "FAIL: $leaked dev file(s) leaked into the zip" >&2
-	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md" <<< "$listing" | head >&2
+	grep -E "$NAME/(\.git|\.claude|bin)/|$NAME/(roadmap|to-do|user-account-security-plan)\.md|core/(STATUS|V1-PLAN|PARITY)\.md|public/faker\.js|/\.git(hub|ignore|attributes)?/|/\.gitignore$|/\.gitattributes$" <<< "$listing" | head >&2
 	exit 1
 }
 
