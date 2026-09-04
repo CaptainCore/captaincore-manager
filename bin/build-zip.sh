@@ -12,6 +12,12 @@
 #   */.git*, */.github/                  the same, inside vendor packages -
 #                                        CI workflows and VCS metadata are not
 #                                        runtime code and are never autoloaded
+#   vendor/*/{tests,docs,examples}/      dependencies' own suites and docs.
+#                                        Verified before excluding: the
+#                                        optimized classmap maps no class into
+#                                        them and nothing requires a path under
+#                                        them, so they are dead weight at
+#                                        runtime (~700 KB)
 #   .claude/                             agent config, dev only
 #   bin/                                 the release toolchain, dev only
 #   roadmap.md, to-do.md                 planning docs, dev only
@@ -84,6 +90,10 @@ zip -r -q -X "$OUT" "$NAME" \
 	-x "*/.github/*" \
 	-x "*/.gitignore" \
 	-x "*/.gitattributes" \
+	-x "$NAME/vendor/*/tests/*" \
+	-x "$NAME/vendor/*/test/*" \
+	-x "$NAME/vendor/*/docs/*" \
+	-x "$NAME/vendor/*/examples/*" \
 	-x "$NAME/.claude/*" \
 	-x "$NAME/bin/*" \
 	-x "$NAME/roadmap.md" \
