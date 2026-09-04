@@ -3680,11 +3680,47 @@ function captaincore_provider_new_site_func( $request ) {
 		}
 	}
 
+	// shared_with names the accounts the finished site is shared into, so each
+	// one has to be an account the caller can actually reach. run() reads it
+	// back with array_column(..., "account_id"), which fatals on a non-array.
+	$shared_with = [];
+	if ( ! empty( $site->shared_with ) && is_array( $site->shared_with ) ) {
+		$is_admin = ( new CaptainCore\User )->is_admin();
+		foreach ( $site->shared_with as $shared ) {
+			$shared     = (array) $shared;
+			$shared_id  = isset( $shared['account_id'] ) ? $shared['account_id'] : null;
+			if ( ! CaptainCore\DB::is_valid_id( $shared_id ) ) {
+				continue;
+			}
+			if ( ! $is_admin && ! captaincore_verify_permissions_account( (int) $shared_id ) ) {
+				$errors[] = "Permission denied for a shared account";
+				break;
+			}
+			$shared_with[] = [ "account_id" => (int) $shared_id ];
+		}
+	}
+
 	if ( ! empty( $errors ) ) {
 		return [
 			'errors' => $errors,
 		];
 	}
+
+	// Rebuild the payload from the fields the dialog actually sends. The whole
+	// object is persisted as ProviderActions.action and then read back by
+	// ProviderAction::run() as its own state - result, step, site_id and
+	// live_environment_id included - so anything extra that survives this point
+	// is server state the caller got to choose.
+	$site = (object) [
+		"name"          => $site->name,
+		"domain"        => $site->domain,
+		"datacenter"    => empty( $site->datacenter ) ? "" : $site->datacenter,
+		"clone_site_id" => empty( $site->clone_site_id ) ? "" : $site->clone_site_id,
+		"provider_id"   => empty( $site->provider_id ) ? "" : $site->provider_id,
+		"account_id"    => empty( $site->account_id ) ? "" : $site->account_id,
+		"customer_id"   => empty( $site->customer_id ) ? "" : $site->customer_id,
+		"shared_with"   => $shared_with,
+	];
 
 	return ( new CaptainCore\Provider( $provider ) )->new_site( $site );
 }
