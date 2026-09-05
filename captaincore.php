@@ -4903,7 +4903,15 @@ function captaincore_recipes_func( $request ) {
 }
 
 function captaincore_recipes_delete_func( $request ) {
-	$recipe_id = $request->get_param( "id" );
+	// Cast before the ownership check, not after. recipe_id is a bigint column,
+	// so MySQL coerces "5 --flag" to 5 and Recipes::verify() would pass on the
+	// caller's own recipe while the untouched string carried on into the CLI
+	// command. The route regex is no help: WP_REST_Request resolves a JSON body
+	// ahead of the URL segment, and DELETE accepts a body.
+	$recipe_id = (int) $request->get_param( "id" );
+	if ( $recipe_id <= 0 ) {
+		return new WP_Error( 'invalid_recipe', "Invalid recipe.", [ 'status' => 400 ] );
+	}
 	if ( ! ( new CaptainCore\Recipes )->verify( $recipe_id ) ) {
 		return new WP_Error( 'permission_denied', "You do not have permission to delete this recipe.", [ 'status' => 403 ] );
 	}
@@ -4911,7 +4919,7 @@ function captaincore_recipes_delete_func( $request ) {
 	$result = ( new CaptainCore\Recipes )->delete( $recipe_id );
 
 	if ( $result ) {
-		CaptainCore\Run::CLI( "recipe delete {$recipe_id}" );
+		CaptainCore\Run::CLI( [ 'recipe', 'delete', (string) $recipe_id ] );
 		return;
 	}
 
@@ -6402,6 +6410,25 @@ function captaincore_update_logs_get_func( $request ) {
 	return json_decode( $response );
 }
 
+/**
+ * Read the quicksave hash from a request, constrained to what a hash can be.
+ *
+ * The `(?P<hash>[a-zA-Z0-9-]+)` in the route is NOT a validator: WP_REST_Request
+ * resolves JSON, POST and GET parameters ahead of the URL segment, so a body or
+ * query field of the same name silently outranks the path. A hash reaches the
+ * CLI as a command argument, so an unconstrained one adds argv to a
+ * fleet-privileged process. Take it from the URL segment only, and require it to
+ * start with an alphanumeric so it can never land in a flag position either.
+ *
+ * @param WP_REST_Request $request Request to read from.
+ * @return string Valid hash, or "" when the segment is missing or malformed.
+ */
+function captaincore_request_hash( $request ) {
+	$url_params = $request->get_url_params();
+	$hash       = (string) ( $url_params['hash'] ?? '' );
+	return preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9-]*$/', $hash ) ? $hash : '';
+}
+
 function captaincore_quicksaves_get_func( $request ) {
 	$site_id     = $request->get_param( 'site_id' );
 	$environment = $request->get_param( 'environment' );
@@ -6410,8 +6437,10 @@ function captaincore_quicksaves_get_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$hash        = $request['hash'];
-	$environment = $request['environment'];
+	$hash = captaincore_request_hash( $request );
+	if ( $hash === '' ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
+	}
 	return ( new CaptainCore\Quicksave( $site_id ) )->get( $hash, $environment );
 }
 
@@ -6424,7 +6453,10 @@ function captaincore_quicksaves_changed_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$hash        = $request['hash'];
+	$hash = captaincore_request_hash( $request );
+	if ( $hash === '' ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
+	}
 	return ( new CaptainCore\Quicksave( $site_id ) )->changed( $hash, $environment, $match );
 }
 
@@ -6432,10 +6464,13 @@ function captaincore_quicksaves_filediff_func( $request ) {
 	$site_id     = $request->get_param( 'site_id' );
 	$environment = $request->get_param( 'environment' );
 	$file        = $request->get_param( 'file' );
-	$hash        = $request['hash'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$hash = captaincore_request_hash( $request );
+	if ( $hash === '' ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
 	}
 	return ( new CaptainCore\Quicksave( $site_id ) )->filediff( $hash, $environment, $file );
 }
@@ -6446,10 +6481,13 @@ function captaincore_quicksaves_rollback_func( $request ) {
 	$type        = $request->get_param( 'type' );
 	$value       = empty( $request->get_param( 'value' ) ) ? "" : $request->get_param( 'value' );
 	$version     = $request->get_param( 'version' );
-	$hash        = $request['hash'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$hash = captaincore_request_hash( $request );
+	if ( $hash === '' ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
 	}
 	return ( new CaptainCore\Quicksave( $site_id ) )->rollback( $hash, $environment, $version, $type, $value );
 }
@@ -6457,11 +6495,14 @@ function captaincore_quicksaves_rollback_func( $request ) {
 function captaincore_quicksaves_sandbox_token_func( $request ) {
 	$site_id          = $request->get_param( 'site_id' );
 	$environment      = CaptainCore\Run::safe_environment( $request->get_param( 'environment' ) );
-	$hash             = $request['hash'];
 	$include_database = (bool) $request->get_param( 'include_database' );
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$hash = captaincore_request_hash( $request );
+	if ( $hash === '' ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
 	}
 
 	$token = wp_generate_password( 64, false );
@@ -6478,7 +6519,7 @@ function captaincore_quicksaves_sandbox_token_func( $request ) {
 }
 
 function captaincore_quicksaves_blueprint_func( $request ) {
-	$hash  = $request['hash'];
+	$hash  = captaincore_request_hash( $request );
 	$token = $request->get_param( 'token' );
 
 	if ( empty( $token ) ) {
@@ -6491,8 +6532,16 @@ function captaincore_quicksaves_blueprint_func( $request ) {
 	}
 
 	$data = json_decode( $transient, true );
-	if ( $data['hash'] !== $hash ) {
+	if ( ! hash_equals( (string) ( $data['hash'] ?? '' ), $hash ) ) {
 		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
+	}
+
+	// Carry the stored copy forward, not the request's. A transient minted
+	// before this validation shipped could still hold an unconstrained hash,
+	// and this value reaches the CLI as a command argument.
+	$hash = (string) $data['hash'];
+	if ( ! preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9-]*$/', $hash ) ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
 	}
 
 	$include_database = ! empty( $data['include_database'] );
@@ -6503,7 +6552,7 @@ function captaincore_quicksaves_blueprint_func( $request ) {
 }
 
 function captaincore_quicksaves_artifact_func( $request ) {
-	$hash  = $request['hash'];
+	$hash  = captaincore_request_hash( $request );
 	$token = $request->get_param( 'token' );
 	$type  = $request->get_param( 'type' );
 	$name  = $request->get_param( 'name' );
@@ -6518,8 +6567,16 @@ function captaincore_quicksaves_artifact_func( $request ) {
 	}
 
 	$data = json_decode( $transient, true );
-	if ( $data['hash'] !== $hash ) {
+	if ( ! hash_equals( (string) ( $data['hash'] ?? '' ), $hash ) ) {
 		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
+	}
+
+	// Use the stored copy, and re-validate it: a transient minted before this
+	// validation shipped could hold an unconstrained hash, and this value is
+	// about to become a CLI argument.
+	$hash = (string) $data['hash'];
+	if ( ! preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9-]*$/', $hash ) ) {
+		return new WP_Error( 'invalid_hash', 'Invalid quicksave.', [ 'status' => 400 ] );
 	}
 
 	if ( ! in_array( $type, [ 'plugin', 'theme', 'database' ], true ) ) {
@@ -6536,7 +6593,7 @@ function captaincore_quicksaves_artifact_func( $request ) {
 		header( 'Access-Control-Allow-Origin: *' );
 		header( 'Content-Type: application/sql' );
 		header( 'Content-Disposition: attachment; filename="database.sql"' );
-		CaptainCore\Run::CLI_Stream( "quicksave database {$site_id}-{$environment} {$hash}" );
+		CaptainCore\Run::CLI_Stream( [ 'quicksave', 'database', "{$site_id}-{$environment}", $hash ] );
 		exit;
 	}
 
@@ -6547,7 +6604,7 @@ function captaincore_quicksaves_artifact_func( $request ) {
 	header( 'Access-Control-Allow-Origin: *' );
 	header( 'Content-Type: application/zip' );
 	header( 'Content-Disposition: attachment; filename="' . $name . '.zip"' );
-	CaptainCore\Run::CLI_Stream( "quicksave archive {$site_id}-{$environment} {$hash} --{$type}={$name}" );
+	CaptainCore\Run::CLI_Stream( [ 'quicksave', 'archive', "{$site_id}-{$environment}", $hash, "--{$type}={$name}" ] );
 	exit;
 }
 
@@ -6610,7 +6667,12 @@ function captaincore_site_backups_get_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$backup_id   = $request['backup_id'];
+	// Constrained even though it is now passed as a discrete argv element: a
+	// value starting with "-" would still occupy a flag position on the CLI.
+	$backup_id = (string) $request['backup_id'];
+	if ( ! preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/', $backup_id ) ) {
+		return new WP_Error( 'invalid_backup', 'Invalid backup.', [ 'status' => 400 ] );
+	}
 	$environment = $request['environment'];
 	$site        = new CaptainCore\Site( $site_id );
 	if ( ! empty( $file ) ) {

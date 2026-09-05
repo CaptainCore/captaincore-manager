@@ -906,7 +906,11 @@ class Site {
 
     public function quicksave_get( $hash, $environment = "production" ) {
 
-        $command = "quicksave get {$this->site_id}-$environment $hash";
+        // argv form: the dispatch server execs these verbatim instead of
+        // re-tokenizing a command string on whitespace, so neither the
+        // environment nor the hash can add arguments to the invocation.
+        $environment = Run::safe_environment( $environment );
+        $args        = [ 'quicksave', 'get', "{$this->site_id}-{$environment}", (string) $hash ];
 
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
@@ -919,7 +923,7 @@ class Site {
                 'Content-Type' => 'application/json; charset=utf-8',
                 'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]),
+            'body'        => json_encode( [ "args" => $args ]),
             'method'      => 'POST',
             'data_format' => 'body'
         ];
@@ -945,19 +949,20 @@ class Site {
 
         $environment = Run::safe_environment( $environment );
         $file    = base64_encode( $file_id );
-        $command = "backup show {$this->site_id}-$environment $backup_id $file";
-    
+        $args    = [ 'backup', 'show', "{$this->site_id}-{$environment}", (string) $backup_id, $file ];
+
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
-        return Run::CLI_Stream( $command );
+        return Run::CLI_Stream( $args );
     }
 
     public function backup_get( $backup_id, $environment = "production" ) {
 
-        $command = "backup get {$this->site_id}-$environment $backup_id";
+        $environment = Run::safe_environment( $environment );
+        $args        = [ 'backup', 'get', "{$this->site_id}-{$environment}", (string) $backup_id ];
 
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
@@ -970,7 +975,7 @@ class Site {
                 'Content-Type' => 'application/json; charset=utf-8',
                 'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]),
+            'body'        => json_encode( [ "args" => $args ]),
             'method'      => 'POST',
             'data_format' => 'body'
         ];
@@ -987,7 +992,8 @@ class Site {
 
     public function backups( $environment = "production" ) {
 
-        $command = "backup list {$this->site_id}-$environment --format=json";
+        $environment = Run::safe_environment( $environment );
+        $args        = [ 'backup', 'list', "{$this->site_id}-{$environment}", '--format=json' ];
 
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
@@ -1000,7 +1006,7 @@ class Site {
                 'Content-Type' => 'application/json; charset=utf-8',
                 'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]),
+            'body'        => json_encode( [ "args" => $args ]),
             'method'      => 'POST',
             'data_format' => 'body'
         ];
@@ -1034,7 +1040,8 @@ class Site {
 
     public function logs_archive_list( $environment = "production" ) {
 
-        $command = "logs archive-list {$this->site_id}-$environment";
+        $environment = Run::safe_environment( $environment );
+        $args        = [ 'logs', 'archive-list', "{$this->site_id}-{$environment}" ];
 
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
@@ -1046,7 +1053,7 @@ class Site {
                 'Content-Type' => 'application/json; charset=utf-8',
                 'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]),
+            'body'        => json_encode( [ "args" => $args ]),
             'method'      => 'POST',
             'data_format' => 'body'
         ];
@@ -1065,7 +1072,8 @@ class Site {
 
     public function logs_archive_get( $file, $environment = "production" ) {
 
-        $command = "logs archive-get {$this->site_id}-$environment $file";
+        $environment = Run::safe_environment( $environment );
+        $args        = [ 'logs', 'archive-get', "{$this->site_id}-{$environment}", $file ];
 
         if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
             add_filter( 'https_ssl_verify', '__return_false' );
@@ -1077,7 +1085,7 @@ class Site {
                 'Content-Type' => 'application/json; charset=utf-8',
                 'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]),
+            'body'        => json_encode( [ "args" => $args ]),
             'method'      => 'POST',
             'data_format' => 'body'
         ];
