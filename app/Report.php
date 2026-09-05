@@ -1822,7 +1822,10 @@ class Report {
      */
     public static function get_default_recipient( $site_ids = [] ) {
 
-        if ( empty( $site_ids ) ) {
+        // Defensive: a scalar here used to index a single CHARACTER out of a
+        // string and resolve a site nobody asked for. The callers validate
+        // through Sites::verify() now, but this must not depend on that.
+        if ( empty( $site_ids ) || ! is_array( $site_ids ) ) {
             return "";
         }
 
@@ -1831,6 +1834,19 @@ class Report {
 
         if ( empty( $site ) || empty( $site->account_id ) ) {
             return "";
+        }
+
+        // Sites::site_ids() includes sites SHARED into the caller's account, so
+        // reaching this point does not mean the caller belongs to the account
+        // that owns the site. The billing contact is plan data, which
+        // Account::fetch() withholds below the plan tier - so withhold it here
+        // too rather than leaking the owner's address to a shared-access member.
+        $user = new User;
+        if ( ! $user->is_admin() ) {
+            $perms = User::tier_permissions( $user->account_level( $site->account_id ) );
+            if ( empty( $perms['plan'] ) ) {
+                return "";
+            }
         }
 
         $account = ( new Account( $site->account_id, true ) )->get();
