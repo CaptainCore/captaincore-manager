@@ -122,7 +122,11 @@ class SecurityThreats {
 			'timeout'   => 30,
 			// TLS relaxation is debug-only here, as it is on every other
 			// outbound call. This body is the fleet's full component inventory.
-			'sslverify' => ! ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ),
+			// TLS stays verified. This body is the fleet's full component
+			// inventory, and a forged reply can suppress a vulnerable component
+			// from the audit queue, so a debug flag is not a good enough reason
+			// to stop checking who we are talking to. RegistryClient::get()
+			// already works this way against a local registry.
 		] );
 
 		if ( is_wp_error( $response ) ) {

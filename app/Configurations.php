@@ -149,13 +149,12 @@ class Configurations {
         
         $command = "configuration sync";
         
-        // Disable https when debug enabled
-        if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
-            add_filter( 'https_ssl_verify', '__return_false' );
-        }
-
+        // Debug-only, and scoped to THIS request via the args below rather than
+        // a global https_ssl_verify filter, which stayed on for every outbound
+        // HTTPS call for the rest of the page load.
         $data = [ 
             'timeout' => 45,
+            'sslverify' => ! ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ),
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8', 
                 'token'        => captaincore_get_cli_token()

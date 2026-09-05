@@ -12,11 +12,21 @@ class Kinsta {
     private static $api_key;
 
     public static function setApiKey( $key ) {
-        self::$api_key = $key;
+        // credentials() returns null to REFUSE a provider row that is neither
+        // the caller's nor the shared house row. Storing that as-is was
+        // indistinguishable from "never set", so getApiKey() fell through to
+        // the house key and spent it anyway - the guard failed open. Keep the
+        // refusal distinguishable.
+        self::$api_key = ( $key === null || $key === '' ) ? false : $key;
     }
 
     private static function getApiKey() {
-        // Fallback to the default provider key if not set dynamically
+        // false means a provider row was explicitly refused - do not substitute
+        // the house key for it. null still means "never set", which keeps the
+        // default-provider path working.
+        if ( self::$api_key === false ) {
+            return false;
+        }
         return self::$api_key ?? \CaptainCore\Providers\Kinsta::credentials("api");
     }
 
@@ -48,6 +58,10 @@ class Kinsta {
             return false;
         }
         $api_key = self::getApiKey();
+        // Refused provider row - bail rather than send an empty Bearer header.
+        if ( $api_key === false || $api_key === null || $api_key === '' ) {
+            return false;
+        }
         $data    = [
             'timeout' => 45,
             'headers' => [
@@ -91,6 +105,10 @@ class Kinsta {
             return false;
         }
         $api_key = self::getApiKey();
+        // Refused provider row - bail rather than send an empty Bearer header.
+        if ( $api_key === false || $api_key === null || $api_key === '' ) {
+            return false;
+        }
         $data    = [
             'timeout' => 45,
             'headers' => [
@@ -134,6 +152,10 @@ class Kinsta {
             return false;
         }
         $api_key = self::getApiKey();
+        // Refused provider row - bail rather than send an empty Bearer header.
+        if ( $api_key === false || $api_key === null || $api_key === '' ) {
+            return false;
+        }
         $data    = [
             'timeout' => 45,
             'headers' => [
@@ -159,6 +181,10 @@ class Kinsta {
             return false;
         }
         $api_key = self::getApiKey();
+        // Refused provider row - bail rather than send an empty Bearer header.
+        if ( $api_key === false || $api_key === null || $api_key === '' ) {
+            return false;
+        }
         $data    = [
             'timeout' => 45,
             'headers' => [

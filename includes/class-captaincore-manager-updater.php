@@ -53,7 +53,11 @@ class Captaincore_Manager_Updater {
 	 * @return array
 	 */
 	public function dev_mode_request_args( $args, $url ) {
-		if ( self::MANIFEST_URL === $url || $this->is_our_package_url( $url ) ) {
+		// Manifest only. Relaxing TLS on the PACKAGE leg too would make the
+		// sha256 pin meaningless: an on-path attacker serves a forged manifest
+		// carrying the hash of their own zip, then serves that zip, and
+		// hash_equals() passes against the attacker's own expected value.
+		if ( self::MANIFEST_URL === $url ) {
 			$args['sslverify'] = false;
 		}
 		return $args;
@@ -229,11 +233,17 @@ class Captaincore_Manager_Updater {
 		$response->author         = $remote->author;
 		$response->author_profile = $remote->author_profile;
 		$response->homepage       = $remote->homepage;
-		$response->download_link  = $remote->download_url;
-		$response->trunk          = $remote->download_url;
+		// Same guard update() applies. verify_package() only intercepts URLs
+		// that pass is_our_package_url(), so advertising one that does not
+		// would hand the core upgrader a package with no host check and no
+		// hash check at all.
+		if ( $this->is_our_package_url( $remote->download_url ) && ! empty( $remote->sha256 ) ) {
+			$response->download_link = $remote->download_url;
+			$response->trunk         = $remote->download_url;
+		}
 		$response->requires_php   = $remote->requires_php;
 		$response->last_updated   = $remote->last_updated;
-		$response->sections       = array( 'description' => $remote->sections->description );
+		$response->sections       = array( 'description' => isset( $remote->sections->description ) ? $remote->sections->description : '' );
 
 		return $response;
 	}
