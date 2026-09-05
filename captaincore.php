@@ -11403,6 +11403,35 @@ function captaincore_scheduled_reports_list_func( WP_REST_Request $request ) {
 /**
  * REST endpoint: Create scheduled report
  */
+/**
+ * Whether the current user may have an account-wide report mailed to them.
+ *
+ * Membership alone is not enough. An account report embeds the account's whole
+ * site list and its process-log timeline, and those are exactly what the
+ * "sites" and "timeline" tiers govern everywhere else - Account::fetch() and
+ * Sites::__construct() both consult them. Report::generate_account() does not,
+ * so the tier has to be enforced here or a domains-only member can mail
+ * themselves everything their tier exists to withhold.
+ *
+ * @param int $account_id Account the report covers.
+ * @return bool
+ */
+function captaincore_can_receive_account_report( $account_id ) {
+	$account_id = (int) $account_id;
+	if ( current_user_can( 'manage_options' ) ) {
+		return true;
+	}
+	$user = new CaptainCore\User;
+	if ( $user->is_admin() ) {
+		return true;
+	}
+	if ( ! captaincore_verify_permissions_account( $account_id ) ) {
+		return false;
+	}
+	$perms = CaptainCore\User::tier_permissions( $user->account_level( $account_id ) );
+	return ! empty( $perms['sites'] ) && ! empty( $perms['timeline'] );
+}
+
 function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 	$params = $request->get_json_params();
 
@@ -11428,8 +11457,10 @@ function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 
 	// Verify access to the requested account (unless admin). Without this a
 	// non-admin could schedule an account-wide report for any account_id and
-	// have its fleet data mailed to a recipient they control.
-	if ( ! empty( $account_id ) && ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions_account( (int) $account_id ) ) {
+	// have its fleet data mailed to a recipient they control. The tier matters
+	// as much as the membership: the report carries the site list and the
+	// timeline, which lower tiers are not entitled to see.
+	if ( ! empty( $account_id ) && ! captaincore_can_receive_account_report( $account_id ) ) {
 		return new WP_Error( 'unauthorized_account', 'You do not have access to the selected account.', [ 'status' => 403 ] );
 	}
 
@@ -11510,7 +11541,7 @@ function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
 	}
 	if ( array_key_exists( 'account_id', $params ) ) {
 		// Verify access to the account being assigned (unless admin).
-		if ( ! $is_admin && ! empty( $params['account_id'] ) && ! captaincore_verify_permissions_account( (int) $params['account_id'] ) ) {
+		if ( ! $is_admin && ! empty( $params['account_id'] ) && ! captaincore_can_receive_account_report( $params['account_id'] ) ) {
 			return new WP_Error( 'unauthorized_account', 'You do not have access to the selected account.', [ 'status' => 403 ] );
 		}
 		$update_data['account_id'] = $params['account_id'];
