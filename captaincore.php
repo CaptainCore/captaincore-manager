@@ -1930,6 +1930,42 @@ function captaincore_accounts_get_func( WP_REST_Request $request ) {
 	return $account->fetch();
 }
 
+/**
+ * Whether the current user may run each of the given recipes by id.
+ *
+ * A recipe body is operator-authored script that gets piped into a shell on a
+ * managed site, and Recipes::list() deliberately withholds other users' private
+ * recipes and blanks the content of public ones - so running one BY ID has to
+ * be gated the same way. Public, own, or admin.
+ *
+ * Kept as one helper because there are three doors into this capability
+ * (/run/code, the sites/cli recipe branch, and account site defaults) and the
+ * third one shipped without the check.
+ *
+ * @param array $recipe_ids Recipe ids to test.
+ * @return bool True when every id is available to the caller.
+ */
+function captaincore_verify_recipe_permissions( $recipe_ids = [] ) {
+	$recipe_ids = array_filter( array_map( 'intval', (array) $recipe_ids ) );
+	if ( empty( $recipe_ids ) ) {
+		return true;
+	}
+	if ( ( new CaptainCore\User )->is_admin() ) {
+		return true;
+	}
+	$user_id = get_current_user_id();
+	foreach ( array_unique( $recipe_ids ) as $recipe_id ) {
+		$recipe = CaptainCore\Recipes::get( $recipe_id );
+		if ( ! $recipe ) {
+			return false;
+		}
+		if ( empty( $recipe->public ) && $recipe->user_id != $user_id ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 function captaincore_accounts_defaults_func( WP_REST_Request $request ) {
 	$user       = new CaptainCore\User;
 	$account_id = intval( $request['id'] );
@@ -1953,6 +1989,18 @@ function captaincore_accounts_defaults_func( WP_REST_Request $request ) {
 	if ( ! isset( $record->defaults['recipes'] ) ) {
 		$record->defaults['recipes'] = [];
 	}
+
+	// Site defaults are the third way to run a recipe by id: `site
+	// deploy-defaults` reads this list and pipes each recipe body into a shell
+	// on the account's sites. /run/code and the sites/cli recipe branch both
+	// test access before resolving stored content, so this has to as well -
+	// otherwise another user's private recipe runs on a host the caller picks.
+	$recipe_ids = array_map( 'intval', (array) $record->defaults['recipes'] );
+	if ( ! captaincore_verify_recipe_permissions( $recipe_ids ) ) {
+		return new WP_Error( 'permission_denied', 'One or more of the selected recipes is not available to you.', [ 'status' => 403 ] );
+	}
+	$record->defaults['recipes'] = $recipe_ids;
+
 	( new CaptainCore\Accounts )->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $account_id ] );
 	( new CaptainCore\Account( $account_id, true ) )->sync();
 	return "Record updated.";
@@ -2641,8 +2689,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		// Recipes::list() withholds other users' private recipes, so running one
 		// by id needs the same access test /run/code applies: public, own, or admin.
 		$recipe = CaptainCore\Recipes::get( intval( $value ) );
-		$can    = $recipe && ( ! empty( $recipe->public ) || $recipe->user_id == get_current_user_id() || ( new CaptainCore\User )->is_admin() );
-		if ( ! $can ) {
+		if ( ! captaincore_verify_recipe_permissions( [ $value ] ) ) {
 			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 		}
 		$args = array_merge( [ 'ssh' ], $sites, [ '--recipe=' . intval( $value ) ] );
@@ -4302,8 +4349,7 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
     $recipe_id = isset( $params['recipe_id'] ) ? intval( $params['recipe_id'] ) : 0;
     if ( $recipe_id && empty( $code ) ) {
         $recipe = CaptainCore\Recipes::get( $recipe_id );
-        $can    = $recipe && ( ! empty( $recipe->public ) || $recipe->user_id == get_current_user_id() || ( new CaptainCore\User )->is_admin() );
-        if ( ! $can ) {
+        if ( ! captaincore_verify_recipe_permissions( [ $recipe_id ] ) ) {
             return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
         }
         $code = (string) $recipe->content;
