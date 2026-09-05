@@ -11225,13 +11225,12 @@ function captaincore_report_send_func( WP_REST_Request $request ) {
 		return new WP_Error( 'invalid_recipient', 'A valid recipient email is required.', [ 'status' => 400 ] );
 	}
 
-	if ( ! current_user_can( 'manage_options' ) ) {
-		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
-		foreach ( $site_ids as $site_id ) {
-			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
-				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
-			}
-		}
+	// Sites::verify() rather than a hand-rolled loop: foreach over a non-array
+	// runs zero times, so a scalar site_ids slipped past the guard entirely
+	// while the consumer still indexed it. verify() rejects non-arrays, empty
+	// arrays and non-numeric ids, and fails closed.
+	if ( ! current_user_can( 'manage_options' ) && ! ( new CaptainCore\Sites )->verify( $site_ids ) ) {
+		return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
 	}
 
 	$result = CaptainCore\Report::send( $site_ids, $start_date, $end_date, $recipient );
@@ -11256,13 +11255,12 @@ function captaincore_report_preview_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
 	}
 
-	if ( ! current_user_can( 'manage_options' ) ) {
-		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
-		foreach ( $site_ids as $site_id ) {
-			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
-				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
-			}
-		}
+	// Sites::verify() rather than a hand-rolled loop: foreach over a non-array
+	// runs zero times, so a scalar site_ids slipped past the guard entirely
+	// while the consumer still indexed it. verify() rejects non-arrays, empty
+	// arrays and non-numeric ids, and fails closed.
+	if ( ! current_user_can( 'manage_options' ) && ! ( new CaptainCore\Sites )->verify( $site_ids ) ) {
+		return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
 	}
 
 	$html = CaptainCore\Report::preview( $site_ids, $start_date, $end_date );
@@ -11281,13 +11279,12 @@ function captaincore_report_default_recipient_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
 	}
 
-	if ( ! current_user_can( 'manage_options' ) ) {
-		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
-		foreach ( $site_ids as $site_id ) {
-			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
-				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
-			}
-		}
+	// Sites::verify() rather than a hand-rolled loop: foreach over a non-array
+	// runs zero times, so a scalar site_ids slipped past the guard entirely
+	// while the consumer still indexed it. verify() rejects non-arrays, empty
+	// arrays and non-numeric ids, and fails closed.
+	if ( ! current_user_can( 'manage_options' ) && ! ( new CaptainCore\Sites )->verify( $site_ids ) ) {
+		return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
 	}
 
 	$email = CaptainCore\Report::get_default_recipient( $site_ids );
@@ -11465,15 +11462,8 @@ function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 	}
 
 	// Verify user has access to all requested sites (unless admin)
-	if ( ! empty( $site_ids ) && ! current_user_can( 'manage_options' ) ) {
-		$user_sites       = new CaptainCore\Sites();
-		$allowed_site_ids = $user_sites->site_ids();
-
-		foreach ( $site_ids as $site_id ) {
-			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
-				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
-			}
-		}
+	if ( ! empty( $site_ids ) && ! current_user_can( 'manage_options' ) && ! ( new CaptainCore\Sites )->verify( $site_ids ) ) {
+		return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
 	}
 
 	$create_data = [
@@ -11514,15 +11504,8 @@ function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
 	$update_data = [];
 	if ( isset( $params['site_ids'] ) ) {
 		// Verify user has access to all requested sites (unless admin)
-		if ( ! $is_admin ) {
-			$user_sites       = new CaptainCore\Sites();
-			$allowed_site_ids = $user_sites->site_ids();
-
-			foreach ( $params['site_ids'] as $site_id ) {
-				if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
-					return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
-				}
-			}
+		if ( ! $is_admin && ! ( new CaptainCore\Sites )->verify( $params['site_ids'] ) ) {
+			return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
 		}
 		$update_data['site_ids'] = $params['site_ids'];
 	}
