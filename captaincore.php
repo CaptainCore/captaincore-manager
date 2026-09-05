@@ -1004,9 +1004,24 @@ function captaincore_missive_func( WP_REST_Request $request ) {
  * @param bool   $inline Render as a single line instead of a block.
  * @return string
  */
-function captaincore_markdown( $text, $inline = false ) {
+function captaincore_markdown( $text, $inline = false, $trusted = false ) {
 	$parsedown = new \Parsedown();
-	$html      = $inline
+
+	// Safe mode escapes raw HTML in the source instead of passing it through.
+	// wp_kses_post() below already made this safe on its own; safe mode is a
+	// second, independent layer, so markup never reaches the filter and a kses
+	// bypass alone is not enough. Default it ON, because almost everything here
+	// is user or customer supplied - process log descriptions, audit findings
+	// scraped off managed sites, account notes.
+	//
+	// $trusted is for operator-authored markdown that deliberately contains
+	// HTML (api-docs.md ships inside the plugin and uses <strong>/<br>/<small>).
+	// Never pass true for anything that reached us over the wire.
+	if ( ! $trusted ) {
+		$parsedown->setSafeMode( true );
+	}
+
+	$html = $inline
 		? $parsedown->line( (string) $text )
 		: $parsedown->text( (string) $text );
 	return wp_kses_post( $html );
@@ -9062,7 +9077,8 @@ function captaincore_register_rest_endpoints() {
 				$markdown = str_replace( '{your-site}', wp_parse_url( home_url(), PHP_URL_HOST ), $markdown );
 				$format   = $request->get_param( 'format' );
 				if ( $format === 'html' ) {
-					return [ 'html' => captaincore_markdown( $markdown ) ];
+					// Trusted: this file ships inside the plugin and uses HTML.
+					return [ 'html' => captaincore_markdown( $markdown, false, true ) ];
 				}
 				// Raw markdown download
 				header( 'Content-Type: text/markdown; charset=UTF-8' );
