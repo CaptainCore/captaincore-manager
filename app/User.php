@@ -1830,7 +1830,40 @@ class User {
         return $items;
     }
 
+    /**
+     * Whether the current user may mint an application password.
+     *
+     * WP_Application_Passwords::create_new_application_password() performs NO
+     * authorization of its own - in core that gate lives in the REST controller
+     * (WP_REST_Application_Passwords_Controller::create_item_permissions_check),
+     * which our own routes bypass. Without this, "logged in" was the only
+     * requirement, so the operator could not turn application passwords off for
+     * anyone: a user could re-enable them for themselves in one request.
+     *
+     * @return true|\WP_Error True when allowed, WP_Error otherwise.
+     */
+    private function can_create_application_password() {
+        $user_id = get_current_user_id();
+        if ( ! $user_id ) {
+            return new \WP_Error( 'rest_forbidden', 'Not signed in.', [ 'status' => 401 ] );
+        }
+        if ( ! function_exists( 'wp_is_application_passwords_available' ) ) {
+            return true;
+        }
+        if ( ! wp_is_application_passwords_available() || ! wp_is_application_passwords_available_for_user( $user_id ) ) {
+            return new \WP_Error( 'application_passwords_disabled', 'Application passwords are not available for this account.', [ 'status' => 403 ] );
+        }
+        if ( ! current_user_can( 'create_app_password', $user_id ) ) {
+            return new \WP_Error( 'rest_cannot_create_app_password', 'You are not allowed to create application passwords.', [ 'status' => 403 ] );
+        }
+        return true;
+    }
+
     public function create_named_application_password( $name = '' ) {
+        $allowed = $this->can_create_application_password();
+        if ( is_wp_error( $allowed ) ) {
+            return $allowed;
+        }
         $user_id = get_current_user_id();
         $name    = sanitize_text_field( $name );
         if ( $name === '' ) {
@@ -1865,6 +1898,10 @@ class User {
     }
 
     public function create_application_password() {
+        $allowed = $this->can_create_application_password();
+        if ( is_wp_error( $allowed ) ) {
+            return $allowed;
+        }
         $user_id = get_current_user_id();
         $name    = get_bloginfo( 'name' ) . ' API';
         $result  = \WP_Application_Passwords::create_new_application_password( $user_id, [ 'name' => $name ] );
