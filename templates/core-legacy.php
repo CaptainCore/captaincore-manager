@@ -2,6 +2,25 @@
 if ( ! function_exists('is_plugin_active') ) {
     include_once(ABSPATH . 'wp-admin/includes/plugin.php');
 }
+
+// core.php sends a logged-out visitor to /login. This shell never did, and the
+// ?ui=legacy branch is picked before authentication is considered at all, so
+// the whole operator dashboard - including the boot payload below - rendered
+// for anyone who asked. The invite, welcome and connect flows genuinely need a
+// logged-out shell, so they stay exempt; everything else redirects.
+$captaincore_public_route = false;
+if ( ! is_user_logged_in() ) {
+    $captaincore_base         = strtok( (string) get_query_var( 'captaincore_route' ), '/' );
+    $captaincore_public_route = in_array( $captaincore_base, [ 'welcome', 'connect', 'login' ], true )
+        || ( isset( $_GET['account'] ) && isset( $_GET['token'] ) );
+
+    if ( ! $captaincore_public_route ) {
+        $captaincore_config = CaptainCore\Configurations::get();
+        $captaincore_path   = isset( $captaincore_config->path ) ? '/' . trim( (string) $captaincore_config->path, '/' ) . '/' : '/account/';
+        wp_safe_redirect( home_url( $captaincore_path . 'login' ) );
+        exit;
+    }
+}
 ?><!DOCTYPE html>
 <html>
 <head>
@@ -13409,7 +13428,7 @@ const app = createApp({
 		billing_loading: true,
 		billing_tabs: 1,
 		home_link: <?php echo json_encode( home_url() ); ?>,
-		remote_upload_uri: <?php echo json_encode( (string) get_option( 'options_remote_upload_uri' ) ); ?>,
+		remote_upload_uri: <?php echo json_encode( is_user_logged_in() ? (string) get_option( 'options_remote_upload_uri' ) : '' ); ?>,
 		loading_page: true,
 		expanded: [],
 		accounts: [],
@@ -13711,8 +13730,8 @@ const app = createApp({
 				"value": "uk-london-1"
 			}
 		],
-		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
-		kinsta_provider_sites: [<?php echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>],
+		kinsta_providers: <?php echo json_encode( is_user_logged_in() ? CaptainCore\Providers\Kinsta::list() : [] ); ?>,
+		kinsta_provider_sites: [<?php echo json_encode( is_user_logged_in() ? CaptainCore\Providers\Kinsta::list_sites() : [] ); ?>],
 		pinned_environments: [],
 		clone_sites: [],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
@@ -13745,7 +13764,7 @@ const app = createApp({
 		selected_nav: "",
 		querystring: window.location.search,
 		page: 1,
-		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
+		socket: "<?php echo is_user_logged_in() ? esc_js( captaincore_fetch_socket_address() . "/ws" ) : ''; ?>",
 		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
 		jobs: [],
 		keys: [],
@@ -13802,7 +13821,7 @@ const app = createApp({
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
 		legacy_ui: <?php echo get_user_meta( get_current_user_id(), 'captaincore_legacy_ui', true ) ? 'true' : 'false'; ?>,
-		process_roles: <?php echo wp_json_encode( json_decode( (string) get_option('captaincore_process_roles') ) ?: [] ); ?>,
+		process_roles: <?php echo wp_json_encode( is_user_logged_in() ? ( json_decode( (string) get_option('captaincore_process_roles') ) ?: [] ) : [] ); ?>,
 		shared_with: [],
 		new_key: { show: false, title: "", key: "" },
 		new_key_user: { show: false, title: "", key: "" },
