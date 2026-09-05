@@ -153,6 +153,24 @@ class Account {
             $record["account"]["plan"] = (object) [ "name" => $plan_name ];
         }
 
+        // The account block itself was emitted untiered while everything around
+        // it was gated. It carries `defaults`, which is the site-provisioning
+        // template - the WordPress administrator accounts (username, email,
+        // name) auto-created on this tenant's new sites - and `metrics`, which
+        // carries outstanding_invoices. Accounts::list() already strips that
+        // figure from non-billing viewers, so the two readers disagreed.
+        // Reachable below the intended tier two ways: sites-only/domains-only
+        // members on GET /accounts/{id}, and anyone holding a valid unaccepted
+        // invite token on the invite preview.
+        if ( ! $user->is_admin() ) {
+            if ( empty( $perms['users'] ) ) {
+                unset( $record["account"]["defaults"] );
+            }
+            if ( empty( $perms['invoices'] ) && isset( $record["account"]["metrics"]->outstanding_invoices ) ) {
+                unset( $record["account"]["metrics"]->outstanding_invoices );
+            }
+        }
+
         return $record;
     }
 

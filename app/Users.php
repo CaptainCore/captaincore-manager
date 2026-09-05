@@ -9,17 +9,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Users {
 
-    public function __construct( $users = [] ) {
-        $user        = new User;
+    /** Whether the caller may read or write the fleet-wide user directory. */
+    private $authorized = false;
 
-        // Bail if not an administrator
-        if ( ! $user->is_admin() ) {
-            return 'Error: Please log in.';
-        }
-        
+    public function __construct( $users = [] ) {
+        // A constructor's return value is discarded, so the old `return
+        // 'Error: Please log in.'` here gated nothing at all - the object came
+        // back fully usable and list() would hand every WordPress user's name,
+        // email, login and roles to any caller. Sites and Accounts get away
+        // with the same shape only because their early return leaves the
+        // property their accessors read empty; list() reads nothing from $this.
+        // Keep the decision as state and honour it in every method.
+        $this->authorized = ( new User )->is_admin();
     }
 
     public function list() {
+        if ( ! $this->authorized ) {
+            return [];
+        }
         $users       = [];
         $fetch_users = get_users();
         // One pass over the account-user pivot table — a per-user accounts()
@@ -53,6 +60,9 @@ class Users {
     }
 
     public function requested_sites() {
+        if ( ! $this->authorized ) {
+            return [];
+        }
         $results     = [];
         $fetch_users = get_users();
         foreach( $fetch_users as $user ) {
@@ -67,6 +77,9 @@ class Users {
     }
 
     public function update( $user ) {
+        if ( ! $this->authorized ) {
+            return [];
+        }
         $user         = (object) $user;
         $user->errors = [];
 
