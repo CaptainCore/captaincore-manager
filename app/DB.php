@@ -548,6 +548,22 @@ class DB {
         return $wpdb->get_results( $sql );
     }
 
+    /**
+     * Quote a caller-supplied value for use inside a REGEXP string literal.
+     *
+     * esc_sql() keeps the value inside the SQL literal; this keeps it inside
+     * the LITERAL part of the pattern. Without it a filter value is still a
+     * regex, so ".*" widens the match and a nested quantifier makes MySQL
+     * backtrack across the environments table's longtext columns. Same helper
+     * fetch_sites_filtered() already uses.
+     *
+     * @param mixed $value Raw value.
+     * @return string
+     */
+    private static function quote_regex_literal( $value ) {
+        return esc_sql( preg_replace( '/[.*+?()\[\]{}|^$\\\\]/', '\\\\$0', (string) $value ) );
+    }
+
     static function query_sites_matching_versions_statuses( $arguments = [], $allowed_site_ids = [] ) {
         global $wpdb;
         $arguments  = (object) $arguments;
@@ -566,7 +582,7 @@ class DB {
             $filter_column = self::sanitize_component_column( $arguments->filter[1] ?? '' );
             if ( ! empty( $filter_column ) ) {
                 // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-                $pattern = '{"name":"'.esc_sql( $arguments->filter[0] ).'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
+                $pattern = '{"name":"'.self::quote_regex_literal( $arguments->filter[0] ).'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
                 $pattern = str_replace ( "{", "[{]", $pattern );
                 $pattern = str_replace ( "}", "[}]", $pattern );
                 $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$filter_column} REGEXP '{$pattern}'";
@@ -583,7 +599,7 @@ class DB {
                 continue;
             }
             // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-            $pattern = '{"name":"'.esc_sql( $version->slug ).'","title":"[^"]*","status":"[^"]*","version":"'.esc_sql( $version->name ).'"}';
+            $pattern = '{"name":"'.self::quote_regex_literal( $version->slug ).'","title":"[^"]*","status":"[^"]*","version":"'.self::quote_regex_literal( $version->name ).'"}';
             $pattern = str_replace ( "{", "[{]", $pattern );
             $pattern = str_replace ( "}", "[}]", $pattern );
             if ( empty( $version_conditions ) ) {
@@ -606,7 +622,7 @@ class DB {
                 continue;
             }
             // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-            $pattern = '{"name":"'.esc_sql( $status->slug ).'","title":"[^"]*","status":"'.esc_sql( $status->name ).'","version":"[^"]*"}';
+            $pattern = '{"name":"'.self::quote_regex_literal( $status->slug ).'","title":"[^"]*","status":"'.self::quote_regex_literal( $status->name ).'","version":"[^"]*"}';
             $pattern = str_replace ( "{", "[{]", $pattern );
             $pattern = str_replace ( "}", "[}]", $pattern );
             $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}'";
