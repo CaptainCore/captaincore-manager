@@ -915,6 +915,10 @@ class Mailer {
      *  SITE REMOVAL REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_removal_request( $site, $user, $is_removal ) {
+        // Escaped for the HTML body. These are customer-set (display_name) or
+        // caller-supplied (plan fields), and every sibling cell here is already
+        // escaped - the omission was inconsistent, not deliberate.
+        $user_name_html = esc_html( $user->name ?? "" );
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -954,7 +958,7 @@ class Mailer {
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
+                                {$user_name_html} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
@@ -986,6 +990,10 @@ class Mailer {
      *  SITE AUDIT REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_audit_request( $site, $environment, $user, $report_type, $notes, $is_request ) {
+        // Escaped for the HTML body. These are customer-set (display_name) or
+        // caller-supplied (plan fields), and every sibling cell here is already
+        // escaped - the omission was inconsistent, not deliberate.
+        $user_name_html = esc_html( $user->name ?? "" );
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
 
@@ -1052,7 +1060,7 @@ class Mailer {
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
+                                {$user_name_html} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
@@ -1085,6 +1093,11 @@ class Mailer {
      *  CANCEL PLAN REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_cancel_plan_request( $subscription, $user ) {
+        // Escaped for the HTML body. These are customer-set (display_name) or
+        // caller-supplied (plan fields), and every sibling cell here is already
+        // escaped - the omission was inconsistent, not deliberate.
+        $user_name_html  = esc_html( $user["name"] ?? "" );
+        $user_email_html = esc_html( $user["email"] ?? "" );
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -1111,7 +1124,7 @@ class Mailer {
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
-                                {$user['name']} <span style='color: #A3ACB9; font-weight: 400;'>({$user['email']})</span>
+                                {$user_name_html} <span style='color: #A3ACB9; font-weight: 400;'>({$user_email_html})</span>
                             </td>
                         </tr>
                     </table>
@@ -1142,6 +1155,13 @@ class Mailer {
      *  PLAN CHANGE REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_plan_change_request( $subscription, $user ) {
+        // Escaped for the HTML body. These are customer-set (display_name) or
+        // caller-supplied (plan fields), and every sibling cell here is already
+        // escaped - the omission was inconsistent, not deliberate.
+        $user_name_html      = esc_html( $user["name"] ?? "" );
+        $user_email_html     = esc_html( $user["email"] ?? "" );
+        $plan_name_html      = esc_html( $subscription->plan["name"] ?? "" );
+        $plan_interval_html  = esc_html( $subscription->plan["interval"] ?? "" );
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -1163,16 +1183,16 @@ class Mailer {
                         </tr>
                         <tr>
                             <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>New Plan</td>
-                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['name']}</td>
+                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$plan_name_html}</td>
                         </tr>
                         <tr>
                             <td style='padding-bottom: 10px; color: #666D7A; font-size: 14px;'>New Interval</td>
-                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['interval']}</td>
+                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$plan_interval_html}</td>
                         </tr>
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
-                                {$user['name']} <span style='color: #A3ACB9; font-weight: 400;'>({$user['email']})</span>
+                                {$user_name_html} <span style='color: #A3ACB9; font-weight: 400;'>({$user_email_html})</span>
                             </td>
                         </tr>
                     </table>
@@ -1203,6 +1223,10 @@ class Mailer {
      *  NEW SITE REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_request_notification( $site_name, $site_notes, $account_name, $user ) {
+        // Escaped for the HTML body. These are customer-set (display_name) or
+        // caller-supplied (plan fields), and every sibling cell here is already
+        // escaped - the omission was inconsistent, not deliberate.
+        $user_name_html = esc_html( $user->name ?? "" );
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
@@ -1239,7 +1263,7 @@ class Mailer {
                         <tr>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #666D7A; font-size: 14px;'>Requested By</td>
                             <td style='padding-top: 10px; border-top: 1px solid #E3E7EE; color: #15181D; font-weight: 600; text-align: right;'>
-                                {$user->name} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
+                                {$user_name_html} <span style='color: #A3ACB9; font-weight: 400;'>(#{$user->user_id})</span>
                             </td>
                         </tr>
                     </table>
