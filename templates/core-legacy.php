@@ -8620,19 +8620,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<span class="text-body-2">WooCommerce Products</span>
 								<v-row class="mb-7">
 									<v-col>
-										<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Hosting Plan" hide-details variant="underlined"></v-select>
+										<v-select v-model="configurations.woocommerce.hosting_plan" :items="<?php echo esc_attr( wp_json_encode( CaptainCore\Configurations::products() ) ); ?>" item-value="id" item-title="name" label="Hosting Plan" hide-details variant="underlined"></v-select>
 									</v-col>
 									<v-col>
-										<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Addons" hide-details variant="underlined"></v-select>
+										<v-select v-model="configurations.woocommerce.addons" :items="<?php echo esc_attr( wp_json_encode( CaptainCore\Configurations::products() ) ); ?>" item-value="id" item-title="name" label="Addons" hide-details variant="underlined"></v-select>
 									</v-col>
 									<v-col>
-										<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Charges" hide-details variant="underlined"></v-select>
+										<v-select v-model="configurations.woocommerce.charges" :items="<?php echo esc_attr( wp_json_encode( CaptainCore\Configurations::products() ) ); ?>" item-value="id" item-title="name" label="Charges" hide-details variant="underlined"></v-select>
 									</v-col>
 									<v-col>
-										<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Credits" hide-details variant="underlined"></v-select>
+										<v-select v-model="configurations.woocommerce.credits" :items="<?php echo esc_attr( wp_json_encode( CaptainCore\Configurations::products() ) ); ?>" item-value="id" item-title="name" label="Credits" hide-details variant="underlined"></v-select>
 									</v-col>
 									<v-col>
-										<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Usage" hide-details variant="underlined"></v-select>
+										<v-select v-model="configurations.woocommerce.usage" :items="<?php echo esc_attr( wp_json_encode( CaptainCore\Configurations::products() ) ); ?>" item-value="id" item-title="name" label="Usage" hide-details variant="underlined"></v-select>
 									</v-col>
 								</v-row>
 								<span class="text-body-2">Hosting Plans</span>
@@ -23052,6 +23052,18 @@ const app = createApp({
 					//self.dialog_domain.results = response.data;
 				});
 		},
+		// The DNS result banner is rendered with v-html, and the delete branch
+		// reads the record name out of the zone as loaded from the provider -
+		// i.e. not necessarily a value this operator typed. Escape before it
+		// becomes markup.
+		escHtml( value ) {
+			return String( value == null ? "" : value )
+				.replace( /&/g, "&amp;" )
+				.replace( /</g, "&lt;" )
+				.replace( />/g, "&gt;" )
+				.replace( /"/g, "&quot;" )
+				.replace( /'/g, "&#39;" );
+		},
 		reflectDNS() {
 			this.dialog_domain.results.forEach( result => {
 
@@ -23066,9 +23078,9 @@ const app = createApp({
 					result.name = JSON.parse(JSON.stringify(record.update.record_name))
 					result.type = JSON.parse(JSON.stringify(record.update.record_type))
 					if ( result.name == "" ) {
-						result.success = `<code>${result.type.toUpperCase()}</code> record <code>@</code> updated successfully`
+						result.success = `<code>${this.escHtml(result.type).toUpperCase()}</code> record <code>@</code> updated successfully`
 					} else {
-						result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.name}</code> updated successfully`
+						result.success = `<code>${this.escHtml(result.type).toUpperCase()}</code> record <code>${this.escHtml(result.name)}</code> updated successfully`
 					}
 				}
 
@@ -23077,17 +23089,17 @@ const app = createApp({
 					record_name = record_to_remove[0].name
 					this.dialog_domain.records = this.dialog_domain.records.filter( record => record.id != result.record_id );
 					if ( record_name == "" ) {
-						result.success = `<code>${result.record_type.toUpperCase()}</code> record <code>@</code> deleted successfully`;
+						result.success = `<code>${this.escHtml(result.record_type).toUpperCase()}</code> record <code>@</code> deleted successfully`;
 					} else {
-						result.success = `<code>${result.record_type.toUpperCase()}</code> record <code>${record_name}</code> deleted successfully`;
+						result.success = `<code>${this.escHtml(result.record_type).toUpperCase()}</code> record <code>${this.escHtml(record_name)}</code> deleted successfully`;
 					}
 				}
 
 				if ( result.record_status == "new-record" && typeof result.errors == 'undefined' && result.data.id != "" ) {
 					if ( result.record_name == "" ) {
-						result.success = `<code>${result.type.toUpperCase()}</code> record <code>@</code> added successfully`;
+						result.success = `<code>${this.escHtml(result.type).toUpperCase()}</code> record <code>@</code> added successfully`;
 					} else {
-						result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.record_name}</code> added successfully`;
+						result.success = `<code>${this.escHtml(result.type).toUpperCase()}</code> record <code>${this.escHtml(result.record_name)}</code> added successfully`;
 					}
 
 					// Remove existing new recording matching type, name, value and ttl.
