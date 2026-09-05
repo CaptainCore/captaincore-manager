@@ -22,7 +22,7 @@ class Domains extends DB {
         $domain_ids = [];
 
         // Bail if not assigned a role
-        if ( ! $user->role_check() ) {
+        if ( ! $user->has_known_role() ) {
             return 'Error: Please log in.';
         }
 

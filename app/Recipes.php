@@ -18,7 +18,7 @@ class Recipes extends DB {
 		$all_recipes = self::fetch_recipes();
 
         // Bail if not assigned a role
-        if ( ! $user->role_check() ) {
+        if ( ! $user->has_known_role() ) {
             return 'Error: Please log in.';
         }
 

@@ -18,7 +18,7 @@ class Accounts extends DB {
         $account_ids = $user->accounts();
 
         // Bail if not assigned a role
-        if ( ! $user->role_check() ) {
+        if ( ! $user->has_known_role() ) {
             return 'Error: Please log in.';
         }
 
