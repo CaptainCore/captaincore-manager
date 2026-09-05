@@ -324,17 +324,24 @@ class Mailgun {
             }
         }
 
-        $command = sprintf(
-            "ssh %s --script=deploy-mailgun -- --key=%s --name=%s --domain=%s --password=%s --gravitysmtp_zip=%s",
+        // argv form: the dispatch server execs these verbatim rather than
+        // re-tokenizing a command string, so from_name - which arrives straight
+        // from the request - stays a single argument no matter what it contains.
+        // This was the last command string in the provider tree carrying a
+        // caller-supplied value.
+        $args = [
+            'ssh',
             $site_slug,
-            json_encode( $license ),
-            json_encode( $from_name ),
-            json_encode( $details->mailgun_zone ),
-            json_encode( $details->mailgun_smtp_password ),
-            json_encode( $download_url )
-        );
+            '--script=deploy-mailgun',
+            '--',
+            '--key=' . $license,
+            '--name=' . $from_name,
+            '--domain=' . $details->mailgun_zone,
+            '--password=' . $details->mailgun_smtp_password,
+            '--gravitysmtp_zip=' . $download_url,
+        ];
 
-        return \CaptainCore\Run::CLI( $command );
+        return \CaptainCore\Run::CLI( $args );
     }
 
 }
