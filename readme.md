@@ -85,7 +85,7 @@ Each log entry records the user, IP address, account context, entity type and ID
 
 1. Download the latest release from [GitHub Releases](https://github.com/CaptainCore/captaincore-manager/releases) and install it through the WordPress Plugins screen, or upload it to `/wp-content/plugins/`.
 2. Activate the plugin. Database tables are created on activation, and future updates arrive through the built-in self-updater, which verifies each package against the sha256 published in [manifest.json](manifest.json).
-3. Connect a server running [CaptainCore CLI](https://github.com/CaptainCore/captaincore). The Manager generates its CLI token automatically. Configuration happens in the Settings section of the `/account` interface rather than wp-config constants.
+3. Connect a server running [CaptainCore CLI](https://github.com/CaptainCore/captaincore): install the CLI there and run `captaincore connect --server-url=https://your-cli-server`. The Manager generates its CLI token automatically and hands it over, and the CLI registers its own address for job dispatch, so no wp-config constants are needed. Both values are visible under Settings in the `/account` interface.
 
 ## A word of warning
 

@@ -833,6 +833,8 @@ class Component extends DCLogic {
       setTabBrand: isOp && tab === 'branding', setTabProv: tab === 'providers', setTabDef: tab === 'defaults',
       setTabKeys: tab === 'keys', setTabCook: tab === 'cookbook', setTabHand: tab === 'handbook',
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
+      cliAddress: 'https://captaincore-api.example.com', onCliAddress: () => {},
+      cliAddressHint: 'Set by captaincore connect --server-url on the CLI server, or type it here.',
       brandSwatches: (booted ? [] : [['primary', '#3b82c4'], ['success', '#22a06b'], ['warning', '#d9a406'], ['error', '#d94a3d'], ['accent', '#7c5cff']]).map(([k, c]) => ({ k, c, on: () => {} })),
       brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => { this.setState({ copied: 'brand' }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },

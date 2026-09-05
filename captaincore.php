@@ -1039,6 +1039,47 @@ function captaincore_get_cli_token() {
 	return $token;
 }
 
+/**
+ * Base URL of the CLI server the Manager dispatches jobs to.
+ *
+ * A CAPTAINCORE_CLI_ADDRESS constant in wp-config.php wins when defined. Otherwise the
+ * value saved in the global configurations is used. `captaincore connect --server-url`
+ * on the CLI server writes that value, and the Settings screen can edit it, so a
+ * fresh install needs no wp-config edit.
+ */
+function captaincore_cli_address() {
+	if ( defined( 'CAPTAINCORE_CLI_ADDRESS' ) && CAPTAINCORE_CLI_ADDRESS ) {
+		return rtrim( CAPTAINCORE_CLI_ADDRESS, '/' );
+	}
+	$configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
+	if ( ! empty( $configurations->cli_address ) && is_string( $configurations->cli_address ) ) {
+		return rtrim( $configurations->cli_address, '/' );
+	}
+	return '';
+}
+
+/**
+ * Validate and persist a CLI server address into the global configurations.
+ * Returns the saved address, or a WP_Error when the value is not an http(s) URL.
+ */
+function captaincore_save_cli_address( $address ) {
+	$address = rtrim( trim( (string) $address ), '/' );
+	if ( ! filter_var( $address, FILTER_VALIDATE_URL ) || ! in_array( wp_parse_url( $address, PHP_URL_SCHEME ), [ 'http', 'https' ], true ) ) {
+		return new WP_Error( 'captaincore_bad_cli_address', 'cli_address must be an http(s) URL.', [ 'status' => 400 ] );
+	}
+	$configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
+	if ( empty( $configurations ) || ! is_object( $configurations ) ) {
+		$configurations = (object) [];
+	}
+	if ( isset( $configurations->cli_address ) && $configurations->cli_address === $address ) {
+		return $address;
+	}
+	$configurations->cli_address = $address;
+	update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+	( new CaptainCore\Configurations )->sync();
+	return $address;
+}
+
 function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
@@ -2548,7 +2589,7 @@ function captaincore_jobs_get_func( WP_REST_Request $request ) {
 		'method' => 'GET',
 	];
 
-	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$job_id}", $data );
+	$response = wp_remote_get( captaincore_cli_address() . "/task/{$job_id}", $data );
 	if ( is_wp_error( $response ) ) {
 		return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 	}
@@ -2884,7 +2925,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	];
 
 	if ( $run_in_background_silent ) {
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+		$response = wp_remote_post( captaincore_cli_address() . "/run/background", $data );
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 		}
@@ -2899,7 +2940,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		if ( captaincore_is_api_request( $request ) ) {
 			$async = ! empty( $request->get_json_params()['async'] );
 			if ( $async ) {
-				$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+				$response = wp_remote_post( captaincore_cli_address() . "/run/background", $data );
 				if ( is_wp_error( $response ) ) {
 					return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 				}
@@ -2919,14 +2960,14 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 			}
 
 			$data['timeout'] = 300;
-			$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+			$response = wp_remote_post( captaincore_cli_address() . "/run", $data );
 			if ( is_wp_error( $response ) ) {
 				return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 			}
 			return [ "status" => "completed", "response" => $response["body"] ];
 		}
 
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+		$response = wp_remote_post( captaincore_cli_address() . "/tasks", $data );
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 		}
@@ -2946,7 +2987,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	}
 
 	// Foreground command
-	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+	$response = wp_remote_post( captaincore_cli_address() . "/run", $data );
 	if ( is_wp_error( $response ) ) {
 		return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 	}
@@ -5080,7 +5121,7 @@ function captaincore_running_func( $request ) {
 		];
 
 		// Add command to dispatch server
-		$response  = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+		$response  = wp_remote_post( captaincore_cli_address() . "/run", $data );
 		$processes = json_decode( $response["body"]);
 
 		if ( is_array( $processes ) ) {
@@ -5101,7 +5142,7 @@ function captaincore_progress_func( $request ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/progress", [
+	$response = wp_remote_get( captaincore_cli_address() . "/progress", [
 		'timeout' => 15,
 		'headers' => [
 			'token' => captaincore_get_cli_token(),
@@ -5128,7 +5169,7 @@ function captaincore_progress_kill_func( $request ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$response = wp_remote_request( CAPTAINCORE_CLI_ADDRESS . "/progress/{$pid}", [
+	$response = wp_remote_request( captaincore_cli_address() . "/progress/{$pid}", [
 		'timeout' => 15,
 		'method'  => 'DELETE',
 		'headers' => [
@@ -5150,7 +5191,7 @@ function captaincore_progress_detail_func( $request ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/progress/{$pid}", [
+	$response = wp_remote_get( captaincore_cli_address() . "/progress/{$pid}", [
 		'timeout' => 15,
 		'headers' => [
 			'token' => captaincore_get_cli_token(),
@@ -7831,8 +7872,20 @@ function captaincore_permission_check() {
 function captaincore_cli_connect_func( WP_REST_Request $request ) {
 	global $wpdb;
 
+	// Pairing in the other direction: the CLI server tells the Manager where to
+	// dispatch jobs. Only the admin-authenticated path (application password)
+	// may change it; a token-authenticated --sync cannot redirect dispatch.
+	$params = $request->get_json_params();
+	if ( ! empty( $params['cli_address'] ) && captaincore_admin_permission_check() ) {
+		$saved = captaincore_save_cli_address( $params['cli_address'] );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+	}
+
 	$response = [
 		'token'          => captaincore_get_cli_token(),
+		'cli_address'    => captaincore_cli_address(),
 		'api_url'        => rest_url( 'captaincore/v1/api' ),
 		'gui_url'        => home_url(),
 		'configurations' => CaptainCore\Configurations::get(),
@@ -10050,7 +10103,7 @@ function captaincore_register_rest_endpoints() {
 					'method' => 'GET',
 				];
 
-				$raw_response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
+				$raw_response = wp_remote_get( captaincore_cli_address() . "/task/{$task_id}", $data );
 				if ( is_wp_error( $raw_response ) ) {
 					return new WP_Error( 'request_failed', $raw_response->get_error_message(), [ 'status' => 500 ] );
 				}
@@ -10112,7 +10165,7 @@ function captaincore_register_rest_endpoints() {
 					ob_end_clean();
 				}
 
-				$url = CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}/stream";
+				$url = captaincore_cli_address() . "/task/{$task_id}/stream";
 				$ch  = curl_init( $url );
 				curl_setopt( $ch, CURLOPT_HTTPHEADER, [
 					'Content-Type: application/json; charset=utf-8',
@@ -10167,7 +10220,7 @@ function captaincore_register_rest_endpoints() {
 					'method' => 'DELETE',
 				];
 
-				wp_remote_request( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
+				wp_remote_request( captaincore_cli_address() . "/task/{$task_id}", $data );
 
 				return [ "status" => "cancelled" ];
 			},
@@ -11764,7 +11817,7 @@ function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$url      = CAPTAINCORE_CLI_ADDRESS . '/run';
+	$url      = captaincore_cli_address() . '/run';
 	$response = wp_remote_post(
 		$url,
 		[
@@ -11844,7 +11897,7 @@ function captaincore_environment_files_func( WP_REST_Request $request ) {
 	}
 
 	$response = wp_remote_post(
-		CAPTAINCORE_CLI_ADDRESS . '/run',
+		captaincore_cli_address() . '/run',
 		[
 			'timeout' => 120,
 			'headers' => [
@@ -13849,7 +13902,7 @@ function captaincore_run_background_command( $command ) {
 	];
 
 	// Add command to dispatch server
-	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+	$response = wp_remote_post( captaincore_cli_address() . "/run/background", $data );
 	if ( is_wp_error( $response ) ) {
 		$error_message = $response->get_error_message();
 		return "Something went wrong: $error_message";
@@ -13893,7 +13946,7 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 	];
 
 	// Add command to dispatch server
-	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+	$response = wp_remote_post( captaincore_cli_address() . "/run", $data );
 
 	return $response["body"];
 }
@@ -14036,8 +14089,8 @@ function sort_by_name($a, $b) {
 }
 
 function captaincore_fetch_socket_address() {
-	$captaincore_cli_address = ( defined( "CAPTAINCORE_CLI_ADDRESS" ) ? CAPTAINCORE_CLI_ADDRESS : "" );
-	$socket_address          = str_replace( "https://", "wss://", $captaincore_cli_address );
+	$captaincore_cli_address = captaincore_cli_address();
+	$socket_address          = str_replace( [ "https://", "http://" ], [ "wss://", "ws://" ], $captaincore_cli_address );
 	if ( defined( 'CAPTAINCORE_CLI_SOCKET_ADDRESS' ) ) {
 		$socket_address = "wss://" . CAPTAINCORE_CLI_SOCKET_ADDRESS;
 	}

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- The CLI server address no longer has to live in wp-config.php. `captaincore connect --server-url=https://...` on the CLI server registers the address with the Manager over the same authenticated request that hands the CLI its token, so one command pairs both directions. The value is stored in the global configurations, shown and editable under Settings, Branding, as "CLI server", and read through a new `captaincore_cli_address()` helper that every dispatch call and the websocket address now use. A `CAPTAINCORE_CLI_ADDRESS` constant still wins when defined, so existing installs keep working unchanged; the Settings field says so when that is the case. Only an administrator-authenticated connect can change the address; a token-authenticated `--sync` cannot redirect dispatch.
+
 ## **v1.1.0** - September 4, 2026
 
 The security and scale release. Two audits ran against this cycle: the sweep that followed 1.0.0, which went over every REST route and both authorization primitives, and a second pass over the release candidate that found site provisioning trusting fields it had accepted from the browser. Both are fixed here. Alongside that, the dashboard picked up the parts of the legacy interface it was still missing, from domain registrar and account assignment to per account site defaults and renewal estimates, and an account with a large footprint opens in under a second instead of a minute.
