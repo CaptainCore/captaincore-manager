@@ -41,7 +41,8 @@ Object.assign(Component.prototype, {
   saveBranding() {
     const set = this._set;
     if (!set || !set.cfg) return;
-    const cfg = { ...set.cfg, name: (this.state.brandName || '').trim() || set.cfg.name };
+    const cliAddress = (this.state.cliAddress === undefined ? (set.cfg.cli_address || '') : this.state.cliAddress).trim().replace(/\/+$/, '');
+    const cfg = { ...set.cfg, name: (this.state.brandName || '').trim() || set.cfg.name, cli_address: cliAddress };
     this.setState({ copied: 'brand' });
     clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1600);
     this.api('/configurations/global', { method: 'PUT', body: cfg }).catch(() => {});
@@ -112,6 +113,11 @@ Object.assign(Component.prototype, {
       edit: (ev) => { ev.stopPropagation(); this.openProcessEdit(h); } }));
     return {
       brandName: s.brandName, onBrandName: e => this.setState({ brandName: e.target.value }),
+      cliAddress: s.cliAddress === undefined ? (set.cfg.cli_address || '') : s.cliAddress,
+      onCliAddress: e => this.setState({ cliAddress: e.target.value }),
+      cliAddressHint: window.CC_BOOT && window.CC_BOOT.cliAddressConstant
+        ? 'A CAPTAINCORE_CLI_ADDRESS constant in wp-config.php overrides this value.'
+        : 'Set by captaincore connect --server-url on the CLI server, or type it here.',
       brandSwatches, brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => this.saveBranding(),
       provRows, defRows, keyRows, recipeRows, handRows,

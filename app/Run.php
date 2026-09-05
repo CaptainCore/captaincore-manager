@@ -76,7 +76,7 @@ class Run {
             'data_format' => 'body',
         ];
 
-        return wp_remote_post( CAPTAINCORE_CLI_ADDRESS . $path, $data );
+        return wp_remote_post( captaincore_cli_address() . $path, $data );
     }
 
     public static function CLI( $command = "", $background = false, $payload = "" ) {
@@ -105,7 +105,7 @@ class Run {
             return;
         }
 
-        $url          = CAPTAINCORE_CLI_ADDRESS . "/run/stream";
+        $url          = captaincore_cli_address() . "/run/stream";
         $payload_body = wp_json_encode( self::build_body( $command, $payload ) );
         $headers      = [
             'Content-Type: application/json; charset=utf-8',

@@ -511,7 +511,7 @@ class Site {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return "Something went wrong: $error_message";
@@ -929,7 +929,7 @@ class Site {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return [];
@@ -981,7 +981,7 @@ class Site {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return [];
@@ -1012,7 +1012,7 @@ class Site {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return "Something went wrong: $error_message";
@@ -1058,7 +1058,7 @@ class Site {
             'data_format' => 'body'
         ];
 
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             return [];
         }
@@ -1090,7 +1090,7 @@ class Site {
             'data_format' => 'body'
         ];
 
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( captaincore_cli_address() . "/run", $data );
         if ( is_wp_error( $response ) ) {
             return new \WP_Error( 'cli_error', $response->get_error_message(), [ 'status' => 500 ] );
         }

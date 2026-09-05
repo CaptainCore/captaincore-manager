@@ -41,6 +41,7 @@ $cc_boot = [
     'restRoot'        => esc_url_raw( rest_url() ),
     'role'            => $user->role,
     'dcRole'          => $user->role === 'administrator' ? 'operator' : 'customer',
+    'cliAddressConstant' => defined( 'CAPTAINCORE_CLI_ADDRESS' ) && (bool) CAPTAINCORE_CLI_ADDRESS,
     'version'         => defined( 'CAPTAINCORE_VERSION' ) ? CAPTAINCORE_VERSION : '',
     'userFirstName'   => $first_name,
     // Raw name meta for the Profile form (userFirstName above is the display
