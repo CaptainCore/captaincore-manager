@@ -1497,15 +1497,22 @@ class User {
 
     /**
      * Constrain a tier to one the permission table knows, so a stored or
-     * submitted value cannot become an unrecognised level - tier_permissions()
-     * falls back to full for anything it does not recognise.
+     * submitted value cannot become an unrecognised level. Unknown input
+     * resolves DOWN, to the least access, because both callers write the
+     * result straight into account_user.level.
      *
      * @param string $level
      * @return string
      */
     public static function safe_account_level( $level ) {
         $allowed = [ 'full-billing', 'full', 'sites-only', 'domains-only' ];
-        return in_array( $level, $allowed, true ) ? $level : 'full';
+        // Unrecognised input resolves to the most restrictive real tier, not
+        // the second most permissive one. This used to return 'full' on the
+        // strength of a docblock claiming tier_permissions() did the same -
+        // which stopped being true when that method was hardened to return the
+        // all-false 'none' tier. Both callers write this straight into
+        // account_user.level, so the default here is an access decision.
+        return in_array( $level, $allowed, true ) ? $level : 'sites-only';
     }
 
     /**
