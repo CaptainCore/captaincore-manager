@@ -13365,6 +13365,118 @@ function captaincore_login_clear_failures( $keys ) {
 	}
 }
 
+/**
+ * Whether this sign-in has to be verified by email before it may complete.
+ *
+ * Shared by the CaptainCore secure login endpoint and the wp-login.php /
+ * XML-RPC guard so both entry points reach the same decision. A user with TOTP
+ * is already covered by their second factor. When GeoIP cannot resolve (missing
+ * database, private range, odd headers) the login proceeds without adding to
+ * trust - hard-failing there would lock people out on a stale database.
+ *
+ * Sends the verification email as a side effect when it returns true.
+ *
+ * @param WP_User $user Authenticated user.
+ * @return bool True when a verification email was sent and the sign-in must halt.
+ */
+function captaincore_login_requires_verification( $user ) {
+	if ( ! ( $user instanceof WP_User ) ) {
+		return false;
+	}
+	if ( (bool) get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ) {
+		return false;
+	}
+
+	$fingerprint = CaptainCore\GeoIP::fingerprint( CaptainCore\GeoIP::client_ip() );
+	if ( $fingerprint === null || ! empty( $fingerprint['is_local'] ) || empty( $fingerprint['lookup_ok'] ) ) {
+		return false;
+	}
+
+	if ( CaptainCore\TrustedLogins::is_trusted( $user->ID, $fingerprint ) ) {
+		CaptainCore\TrustedLogins::touch( $user->ID, $fingerprint );
+		return false;
+	}
+
+	$token      = CaptainCore\PendingVerification::create( $user->ID, $fingerprint );
+	$verify_url = CaptainCore\PendingVerification::verify_url( $user->ID, $token );
+	CaptainCore\Mailer::send_login_verification( $user, $verify_url, $fingerprint );
+	return true;
+}
+
+/**
+ * Whether a CaptainCore login guard should stay out of the way for this request.
+ *
+ * @param mixed $user Whatever the authenticate filter currently holds.
+ * @return bool
+ */
+function captaincore_login_guard_should_skip( $user ) {
+	// Leave WP-CLI alone.
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		return true;
+	}
+	// The CaptainCore secure login endpoint runs these checks itself.
+	if ( ! empty( $GLOBALS['captaincore_login_in_progress'] ) ) {
+		return true;
+	}
+	// Application passwords are for integrations and never carry a second
+	// factor by design; they authenticate at priority 20, so by the time this
+	// runs the action has already fired.
+	if ( did_action( 'application_password_did_authenticate' ) ) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Apply the login throttle to wp-login.php and XML-RPC.
+ *
+ * Runs ahead of core's username/password check so a throttled login never
+ * reaches the password comparison. The secure login endpoint keeps its own
+ * matching calls; without this the throttle only covered one of three ways in.
+ */
+function captaincore_throttle_wp_login( $user, $username = '' ) {
+	if ( captaincore_login_guard_should_skip( $user ) || $username === '' ) {
+		return $user;
+	}
+	if ( captaincore_login_is_throttled( captaincore_login_throttle_keys( $username ) ) ) {
+		return new WP_Error( 'captaincore_throttled', '<strong>Error:</strong> Too many attempts. Please try again later.' );
+	}
+	return $user;
+}
+add_filter( 'authenticate', 'captaincore_throttle_wp_login', 5, 2 );
+
+function captaincore_record_wp_login_failure( $username ) {
+	captaincore_login_record_failure( captaincore_login_throttle_keys( $username ) );
+}
+add_action( 'wp_login_failed', 'captaincore_record_wp_login_failure' );
+
+function captaincore_clear_wp_login_failures( $user_login ) {
+	captaincore_login_clear_failures( captaincore_login_throttle_keys( $user_login ) );
+}
+add_action( 'wp_login', 'captaincore_clear_wp_login_failures' );
+
+/**
+ * Require a trusted location on wp-login.php and XML-RPC.
+ *
+ * Hooked at priority 30 - AFTER core's username/password check at 20 - because
+ * this sends an email. wp_authenticate_user (where the 2FA guard lives) runs
+ * BEFORE the password is verified, so challenging there would let anyone
+ * trigger verification mail for any username they can name.
+ */
+function captaincore_enforce_login_location( $user ) {
+	if ( captaincore_login_guard_should_skip( $user ) || ! ( $user instanceof WP_User ) ) {
+		return $user;
+	}
+	if ( ! captaincore_login_requires_verification( $user ) ) {
+		return $user;
+	}
+	return new WP_Error(
+		'captaincore_verification_required',
+		'<strong>Check your email.</strong> This sign-in came from a new location, so we sent a link to finish signing in.'
+	);
+}
+add_filter( 'authenticate', 'captaincore_enforce_login_location', 30 );
+
 function captaincore_login_func( WP_REST_Request $request ) {
 
 	// Mark that authentication is happening inside the CaptainCore secure login
@@ -13448,22 +13560,8 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		// When 2FA is not enabled, require that the login originate from a trusted
 		// location. An unknown location triggers an email-verify step and halts
 		// the sign-in until the user clicks the emailed link.
-		if ( ! $tfa_enabled ) {
-			$fingerprint = CaptainCore\GeoIP::fingerprint( CaptainCore\GeoIP::client_ip() );
-
-			// If GeoIP can't resolve (DB missing, garbage IP, private range returned null),
-			// allow the login but don't add to trust. Hard-failing here would lock users out
-			// when databases are stale or the network sends odd headers.
-			if ( $fingerprint !== null && empty( $fingerprint['is_local'] ) && ! empty( $fingerprint['lookup_ok'] ) ) {
-				if ( CaptainCore\TrustedLogins::is_trusted( $current_user->ID, $fingerprint ) ) {
-					CaptainCore\TrustedLogins::touch( $current_user->ID, $fingerprint );
-				} else {
-					$token      = CaptainCore\PendingVerification::create( $current_user->ID, $fingerprint );
-					$verify_url = CaptainCore\PendingVerification::verify_url( $current_user->ID, $token );
-					CaptainCore\Mailer::send_login_verification( $current_user, $verify_url, $fingerprint );
-					return [ "info" => "We sent a verification email to finish signing in." ];
-				}
-			}
+		if ( captaincore_login_requires_verification( $current_user ) ) {
+			return [ "info" => "We sent a verification email to finish signing in." ];
 		}
 
 		if ( function_exists( "wpgraphql_cors_signon" ) ) {
