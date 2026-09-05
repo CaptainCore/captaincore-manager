@@ -1457,6 +1457,26 @@ class User {
         return $this->roles;
     }
 
+    /**
+     * Whether this user holds any role the app knows about.
+     *
+     * This is NOT an authorization gate - it is true for a bare Subscriber. It
+     * exists so the list models can tell "a user of this app" from "nobody",
+     * and every caller has to do its own per-row scoping on top. It was named
+     * role_check() and read like a privilege test at eight call sites.
+     *
+     * @return bool
+     */
+    public function has_known_role() {
+        if ( ! is_array( $this->roles ) ) {
+            return false;
+        }
+        return (bool) array_intersect( [ 'subscriber', 'customer', 'administrator', 'editor' ], $this->roles );
+    }
+
+    /**
+     * @deprecated Use has_known_role(). Kept so nothing outside this tree breaks.
+     */
     public function role_check() {
         if ( ! is_array( $this->roles ) ) {
             return false;

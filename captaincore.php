@@ -3654,7 +3654,7 @@ function captaincore_provider_verify_func( $request ) {
 }
 
 function captaincore_provider_themes_func( $request ) {
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
@@ -3666,7 +3666,7 @@ function captaincore_provider_themes_func( $request ) {
 
 function captaincore_provider_theme_download_func( $request ) {
 	$theme_id = $request->get_param( "id" );
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
@@ -3678,7 +3678,7 @@ function captaincore_provider_theme_download_func( $request ) {
 
 function captaincore_provider_plugin_download_func( $request ) {
 	$plugin_id = $request->get_param( "id" );
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
@@ -3689,7 +3689,7 @@ function captaincore_provider_plugin_download_func( $request ) {
 }
 
 function captaincore_provider_plugins_func( $request ) {
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
@@ -3859,21 +3859,21 @@ function captaincore_provider_deploy_to_production_func( $request ) {
 }
 
 function captaincore_provider_actions_check_func( $request ) {
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction )->check();
 }
 
 function captaincore_provider_actions_run_func( $request ) {
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction( $request['id'] ) )->run();
 }
 
 function captaincore_provider_actions_func( $request ) {
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction )->active();
@@ -4808,7 +4808,7 @@ function captaincore_domain_zone_import_func( $request ) {
 		$domain = trim( $domain, "." );
 		}
 	}
-	if ( ! ( new CaptainCore\User )->role_check() ){
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return CaptainCore\Domains::records( $domain, $zone );
