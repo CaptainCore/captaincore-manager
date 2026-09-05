@@ -120,9 +120,17 @@ class Provider {
         // Validate
         if ( $provider->name == '' ) {
             $response['errors'][] = "Error: Provider name can't be empty.";
+        } else {
+            $provider->name = sanitize_text_field( $provider->name );
         }
+        // As a slug, matching the update handler: this value selects which
+        // adapter class reads the row, so it must not be free text.
         if ( $provider->provider == '' ) {
             $response['errors'][] = "Error: Provider can't be empty.";
+        } elseif ( ! preg_match( '/^[a-z0-9_-]{1,32}$/i', (string) $provider->provider ) ) {
+            $response['errors'][] = "Error: Provider is not valid.";
+        } else {
+            $provider->provider = strtolower( $provider->provider );
         }
 
         if ( count($response['errors']) > 0 ) {

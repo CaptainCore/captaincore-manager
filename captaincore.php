@@ -2393,7 +2393,15 @@ function captaincore_accounts_update_func( WP_REST_Request $request ) {
 		$update['name'] = sanitize_text_field( trim( (string) $account->name ) );
 	}
 	if ( isset( $account->billing_user_id ) ) {
-		$update['billing_user_id'] = $account->billing_user_id;
+		// Has to name a real member of THIS account. It was written through
+		// unvalidated, so an owner could point it at any user id in the fleet
+		// (or none), and Accounts::list() reads it to decide who is shown the
+		// account's outstanding invoice count.
+		$candidate = (int) $account->billing_user_id;
+		if ( $candidate > 0 && ! $user->is_admin() && empty( ( new CaptainCore\AccountUser )->where( [ "user_id" => $candidate, "account_id" => $account_id ] ) ) ) {
+			return new WP_Error( 'invalid_billing_user', 'That user is not a member of this account.', [ 'status' => 400 ] );
+		}
+		$update['billing_user_id'] = $candidate;
 	}
 	if ( ! empty( $update ) ) {
 		( new CaptainCore\Accounts )->update( $update, [ "account_id" => $account_id ] );
@@ -13517,7 +13525,15 @@ function captaincore_login_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
-	if ( $post->command == "reset" ) {
+	// A non-string command (a JSON `true`) type-juggles past every loose
+	// comparison in the ladder below at once - true == "reset" is true for any
+	// non-empty string - so a single request would fall into whichever branch
+	// returned first. The /api endpoint already guards this; match it here.
+	if ( ! is_object( $post ) || ! isset( $post->command ) || ! is_string( $post->command ) ) {
+		return new WP_Error( 'invalid_command', 'Invalid request.', [ 'status' => 400 ] );
+	}
+
+	if ( $post->command === "reset" ) {
 
 		// Answer identically whether or not the account exists. Returning null
 		// for an unknown login and true for a known one made this an account
@@ -13553,7 +13569,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		return $response;
 	}
 
-	if ( $post->command == "signIn" ) {
+	if ( $post->command === "signIn" ) {
 		$credentials = [
 			"user_login"    => $post->login->user_login,
 			"user_password" => $post->login->user_password,
@@ -13602,7 +13618,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		return [ "message" =>  "Logged in." ];
 	}
 
-	if ( $post->command == "signOut" ) {
+	if ( $post->command === "signOut" ) {
 		// REST + cookie without a nonce: determine_current_user resolves to 0
 		// as CSRF protection, so wp_logout()'s internal session destroy is a
 		// no-op and leaves the row in session_tokens usermeta. Parse the
@@ -13619,7 +13635,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		wp_logout();
 	}
 
-	if ( $post->command == "createAccount" ) {
+	if ( $post->command === "createAccount" ) {
 
 		$errors   = [];
 		$password = $post->login->password;
