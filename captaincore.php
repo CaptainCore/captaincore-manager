@@ -3729,6 +3729,20 @@ function captaincore_provider_new_site_func( $request ) {
 		}
 	}
 
+	// customer_id names the account the finished site is BILLED to, and
+	// Sites::__construct() treats it as an owning account id - so an unchecked
+	// value here manufactures a site link into any account in the fleet, which
+	// /sites/{id}/invite then legitimately honours (shared access is allowed to
+	// invite into the linked customer account by design). Verify it exactly as
+	// account_id and shared_with above are verified.
+	if ( ! empty( $site->customer_id ) ) {
+		if ( ! CaptainCore\DB::is_valid_id( $site->customer_id ) ) {
+			$errors[] = "Invalid customer account";
+		} elseif ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions_account( (int) $site->customer_id ) ) {
+			$errors[] = "Permission denied for the customer account";
+		}
+	}
+
 	if ( ! empty( $errors ) ) {
 		return [
 			'errors' => $errors,
@@ -3747,7 +3761,7 @@ function captaincore_provider_new_site_func( $request ) {
 		"clone_site_id" => empty( $site->clone_site_id ) ? "" : $site->clone_site_id,
 		"provider_id"   => empty( $site->provider_id ) ? "" : $site->provider_id,
 		"account_id"    => empty( $site->account_id ) ? "" : $site->account_id,
-		"customer_id"   => empty( $site->customer_id ) ? "" : $site->customer_id,
+		"customer_id"   => empty( $site->customer_id ) ? "" : (int) $site->customer_id,
 		"shared_with"   => $shared_with,
 	];
 
@@ -6792,6 +6806,18 @@ function captaincore_site_invite_func( $request ) {
         }
         if ( ! $allowed ) {
             return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
+        }
+
+        // Sharing a site is for bringing OTHER people in. A self-invite turns
+        // it into a self-promotion primitive: the sender is vetted against an
+        // account that grants the site, but the membership lands in the linked
+        // customer account, so inviting your own address is a way to join an
+        // account you were never a member of. Account::invite() grants existing
+        // users membership synchronously, so there is no acceptance step to
+        // catch it later.
+        $invitee = get_user_by( 'email', $email );
+        if ( $invitee && (int) $invitee->ID === get_current_user_id() ) {
+            return new WP_Error( 'permission_denied', 'You cannot invite yourself.', [ 'status' => 403 ] );
         }
     }
 
