@@ -15,6 +15,40 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Stale session: nonce refresh + login bounce (2026-09-06)
+
+Bug: a dashboard tab left open past the wp_rest nonce lifetime (12 to 24
+hours) failed every REST call with a silent 403 `rest_cookie_invalid_nonce`.
+`api()` threw `'auth'`, only `hydrate()` redirected, and every other caller
+swallowed it, so cards sat on "Loading" and the console filled with 403s.
+The legacy Vue app had an axios interceptor for this (re-fetch the nonce,
+retry once, else `/login`); the new UI had nothing.
+
+Fix (data.js): `api()` reads the error body on a 401/403 and, on
+`rest_cookie_invalid_nonce`, calls `refreshNonce()` (core's `rest-nonce`
+admin-ajax action, `CC_BOOT.ajaxUrl`; deduped so a burst of stale polls
+shares one refresh) and replays the request once. The replay is safe for
+writes because the nonce check runs before any handler. If the refresh
+fails (admin-ajax answers 400, the WordPress session is gone),
+`sessionExpired()` sends the tab to `CC_BOOT.loginUrl?redirect_to=<path>`.
+Any other 401/403 still throws `'auth'` so a genuine denial (customer on an
+operator route) never bounces to login. Proactive half: `startSessionWatch()`
+(mounted in app.js, cleared on unmount) refreshes every 30 minutes and on
+visibilitychange when the nonce is over 5 minutes old, and a failed refresh
+there redirects immediately. The raw fetch/XHR callers that read
+`boot.nonce` directly (invoice PDF, audit HTML, zip upload) pick up the
+refreshed value for free. core-login.php honours `redirect_to` only for a
+path inside the app (no host, no `//`, no login loop) on both the
+already-logged-in redirect and the form's post-sign-in `HOME`.
+
+Verified 2026-09-06 with Playwright: two concurrent calls on a forged nonce
+produced one admin-ajax refresh and two 200 replays; cleared cookies plus a
+stale call landed on `/account/login?redirect_to=%2Faccount%2Fsites` and,
+once signed in, back on that page; `redirect_to` of a foreign host, `//`,
+`/account/login` and `/wp-admin/` all fell back to the app home; the focus
+trigger fired exactly one refresh after a simulated 6-minute hide and none
+under 5 minutes.
+
 ## Site detail for an id not in the fleet (2026-09-02)
 
 Bug: `/account/sites/{id}` for a deleted site (or one the user cannot see)

@@ -18,9 +18,20 @@ $configurations = ( new CaptainCore\Configurations )->get();
 $config_path    = '/' . trim( (string) $configurations->path, '/' );
 $config_path    = $config_path === '/' ? '/' : $config_path . '/';
 
+// Where to land after sign-in. A dashboard tab whose session expired sends
+// its own URL as ?redirect_to= so the user comes back to the same screen.
+// Only a path inside the app is honoured (no host, no scheme, no login loop);
+// anything else falls back to the app home.
+$app_home    = home_url( $config_path );
+$redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
+if ( $redirect_to !== '' && strpos( $redirect_to, $config_path ) === 0 && strpos( $redirect_to, '//' ) === false
+    && strpos( $redirect_to, $config_path . 'login' ) !== 0 && ! preg_match( '/[\r\n\s]/', $redirect_to ) ) {
+    $app_home = home_url( $redirect_to );
+}
+
 // Already signed in → straight into the app.
 if ( is_user_logged_in() ) {
-    wp_safe_redirect( home_url( $config_path ) );
+    wp_safe_redirect( $app_home );
     exit;
 }
 
@@ -29,7 +40,6 @@ $brand      = ! empty( $colors->primary ) && preg_match( '/^#[0-9a-fA-F]{6}$/', 
 $name       = ! empty( $configurations->name ) ? $configurations->name : 'CaptainCore';
 $plugin_url = plugin_dir_url( __DIR__ );
 $rest_login = esc_url_raw( rest_url( 'captaincore/v1/login/' ) );
-$app_home   = home_url( $config_path );
 ?><!DOCTYPE html>
 <html>
 <head>

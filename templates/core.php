@@ -39,6 +39,10 @@ $first_name = ! empty( $user->first_name ) ? $user->first_name : strtok( (string
 $cc_boot = [
     'nonce'           => wp_create_nonce( 'wp_rest' ),
     'restRoot'        => esc_url_raw( rest_url() ),
+    // Core's `rest-nonce` admin-ajax action: data.js refreshes the wp_rest
+    // nonce through it (every 30 minutes, on tab focus, and on a 403
+    // rest_cookie_invalid_nonce) so a long-lived tab keeps working.
+    'ajaxUrl'         => esc_url_raw( admin_url( 'admin-ajax.php' ) ),
     'role'            => $user->role,
     'dcRole'          => $user->role === 'administrator' ? 'operator' : 'customer',
     'cliAddressConstant' => defined( 'CAPTAINCORE_CLI_ADDRESS' ) && (bool) CAPTAINCORE_CLI_ADDRESS,

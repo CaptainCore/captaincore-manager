@@ -3,19 +3,102 @@
 
 Object.assign(Component.prototype, {
 
+  // One REST call. The wp_rest nonce in CC_BOOT expires after 12-24 hours
+  // (WordPress nonce tick) and dies outright when the login session ends. A
+  // tab left open overnight used to fail every call with a silent 403 (the
+  // legacy Vue app had an axios interceptor that re-fetched the nonce and
+  // retried once; this is the same idea). On `rest_cookie_invalid_nonce` we
+  // pull a fresh nonce through core's `rest-nonce` admin-ajax action and
+  // replay the request. The replay is safe for POST/PUT/DELETE too: the nonce
+  // check runs in rest_authentication_errors, before any handler executes.
+  // If the nonce cannot be refreshed the WordPress session itself is gone and
+  // the user is sent to the login page (with the current URL to come back to).
+  // Every other 401/403 still surfaces as the 'auth' error callers already
+  // handle (a customer on an operator route is a real denial, not a stale
+  // session, and must not bounce them to login).
   api(path, opts = {}) {
     const boot = window.CC_BOOT || {};
-    return fetch(boot.restRoot + 'captaincore/v1' + path, {
+    const send = () => fetch(boot.restRoot + 'captaincore/v1' + path, {
       headers: Object.assign({ 'X-WP-Nonce': boot.nonce, 'Content-Type': 'application/json' }, opts.headers || {}),
       method: opts.method || 'GET',
       body: opts.body ? JSON.stringify(opts.body) : undefined
-    }).then(r => {
-      if (r.status === 401 || r.status === 403) throw new Error('auth');
-      // Some routes answer 200 with an empty body (a handler that ends in a
-      // bare `return;`). Treat that as null instead of a JSON parse failure,
-      // which used to surface as a spurious "Could not …" toast.
-      return r.text().then(t => (t && t.trim()) ? JSON.parse(t) : null);
     });
+    // Some routes answer 200 with an empty body (a handler that ends in a
+    // bare `return;`). Treat that as null instead of a JSON parse failure,
+    // which used to surface as a spurious "Could not …" toast.
+    const parse = r => r.text().then(t => (t && t.trim()) ? JSON.parse(t) : null);
+    return send().then(r => {
+      if (r.status !== 401 && r.status !== 403) return parse(r);
+      return r.text().then(t => {
+        let code = '';
+        try { code = (JSON.parse(t) || {}).code || ''; } catch (e) {}
+        if (code !== 'rest_cookie_invalid_nonce' || opts._retried) throw new Error('auth');
+        return this.refreshNonce().then(
+          () => this.api(path, Object.assign({}, opts, { _retried: true })),
+          () => { this.sessionExpired(); throw new Error('auth'); }
+        );
+      });
+    });
+  },
+
+  // Fetch a fresh wp_rest nonce for the current login session via core's
+  // `rest-nonce` admin-ajax action (the same call @wordpress/api-fetch makes).
+  // Resolves with the nonce, which is also written into CC_BOOT so the raw
+  // fetch()/XHR callers that read boot.nonce directly (PDF, audit HTML, zip
+  // upload) pick it up. Rejects when the session is no longer logged in
+  // (admin-ajax answers 400 "0"). Concurrent callers share one in-flight
+  // request so a burst of stale polls does not fan out into N refreshes.
+  refreshNonce() {
+    const boot = window.CC_BOOT || {};
+    if (boot._nonceRefresh) return boot._nonceRefresh;
+    if (!boot.ajaxUrl) return Promise.reject(new Error('auth'));
+    const done = () => { boot._nonceRefresh = null; };
+    boot._nonceRefresh = fetch(boot.ajaxUrl + '?action=rest-nonce', { credentials: 'same-origin', cache: 'no-store' })
+      .then(r => r.ok ? r.text() : Promise.reject(new Error('auth')))
+      .then(t => {
+        const nonce = (t || '').trim();
+        if (!/^[a-f0-9]{10}$/.test(nonce)) throw new Error('auth');
+        boot.nonce = nonce;
+        boot.nonceAt = Date.now();
+        return nonce;
+      })
+      .then(n => { done(); return n; }, e => { done(); throw e; });
+    return boot._nonceRefresh;
+  },
+
+  // The login session is gone: go to the login page, carrying the current
+  // app URL so a successful sign-in lands back on the same screen.
+  sessionExpired() {
+    const boot = window.CC_BOOT || {};
+    if (!boot.loginUrl || boot._expiring) return;
+    boot._expiring = true;
+    this.stopSessionWatch();
+    const back = location.pathname + location.search;
+    location.href = boot.loginUrl + (back.indexOf(boot.path || '/') === 0 ? '?redirect_to=' + encodeURIComponent(back) : '');
+  },
+
+  // Background keep-alive for the nonce. Refreshes it every 30 minutes while
+  // the tab is open, and immediately when a hidden tab comes back to the
+  // foreground after more than 5 minutes, so a dashboard left open overnight
+  // already holds a valid nonce before the first click. A refresh that
+  // reports the session as logged out redirects to the login page right away
+  // instead of waiting for the next call to fail.
+  startSessionWatch() {
+    const boot = window.CC_BOOT;
+    if (!boot || !boot.nonce || !boot.ajaxUrl) return;
+    boot.nonceAt = boot.nonceAt || Date.now();
+    const bump = () => this.refreshNonce().catch(() => this.sessionExpired());
+    this._sessionTimer = setInterval(bump, 30 * 60 * 1000);
+    this._onSessionVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - (boot.nonceAt || 0) > 5 * 60 * 1000) bump();
+    };
+    document.addEventListener('visibilitychange', this._onSessionVisible);
+  },
+
+  stopSessionWatch() {
+    if (this._sessionTimer) { clearInterval(this._sessionTimer); this._sessionTimer = null; }
+    if (this._onSessionVisible) { document.removeEventListener('visibilitychange', this._onSessionVisible); this._onSessionVisible = null; }
   },
 
   fmtStorage(b) {

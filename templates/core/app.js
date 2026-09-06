@@ -2676,6 +2676,7 @@ class Component extends DCLogic {
     };
     window.addEventListener('keydown', this.onKey);
     this.hydrate();
+    if (this.startSessionWatch) this.startSessionWatch();
     if (this.hydrateHome) this.hydrateHome();
     if (window.CC_BOOT && this.initBulkProgress) this.initBulkProgress();
     this.timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1,
@@ -2685,6 +2686,7 @@ class Component extends DCLogic {
   }
   componentWillUnmount() {
     window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); if (this._bulkTimer) clearInterval(this._bulkTimer);
+    if (this.stopSessionWatch) this.stopSessionWatch();
     if (this._themeMq && this._onThemeMq) {
       if (this._themeMq.removeEventListener) this._themeMq.removeEventListener('change', this._onThemeMq);
       else if (this._themeMq.removeListener) this._themeMq.removeListener(this._onThemeMq);
