@@ -1176,10 +1176,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <!-- Plugins/Themes now live in the tab-bar segment row (Inventory),
                  so this row carries only the right-aligned actions. -->
             <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ exclCount }}</span>
               <div style="flex:1"></div>
-              <sc-if value="{{ hasUpdates }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ doUpdateAll }}" style="border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer">{{ updateAllLabel }}</button>
+              <sc-if value="{{ usShow }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ openUpdSettings }}" title="Managed updates on or off, excluded plugins & themes" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer;margin-right:4px" style-hover="text-decoration:underline">Update settings…</span>
               </sc-if>
+              <button onClick="{{ doUpdateAll }}" title="{{ uaTitle }}" style="border:1px solid {{ uaBd }};background:{{ uaBg }};color:var(--ink);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">{{ updateAllLabel }}</button>
               <button onClick="{{ openAddAddon }}" title="Upload / WordPress.org / Envato" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
@@ -1190,6 +1192,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ a.v }}</span>
                   <sc-if value="{{ a.upd }}" hint-placeholder-val="{{ false }}">
                     <span style="font:500 var(--fs-12) var(--mono);background:var(--warn-soft);border-radius:99px;padding:2px 9px">→ {{ a.latest }}</span>
+                  </sc-if>
+                  <sc-if value="{{ a.exclB }}" hint-placeholder-val="{{ false }}">
+                    <span title="Excluded from managed updates on this environment (right-click to include)" style="font:500 var(--fs-12) var(--sans);background:var(--panel-2);color:var(--ink-dim);border:1px solid var(--rule);border-radius:99px;padding:2px 9px">Excluded</span>
                   </sc-if>
                   <sc-if value="{{ a.vulnB }}" hint-placeholder-val="{{ false }}">
                     <span style="font:600 var(--fs-11) var(--sans);letter-spacing:.04em;background:var(--bad-soft);color:var(--bad);border-radius:99px;padding:2px 9px">VULN</span>
@@ -4783,8 +4788,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <span onClick="{{ usFlip }}" style="width:34px;height:20px;border-radius:99px;background:{{ usTogBg }};display:flex;align-items:center;padding:2px;justify-content:{{ usTogJust }};cursor:pointer"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
             <span style="font:500 var(--fs-13) var(--sans)">Managed updates</span>
           </span>
+          <span style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)">Click a name to exclude it from managed updates on this environment. Excluded plugins and themes stay at their current version until you include them again.</span>
           <div style="display:flex;flex-direction:column;gap:7px">
-            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Excluded plugins</span>
+            <span style="display:flex;align-items:center;gap:8px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Excluded plugins <span style="font:400 var(--fs-115) var(--mono);background:var(--panel-2);border-radius:99px;padding:1px 8px">{{ usPluginCount }}</span></span>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <sc-for list="{{ usPluginChips }}" as="c" hint-placeholder-count="4">
                 <span onClick="{{ c.toggle }}" style="font:500 var(--fs-12) var(--mono);color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};padding:4px 10px;border-radius:99px;cursor:pointer">{{ c.label }}</span>
@@ -4792,7 +4798,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:7px">
-            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Excluded themes</span>
+            <span style="display:flex;align-items:center;gap:8px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Excluded themes <span style="font:400 var(--fs-115) var(--mono);background:var(--panel-2);border-radius:99px;padding:1px 8px">{{ usThemeCount }}</span></span>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <sc-for list="{{ usThemeChips }}" as="c" hint-placeholder-count="2">
                 <span onClick="{{ c.toggle }}" style="font:500 var(--fs-12) var(--mono);color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};padding:4px 10px;border-radius:99px;cursor:pointer">{{ c.label }}</span>

@@ -135,7 +135,8 @@ Object.assign(Component.prototype, {
       ['Storage', this.fmtStorage(e.storage)],
       ['Visits / wk', e.visits ? Number(e.visits).toLocaleString() : '—'],
       ['Uptime monitor', e.monitor_enabled ? 'On' : 'Off'],
-      ['Managed updates', e.updates_enabled ? 'On' : 'Off']
+      ['Managed updates', !e.updates_enabled || e.updates_enabled === '0' ? 'Off'
+        : (n => n ? 'On · ' + n + ' excluded' : 'On')(this.envExcluded(e, 'plugins').length + this.envExcluded(e, 'themes').length)]
     ];
     if (Number(e.subsite_count) > 1) rows.push(['Subsites', String(e.subsite_count)]);
     return rows.filter(([, v]) => v !== '');
@@ -197,7 +198,9 @@ Object.assign(Component.prototype, {
   updSettingsVals(real, s) {
     if (!s.usOpen || !real) return { usOpen: false };
     const e = this.currentEnv(real, s) || {};
-    const mkChips = (list, key) => (list || []).map(p => { const slug = p.name || p.slug || '';
+    // must-use plugins and drop-ins never go through `wp plugin update`, so
+    // they have nothing to exclude and are left off the chip list.
+    const mkChips = (list, key) => (list || []).filter(p => p.status !== 'must-use' && p.status !== 'dropin').map(p => { const slug = p.name || p.slug || '';
       const on = (this.state[key] || []).includes(slug);
       return { label: slug,
         bg: on ? 'var(--warn-soft)' : 'var(--panel-2)', fg: on ? 'var(--ink)' : 'var(--ink-dim)',
@@ -214,6 +217,8 @@ Object.assign(Component.prototype, {
       usTogJust: s.usEnabled ? 'flex-end' : 'flex-start',
       usPluginChips: mkChips(e.plugins, 'usExPlugins'),
       usThemeChips: mkChips(e.themes, 'usExThemes'),
+      usPluginCount: (s.usExPlugins || []).length + ' of ' + mkChips(e.plugins, 'usExPlugins').length + ' excluded',
+      usThemeCount: (s.usExThemes || []).length + ' of ' + mkChips(e.themes, 'usExThemes').length + ' excluded',
       usClose: () => this.setState({ usOpen: false }),
       usSave: () => {
         const st = this.state;
@@ -1031,10 +1036,13 @@ Object.assign(Component.prototype, {
     if (this.loadUpdateQueue) this.loadUpdateQueue();
     const list = s.addonKind === 'plugins' ? e.plugins : e.themes;
     if (!Array.isArray(list)) return [];
+    const exSet = new Set(this.envExcluded(e, s.addonKind));
     return list.map(p => ({
       name: p.title || p.plugin || p.name || '',
       slug: p.name || p.slug || '',
       v: p.version || '',
+      // Per-env managed-update exclusion (updates_exclude_plugins/themes csv).
+      excluded: exSet.has(p.name || p.slug || ''),
       latest: this.uqUpdateTarget(s.addonKind, p.name || p.slug || '', p.version || '') || p.version || '',
       active: p.status === 'active' || p.status === 'active-network',
       // must-use plugins and drop-ins can't be toggled, updated, or deleted
@@ -1043,6 +1051,38 @@ Object.assign(Component.prototype, {
       muLabel: p.status === 'dropin' ? 'Drop-in' : 'Must-use',
       _status: p.status || ''
     }));
+  },
+
+  // The env's excluded slugs for one kind, csv → array.
+  envExcluded(e, kind) {
+    const raw = kind === 'themes' ? e.updates_exclude_themes : e.updates_exclude_plugins;
+    return String(raw || '').split(',').map(x => x.trim()).filter(Boolean);
+  },
+
+  // Row-level exclusion toggle (Inventory context menu). Same PUT
+  // /sites/{id}/settings contract as the Update settings dialog, sending the
+  // env's current policy with just this slug flipped.
+  toggleAddonExclusion(a, real, s) {
+    const e = this.currentEnv(real, s);
+    if (!e) return;
+    const kind = s.addonKind === 'themes' ? 'themes' : 'plugins';
+    const plugins = this.envExcluded(e, 'plugins'), themes = this.envExcluded(e, 'themes');
+    const list = kind === 'themes' ? themes : plugins;
+    const next = list.includes(a.slug) ? list.filter(x => x !== a.slug) : [...list, a.slug];
+    const value = { updates_enabled: e.updates_enabled && e.updates_enabled !== '0' ? '1' : '0',
+      updates_exclude_plugins: kind === 'plugins' ? next : plugins,
+      updates_exclude_themes: kind === 'themes' ? next : themes };
+    const nowExcluded = next.includes(a.slug);
+    const tid = this.toast((nowExcluded ? 'Excluding ' : 'Including ') + a.slug + '…', { kind: 'loading' });
+    this.api('/sites/' + real.siteId + '/settings', { method: 'PUT',
+      body: { environment: e.environment || 'Production', value } })
+      .then(() => {
+        e.updates_exclude_plugins = value.updates_exclude_plugins.join(',');
+        e.updates_exclude_themes = value.updates_exclude_themes.join(',');
+        this.updateToast(tid, a.slug + (nowExcluded ? ' excluded from managed updates' : ' included in managed updates'), { kind: 'success' });
+        this.setState({});
+      })
+      .catch(() => this.updateToast(tid, 'Could not save update settings', { kind: 'error' }));
   },
 
   realToggleAddon(a, real, s) {

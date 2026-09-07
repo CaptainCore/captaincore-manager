@@ -15,6 +15,44 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Manual update and update exclusions, findable (2026-09-07)
+
+Austin reviewed the legacy Updates tab and asked for two things he could not
+find in the new UI: the "Manual update" button and a way to exclude plugins
+or themes from updates per environment. Both had been ported on 2026-08-23
+but were hidden: "Update all (N)" only rendered when the fleet update-queue
+counted pending targets, which reads zero for most sites even when the site
+itself has updates waiting, and the exclusions editor was a single
+"Update settings…" link at the bottom of the overview's Environment card.
+
+Now: **Run managed update** is a permanent entry in the overview Tools card
+(tools.js `toolManagedUpdate`, first row) and the Inventory action bar
+always shows the button, labelled "Update all (N)" in warn colours when the
+queue knows of pending targets and "Run managed update" otherwise. Both go
+through the same in-app confirm (which states how many components are
+excluded) and dispatch the CLI `update` via `/sites/bulk-tools`, the same
+run v1's button made. `doUpdateAll` now delegates to the tool instead of
+carrying its own copy.
+
+Exclusions surface where the plugins are: each Inventory row wears an
+**Excluded** pill when its slug is in the env's `updates_exclude_*` csv, the
+action bar reads "N excluded from updates", the row context menu (operators)
+offers "Exclude from / Include in managed updates" (site-detail.js
+`toggleAddonExclusion`, PUT /sites/{id}/settings with the env's current
+policy and just that slug flipped), and "Update settings…" sits in the action
+bar and the Tools card as well as the Environment card. The Environment row
+reads "On · N excluded". The dialog gained a one-line explanation, "N of M
+excluded" counters per kind, and no longer lists must-use plugins or
+drop-ins (nothing to exclude; `wp plugin update` never touches them).
+
+Verified live on anchor.localhost against a real site as the operator:
+right-click → Exclude wrote the slug to `updates_exclude_plugins`, the pill,
+counter and "1 of 9 excluded" appeared, Include removed it again (column
+back to empty), and the Run managed update confirm was opened and cancelled
+without dispatching anything. Note the settings route itself is only gated
+by `captaincore_verify_permissions`, so customers could reach it too; the UI
+keeps Austin's earlier operator-only call for the policy editor.
+
 ## Stale session: nonce refresh + login bounce (2026-09-06)
 
 Bug: a dashboard tab left open past the wp_rest nonce lifetime (12 to 24

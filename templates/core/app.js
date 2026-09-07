@@ -2107,7 +2107,11 @@ class Component extends DCLogic {
     const sAK = (leaf === 'plugins' || leaf === 'themes') && s.addonKind !== leaf
       ? Object.assign({}, s, { addonKind: leaf }) : s;
     const addonsSrc = real ? this.realAddonSrc(real, sAK) : (sAK.addonKind === 'plugins' ? this.PLUGINS : this.THEMES);
+    const excluded = addonsSrc.filter(a => a.excluded);
     const addons = addonsSrc.map(a => { const upd = a.v !== a.latest;
+      // Per-env update exclusion (operators; PUT /sites/{id}/settings).
+      const doExclude = () => real ? this.toggleAddonExclusion(a, real, sAK)
+        : this.toast(a.excluded ? a.slug + ' included in managed updates' : a.slug + ' excluded from managed updates', { kind: 'info' });
       const doToggle = () => real ? this.realToggleAddon(a, real, s) : this.runJob(a.active ? 'deactivate' : 'activate', a.slug + ' on ' + site.name);
       const doUpdate = () => real
         ? this.aaRunCode((sAK.addonKind === 'themes' ? 'wp theme update ' : 'wp plugin update ') + a.slug + ' --skip-themes --skip-plugins', a.slug + ' on ' + site.name)
@@ -2116,6 +2120,7 @@ class Component extends DCLogic {
         : this.runJob((sAK.addonKind === 'plugins' ? 'plugin' : 'theme') + ' delete', a.slug + ' on ' + site.name);
       return { ...a, upd,
       isMu: !!a.mu, notMu: !a.mu,
+      exclB: !!a.excluded,
       vulnB: !!(site.vuln && a.slug === 'gravityforms'),
       dot: a.mu ? 'var(--ink-dim)' : a.active ? 'var(--ok)' : 'var(--rule)',
       statusLabel: a.mu ? a.muLabel : a.active ? 'Active' : 'Inactive',
@@ -2126,6 +2131,7 @@ class Component extends DCLogic {
       ] : [
         ...(upd ? [{ label: 'Update to ' + a.latest, act: doUpdate }] : []),
         { label: a.active ? 'Deactivate' : 'Activate', act: doToggle },
+        ...(isOp ? [{ label: a.excluded ? 'Include in managed updates' : 'Exclude from managed updates', act: doExclude }] : []),
         { label: 'Copy slug', act: () => this.ctxCopy(a.slug, 'slug') },
         { label: 'Delete…', danger: true, act: doDelete }
       ]) }; });
@@ -2394,13 +2400,18 @@ class Component extends DCLogic {
       akpBg: s.addonKind === 'plugins' ? 'var(--panel-2)' : 'transparent', akpFg: s.addonKind === 'plugins' ? 'var(--ink)' : 'var(--ink-dim)',
       aktBg: s.addonKind === 'themes' ? 'var(--panel-2)' : 'transparent', aktFg: s.addonKind === 'themes' ? 'var(--ink)' : 'var(--ink-dim)',
       setAddP: () => this.setState({ addonKind: 'plugins' }), setAddT: () => this.setState({ addonKind: 'themes' }),
-      addons, hasUpdates: updCount > 0, updateAllLabel: 'Update all (' + updCount + ')',
-      doUpdateAll: async () => {
+      // The managed-update button is always offered (v1's "Manual update"):
+      // it wears the pending count when the fleet update queue knows of any,
+      // and a neutral "Run managed update" otherwise. tools.js owns the run.
+      addons, hasUpdates: updCount > 0,
+      updateAllLabel: updCount > 0 ? 'Update all (' + updCount + ')' : 'Run managed update',
+      uaBd: updCount > 0 ? 'var(--warn)' : 'var(--rule)', uaBg: updCount > 0 ? 'var(--warn-soft)' : 'var(--paper)',
+      uaTitle: updCount > 0 ? 'Managed update: quicksave, update the ' + updCount + ' pending, quicksave again'
+        : 'Managed update: quicksave, update whatever is pending on the site, quicksave again',
+      exclCount: excluded.length ? excluded.length + ' excluded from updates' : '',
+      doUpdateAll: () => {
         if (!real) { this.runJob('update-wp', site.name + ' · ' + updCount + ' components'); return; }
-        if (!(await this.uiConfirm('Run a managed update on ' + site.name + '? Updates pending components with quicksaves before and after.', { label: 'Run update' }))) return;
-        this.runTool({ label: 'update', real, s,
-          dispatch: () => this.bulkTool('update', real, s),
-          onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
+        this.toolManagedUpdate(real, s);
       },
       ...this.computeAddAddon(real, s, site),
       ...this.computeFiles(real, s),

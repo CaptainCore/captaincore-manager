@@ -56,6 +56,23 @@ Object.assign(Component.prototype, {
       onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
   },
 
+  // Managed update — v1's "Manual update" button on the Updates tab. Runs
+  // the CLI `update` for this environment (quicksave before/after, the
+  // env's excluded plugins/themes skipped, update log written). Always
+  // offered: the Manager's pending count comes from the fleet update-queue
+  // targets and can read zero while the site itself has updates waiting.
+  async toolManagedUpdate(real, s) {
+    const e = this.currentEnv(real, s) || {};
+    const csv = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    const ex = csv(e.updates_exclude_plugins).length + csv(e.updates_exclude_themes).length;
+    const msg = 'Run a managed update on ' + this.toolSiteName(real, s) + '? Updates every pending plugin and theme'
+      + (ex ? ' except the ' + ex + ' excluded' : '') + ', with quicksaves before and after.';
+    if (!(await this.uiConfirm(msg, { label: 'Run update' }))) return;
+    this.runTool({ label: 'update', real, s,
+      dispatch: () => this.bulkTool('update', real, s),
+      onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
+  },
+
   async toolResetPermissions(real, s) {
     if (!(await this.uiConfirm('Reset file permissions to defaults on ' + this.toolSiteName(real, s) + '?', { label: 'Reset permissions' }))) return;
     this.runTool({ label: 'reset-permissions', real, s,
@@ -208,7 +225,14 @@ Object.assign(Component.prototype, {
   // render but no-op, same convention as the rest of the detail slices.
   computeTools(real, s) {
     const on = fn => () => { if (real) fn(); };
+    const isOp = (window.CC_BOOT || {}).dcRole === 'operator' || !window.CC_BOOT;
     const tools = [
+      { k: 'update',  label: 'Run managed update', desc: 'Update plugins & themes with quicksaves before and after',
+        icon: 'M21 12a9 9 0 1 1-2.64-6.36 M21 3v6h-6', go: on(() => this.toolManagedUpdate(real, s)) },
+      // Operator-only: the per-environment update policy (on/off + exclusions).
+      ...(isOp ? [{ k: 'updsettings', label: 'Update settings…', desc: 'Managed updates on or off, excluded plugins & themes',
+        icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z',
+        go: on(() => this.openUpdSettings(real, s)) }] : []),
       { k: 'deploy',  label: 'Deploy defaults',  desc: 'Apply standard config & plugins',
         icon: 'M21 12a9 9 0 1 1-6.2-8.6 M21 3v6h-6', go: on(() => this.toolDeployDefaults(real, s)) },
       { k: 'migrate', label: 'Migrate backup…',  desc: 'Import from an external URL',
