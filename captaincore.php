@@ -1971,7 +1971,19 @@ function captaincore_upcoming_subscriptions_func( $request ) {
 }
 
 function captaincore_billing_func( $request ) {
-	return ( new CaptainCore\User )->billing();
+	$billing = ( new CaptainCore\User )->billing();
+	// Country/state lists for the billing-details form on the payment screen.
+	// They ride this response rather than the page boot: ~50KB that only the
+	// billing screen and a payable invoice ever need.
+	$billing->countries = [];
+	$billing->states    = (object) [];
+	if ( function_exists( 'WC' ) && class_exists( 'WC_Countries' ) ) {
+		foreach ( ( new WC_Countries )->get_allowed_countries() as $code => $label ) {
+			$billing->countries[] = [ 'value' => $code, 'title' => html_entity_decode( $label ) ];
+		}
+		$billing->states = array_filter( WC()->countries->get_allowed_country_states() );
+	}
+	return $billing;
 }
 
 function captaincore_accounts_get_func( WP_REST_Request $request ) {
@@ -2185,6 +2197,43 @@ function captaincore_domains_delete_func( WP_REST_Request $request ) {
 	return $response;
 }
 
+/**
+ * Required billing fields, labelled. A card cannot be attached without them:
+ * Stripe wants the owner address for AVS and WooCommerce has nothing to bill
+ * to without a name and country. State counts only where the country has one.
+ *
+ * @return array Labels of the fields the current customer is still missing.
+ */
+function captaincore_billing_address_missing( $user_id ) {
+	if ( ! class_exists( 'WC_Customer' ) ) {
+		return [];
+	}
+	$customer = new WC_Customer( $user_id );
+	$required = [
+		'first_name' => 'First name',
+		'last_name'  => 'Last name',
+		'address_1'  => 'Street address',
+		'city'       => 'City',
+		'postcode'   => 'ZIP / Postal code',
+		'country'    => 'Country',
+		'email'      => 'Email',
+	];
+	$address = $customer->get_billing();
+	$missing = [];
+	foreach ( $required as $key => $label ) {
+		if ( empty( $address[ $key ] ) || trim( (string) $address[ $key ] ) === '' ) {
+			$missing[] = $label;
+		}
+	}
+	if ( ! empty( $address['country'] ) && function_exists( 'WC' ) ) {
+		$states = WC()->countries->get_states( $address['country'] );
+		if ( ! empty( $states ) && empty( $address['state'] ) ) {
+			$missing[] = 'State';
+		}
+	}
+	return $missing;
+}
+
 function captaincore_billing_pay_invoice_func( WP_REST_Request $request ) {
 	$user      = new CaptainCore\User;
 	$source_id = $request->get_param( 'source_id' );
@@ -2206,6 +2255,10 @@ function captaincore_billing_pay_invoice_func( WP_REST_Request $request ) {
 	}
 
 	if ( $source_id ) {
+		$missing = captaincore_billing_address_missing( $user->user_id() );
+		if ( $missing ) {
+			return (object) [ 'error' => 'Billing details are required before a card can be added: ' . implode( ', ', $missing ) . '.' ];
+		}
 		$response = $user->add_payment_method( $source_id );
 		if ( isset( $response->error ) ) {
 			return $response;
@@ -2233,8 +2286,12 @@ function captaincore_billing_set_primary_func( WP_REST_Request $request ) {
 }
 
 function captaincore_billing_add_payment_func( WP_REST_Request $request ) {
-	$user     = new CaptainCore\User;
+	$user      = new CaptainCore\User;
 	$source_id = $request->get_param( 'source_id' );
+	$missing   = captaincore_billing_address_missing( $user->user_id() );
+	if ( $missing ) {
+		return (object) [ 'error' => 'Billing details are required before a card can be added: ' . implode( ', ', $missing ) . '.' ];
+	}
 	$response = $user->add_payment_method( $source_id );
 	return $response;
 }
@@ -2284,19 +2341,24 @@ function captaincore_billing_request_plan_changes_func( WP_REST_Request $request
 
 function captaincore_billing_update_func( WP_REST_Request $request ) {
 	$user     = new CaptainCore\User;
-	$billing  = (object) $request->get_param( 'address' );
+	// A partial payload is legitimate (the address dialog saves what is typed),
+	// so read every field defensively rather than off an assumed shape.
+	$billing  = (array) $request->get_param( 'address' );
+	$field    = function ( $key ) use ( $billing ) {
+		return isset( $billing[ $key ] ) ? sanitize_text_field( (string) $billing[ $key ] ) : '';
+	};
 	$customer = new WC_Customer( $user->user_id() );
-	$customer->set_billing_address_1( $billing->address_1 );
-	$customer->set_billing_address_2( $billing->address_2 );
-	$customer->set_billing_city( $billing->city );
-	$customer->set_billing_company( $billing->company );
-	$customer->set_billing_country( $billing->country );
-	$customer->set_billing_email( $billing->email );
-	$customer->set_billing_first_name( $billing->first_name );
-	$customer->set_billing_last_name( $billing->last_name );
-	$customer->set_billing_phone( $billing->phone );
-	$customer->set_billing_postcode( $billing->postcode );
-	$customer->set_billing_state( $billing->state );
+	$customer->set_billing_address_1( $field( 'address_1' ) );
+	$customer->set_billing_address_2( $field( 'address_2' ) );
+	$customer->set_billing_city( $field( 'city' ) );
+	$customer->set_billing_company( $field( 'company' ) );
+	$customer->set_billing_country( $field( 'country' ) );
+	$customer->set_billing_email( sanitize_email( isset( $billing['email'] ) ? (string) $billing['email'] : '' ) );
+	$customer->set_billing_first_name( $field( 'first_name' ) );
+	$customer->set_billing_last_name( $field( 'last_name' ) );
+	$customer->set_billing_phone( $field( 'phone' ) );
+	$customer->set_billing_postcode( $field( 'postcode' ) );
+	$customer->set_billing_state( $field( 'state' ) );
 	$customer->save();
 	return [ 'success' => true ];
 }

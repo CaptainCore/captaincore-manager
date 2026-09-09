@@ -15,6 +15,45 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Billing details required before a card (2026-09-09)
+
+A new customer could not pay their first invoice. The invoice screen offered
+"Pay with a new card", took the card, and failed — because the account had no
+billing address on file yet, and both Stripe (owner address, AVS) and
+WooCommerce (a customer to bill) need one. v1 collected the address in the
+same dialog as the card and validated it before it would let you pay
+(`dialog_invoice.customer` plus a Vuetify form with rules); the v3 card dialog
+shipped with the Stripe element alone, so there was no way for a first-time
+customer to supply what the charge needed.
+
+The card dialog now carries the billing details it requires. When the address
+on file is complete it renders as a summary with an Edit link; when anything
+required is missing — first name, last name, street address, city, ZIP,
+country, email, and state where the country has states — the form opens
+instead, seeded from what is on file plus the profile name and account email.
+Country and state are the app's searchable dropdown, fed by
+`/billing/`'s new `countries` / `states` (WooCommerce's allowed-country lists,
+~50KB, which is why they ride the billing fetch rather than the page boot).
+Submit validates first, marks the empty required rows, then saves the address
+(`PUT /billing/update`) BEFORE creating the source, and passes `owner` through
+to `stripe.createSource` the way v1 did. Stripe's own ZIP box is hidden now
+that the form asks for the postcode.
+
+Two other doors got the same gate: the Billing address dialog marks required
+fields and says what is still needed, and paying an invoice with a saved card
+sends the customer to that dialog instead of firing a charge that cannot
+settle. `captaincore_billing_add_payment_func` and the `source_id` branch of
+`captaincore_billing_pay_invoice_func` refuse a card with an incomplete
+address server-side, so the API says what is missing rather than surfacing a
+bare gateway error, and `captaincore_billing_update_func` reads a partial
+payload defensively instead of off an assumed shape.
+
+Verified locally end to end: a fresh customer with no address got the form,
+submitting empty named all six missing fields and outlined them, and filling
+it saved the WooCommerce billing address and added the card; an existing
+customer saw the summary and "Add card & pay" carried a $1 test invoice to
+completed. Both themes checked.
+
 ## Manual update and update exclusions, findable (2026-09-07)
 
 Austin reviewed the legacy Updates tab and asked for two things he could not

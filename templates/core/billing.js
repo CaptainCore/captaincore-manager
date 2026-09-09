@@ -22,6 +22,60 @@ Object.assign(Component.prototype, {
     }).catch(() => { this._billingLoading = false; this._billing = { error: 'Could not load billing.' }; this.setState({}); });
   },
 
+  // ── Billing details gate ─────────────────────────────────────
+  // A card cannot be added or charged without a billing address: Stripe wants
+  // the owner address for AVS, and WooCommerce has nothing to bill to without
+  // a name and country on the customer. v1 collected this in the invoice
+  // dialog before it would let you pay (dialog_invoice.customer); v3 shipped
+  // the card dialog without it, so a brand-new account — which has no address
+  // on file yet — could only fail its first payment. These fields are the same
+  // ones v1 marked required.
+  BILL_REQ: [
+    ['first_name', 'First name'], ['last_name', 'Last name'], ['address_1', 'Street address'],
+    ['city', 'City'], ['postcode', 'ZIP / Postal code'], ['country', 'Country'], ['email', 'Email']
+  ],
+
+  // Country / state lists ride the /billing/ response (see
+  // captaincore_billing_func) — they are only needed on this screen.
+  billCountries() {
+    const b = this._billing;
+    return (b && !b.error && Array.isArray(b.countries)) ? b.countries : [];
+  },
+
+  // States for a country, as [{ value, title }] — empty when the country has
+  // none, in which case State is not required.
+  billStates(country) {
+    const b = this._billing;
+    const map = (b && !b.error && b.states) ? b.states : {};
+    const st = country ? map[country] : null;
+    if (!st || Array.isArray(st)) return [];
+    return Object.keys(st).map(k => ({ value: k, title: st[k] }));
+  },
+
+  // Labels of every required field this address is missing.
+  billMissing(a) {
+    a = a || {};
+    const miss = this.BILL_REQ.filter(([k]) => !String(a[k] == null ? '' : a[k]).trim()).map(([, label]) => label);
+    if (this.billStates(a.country).length && !String(a.state || '').trim()) miss.push('State');
+    return miss;
+  },
+
+  // The billing address a fresh card dialog starts from: what is on file,
+  // topped up with the profile name and account email so a new customer
+  // normally only has to type the address itself.
+  cardAddrSeed() {
+    const boot = window.CC_BOOT || {};
+    const a = (this._billing && !this._billing.error && this._billing.address) || {};
+    const draft = {};
+    ['first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'email', 'phone']
+      .forEach(k => { draft[k] = a[k] == null ? '' : String(a[k]); });
+    if (!draft.first_name) draft.first_name = boot.profFirst || '';
+    if (!draft.last_name) draft.last_name = boot.profLast || '';
+    if (!draft.email) draft.email = boot.userEmail || '';
+    if (!draft.country) draft.country = 'US';
+    return draft;
+  },
+
   // ── Add card via Stripe Elements ─────────────────────────────
   // Pay-mode variant: same dialog, but submit pays the invoice with the new
   // card in one step (pay-invoice's source_id branch adds the method, pays,
@@ -34,7 +88,12 @@ Object.assign(Component.prototype, {
   openAddCard() {
     const boot = window.CC_BOOT || {};
     if (!boot.stripeKey || !window.Stripe) { if (boot.addPaymentUrl) window.location.href = boot.addPaymentUrl; return; }
-    this.setState({ cardDlgOpen: true, cardErr: '', cardSaving: false, cardPayInvoice: this._cardPayInvoice || '' });
+    // The billing-details draft stays null until the customer types: it is
+    // derived from whatever is on file (cardAddrSeed), so a /billing/ fetch
+    // still in flight when the dialog opens fills the form in when it lands.
+    if (!this._billing && !this._billingLoading) this.loadBilling();
+    this.setState({ cardDlgOpen: true, cardErr: '', cardSaving: false, cardPayInvoice: this._cardPayInvoice || '',
+      cardAddr: null, cardAddrEditing: false, cardAddrTried: false, ddOpen: '', ddQ: '' });
     this._cardPayInvoice = null;
     // Mount after the dialog paints.
     setTimeout(() => {
@@ -44,7 +103,10 @@ Object.assign(Component.prototype, {
         if (!mount) return;
         if (this._cardEl) { try { this._cardEl.unmount(); } catch (e) {} }
         this._cardElements = this._stripe.elements();
-        this._cardEl = this._cardElements.create('card', { hidePostalCode: false });
+        // The billing form above collects the postcode and it rides along as
+        // owner.address.postal_code, so Stripe's own ZIP box would be a second
+        // ask for the same number.
+        this._cardEl = this._cardElements.create('card', { hidePostalCode: true });
         this._cardEl.mount(mount);
         this._cardEl.on('change', ev => { if (ev.error) this.setState({ cardErr: ev.error.message }); else if (this.state.cardErr) this.setState({ cardErr: '' }); });
       } catch (e) { this.setState({ cardErr: 'Could not load the card form.' }); }
@@ -53,28 +115,55 @@ Object.assign(Component.prototype, {
 
   closeAddCard() {
     if (this._cardEl) { try { this._cardEl.unmount(); } catch (e) {} this._cardEl = null; }
-    this.setState({ cardDlgOpen: false, cardSaving: false, cardErr: '', cardPayInvoice: '' });
+    this.setState({ cardDlgOpen: false, cardSaving: false, cardErr: '', cardPayInvoice: '',
+      cardAddrEditing: false, ddOpen: '', ddQ: '' });
   },
 
   submitCard() {
     if (!this._stripe || !this._cardEl || this.state.cardSaving) return;
+    const addr = this.state.cardAddr || this.cardAddrSeed();
+    const miss = this.billMissing(addr);
+    if (miss.length) {
+      this.setState({ cardAddrEditing: true, cardAddrTried: true, cardErr: 'Billing details are required: ' + miss.join(', ') + '.' });
+      return;
+    }
     const payId = this.state.cardPayInvoice || '';
     this.setState({ cardSaving: true, cardErr: '' });
     const tid = this.toast(payId ? 'Processing payment…' : 'Adding card…', { kind: 'loading' });
-    this._stripe.createSource(this._cardEl, { type: 'card' }).then(result => {
-      if (result.error) { this.setState({ cardSaving: false, cardErr: result.error.message }); this.dismissToast(tid); return; }
-      const req = payId
-        ? this.api('/billing/pay-invoice', { method: 'POST', body: { value: payId, source_id: result.source.id } })
-        : this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } });
-      req.then(res => {
-        if (res && (res.error || res.code)) { const msg = res.error || res.message || 'Card declined';
-          this.setState({ cardSaving: false, cardErr: String(msg) }); this.updateToast(tid, payId ? 'Payment failed' : 'Card declined', { kind: 'error' }); return; }
-        this.closeAddCard();
-        this.updateToast(tid, payId ? 'Payment submitted' : 'Card added', { kind: 'success' });
-        if (payId) { this._invoiceView = null; this.openInvoice(payId); }
-        this.loadBilling(true);
-      }).catch(() => { this.setState({ cardSaving: false, cardErr: payId ? 'Payment failed.' : 'Could not save the card.' }); this.updateToast(tid, payId ? 'Payment failed' : 'Could not save the card', { kind: 'error' }); });
-    }).catch(() => { this.setState({ cardSaving: false, cardErr: 'Could not process the card.' }); this.dismissToast(tid); });
+    const fail = (msg, toastMsg) => { this.setState({ cardSaving: false, cardErr: msg });
+      if (toastMsg) this.updateToast(tid, toastMsg, { kind: 'error' }); else this.dismissToast(tid); };
+    // Save the address FIRST — the charge is billed to the WooCommerce
+    // customer, so it has to be on file before the source is attached.
+    this.api('/billing/update', { method: 'PUT', body: { address: addr } }).then(res => {
+      if (res && (res.error || res.code)) { fail(String(res.error || res.message || 'Could not save billing details.')); return; }
+      if (this._billing && !this._billing.error) this._billing.address = { ...addr };
+      return this._stripe.createSource(this._cardEl, {
+        type: 'card',
+        currency: 'usd',
+        owner: {
+          name: [addr.first_name, addr.last_name].filter(Boolean).join(' '),
+          email: addr.email,
+          phone: addr.phone || undefined,
+          address: {
+            line1: addr.address_1, line2: addr.address_2 || undefined, city: addr.city,
+            state: addr.state || undefined, postal_code: addr.postcode, country: addr.country
+          }
+        }
+      }).then(result => {
+        if (result.error) { fail(result.error.message); return; }
+        const req = payId
+          ? this.api('/billing/pay-invoice', { method: 'POST', body: { value: payId, source_id: result.source.id } })
+          : this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } });
+        return req.then(res2 => {
+          if (res2 && (res2.error || res2.code)) { const msg = res2.error || res2.message || 'Card declined';
+            fail(String(msg), payId ? 'Payment failed' : 'Card declined'); return; }
+          this.closeAddCard();
+          this.updateToast(tid, payId ? 'Payment submitted' : 'Card added', { kind: 'success' });
+          if (payId) { this._invoiceView = null; this.openInvoice(payId); }
+          this.loadBilling(true);
+        }).catch(() => fail(payId ? 'Payment failed.' : 'Could not save the card.', payId ? 'Payment failed' : 'Could not save the card'));
+      });
+    }).catch(() => fail('Could not process the card.'));
   },
 
   // ── Add bank account (ACH via Stripe Financial Connections) ──
@@ -124,6 +213,14 @@ Object.assign(Component.prototype, {
         } else finish();
       });
     }).catch(() => { this.setState({ achSaving: false, achErr: 'Could not start bank setup.' }); this.dismissToast(tid); });
+  },
+
+  // Billing address dialog — a method (not just a closure in realBillingVals)
+  // because the invoice page opens it too when a saved card cannot be charged
+  // for want of an address.
+  openBillingAddress() {
+    const a = (this._billing && !this._billing.error && this._billing.address) || {};
+    this.setState({ billAddrOpen: true, billAddrDraft: { ...a }, billAddrTried: false });
   },
 
   openVerifyAch(token) { this.setState({ verifyDlgOpen: true, verifyToken: token, verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false }); },
@@ -220,6 +317,10 @@ Object.assign(Component.prototype, {
       }; });
     const selLabel = (methods.map(pm => pm).filter(pm => String(pm.token) === selTok).map(pm => {
       const m = pm.method || {}; return (m.brand || m.bank_name || 'Card') + ' ··' + (m.last4 || '????'); })[0]) || '';
+    // A saved method still cannot be charged without a billing address on the
+    // WooCommerce customer — send them to the address dialog instead of
+    // letting the charge fail with a bare gateway error.
+    const addrMiss = (this._hydrated && bill && !bill.error) ? this.billMissing(bill.address) : [];
     return {
       invPayMethods,
       invHasMethods: invPayMethods.length > 0,
@@ -231,7 +332,14 @@ Object.assign(Component.prototype, {
       invPayConfirm: !!s.invPayConfirm && invPayMethods.length > 0,
       invPayNotConfirm: !s.invPayConfirm || invPayMethods.length === 0,
       invPayConfirmText: 'Pay ' + amount + ' with ' + (selLabel || 'the selected method') + '?',
-      invPayAsk: () => this.setState({ invPayConfirm: true }),
+      invPayAsk: () => {
+        if (addrMiss.length) {
+          this.toast('Add your billing details first — missing ' + addrMiss.join(', ') + '.', { kind: 'error' });
+          this.openBillingAddress();
+          return;
+        }
+        this.setState({ invPayConfirm: true });
+      },
       invPayCancel: () => this.setState({ invPayConfirm: false }),
       invPayGo: () => {
         if (!this._hydrated) { this.setState(st => ({ paid: { ...st.paid, ['#' + id]: true }, invPayConfirm: false })); return; }
@@ -283,6 +391,63 @@ Object.assign(Component.prototype, {
       }).catch(() => {});
   },
 
+  // Billing-details half of the card dialog: a summary once the address is
+  // complete, the form while anything required is missing (or after Edit).
+  cardAddrVals(s) {
+    const d = s.cardAddr || this.cardAddrSeed();
+    const countries = this.billCountries();
+    const states = this.billStates(d.country);
+    const tried = !!s.cardAddrTried;
+    const set = (k, v) => this.setState(st => ({ cardAddr: { ...(st.cardAddr || this.cardAddrSeed()), [k]: v }, cardErr: '' }));
+    const row = (k, label, req, ph) => ({ label: req ? label + ' *' : label, ph: ph || '',
+      v: d[k] == null ? '' : String(d[k]),
+      bd: (req && tried && !String(d[k] || '').trim()) ? 'var(--bad)' : 'var(--rule)',
+      on: e => set(k, e.target.value) });
+    const opts = (list, cur, k) => { const nq = (s.ddQ || '').trim().toLowerCase();
+      return (nq ? list.filter(o => o.title.toLowerCase().indexOf(nq) !== -1) : list).map(o => ({ label: o.title,
+        mark: o.value === cur ? '\u2713' : '', bg: o.value === cur ? 'var(--brand-soft)' : 'transparent',
+        // Changing country invalidates the state, which belongs to the old one.
+        pick: () => this.setState(st => ({
+          cardAddr: { ...(st.cardAddr || this.cardAddrSeed()), [k]: o.value, ...(k === 'country' ? { state: '' } : {}) },
+          cardErr: '', ddOpen: '', ddQ: '' })) })); };
+    const title = (list, v, fallback) => (list.filter(o => o.value === v).map(o => o.title)[0]) || fallback;
+    const toggle = key => () => this.setState(st => ({ ddOpen: st.ddOpen === key ? '' : key, ddQ: '' }));
+    const editing = !!s.cardAddrEditing || this.billMissing(d).length > 0;
+    return {
+      cardAddrForm: editing, cardAddrDone: !editing,
+      cardAddrL1: [[d.first_name, d.last_name].filter(Boolean).join(' '), d.company].filter(Boolean).join(' \u00b7 ') || '\u2014',
+      cardAddrL2: [d.address_1, d.address_2].filter(Boolean).join(', '),
+      cardAddrL3: [[d.city, title(states, d.state, d.state)].filter(Boolean).join(', '), d.postcode].filter(Boolean).join(' ')
+        + (d.country ? ' \u00b7 ' + title(countries, d.country, d.country) : ''),
+      cardAddrL4: [d.email, d.phone].filter(Boolean).join(' \u00b7 '),
+      cardAddrEdit: () => this.setState({ cardAddrEditing: true }),
+      cardAddrTop: [
+        row('first_name', 'First name', true), row('last_name', 'Last name', true),
+        row('company', 'Company', false, 'Optional'),
+        row('address_1', 'Street address', true, 'House number and street name'),
+        row('address_2', 'Apt, suite', false, 'Optional'),
+        row('city', 'City', true)
+      ],
+      cardAddrBottom: [
+        row('postcode', 'ZIP / Postal', true), row('email', 'Email', true), row('phone', 'Phone', false, 'Optional')
+      ],
+      // Country / state pickers — the same searchable dropdown the rest of the
+      // app uses. Falls back to a plain input if WooCommerce gave us no list.
+      cardHasCountries: countries.length > 0, cardNoCountries: countries.length === 0,
+      cardCountryLabel: title(countries, d.country, d.country || 'Select country'),
+      cardCountryBd: (tried && !String(d.country || '').trim()) ? 'var(--bad)' : 'var(--rule)',
+      ddCardCountryOpen: s.ddOpen === 'cardCountry', ddToggleCardCountry: toggle('cardCountry'),
+      ddCardCountryOpts: opts(countries, d.country, 'country'),
+      cardCountryText: d.country || '', onCardCountry: e => set('country', e.target.value),
+      cardHasStates: states.length > 0, cardNoStates: states.length === 0,
+      cardStateLabel: title(states, d.state, d.state || 'Select state'),
+      cardStateBd: (tried && states.length && !String(d.state || '').trim()) ? 'var(--bad)' : 'var(--rule)',
+      ddCardStateOpen: s.ddOpen === 'cardState', ddToggleCardState: toggle('cardState'),
+      ddCardStateOpts: opts(states, d.state, 'state'),
+      cardStateText: d.state || '', onCardState: e => set('state', e.target.value)
+    };
+  },
+
   realBillingVals(s) {
     if (s.route === 'billing' && !this._billing && !this._billingLoading) setTimeout(() => this.loadBilling(), 0);
     const b = this._billing;
@@ -325,6 +490,9 @@ Object.assign(Component.prototype, {
     const boot = window.CC_BOOT || {};
     const noticeText = !invoices.length && s.billTab === 'invoices' ? 'No invoices yet.'
       : !payMethods.length && s.billTab === 'methods' ? 'No payment methods on file.' : '';
+    // Required fields carry a marker so the address that a card needs is
+    // obvious here too, not only inside the card dialog.
+    const REQ_KEYS = this.BILL_REQ.map(([k]) => k);
     const ADDR_FIELDS = [
       ['first_name', 'First name'], ['last_name', 'Last name'], ['company', 'Company'],
       ['address_1', 'Address 1'], ['address_2', 'Address 2'], ['city', 'City'],
@@ -347,6 +515,7 @@ Object.assign(Component.prototype, {
       cardSubmitLabel: s.cardPayInvoice ? 'Add card & pay' : 'Add card',
       closeAddCard: () => this.closeAddCard(),
       submitCard: () => this.submitCard(),
+      ...this.cardAddrVals(s),
       achDlgOpen: !!s.achDlgOpen, achName: s.achName || '', achErr: s.achErr || '',
       onAchName: e => this.setState({ achName: e.target.value, achErr: '' }),
       closeAddAch: () => this.closeAddAch(), submitAch: () => this.submitAch(),
@@ -360,10 +529,15 @@ Object.assign(Component.prototype, {
       addrL3: [[a.city, a.state].filter(Boolean).join(', '), a.postcode].filter(Boolean).join(' ') + (a.country ? ' · ' + a.country : ''),
       addrL4: [a.email, a.phone].filter(Boolean).join(' · '),
       billAddrOpen: !!s.billAddrOpen,
-      openBillAddr: () => this.setState({ billAddrOpen: true, billAddrDraft: { ...a } }),
+      billAddrMissing: !!this.billMissing(a).length,
+      billAddrMissingText: 'Needed before a card can be added: ' + this.billMissing(a).join(', ') + '.',
+      openBillAddr: () => this.openBillingAddress(),
       closeBillAddr: () => this.setState({ billAddrOpen: false }),
-      billAddrFields: ADDR_FIELDS.map(([k, label]) => ({ label, v: (s.billAddrDraft || {})[k] || '',
-        on: e => this.setState(st => ({ billAddrDraft: { ...st.billAddrDraft, [k]: e.target.value } })) })),
+      billAddrFields: ADDR_FIELDS.map(([k, label]) => { const v = (s.billAddrDraft || {})[k] || '';
+        const req = REQ_KEYS.indexOf(k) !== -1 || (k === 'state' && !!this.billStates((s.billAddrDraft || {}).country).length);
+        return { label: req ? label + ' *' : label, v,
+          bd: (req && !String(v).trim()) ? 'var(--bad)' : 'var(--rule)',
+          on: e => this.setState(st => ({ billAddrDraft: { ...st.billAddrDraft, [k]: e.target.value } })) }; }),
       saveBillAddr: () => {
         this.api('/billing/update', { method: 'PUT', body: { address: this.state.billAddrDraft } })
           .then(() => { this.setState({ billAddrOpen: false }); this.loadBilling(true); }).catch(() => {});

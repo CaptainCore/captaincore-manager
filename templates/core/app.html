@@ -5244,8 +5244,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeBillAddr }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:14px 18px;display:flex;flex-direction:column;gap:9px">
+          <sc-if value="{{ billAddrMissing }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim);background:var(--warn-soft);border-radius:9px;padding:9px 11px">{{ billAddrMissingText }}</span>
+          </sc-if>
           <sc-for list="{{ billAddrFields }}" as="f" hint-placeholder-count="6">
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ f.label }}</span><input value="{{ f.v }}" onInput="{{ f.on }}" style="flex:1;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:0 11px;outline:none"></div>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ f.label }}</span><input value="{{ f.v }}" onInput="{{ f.on }}" style="flex:1;min-width:0;height:36px;border:1px solid {{ f.bd }};border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:0 11px;outline:none"></div>
           </sc-for>
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
@@ -5258,15 +5261,84 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   </sc-if>
 
   <!-- ══ Add card dialog (Stripe Elements) ══ -->
+  <!-- Billing details ride in the same dialog: Stripe needs the owner address
+       and WooCommerce needs a billing name/country, so a card cannot be added
+       or charged until they are on file. Summary once complete, form until. -->
   <sc-if value="{{ cardDlgOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeAddCard }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding-top:16vh">
-      <div onClick="{{ stopProp }}" style="width:440px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+    <div onClick="{{ closeAddCard }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px;overflow-y:auto">
+      <div onClick="{{ stopProp }}" style="width:500px;max-width:calc(100vw - 40px);background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
         <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
           <span style="font:600 var(--fs-15) var(--sans)">{{ cardDlgTitle }}</span>
           <div style="flex:1"></div>
           <span onClick="{{ closeAddCard }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <sc-if value="{{ cardAddrDone }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:flex-start;gap:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:11px 13px">
+                <span style="min-width:0;flex:1">
+                  <span style="display:block;font:600 var(--fs-11) var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:4px">Billing details</span>
+                  <span style="display:block;font:500 var(--fs-13) var(--sans)">{{ cardAddrL1 }}</span>
+                  <span style="display:block;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ cardAddrL2 }}</span>
+                  <span style="display:block;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ cardAddrL3 }}</span>
+                  <span style="display:block;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ cardAddrL4 }}</span>
+                </span>
+                <span onClick="{{ cardAddrEdit }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;flex:none">Edit</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cardAddrForm }}" hint-placeholder-val="{{ false }}">
+              <span style="font:600 var(--fs-11) var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">Billing details</span>
+              <sc-for list="{{ cardAddrTop }}" as="f" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ f.label }}</span><input value="{{ f.v }}" onInput="{{ f.on }}" placeholder="{{ f.ph }}" style="flex:1;min-width:0;height:32px;border:1px solid {{ f.bd }};border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none"></div>
+              </sc-for>
+              <sc-if value="{{ cardHasStates }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">State *</span>
+                  <div style="position:relative;flex:1;min-width:0">
+                    <div onClick="{{ ddToggleCardState }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid {{ cardStateBd }};border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1;min-width:0">{{ cardStateLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                    <sc-if value="{{ ddCardStateOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:71"></div>
+                      <div style="position:absolute;top:36px;left:0;z-index:72;width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                        <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search states…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                        <div style="max-height:180px;overflow-y:auto">
+                          <sc-for list="{{ ddCardStateOpts }}" as="o" hint-placeholder-count="4">
+                            <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ cardNoStates }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">State</span><input value="{{ cardStateText }}" onInput="{{ onCardState }}" placeholder="Optional" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none"></div>
+              </sc-if>
+              <sc-if value="{{ cardHasCountries }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Country *</span>
+                  <div style="position:relative;flex:1;min-width:0">
+                    <div onClick="{{ ddToggleCardCountry }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid {{ cardCountryBd }};border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1;min-width:0">{{ cardCountryLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                    <sc-if value="{{ ddCardCountryOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:71"></div>
+                      <div style="position:absolute;top:36px;left:0;z-index:72;width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                        <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search countries…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                        <div style="max-height:180px;overflow-y:auto">
+                          <sc-for list="{{ ddCardCountryOpts }}" as="o" hint-placeholder-count="4">
+                            <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ cardNoCountries }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Country *</span><input value="{{ cardCountryText }}" onInput="{{ onCardCountry }}" placeholder="Two-letter country code" style="flex:1;min-width:0;height:32px;border:1px solid {{ cardCountryBd }};border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none"></div>
+              </sc-if>
+              <sc-for list="{{ cardAddrBottom }}" as="f" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:118px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ f.label }}</span><input value="{{ f.v }}" onInput="{{ f.on }}" placeholder="{{ f.ph }}" style="flex:1;min-width:0;height:32px;border:1px solid {{ f.bd }};border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none"></div>
+              </sc-for>
+            </sc-if>
+          </div>
+          <span style="font:600 var(--fs-11) var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)">Card</span>
           <div id="cc-card-element" style="border:1px solid var(--rule);border-radius:8px;padding:12px;background:var(--paper);min-height:44px"></div>
           <sc-if value="{{ cardErr }}" hint-placeholder-val="{{ false }}">
             <span style="font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ cardErr }}</span>
