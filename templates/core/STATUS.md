@@ -15,6 +15,29 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Mailgun sending tab empty after setup (2026-09-10)
+
+Clicking **Set up sending** created the Mailgun zone (the header flipped to
+"Transactional sending via mg.{domain}") but left DNS verification, usage, and
+recent events blank. Leaving the tab and coming back filled them in. Setup
+called `loadDomainDetail()`, which rebuilds `_domain` with `info: null` and
+never fetched the Mailgun payload — `loadMailgun()` only ran from the Sending
+tab click.
+
+Setup now applies the returned domain in place and calls `loadMailgun()` (and
+reloads the DNS zone, since setup may have written Constellix records).
+`loadDomainDetail()` also hydrates whichever lazy tab is visible once `/domain/{id}`
+returns, so a domain reload while already on Sending or Email forwarding no
+longer renders an empty panel. The setup button reads "Setting up…" while the
+request is in flight, and the DNS card shows "Loading DNS records…" until the
+rows land.
+
+Verified with Playwright on a domain that already has a zone: opening Sending
+loaded five records, then `loadDomainDetail()` while staying on that tab
+refilled records and usage without switching away. A mocked setup on a domain
+with no zone flipped the panel to the active sending view with five Pending
+rows and Copy DNS records, still on Sending.
+
 ## Billing details required before a card (2026-09-09)
 
 A new customer could not pay their first invoice. The invoice screen offered

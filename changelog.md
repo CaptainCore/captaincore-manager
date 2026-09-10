@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Improved
+
+- A managed update can be started from any site, whether or not the dashboard counts updates as pending. "Run managed update" is the first entry in the site's Tools card, and the Inventory tab's button is always present, reading "Update all (N)" when the update queue knows of pending targets and "Run managed update" otherwise. Both confirm first, say how many components the environment excludes, and run the same update the legacy "Manual update" button did, with quicksaves before and after.
+- Update exclusions are visible and editable where the plugins are. A plugin or theme excluded from managed updates on an environment wears an "Excluded" pill in the Inventory list, the tab reports how many are excluded, and right-clicking a row offers "Exclude from managed updates" or "Include in managed updates" without opening the settings dialog. "Update settings…" now also sits in the Inventory tab and the Tools card, the Environment card reads "On · N excluded", and the dialog explains what clicking a name does, counts exclusions per kind, and no longer lists must-use plugins or drop-ins.
+
+### Fixed
+
+- After Mailgun sending is set up, the Sending tab loads DNS records, usage, and events immediately. The zone used to be created while the panel stayed empty until you left the tab and came back.
+- A first payment no longer fails for want of a billing address. Adding a card asks for the billing details the charge needs — name, address, city, state, ZIP, country and email — showing them as a summary once they are on file and as a form until then, with searchable country and state pickers. The address is saved before the card is created and travels with it to Stripe. Paying an invoice with a saved card asks for the same details first, the Billing address screen marks what is required, and the API refuses a card with an incomplete address instead of returning a bare gateway error.
+- A dashboard tab left open for more than half a day no longer fails silently. The REST nonce is refreshed in the background every 30 minutes and whenever the tab returns to the foreground, and a request that still hits an expired nonce fetches a fresh one and replays itself. When the login session itself has ended, the tab goes to the login page and returns to the same screen after sign-in.
+
 ## **v1.1.1** - September 5, 2026
 
 The pairing release. Connecting a CaptainCore CLI server to the Manager is now one command in each direction at once: `captaincore connect --server-url=...` fetches the CLI token and registers the CLI server's address with the Manager in the same request, so a fresh install needs no wp-config.php constant. The release also carries the second security sweep that ran after 1.1.0 shipped: fourteen fixes, most of them closing checks that failed open or that one entry point applied and another skipped.

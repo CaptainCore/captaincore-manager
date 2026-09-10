@@ -49,8 +49,22 @@ Object.assign(Component.prototype, {
       const p = info && info.provider;
       if (p && !p.errors) this.setState({ reg: { auto: false, lock: p.locked === 'on', priv: p.whois_privacy === 'on' } });
       bump();
+      // Setup / activate / delete all land here while the user is still on a
+      // lazy tab. The tab click is what normally loads Mailgun / forwards, so
+      // without this the sending (and forwarding) panel renders empty until
+      // you leave and come back.
+      this.hydrateDomainTab();
     }).catch(() => { dom.infoErr = 'Could not load domain details.'; bump(); });
     this.loadDnsZone();
+  },
+
+  // Load the currently visible domain tab's secondary payload. DNS is fetched
+  // unconditionally from loadDomainDetail; sending and forwarding wait for a
+  // tab click — except when the domain record itself just changed underneath.
+  hydrateDomainTab() {
+    const tab = this.state.domTab;
+    if (tab === 'sending') this.loadMailgun();
+    else if (tab === 'forwarding') this.loadForwards();
   },
 
   loadDnsZone() {
@@ -912,6 +926,8 @@ Object.assign(Component.prototype, {
         del: () => this.api('/domain/' + dom.domainId + '/email-forwards/' + f.uid, { method: 'DELETE' })
           .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}) })),
       mgActive, mgInactive: !mgActive, mgLoading: dom.mgLoading,
+      mgSetupLabel: (dom.mgLoading && !mgActive) ? 'Setting up…' : 'Set up sending',
+      mgRecsLoading: !!(dom.mgLoading && mgActive && mgRecs.length === 0),
       mgNotice: !!dom.mgErr, mgNoticeText: dom.mgErr,
       // The sending host is a subdomain of this domain, and which one matters:
       // Mailgun names are unique platform-wide, so when mg. is already held
@@ -926,13 +942,25 @@ Object.assign(Component.prototype, {
       mgSetup: () => {
         const sub = String(s.mgSub === undefined ? 'mg' : s.mgSub).replace(/^[.-]+|[.-]+$/g, '');
         if (!sub) { dom.mgErr = 'Enter a subdomain to send from.'; this.setState({}); return; }
-        dom.mgErr = ''; this.setState({});
+        if (dom.mgLoading) return;
+        dom.mgErr = '';
+        dom.mgLoading = true;
+        this.setState({});
         this.api('/domain/' + dom.domainId + '/mailgun/setup', { method: 'POST', body: { domain: sub + '.' + d.name } })
           .then(res => {
-            if (res && res.code) { dom.mgErr = res.message || 'Could not set up Mailgun sending.'; this.setState({}); return; }
-            this.loadDomainDetail(dom.domainId);
+            if (this._domain !== dom) return;
+            if (res && res.code) { dom.mgLoading = false; dom.mgErr = res.message || 'Could not set up Mailgun sending.'; this.setState({}); return; }
+            // Apply the updated domain in place. loadDomainDetail() rebuilds
+            // _domain with info:null, which flashes the setup banner and used
+            // to leave DNS/usage/events empty until the Sending tab was
+            // clicked again (that's the only place loadMailgun ran).
+            if (res && res.domain) dom.info = Object.assign(dom.info || {}, res.domain);
+            // loadMailgun() early-returns while mgLoading is true.
+            dom.mgLoading = false;
+            this.loadMailgun();
+            this.loadDnsZone();
           })
-          .catch(() => { dom.mgErr = 'Could not set up Mailgun sending.'; this.setState({}); }); },
+          .catch(() => { if (this._domain === dom) { dom.mgLoading = false; dom.mgErr = 'Could not set up Mailgun sending.'; this.setState({}); } }); },
       // Before setup there is no zone yet, so the header follows the subdomain
       // being chosen below rather than always claiming mg.
       mgHost: details.mailgun_zone || (String(s.mgSub === undefined ? 'mg' : s.mgSub).replace(/^[.-]+|[.-]+$/g, '') || 'mg') + '.' + d.name,

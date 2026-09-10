@@ -2162,7 +2162,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <input value="{{ mgSub }}" onInput="{{ onMgSub }}" placeholder="mg" title="Sending subdomain" style="width:78px;padding:0;margin:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 var(--fs-12) var(--mono);text-align:right">
                   <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ mgSubSuffix }}</span>
                 </div>
-                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Set up sending</button>
+                <button onClick="{{ mgSetup }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ mgSetupLabel }}</button>
               </div>
             </sc-if>
             <sc-if value="{{ mgNotice }}" hint-placeholder-val="{{ false }}">
@@ -2177,6 +2177,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <button onClick="{{ mgCopyRecs }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Copy DNS records</button>
                 </sc-if>
               </div>
+              <sc-if value="{{ mgRecsLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:10px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading DNS records…</div>
+              </sc-if>
               <sc-for list="{{ mgRecs }}" as="r" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule)">
                   <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:var(--panel-2);border-radius:6px;padding:3px 0">{{ r.type }}</span>

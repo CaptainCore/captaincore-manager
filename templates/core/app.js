@@ -2026,6 +2026,7 @@ class Component extends DCLogic {
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},
       mgActive: true, mgInactive: false, mgLoading: false, mgNotice: false, mgNoticeText: '', mgSetup: () => {},
+      mgSetupLabel: 'Set up sending', mgRecsLoading: false,
       regShowAuto: true,
       domHasAccounts: false, domAccounts: [], domCanAssign: false,
       openDmaDlg: () => {}, dmaOpen: false, closeDma: () => {},
