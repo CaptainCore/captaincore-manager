@@ -1293,18 +1293,54 @@ class Mailer {
      *  HELPER: Make Images Responsive for Email
      * ------------------------------------------------------------------------- */
     private static function make_images_responsive( $content ) {
-        // Remove explicit width and height attributes from img tags (they override CSS)
-        $content = preg_replace( '/<img([^>]*)\s+width\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
-        $content = preg_replace( '/<img([^>]*)\s+height\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
-        
-        // Add responsive styles to all img tags
-        $content = preg_replace(
-            '/<img([^>]+)>/i',
-            '<img$1 style="max-width: 100% !important; height: auto !important; display: block;">',
+        // Core image lightbox injects <button class="lightbox-trigger"> next to
+        // captioned images. In email the expand SVG is white-on-white and the
+        // button renders as an empty pill above the caption.
+        $content = preg_replace( '/<button[^>]*class="[^"]*lightbox-trigger[^"]*"[^>]*>.*?<\/button>/is', '', $content );
+        $content = preg_replace( '/<div[^>]*class="[^"]*wp-lightbox-overlay[^"]*"[^>]*>.*?<\/div>/is', '', $content );
+        $content = preg_replace( '/\s+data-wp-[a-z0-9_-]+(?:=(?:"[^"]*"|\'[^\']*\'))?/i', '', $content );
+
+        // Figure + caption as a simple card so the caption sits with the image.
+        $content = preg_replace_callback(
+            '/<figure([^>]*)>(.*?)<\/figure>/is',
+            function ( $m ) {
+                $inner = $m[2];
+                $style = 'margin: 24px 0; padding: 0;';
+                if ( stripos( $inner, '<figcaption' ) !== false ) {
+                    $style = 'margin: 24px 0; padding: 0; background: #F4F6F9; border-radius: 6px; overflow: hidden;';
+                }
+                $inner = preg_replace(
+                    '/<figcaption([^>]*)>/i',
+                    '<figcaption$1 style="font-size: 13px; line-height: 1.5; color: #565C66; padding: 10px 14px 14px; margin: 0;">',
+                    $inner
+                );
+                return '<figure' . $m[1] . ' style="' . $style . '">' . $inner . '</figure>';
+            },
             $content
         );
-        // Clean up any duplicate style attributes
-        $content = preg_replace( '/style="([^"]*)"([^>]*)style="([^"]*)"/i', 'style="$1 $3"$2', $content );
+
+        // Width/height attributes fight max-width in email clients.
+        $content = preg_replace( '/<img([^>]*)\s+width\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
+        $content = preg_replace( '/<img([^>]*)\s+height\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
+        $content = preg_replace( '/\s+srcset\s*=\s*["\'][^"\']*["\']/i', '', $content );
+        $content = preg_replace( '/\s+sizes\s*=\s*["\'][^"\']*["\']/i', '', $content );
+
+        $content = preg_replace_callback(
+            '/<img([^>]*?)(\s*\/?)>/i',
+            function ( $m ) {
+                $attrs = $m[1];
+                $close = $m[2];
+                $style = 'max-width: 100% !important; height: auto !important; display: block;';
+                if ( preg_match( '/style=(["\'])(.*?)\1/i', $attrs, $sm ) ) {
+                    $attrs = preg_replace( '/style=(["\'])(.*?)\1/i', '', $attrs );
+                    $style = rtrim( $sm[2], '; ' ) . '; ' . $style;
+                }
+                $attrs = trim( preg_replace( '/\s+/', ' ', $attrs ) );
+                return '<img ' . $attrs . ' style="' . $style . '"' . $close . '>';
+            },
+            $content
+        );
+
         return $content;
     }
 
