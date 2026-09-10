@@ -6533,10 +6533,21 @@ function captaincore_site_backup_update_func( $request ) {
 }
 
 function captaincore_site_snapshot_download_func( $request ) {
-	$site_id       = $request['id'];
-	$token         = $request['token'];
-	$snapshot_id   = $request['snapshot_id'];
-	$snapshot_name = $request['snapshot_name'] . ".zip";
+	// Read the identifying values from the URL segments. WP_REST_Request ranks
+	// a body/query field of the same name above the URL, and every one of these
+	// feeds a permission decision.
+	$url_params    = $request->get_url_params();
+	$site_id       = (int) ( $url_params['id'] ?? 0 );
+	$token         = (string) ( $url_params['token'] ?? '' );
+	$snapshot_id   = (int) ( $url_params['snapshot_id'] ?? 0 );
+	$snapshot_name = (string) ( $url_params['snapshot_name'] ?? '' );
+
+	// The extension is optional in the route: the emailed link and the legacy
+	// dashboard trim it, the dashboard's Download link keeps it. Normalize to
+	// the stored name, which always ends in .zip.
+	if ( strtolower( substr( $snapshot_name, -4 ) ) !== '.zip' ) {
+		$snapshot_name .= '.zip';
+	}
 
 	// Verify Snapshot link is valid (constant-time token comparison).
 	$db = new CaptainCore\Snapshots();
@@ -6553,8 +6564,15 @@ function captaincore_site_snapshot_download_func( $request ) {
 		return new WP_Error( 'token_expired', 'This download link has expired.', [ 'status' => 403 ] );
 	}
 
-	$snapshot_url = captaincore_snapshot_download_link( $snapshot_id  );
-	header('Location: ' . $snapshot_url);
+	// The dispatch server answers with the signed storage URL, but it answers
+	// with a plain error string when it cannot find the archive or is down.
+	// Redirecting to that put the error text in the Location header and sent
+	// the browser nowhere; say what happened instead.
+	$snapshot_url = trim( (string) captaincore_snapshot_download_link( $snapshot_id ) );
+	if ( ! preg_match( '#^https?://#i', $snapshot_url ) || ! wp_http_validate_url( $snapshot_url ) ) {
+		return new WP_Error( 'snapshot_unavailable', 'This snapshot is no longer available for download.', [ 'status' => 502 ] );
+	}
+	wp_redirect( $snapshot_url );
 	exit;
 }
 
@@ -8721,7 +8739,7 @@ function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+)', [
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+(?:\.zip)?)', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_site_snapshot_download_func',
 			'permission_callback' => '__return_true', // Public endpoint

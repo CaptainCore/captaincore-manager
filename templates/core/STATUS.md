@@ -77,6 +77,64 @@ it saved the WooCommerce billing address and added the card; an existing
 customer saw the summary and "Add card & pay" carried a $1 test invoice to
 completed. Both themes checked.
 
+## Snapshot downloads: the .zip that matched no route (2026-09-10)
+
+Every Download and Copy link on the Snapshots tab returned
+`rest_no_route` 404. The download route's last segment is
+`(?P<snapshot_name>[a-zA-Z0-9-]+)` and the handler appends `.zip` itself, so
+the URL has to carry the *stem*. The emailed link (`substr($name, 0, -4)`)
+and the legacy dashboard (`item.snapshot_name.slice(0, -4)`) both trim it;
+`mapSnapshot` passed `encodeURIComponent(r.snapshot_name)` whole, dot and
+all, and a dot cannot match that character class. Reproduced exactly against
+a shaped URL: with `.zip` → 404 rest_no_route, without → 403 token_invalid
+(the route matched and the token check ran).
+
+Fixed at both ends. version-recovery.js strips a trailing `.zip` when it
+builds `_url`, and the route now reads `[a-zA-Z0-9-]+(?:\.zip)?` with the
+handler appending the extension only when it is absent, so the emailed links
+already in mailboxes and the dashboard links both resolve. Only the literal
+`.zip` is admitted: `…-deadbeef.php` and `../../etc/passwd` still 404.
+
+Two more bugs surfaced while testing that one:
+
+**The countdown was off by the viewer's UTC offset.** The CLI writes
+`expires_at` as `"2006-01-02 15:04:05"` in UTC (cmd/snapshot.go) and
+`captaincore_sites_snapshot_link_func` writes the same shape. A space
+separated datetime with no zone is parsed as LOCAL time by every browser, so
+`new Date(r.expires_at)` shifted every countdown. That is the "27h left" in
+the report: a 24 hour link, read in US Eastern. New `parseTs()` treats a
+zone-less timestamp as UTC and leaves anything carrying `Z` or `±HH:MM`
+alone. Verified by running the helper under three zones: New York read 27h
+before and 23h after, Berlin 21h before and 23h after. Berlin is the
+dangerous direction, where a live link can read as expired. The legacy
+`0000-00-00 00:00:00` rows parse to 0 and still render "expired".
+
+**A dispatch error became the redirect target.** The handler did
+`header('Location: ' . captaincore_snapshot_download_link($id))` with no
+check, and that helper returns the response body verbatim — so a snapshot the
+storage server cannot find sent `Location: Error: Snapshot not found.` Now
+the body must look like an http(s) URL and pass `wp_http_validate_url()`,
+else a 502 `snapshot_unavailable` with a sentence a person can read.
+
+Also: the Download link no longer renders on an expired row (the handler
+always 403s there; "New 24h link" was already the real affordance), and the
+row label read "Link expires in 27h left" because `expires` carried its own
+"left" — it now holds just the duration.
+
+One thing left alone: snapshots from 2017-2018 carry names like
+`austinginder.com-2018-01-31.tar.gz`. The interior dot and the `.tar.gz` can
+never match the route, so they are undownloadable no matter what token is
+minted. They all have empty tokens and a zero expiry, so they render as
+expired and now offer no Download link at all. Not worth widening the route
+for archives that old.
+
+Verified live on anchor.localhost: a seeded snapshot row proved the whole
+guard chain (correct name+token → expiry gate; wrong token → token_invalid;
+wrong site id → token_invalid; a JSON body trying to override the URL token
+→ ignored, the URL segment wins), and the browser was driven to the tab to
+capture the URL the Download link actually opens. The seeded row was deleted
+afterwards.
+
 ## Manual update and update exclusions, findable (2026-09-07)
 
 Austin reviewed the legacy Updates tab and asked for two things he could not

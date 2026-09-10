@@ -1306,7 +1306,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ sn.expired }}" hint-placeholder-val="{{ false }}">
                     <span onClick="{{ sn.regen }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">New 24h link</span>
                   </sc-if>
-                  <span onClick="{{ sn.doDl }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Download</span>
+                  <sc-if value="{{ sn.live }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ sn.doDl }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Download</span>
+                  </sc-if>
                 </div>
               </sc-for>
             </div>

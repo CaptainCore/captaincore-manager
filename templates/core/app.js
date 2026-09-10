@@ -259,7 +259,7 @@ class Component extends DCLogic {
   };
 
   SNAPSHOTS = window.CC_BOOT ? [] : [
-    { id: 'snap_4c8aa', name: 'db-only-checkout-bug', when: 'Today · 8:02 AM', size: '48 MB', filter: 'Database', expires: '23h left' },
+    { id: 'snap_4c8aa', name: 'db-only-checkout-bug', when: 'Today · 8:02 AM', size: '48 MB', filter: 'Database', expires: '23h' },
     { id: 'snap_9f2e1', name: 'pre-redesign-full', when: 'Jul 12 · 2:12 PM', size: '2.4 GB', filter: 'Everything', expires: 'expired' },
     { id: 'snap_77b03', name: 'uploads-june', when: 'Jun 30 · 4:44 PM', size: '1.4 GB', filter: 'Uploads', expires: 'expired' }
   ];

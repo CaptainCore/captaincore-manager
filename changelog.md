@@ -9,6 +9,11 @@
 
 ### Fixed
 
+- Snapshot downloads work again. The dashboard's Download link and Copy link both pointed at a URL ending in ".zip", which matched no route, so every download answered "No route was found matching the URL and request method" instead of the archive. The download endpoint now accepts the file name with or without the extension, which is also what the emailed link and the legacy dashboard have always sent.
+- A snapshot's countdown is no longer off by the viewer's time zone. Expiry is stored in UTC but was being read as local time, so a fresh 24 hour link read as 27 hours in New York and 21 hours in Berlin, where a live link could be shown as already expired.
+- An expired snapshot offers "New 24h link" alone. Its Download link was still shown and could only ever fail.
+- A snapshot whose archive the storage server cannot produce now says so. The dashboard used to send the browser to a page built from the error text.
+
 - After Mailgun sending is set up, the Sending tab loads DNS records, usage, and events immediately. The zone used to be created while the panel stayed empty until you left the tab and came back.
 - A first payment no longer fails for want of a billing address. Adding a card asks for the billing details the charge needs — name, address, city, state, ZIP, country and email — showing them as a summary once they are on file and as a form until then, with searchable country and state pickers. The address is saved before the card is created and travels with it to Stripe. Paying an invoice with a saved card asks for the same details first, the Billing address screen marks what is required, and the API refuses a card with an incomplete address instead of returning a bare gateway error.
 - A dashboard tab left open for more than half a day no longer fails silently. The REST nonce is refreshed in the background every 30 minutes and whenever the tab returns to the foreground, and a request that still hits an expired nonce fetches a fresh one and replays itself. When the login session itself has ended, the tab goes to the login page and returns to the same screen after sign-in.

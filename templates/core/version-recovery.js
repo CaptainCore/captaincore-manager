@@ -15,6 +15,20 @@ Object.assign(Component.prototype, {
     return d.toLocaleString(undefined, opts);
   },
 
+  // MySQL-style timestamps ("2026-09-11 19:43:02") are written by the CLI and
+  // the Manager in UTC, but a space-separated datetime with no zone is parsed
+  // as LOCAL time by every browser — which silently shifted every countdown by
+  // the viewer's UTC offset. Treat a zone-less string as UTC; leave anything
+  // already carrying Z or ±HH:MM alone. Returns epoch seconds, 0 when unusable.
+  parseTs(value) {
+    if (!value) return 0;
+    const str = String(value).trim();
+    if (/^\d+$/.test(str)) return Number(str);
+    const zoned = /[Zz]$|[+-]\d{2}:?\d{2}$/.test(str);
+    const ms = Date.parse(str.replace(' ', 'T') + (zoned ? '' : 'Z'));
+    return isNaN(ms) ? 0 : ms / 1000;
+  },
+
   // ── Visual captures (Captures tab) ────────────────────────────
   // GET /site/{id}/{env}/captures → [{capture_id, created_at_friendly,
   // git_commit, pages:[{name,image,image_url}]}] newest first. Cached per
@@ -431,14 +445,19 @@ Object.assign(Component.prototype, {
   mapSnapshot(real, r) {
     const boot = window.CC_BOOT || {};
     const now = Date.now() / 1000;
-    const exp = r.expires_at ? (new Date(r.expires_at).getTime() / 1000 || Number(r.expires_at)) : 0;
+    const exp = this.parseTs(r.expires_at);
     const hoursLeft = exp ? Math.floor((exp - now) / 3600) : 0;
+    // The download route's last segment is [a-zA-Z0-9-]+ and the handler
+    // appends the extension itself, so the ".zip" has to come off or the URL
+    // matches no route at all (rest_no_route 404). The emailed link and the
+    // legacy dashboard have always trimmed it the same way.
+    const fileSeg = String(r.snapshot_name || '').replace(/\.zip$/i, '');
     return {
       id: String(r.snapshot_id), name: r.snapshot_name || ('snapshot-' + r.snapshot_id),
       when: this.fmtEpoch(r.created_at), size: this.fmtStorage(r.storage),
-      filter: r.notes || '', expires: exp && exp > now ? (hoursLeft > 0 ? hoursLeft + 'h left' : '<1h left') : 'expired',
+      filter: r.notes || '', expires: exp && exp > now ? (hoursLeft > 0 ? hoursLeft + 'h' : '<1h') : 'expired',
       _real: true, _token: r.token,
-      _url: r.token ? (boot.restRoot + 'captaincore/v1/site/' + real.siteId + '/snapshots/' + r.snapshot_id + '-' + r.token + '/' + encodeURIComponent(r.snapshot_name || '')) : ''
+      _url: r.token && fileSeg ? (boot.restRoot + 'captaincore/v1/site/' + real.siteId + '/snapshots/' + r.snapshot_id + '-' + r.token + '/' + encodeURIComponent(fileSeg)) : ''
     };
   },
 
