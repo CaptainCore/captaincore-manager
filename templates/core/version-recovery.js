@@ -6,13 +6,16 @@
 
 Object.assign(Component.prototype, {
 
+  // Always carries the year: these labels sit in long scrolling lists
+  // (backups reach back years) where a year-less "Sep 15" is only readable
+  // if you tracked how far you scrolled. Shape matches the timeline mocks:
+  // "Sep 15, 2026 · 12:21 AM".
   fmtEpoch(epoch) {
     const n = Number(epoch);
     if (!n) return '';
     const d = new Date(n * 1000);
-    const opts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
-    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
-    return d.toLocaleString(undefined, opts);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      + ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   },
 
   // MySQL-style timestamps ("2026-09-11 19:43:02") are written by the CLI and
@@ -289,7 +292,7 @@ Object.assign(Component.prototype, {
         const list = Array.isArray(rows) ? rows : [];
         real.backups = list.map(b => ({
           id: b.id, idShort: String(b.id || '').slice(0, 8),
-          when: b.time ? new Date(b.time).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '',
+          when: b.time ? this.fmtEpoch(this.parseTs(b.time)) : '',
           size: '', files: '', _raw: b
         }));
         // Retention start = the oldest snapshot still in the repo. Scan for the

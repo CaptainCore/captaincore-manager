@@ -15,6 +15,19 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## History dates always carry the year (2026-09-15)
+
+Customer feedback: the Backups list showed "Sep 15, 12:21 AM" and the year was
+only knowable by tracking how far you had scrolled, so a 2023 snapshot was
+grabbed instead of a 2025 one. `fmtEpoch` in version-recovery.js now always
+prints the year in one shape, "Sep 15, 2026 · 12:21 AM" (it used to add the
+year only when it differed from the current one), and the backups loader
+routes restic's ISO times through `parseTs` + `fmtEpoch` instead of its own
+year-less `toLocaleString`. The helper is shared, so Versions, Snapshots, the
+site timeline and invoice dates pick up the same label. Verified in the
+browser on a customer site's Backups and Versions tabs (rows spanning 2021,
+2023 and 2025 all read with their year).
+
 ## Mailgun sending tab empty after setup (2026-09-10)
 
 Clicking **Set up sending** created the Mailgun zone (the header flipped to
