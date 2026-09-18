@@ -169,6 +169,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore site-label', 'CaptainCore\SiteLabelCLI' );
 	WP_CLI::add_command( 'captaincore session-alerts', 'CaptainCore\SessionAlertsCLI' );
 	WP_CLI::add_command( 'captaincore core-update-runs', 'CaptainCore\CoreUpdateRunsCLI' );
+	WP_CLI::add_command( 'captaincore orphan-rows', 'CaptainCore\OrphanRowsCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -1618,9 +1619,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	if ( $command === 'site-delete' ) {
-		( new CaptainCore\Sites )->delete( $post->site_id );
+		$removed  = ( new CaptainCore\Site( intval( $post->site_id ) ) )->delete();
 		$response = [
-			"response" => "Delete site {$post->site_id}"
+			"response" => "Delete site {$post->site_id}",
+			"removed"  => $removed,
 		];
 	}
 

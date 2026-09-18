@@ -281,6 +281,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
         'CaptainCore\\MailgunCLI' => __DIR__ . '/../..' . '/app/MailgunCLI.php',
         'CaptainCore\\MuManifestCLI' => __DIR__ . '/../..' . '/app/MuManifestCLI.php',
+        'CaptainCore\\OrphanRowsCLI' => __DIR__ . '/../..' . '/app/OrphanRowsCLI.php',
         'CaptainCore\\PendingVerification' => __DIR__ . '/../..' . '/app/PendingVerification.php',
         'CaptainCore\\Process' => __DIR__ . '/../..' . '/app/Process.php',
         'CaptainCore\\ProcessLog' => __DIR__ . '/../..' . '/app/ProcessLog.php',

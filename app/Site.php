@@ -875,8 +875,47 @@ class Site {
         ( new Account( $site->account_id ) )->calculate_usage();
     }
 
+    /**
+     * Hard delete: the site row and every row that only exists because of
+     * it. `Sites::delete` alone used to leave environments, account links,
+     * captures and session snapshots behind. Snapshots, audits and process
+     * logs are kept on purpose: they are history a customer or operator may
+     * still open (a final snapshot's download link resolves through its row).
+     *
+     * Returns the rows removed per table.
+     */
     public function delete() {
-        ( new Sites )->delete( $this->site_id );
+        global $wpdb;
+        $site_id = intval( $this->site_id );
+        if ( $site_id <= 0 ) {
+            return [];
+        }
+        return self::delete_rows_for_site( $site_id );
+    }
+
+    /**
+     * Removes the site row (if any) and its dependent rows for one site_id.
+     * Shared by delete() and the orphan-rows sweeper, which calls it for
+     * site_ids whose site row is already gone.
+     */
+    public static function delete_rows_for_site( $site_id ) {
+        global $wpdb;
+        $site_id = intval( $site_id );
+        $p       = $wpdb->prefix;
+        $removed = [];
+
+        $environment_ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+            "SELECT environment_id FROM {$p}captaincore_environments WHERE site_id = %d", $site_id
+        ) ) );
+        if ( ! empty( $environment_ids ) ) {
+            $in                 = implode( ',', $environment_ids );
+            $removed['scripts'] = (int) $wpdb->query( "DELETE FROM {$p}captaincore_scripts WHERE environment_id IN ($in)" );
+        }
+        foreach ( [ 'captures', 'session_snapshots', 'environments', 'account_site' ] as $table ) {
+            $removed[ $table ] = (int) $wpdb->query( $wpdb->prepare( "DELETE FROM {$p}captaincore_{$table} WHERE site_id = %d", $site_id ) );
+        }
+        $removed['sites'] = (int) $wpdb->query( $wpdb->prepare( "DELETE FROM {$p}captaincore_sites WHERE site_id = %d", $site_id ) );
+        return $removed;
     }
 
     public function captures( $environment = "production" ) {
