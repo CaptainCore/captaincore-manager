@@ -30,6 +30,7 @@ Object.assign(Component.prototype, {
       dnsRecs: this._hydrated ? [] : this.DNS_RECS.map(r => ({ ...r })),
       dnsDirty: false, dnsDel: [], dnsT: 'A', dnsN: '', dnsV: '', dnsEdit: 0,
       fwds: this._hydrated ? [] : this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',
+      fwdEdit: '', fwdEA: '', fwdED: '', fwdSaving: false,
       mgSuppOpen: false, mgDeployOpen: false, mgDepQ: '', mgDepTarget: null, mgDepFrom: '', mgDepBusy: false,
       mgSub: 'mg',
       reg: { auto: false, lock: false, priv: false } });
@@ -382,6 +383,36 @@ Object.assign(Component.prototype, {
       this.setState({ fwds: dom.forwards.map(x => ({ uid: x.id, alias: x.name || '*',
         dest: (x.recipients || []).join(', '),
         status: (x.name || '*') === '*' ? 'Catch-all' : ok ? 'Verified' : 'Pending verification' })) });
+    });
+  },
+
+  // Save the row opened by startEdit. The route accepts a comma list for
+  // recipients (the model splits it) and a bare alias name, so this sends
+  // the fields as typed. api() resolves a WP_Error body (400/404/500) rather
+  // than rejecting, so the error check is on the payload.
+  saveForwardEdit() {
+    const dom = this._domain;
+    const s = this.state;
+    if (!dom || !s.fwdEdit || s.fwdSaving) return;
+    const alias = (s.fwdEA || '').trim().replace(/@.*$/, '');
+    const dest = (s.fwdED || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (!dest.length) { if (this.toast) this.toast('Enter at least one destination address.', { kind: 'error' }); return; }
+    this.setState({ fwdSaving: true });
+    this.api('/domain/' + dom.domainId + '/email-forwards/' + s.fwdEdit, { method: 'PUT',
+      body: { name: alias, recipients: dest } }).then(res => {
+      if (this._domain !== dom) return;
+      if (res && res.code) {
+        this.setState({ fwdSaving: false });
+        if (this.toast) this.toast(res.message || 'Could not save the forward.', { kind: 'error' });
+        return;
+      }
+      this.setState({ fwdEdit: '', fwdEA: '', fwdED: '', fwdSaving: false });
+      if (this.toast) this.toast('Forward saved.', { kind: 'success' });
+      dom.fwdLoading = false; this.loadForwards();
+    }).catch(() => {
+      if (this._domain !== dom) return;
+      this.setState({ fwdSaving: false });
+      if (this.toast) this.toast('Could not save the forward.', { kind: 'error' });
     });
   },
 
@@ -923,8 +954,20 @@ Object.assign(Component.prototype, {
           .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}); },
       fwdRows: (s.fwds || []).map(f => ({ ...f, aliasFull: (f.alias === '*' ? 'anything' : f.alias) + '@' + d.name,
         stFg: f.status === 'Verified' ? 'var(--ok)' : f.status === 'Catch-all' ? 'var(--ink-dim)' : 'var(--warn)',
-        del: () => this.api('/domain/' + dom.domainId + '/email-forwards/' + f.uid, { method: 'DELETE' })
-          .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}) })),
+        // Inline edit (legacy parity): the alias and its recipient list both
+        // PUT to the same route id; Mailgun rebuilds the expression + actions.
+        editing: s.fwdEdit === f.uid, notEditing: s.fwdEdit !== f.uid,
+        startEdit: () => this.setState({ fwdEdit: f.uid, fwdEA: f.alias, fwdED: f.dest, fwdSaving: false }),
+        del: async () => {
+          if (!(await this.uiConfirm('Delete the forward for ' + f.aliasFull + '?', { label: 'Delete forward', danger: true }))) return;
+          this.api('/domain/' + dom.domainId + '/email-forwards/' + f.uid, { method: 'DELETE' })
+            .then(() => { dom.fwdLoading = false; this.loadForwards(); }).catch(() => {}); } })),
+      fwdEA: s.fwdEA, fwdED: s.fwdED,
+      onFwdEA: e => this.setState({ fwdEA: e.target.value }),
+      onFwdED: e => this.setState({ fwdED: e.target.value }),
+      fwdEditLabel: s.fwdSaving ? 'Saving…' : 'Save',
+      fwdEditCancel: () => this.setState({ fwdEdit: '', fwdEA: '', fwdED: '', fwdSaving: false }),
+      fwdEditSave: () => this.saveForwardEdit(),
       mgActive, mgInactive: !mgActive, mgLoading: dom.mgLoading,
       mgSetupLabel: (dom.mgLoading && !mgActive) ? 'Setting up…' : 'Set up sending',
       mgRecsLoading: !!(dom.mgLoading && mgActive && mgRecs.length === 0),

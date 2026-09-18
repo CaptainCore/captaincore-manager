@@ -245,6 +245,7 @@ class above proves a dock row is not evidence that anything ran.
 | contacts save | domains.js:657 | ☐ | |
 | nameservers save | domains.js:648 | ☐ | |
 | DNS record add / edit / delete | domains.js:158-161 | ☐ | |
+| email forward add / edit / delete | domains.js:918 / saveForwardEdit | ☐ | |
 | DNS zone / forwarding / sending delete | domains.js:197 | ☐ | |
 | Mailgun deploy / verify / suppression delete | domains.js:456 / :437 | ☐ | |
 | domain delete | domains.js:228 | ☐ | |

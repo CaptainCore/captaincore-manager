@@ -2122,13 +2122,27 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ fwdActive }}" hint-placeholder-val="{{ true }}">
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
               <sc-for list="{{ fwdRows }}" as="f" hint-placeholder-count="3">
-                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
-                  <span style="font:400 var(--fs-13) var(--mono)">{{ f.aliasFull }}</span>
-                  <span style="color:var(--ink-dim)">→</span>
-                  <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ f.dest }}</span>
-                  <div style="flex:1"></div>
-                  <span style="font:500 var(--fs-12) var(--sans);color:{{ f.stFg }}">{{ f.status }}</span>
-                  <span onClick="{{ f.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                <div style="border-bottom:1px solid var(--rule)">
+                  <sc-if value="{{ f.notEditing }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:12px;padding:11px 16px">
+                      <span style="font:400 var(--fs-13) var(--mono)">{{ f.aliasFull }}</span>
+                      <span style="color:var(--ink-dim)">→</span>
+                      <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ f.dest }}</span>
+                      <div style="flex:1"></div>
+                      <span style="font:500 var(--fs-12) var(--sans);color:{{ f.stFg }}">{{ f.status }}</span>
+                      <span onClick="{{ f.startEdit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Edit</span>
+                      <span onClick="{{ f.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.editing }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--panel)">
+                      <input value="{{ fwdEA }}" onInput="{{ onFwdEA }}" placeholder="alias (or * for catch-all)" style="width:200px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                      <span style="color:var(--ink-dim);font:400 var(--fs-13) var(--sans)">forwards to</span>
+                      <input value="{{ fwdED }}" onInput="{{ onFwdED }}" placeholder="one@example.com, two@example.com" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                      <button onClick="{{ fwdEditSave }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ fwdEditLabel }}</button>
+                      <span onClick="{{ fwdEditCancel }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                    </div>
+                  </sc-if>
                 </div>
               </sc-for>
               <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel)">

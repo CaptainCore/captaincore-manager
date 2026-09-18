@@ -3142,3 +3142,19 @@ a network admin migrates with nothing leaked into the HTML, and an anonymous
 front-end hit and an unauthenticated REST ingest both correctly leave it at 50.
 (Reading the option needs `wp --skip-plugins`, or the read triggers the
 migration it is measuring.)
+
+### Email forwards: inline edit + delete confirm (2026-09-18)
+The Email forwarding tab could add and delete an alias but not change one,
+which the legacy dialog did through `PUT /domain/{id}/email-forwards/{route}`
+(the route and `Domain::update_email_forward()` were already there; only the
+row was missing the affordance). Each forward row now has an Edit link that
+swaps the row for the same two-field form as the add row, pre-filled with the
+alias and its comma-joined recipient list, with Save / Cancel. Save PUTs
+`{ name, recipients[] }`, toasts a WP_Error body (api() resolves 4xx JSON
+rather than rejecting), and reloads the list; the design layer in app.js
+carries the same keys so the preview keeps rendering the rows. Delete gained
+the confirm the legacy UI had, since one click used to drop a live alias.
+Verified via Playwright on a local domain with the forwards routes mocked
+(no Mailgun key locally): Edit opens with the current values, Save sends the
+PUT with the edited alias and split recipients, the row re-renders from the
+reloaded list, Cancel restores the row, no console errors.

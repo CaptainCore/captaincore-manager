@@ -1941,6 +1941,8 @@ class Component extends DCLogic {
       flip: () => this.setState(st => ({ reg: { ...st.reg, [key]: !st.reg[key] } })) });
     const fwdRows = (s.fwds || []).map(f => ({ ...f, aliasFull: (f.alias === '*' ? 'anything' : f.alias) + '@' + d.name,
       stFg: f.status === 'Verified' ? 'var(--ok)' : f.status === 'Catch-all' ? 'var(--ink-dim)' : 'var(--warn)',
+      editing: s.fwdEdit === f.uid, notEditing: s.fwdEdit !== f.uid,
+      startEdit: () => this.setState({ fwdEdit: f.uid, fwdEA: f.alias, fwdED: f.dest }),
       del: () => this.setState(st => ({ fwds: st.fwds.filter(x => x.uid !== f.uid) })) }));
     const mgRecs = this.MG_RECS.map(r => ({ ...r, host: r.host + '.' + d.name,
       stLabel: r.ok ? 'Verified' : 'Pending', stFg: r.ok ? 'var(--ok)' : 'var(--warn)', pending: !r.ok,
@@ -2015,6 +2017,13 @@ class Component extends DCLogic {
       fwdRows, fwdAlias: s.fwdAlias, fwdDest: s.fwdDest,
       onFwdAlias: e => this.setState({ fwdAlias: e.target.value }),
       onFwdDest: e => this.setState({ fwdDest: e.target.value }),
+      // Design preview of the inline edit; the real layer PUTs to Mailgun.
+      fwdEA: s.fwdEA || '', fwdED: s.fwdED || '', fwdEditLabel: 'Save',
+      onFwdEA: e => this.setState({ fwdEA: e.target.value }),
+      onFwdED: e => this.setState({ fwdED: e.target.value }),
+      fwdEditCancel: () => this.setState({ fwdEdit: '', fwdEA: '', fwdED: '' }),
+      fwdEditSave: () => this.setState(st => ({ fwds: st.fwds.map(x => x.uid !== st.fwdEdit ? x
+        : { ...x, alias: (st.fwdEA || '').trim().replace(/@.*$/, '') || '*', dest: (st.fwdED || '').trim() }), fwdEdit: '', fwdEA: '', fwdED: '' })),
       addFwd: () => { const a = this.state.fwdAlias.trim(), t = this.state.fwdDest.trim(); if (!a || !t) return;
         this.setState(st => ({ fwds: [...st.fwds, { uid: Date.now(), alias: a.replace(/@.*$/, ''), dest: t, status: 'Pending verification' }], fwdAlias: '', fwdDest: '' }));
         this.runJob('verify-forward', a.replace(/@.*$/, '') + '@' + d.name); },
