@@ -1239,16 +1239,31 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
-	// Send malware alert notification email
+	// Record malware findings and email only the ones not already open.
+	// A finding reported every night by the same scanner updates its row
+	// (last_seen, seen_count) instead of sending the same email again.
 	if ( $command === 'malware-alert' ) {
-		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
-		\CaptainCore\Mailer::send_malware_alert(
-			$site_name,
-			$post->data->environment ?? 'Production',
-			$post->data->home_url ?? '',
+		$site_name       = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
+		$alert_env       = $post->data->environment ?? 'Production';
+		$alert_env_id    = (int) ( ! empty( $site_id ) ? ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $alert_env ) : 0 );
+		$recorded        = CaptainCore\MalwareFindings::record(
+			(int) $site_id,
+			$alert_env_id,
+			$alert_env,
+			$post->data->source ?? 'wordfence',
 			$post->data->findings ?? []
 		);
-		$response = [ "response" => "Malware alert sent" ];
+		if ( ! empty( $recorded['new'] ) ) {
+			\CaptainCore\Mailer::send_malware_alert(
+				$site_name,
+				$alert_env,
+				$post->data->home_url ?? '',
+				$recorded['new']
+			);
+			$response = [ "response" => "Malware alert sent", "new" => count( $recorded['new'] ), "known" => $recorded['known'], "reopened" => $recorded['reopened'] ];
+		} else {
+			$response = [ "response" => "Malware findings already open, no alert sent", "new" => 0, "known" => $recorded['known'], "reopened" => 0 ];
+		}
 	}
 
 	// Send capture injection alert notification email

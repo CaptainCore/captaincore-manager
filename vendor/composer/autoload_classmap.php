@@ -154,6 +154,7 @@ return array(
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
     'CaptainCore\\Mailer' => $baseDir . '/app/Mailer.php',
     'CaptainCore\\MailgunCLI' => $baseDir . '/app/MailgunCLI.php',
+    'CaptainCore\\MalwareFindings' => $baseDir . '/app/MalwareFindings.php',
     'CaptainCore\\MuManifestCLI' => $baseDir . '/app/MuManifestCLI.php',
     'CaptainCore\\OrphanRowsCLI' => $baseDir . '/app/OrphanRowsCLI.php',
     'CaptainCore\\PendingVerification' => $baseDir . '/app/PendingVerification.php',

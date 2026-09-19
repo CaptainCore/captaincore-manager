@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 52;
+    const REQUIRED_VERSION = 53;
 
     private static function _table() {
         global $wpdb;
@@ -1217,6 +1217,33 @@ class DB {
         KEY injected_caps_count (injected_caps_count),
         KEY max_severity (max_severity),
         KEY alerted_at (alerted_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_malware_findings` (
+            malware_finding_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED DEFAULT 0,
+            environment varchar(40) DEFAULT '',
+            path varchar(500) NOT NULL,
+            signature_id varchar(100) DEFAULT '',
+            signature_name varchar(200) DEFAULT '',
+            description text,
+            matched_text text,
+            source varchar(40) DEFAULT '',
+            status varchar(20) DEFAULT 'open',
+            seen_count int(11) DEFAULT 1,
+            reopened_count int(11) DEFAULT 0,
+            first_seen datetime DEFAULT NULL,
+            last_seen datetime DEFAULT NULL,
+            resolved_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (malware_finding_id),
+        KEY site_id (site_id),
+        KEY environment_id (environment_id),
+        KEY status (status),
+        KEY last_seen (last_seen)
         ) $charset_collate;";
 
         dbDelta($sql);
