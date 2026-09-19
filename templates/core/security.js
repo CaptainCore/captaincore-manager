@@ -171,7 +171,11 @@ Object.assign(Component.prototype, {
     'not-wp-root': ['var(--panel-2)', 'var(--ink-dim)'],
     'http': ['var(--panel-2)', 'var(--ink-dim)'],
     'version': ['var(--panel-2)', 'var(--ink-dim)'],
-    'ssh': ['var(--panel-2)', 'var(--ink-dim)']
+    'ssh': ['var(--panel-2)', 'var(--ink-dim)'],
+    'cli-oxygen': ['var(--brand-soft)', 'var(--brand-ink)'],
+    'cli-known': ['var(--brand-soft)', 'var(--brand-ink)'],
+    'cli-new': ['var(--warn-soft)', 'var(--ink)'],
+    'cli-render': ['var(--warn-soft)', 'var(--ink)']
   },
 
   fmtDur(sec) {
@@ -201,13 +205,15 @@ Object.assign(Component.prototype, {
       const id = pick.core_update_run_id;
       return Promise.all([
         this.api('/core-update-runs/' + id),
-        this.api('/core-update-runs/' + id + '/results?result=fail')
-      ]).then(([run, fails]) => {
+        this.api('/core-update-runs/' + id + '/results?result=fail'),
+        this.api('/core-update-runs/' + id + '/results?action=info')
+      ]).then(([run, fails, infos]) => {
         this._coreRunsLoading = false;
         this._coreRuns = {
           runs: list,
           run: (run && !run.code) ? run : pick,
-          fails: Array.isArray(fails) ? fails : []
+          fails: Array.isArray(fails) ? fails : [],
+          infos: Array.isArray(infos) ? infos : []
         };
         this.setState({});
       });
@@ -240,14 +246,14 @@ Object.assign(Component.prototype, {
     if (!data) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: loading ? 'Loading core probe runs…' : 'No core probe runs yet.',
-        coreTiles: [], coreMeta: '', coreGroups: [], coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
+        coreTiles: [], coreMeta: '', coreGroups: [], coreInfoGroups: [], coreHasInfo: false, coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
       };
     }
     const run = data.run;
     if (!run) {
       return {
         coreHasRun: false, coreEmpty: true, coreEmptyText: 'No core probe runs yet. Fleet probe results land here after update-core finishes.',
-        coreTiles: [], coreMeta: '', coreGroups: [], coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
+        coreTiles: [], coreMeta: '', coreGroups: [], coreInfoGroups: [], coreHasInfo: false, coreRunPickerShow: false, coreRunLabel: '', ddCoreOpen: false, ddToggleCore: () => {}, ddCoreOpts: []
       };
     }
     const failed = parseInt(run.failed_count, 10) || 0;
@@ -264,6 +270,7 @@ Object.assign(Component.prototype, {
     if (run.duration_seconds) meta += (meta ? ' · ' : '') + this.fmtDur(run.duration_seconds);
     if (run.created_at) meta += (meta ? ' · ' : '') + String(run.created_at).slice(0, 16).replace('T', ' ');
     const fails = data.fails || [];
+    const infos = data.infos || [];
     const rawGroups = Array.isArray(run.groups) ? run.groups.filter(g => g.result === 'fail') : [];
     const groups = rawGroups.map(g => {
       const key = g.error_class || 'other';
@@ -294,6 +301,42 @@ Object.assign(Component.prototype, {
         toggle: () => this.setState(st => ({ coreGroupOpen: st.coreGroupOpen === key ? '' : key }))
       };
     });
+    const infoByClass = {};
+    infos.forEach(f => {
+      const key = f.error_class || (String(f.reason || '').indexOf('CLI-only (known)') === 0 ? 'cli-known' : 'cli-new');
+      (infoByClass[key] || (infoByClass[key] = [])).push(f);
+    });
+    const infoGroups = Object.keys(infoByClass).sort().map(key => {
+      const rows = infoByClass[key];
+      const [bg, fg] = this.CORE_CLASS_STYLE[key] || ['var(--brand-soft)', 'var(--brand-ink)'];
+      const open = s.coreInfoOpen === key;
+      const sites = open ? rows.map(f => {
+        const env = /-staging$/i.test(f.site || '') ? 'Staging' : (/production$/i.test(f.site || '') ? 'Production' : '');
+        const reason = (f.reason || f.excerpt || '').replace(/\s+/g, ' ').slice(0, 200);
+        const versions = (f.core_before || f.core_after)
+          ? ((f.core_before || '?') + ' → ' + (f.core_after || '?'))
+          : '';
+        return {
+          id: f.core_update_result_id,
+          name: (f.home_url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || f.site,
+          env, envShow: !!env,
+          stage: f.stage || '',
+          versions, versionsShow: !!versions,
+          reason,
+          status: f.status || 'open',
+          canResolve: false,
+          go: () => { if (f.site_id) this.openSite(String(f.site_id)); },
+          resolve: () => {}
+        };
+      }) : [];
+      return {
+        key, label: this.CORE_CLASS_LABEL[key] || key || 'CLI info',
+        n: String(rows.length), fg, bg, open, sites, sitesShow: open && sites.length > 0,
+        toggle: () => this.setState(st => ({ coreInfoOpen: st.coreInfoOpen === key ? '' : key }))
+      };
+    });
+    const coreHasInfo = infoGroups.length > 0;
+
     const selectedId = s.coreRunId || run.core_update_run_id;
     const runLabel = r => {
       const when = String(r.created_at || '').slice(0, 16).replace('T', ' ');
@@ -315,7 +358,7 @@ Object.assign(Component.prototype, {
     });
     return {
       coreHasRun: true, coreEmpty: false, coreEmptyText: '',
-      coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups,
+      coreTiles: tiles, coreMeta: meta.trim(), coreGroups: groups, coreInfoGroups: infoGroups, coreHasInfo,
       coreRunPickerShow: (data.runs || []).length > 0,
       coreRunLabel: selected ? runLabel(selected) : 'Select a run',
       ddCoreOpen: s.ddOpen === 'coreRun',

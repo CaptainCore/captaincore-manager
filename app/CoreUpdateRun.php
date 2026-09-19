@@ -23,6 +23,16 @@ class CoreUpdateRun {
 		$blob  = strtolower( (string) $stage . ' ' . (string) $reason . ' ' . (string) $excerpt );
 		$stage = strtolower( (string) $stage );
 
+		// CLI-only notices (result=ok action=info): keep them out of frontend fail buckets.
+		if ( $stage === 'cli-render' || strpos( $blob, 'cli-only' ) !== false || strpos( $blob, 'cli render issue' ) !== false ) {
+			if ( strpos( $blob, 'verify_signature' ) !== false && strpos( $blob, 'oxygen' ) !== false ) {
+				return 'cli-oxygen';
+			}
+			if ( strpos( $blob, 'cli-only (known)' ) !== false || strpos( $blob, 'known cli-only' ) !== false ) {
+				return 'cli-known';
+			}
+			return 'cli-new';
+		}
 		if ( strpos( $blob, 'allowed memory size' ) !== false || $stage === 'memory' ) {
 			return 'memory';
 		}
@@ -127,7 +137,7 @@ class CoreUpdateRun {
 					'reason'             => $reason,
 					'excerpt'            => $excerpt,
 					'exit_code'          => (int) ( $row['exit_code'] ?? 0 ),
-					'error_class'        => ( ( $row['result'] ?? '' ) === 'fail' ) ? self::classify( $stage, $reason, $excerpt ) : '',
+					'error_class'        => ( ( ( $row['result'] ?? '' ) === 'fail' ) || ( ( $row['action'] ?? '' ) === 'info' ) ) ? self::classify( $stage, $reason, $excerpt ) : '',
 					'status'             => 'open',
 					'notes'              => '',
 					'created_at'         => $now,

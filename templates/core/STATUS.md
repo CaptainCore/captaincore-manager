@@ -519,6 +519,15 @@ before/after, Resolve. Live app never paints the design-sample 4160-site tiles.
 Deep link `/account/security/core` (and checksums/coverage) so recap emails open
 the tab. Admin REST only. Empty until a fleet probe has been stored.
 
+## Security Core — CLI info notices (2026-09-19)
+
+`update-core` no longer treats CLI boot/render fatals as frontend failures. It soft-continues
+to the HTTP loopback probe; when HTTP is clean the site is stored as `result=ok action=info`
+(`stage=cli-render`). Known CLI-only signatures (Oxygen `verify_signature` / soflyy#1808) classify
+as `cli-oxygen`. New CLI-only fatals classify as `cli-new`. The Core tab shows them under **CLI info**,
+separate from **Failure groups**. Only HTTP/db/apply (and CLI OOM) stay `result=fail`.
+
+
 ## Design language: Minn Admin (2026-07-19)
 
 The UI was restyled to the Minn Admin design system (Austin's ask, mockup first at
