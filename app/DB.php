@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 53;
+    const REQUIRED_VERSION = 54;
 
     private static function _table() {
         global $wpdb;
@@ -1232,7 +1232,14 @@ class DB {
             description text,
             matched_text text,
             source varchar(40) DEFAULT '',
+            severity varchar(20) DEFAULT '',
+            family varchar(40) DEFAULT '',
             status varchar(20) DEFAULT 'open',
+            verdict varchar(20) DEFAULT '',
+            verdict_reason text,
+            reviewed_at datetime DEFAULT NULL,
+            reviewed_by varchar(60) DEFAULT '',
+            emailed_at datetime DEFAULT NULL,
             seen_count int(11) DEFAULT 1,
             reopened_count int(11) DEFAULT 0,
             first_seen datetime DEFAULT NULL,
@@ -1243,6 +1250,7 @@ class DB {
         KEY site_id (site_id),
         KEY environment_id (environment_id),
         KEY status (status),
+        KEY verdict (verdict),
         KEY last_seen (last_seen)
         ) $charset_collate;";
 

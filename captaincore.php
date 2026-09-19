@@ -1254,18 +1254,31 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$post->data->source ?? 'wordfence',
 			$post->data->findings ?? []
 		);
-		if ( ! empty( $recorded['new'] ) ) {
+		// Tier 1 emails now; tier 2 waits for the daily review (MalwareFindings::should_email).
+		$alert_source = $post->data->source ?? 'wordfence';
+		$tier1        = [];
+		foreach ( $recorded['new'] as $f ) {
+			if ( CaptainCore\MalwareFindings::should_email( $alert_source, $f->signature_id ?? '', $f->severity ?? '' ) ) {
+				$tier1[] = $f;
+			}
+		}
+		if ( ! empty( $tier1 ) ) {
 			\CaptainCore\Mailer::send_malware_alert(
 				$site_name,
 				$alert_env,
 				$post->data->home_url ?? '',
-				$recorded['new'],
-				$post->data->source ?? ''
+				$tier1,
+				$alert_source
 			);
-			$response = [ "response" => "Malware alert sent", "new" => count( $recorded['new'] ), "known" => $recorded['known'], "reopened" => $recorded['reopened'] ];
-		} else {
-			$response = [ "response" => "Malware findings already open, no alert sent", "new" => 0, "known" => $recorded['known'], "reopened" => 0 ];
+			CaptainCore\MalwareFindings::mark_emailed( array_map( function ( $f ) { return $f->malware_finding_id ?? 0; }, $tier1 ) );
 		}
+		$response = [
+			"response" => ! empty( $tier1 ) ? "Malware alert sent" : "Malware findings recorded, no alert sent",
+			"new"      => count( $recorded['new'] ),
+			"emailed"  => count( $tier1 ),
+			"known"    => $recorded['known'],
+			"reopened" => $recorded['reopened'],
+		];
 	}
 
 	// Send capture injection alert notification email
@@ -8085,6 +8098,29 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/newsletter/(?P<id>[\d]+)/action', [
 		'methods'             => 'POST',
 		'callback'            => 'captaincore_newsletter_panel_action',
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+
+	// The daily malware review: findings waiting for a verdict, and the verdict itself.
+	register_rest_route( 'captaincore/v1', '/malware-findings', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$limit   = min( 2000, max( 1, (int) ( $request->get_param( 'limit' ) ?: 500 ) ) );
+			$site_id = (int) ( $request->get_param( 'site_id' ) ?: 0 );
+			return CaptainCore\MalwareFindings::unreviewed( $limit, $site_id );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/(?P<id>[\d]+)/verdict', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$user = wp_get_current_user();
+			return CaptainCore\MalwareFindings::set_verdict( (int) $request['id'], $request->get_param( 'verdict' ), $request->get_param( 'reason' ), 'review:' . ( $user->user_login ?? '' ) );
+		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );
 		},
