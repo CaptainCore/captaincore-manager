@@ -2044,15 +2044,51 @@ class Mailer {
     /* -------------------------------------------------------------------------
      *  MALWARE DETECTION ALERT (Admin Notify)
      * ------------------------------------------------------------------------- */
-    static public function send_malware_alert( $site_name, $environment_name, $home_url, $findings ) {
+    /**
+     * Turn a finding location into the label the email shows. File findings
+     * show the file name; database findings ("db:post/115",
+     * "db:option/widget_text", "db:user/login", "db:trigger/name") show
+     * what kind of row it is.
+     */
+    static public function malware_location_label( $location ) {
+        if ( strpos( $location, 'db:' ) !== 0 ) {
+            return basename( $location );
+        }
+        $parts = explode( '/', substr( $location, 3 ), 2 );
+        $kind  = $parts[0];
+        $key   = $parts[1] ?? '';
+        $names = [
+            'post'           => 'Post',
+            'comment'        => 'Comment',
+            'option'         => 'Option',
+            'user'           => 'User',
+            'trigger'        => 'Trigger',
+            'event'          => 'Event',
+            'routine'        => 'Routine',
+            'active_plugins' => 'Active plugin',
+        ];
+        return trim( ( $names[ $kind ] ?? ucfirst( $kind ) ) . ' ' . $key );
+    }
+
+    static public function send_malware_alert( $site_name, $environment_name, $home_url, $findings, $source = '' ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $admin_email = get_option( 'admin_email' );
+        $database    = strpos( (string) $source, 'db-scan' ) === 0;
+        foreach ( $findings as $f ) {
+            if ( strpos( $f->filename ?? '', 'db:' ) === 0 ) {
+                $database = true;
+            }
+        }
+        $intro  = $database
+            ? 'A database scan has found injected content in this site\'s database. Immediate investigation is recommended.'
+            : 'A malware scan has detected suspicious files during the latest quicksave. Immediate investigation is recommended.';
+        $column = $database ? 'Location' : 'File';
 
         // Build findings table rows
         $finding_rows = '';
         foreach ( $findings as $f ) {
-            $filename  = esc_html( basename( $f->filename ?? '' ) );
+            $filename  = esc_html( self::malware_location_label( $f->filename ?? '' ) );
             $rel_path  = esc_html( $f->filename ?? '' );
             $sig_name  = esc_html( $f->signature_name ?? '' );
             $sig_desc  = esc_html( $f->signature_description ?? '' );
@@ -2086,7 +2122,7 @@ class Mailer {
                     </div>
                 </div>
 
-                <p style='margin-bottom: 25px;'>A malware scan has detected suspicious files during the latest quicksave. Immediate investigation is recommended.</p>
+                <p style='margin-bottom: 25px;'>{$intro}</p>
 
                 <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
@@ -2108,7 +2144,7 @@ class Mailer {
                     </div>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>File</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>{$column}</th>
                             <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: center; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Signature</th>
                             <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Description</th>
                         </tr>

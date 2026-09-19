@@ -1259,7 +1259,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				$site_name,
 				$alert_env,
 				$post->data->home_url ?? '',
-				$recorded['new']
+				$recorded['new'],
+				$post->data->source ?? ''
 			);
 			$response = [ "response" => "Malware alert sent", "new" => count( $recorded['new'] ), "known" => $recorded['known'], "reopened" => $recorded['reopened'] ];
 		} else {

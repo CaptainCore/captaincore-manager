@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- **Malware alert emails render database findings.** The CLI's database scan reports locations like `db:post/116` or `db:option/widget_text`; the email now shows them as "Post 116" or "Option widget_text" under a Location column, and opens with "A database scan has found injected content" when the alert's source is the database scan, instead of the quicksave file wording.
+
+- Malware findings are recorded, not just emailed. Every finding the CLI reports (nightly quicksave scans, full-tree scans, hidden-plugin and media checks) lands in a findings table keyed by site, environment, path and signature. A finding already open updates its last-seen time and count instead of sending the same alert again, a resolved finding that comes back reopens and alerts, and only new findings appear in the email. `wp captaincore malware-findings [<site>] [--status=open|resolved|all] [--resolve [--id=<id>]] [--format=table|json|csv|count]` lists and resolves them; resolving after a cleanup is what re-arms the alert.
+
 ### Improved
 
 - A managed update can be started from any site, whether or not the dashboard counts updates as pending. "Run managed update" is the first entry in the site's Tools card, and the Inventory tab's button is always present, reading "Update all (N)" when the update queue knows of pending targets and "Run managed update" otherwise. Both confirm first, say how many components the environment excludes, and run the same update the legacy "Manual update" button did, with quicksaves before and after.
@@ -9,11 +14,14 @@
 
 ### Fixed
 
+- Deleting a site removes everything that belonged to it. The delete only ever removed the site row, so its environments, account links, captures, session snapshots and per-environment scripts stayed behind as rows with no site. A delete now clears all of those in the same pass. Snapshots, audits and timeline entries are kept on purpose, since a customer or operator may still open them (a final snapshot's download link resolves through its row). `wp captaincore orphan-rows` reports the rows earlier deletes left behind and `--delete --limit=N` removes them in batches.
+- Backups, versions, snapshots and timeline entries always show their year. A backup from two years ago read the same as one from last week, "Sep 15, 12:21 AM", so restoring or downloading the wrong year was easy from a long list. Every date in those lists now reads like "Sep 15, 2026 · 12:21 AM".
 - Snapshot downloads work again. The dashboard's Download link and Copy link both pointed at a URL ending in ".zip", which matched no route, so every download answered "No route was found matching the URL and request method" instead of the archive. The download endpoint now accepts the file name with or without the extension, which is also what the emailed link and the legacy dashboard have always sent.
 - A snapshot's countdown is no longer off by the viewer's time zone. Expiry is stored in UTC but was being read as local time, so a fresh 24 hour link read as 27 hours in New York and 21 hours in Berlin, where a live link could be shown as already expired.
 - An expired snapshot offers "New 24h link" alone. Its Download link was still shown and could only ever fail.
 - A snapshot whose archive the storage server cannot produce now says so. The dashboard used to send the browser to a page built from the error text.
 
+- An email forward can be edited again. The Email forwarding tab could add or delete an alias but had no way to change one, so fixing a typo or adding a recipient meant deleting the alias and recreating it. Each forward now has an Edit link that opens the alias and its recipients in place, with Save and Cancel, and Delete asks first.
 - After Mailgun sending is set up, the Sending tab loads DNS records, usage, and events immediately. The zone used to be created while the panel stayed empty until you left the tab and came back.
 - A first payment no longer fails for want of a billing address. Adding a card asks for the billing details the charge needs — name, address, city, state, ZIP, country and email — showing them as a summary once they are on file and as a form until then, with searchable country and state pickers. The address is saved before the card is created and travels with it to Stripe. Paying an invoice with a saved card asks for the same details first, the Billing address screen marks what is required, and the API refuses a card with an incomplete address instead of returning a bare gateway error.
 - A dashboard tab left open for more than half a day no longer fails silently. The REST nonce is refreshed in the background every 30 minutes and whenever the tab returns to the foreground, and a request that still hits an expired nonce fetches a fresh one and replays itself. When the login session itself has ended, the tab goes to the login page and returns to the same screen after sign-in.
