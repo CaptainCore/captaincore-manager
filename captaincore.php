@@ -8109,7 +8109,24 @@ function captaincore_register_rest_endpoints() {
 		'callback'            => function ( WP_REST_Request $request ) {
 			$limit   = min( 2000, max( 1, (int) ( $request->get_param( 'limit' ) ?: 500 ) ) );
 			$site_id = (int) ( $request->get_param( 'site_id' ) ?: 0 );
-			return CaptainCore\MalwareFindings::unreviewed( $limit, $site_id );
+			return CaptainCore\MalwareFindings::unreviewed( $limit, $site_id, ! empty( $request->get_param( 'all' ) ) );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/verdicts', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$user  = wp_get_current_user();
+			$items = $request->get_param( 'verdicts' );
+			if ( ! is_array( $items ) || ! $items ) {
+				return new WP_Error( 'bad_request', 'verdicts must be a non-empty list of {id, verdict, reason}.', [ 'status' => 400 ] );
+			}
+			if ( count( $items ) > 500 ) {
+				return new WP_Error( 'bad_request', 'At most 500 verdicts per request.', [ 'status' => 400 ] );
+			}
+			return CaptainCore\MalwareFindings::review( $items, 'review:' . ( $user->user_login ?? '' ), ! empty( $request->get_param( 'digest' ) ) );
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );

@@ -2083,6 +2083,11 @@ class Mailer {
         $intro  = $database
             ? 'A database scan has found injected content in this site\'s database. Immediate investigation is recommended.'
             : 'A malware scan has detected suspicious files during the latest quicksave. Immediate investigation is recommended.';
+        $badge  = 'Malware Detected';
+        if ( $source === 'review' ) {
+            $intro = 'The daily malware review examined this site\'s stored findings and confirmed a compromise. The description column holds the reviewer\'s reasoning. Immediate cleanup is recommended.';
+            $badge = 'Compromise Confirmed';
+        }
         $column = $database ? 'Location' : 'File';
 
         // Build findings table rows
@@ -2118,7 +2123,7 @@ class Mailer {
             <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
                 <div style='text-align: center; margin-bottom: 25px;'>
                     <div style='display: inline-block; background-color: #F6E0DD; color: #BF3B2E; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
-                        Malware Detected
+                        {$badge}
                     </div>
                 </div>
 
@@ -2156,9 +2161,72 @@ class Mailer {
 
         self::send_email_with_layout(
             $admin_email,
-            "Security Alert: Malware detected on {$site_name}",
+            $source === 'review' ? "Security Alert: Compromise confirmed on {$site_name}" : "Security Alert: Malware detected on {$site_name}",
             "Malware Alert",
             $site_name,
+            $content_html
+        );
+    }
+
+    /**
+     * The daily review's summary: every verdict recorded in one run, worst first.
+     */
+    static public function send_malware_review_digest( $rows, $counts ) {
+        $admin_email = get_option( 'admin_email' );
+        $colors      = [
+            'compromise'  => [ '#F6E0DD', '#BF3B2E' ],
+            'residue'     => [ '#FCEBD2', '#A65A00' ],
+            'needs-human' => [ '#E5E7FA', '#3B3F9E' ],
+            'benign'      => [ '#E1F1E5', '#1E6B3A' ],
+        ];
+        $finding_rows = '';
+        foreach ( (array) $rows as $r ) {
+            $c        = $colors[ $r->verdict ] ?? [ '#E3E7EE', '#565C66' ];
+            $site     = esc_html( ( $r->site_name ?? ( 'site ' . $r->site_id ) ) . ( strtolower( (string) $r->environment ) === 'production' ? '' : ' (' . $r->environment . ')' ) );
+            $location = esc_html( self::malware_location_label( $r->path ) );
+            $reason   = esc_html( mb_strimwidth( (string) $r->verdict_reason, 0, 240, '…' ) );
+            $finding_rows .= "
+                <tr>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-size: 13px; font-weight: 600;'>{$site}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #15181D; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;' title='" . esc_attr( $r->path ) . "'>{$location}<br><span style='color: #A3ACB9; font-family: inherit;'>" . esc_html( $r->signature_id ) . "</span></td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; text-align: center; white-space: nowrap;'>
+                        <span style='display: inline-block; background-color: {$c[0]}; color: {$c[1]}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>" . esc_html( $r->verdict ) . "</span>
+                    </td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #E3E7EE; color: #565C66; font-size: 13px;'>{$reason}</td>
+                </tr>";
+        }
+        $summary = [];
+        foreach ( [ 'compromise', 'residue', 'needs-human', 'benign' ] as $v ) {
+            if ( ! empty( $counts[ $v ] ) ) {
+                $summary[] = "{$counts[ $v ]} {$v}";
+            }
+        }
+        $reviewed = (int) ( $counts['compromise'] ?? 0 ) + (int) ( $counts['residue'] ?? 0 ) + (int) ( $counts['needs-human'] ?? 0 ) + (int) ( $counts['benign'] ?? 0 );
+        $headline = $summary ? implode( ', ', $summary ) : 'nothing reviewed';
+        $intro    = $reviewed
+            ? "The daily malware review classified {$reviewed} stored finding(s): {$headline}. Compromises were emailed separately as they were confirmed; residue and needs-human findings stay open for a person, and benign findings were resolved."
+            : 'The daily malware review ran and found nothing waiting for a verdict.';
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
+                <p style='margin-bottom: 25px;'>{$intro}</p>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Site</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Location</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: center; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Verdict</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #E3E7EE; text-align: left; font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>Reason</th>
+                        </tr>
+                        {$finding_rows}
+                    </table>
+                </div>
+            </div>
+        ";
+        self::send_email_with_layout(
+            $admin_email,
+            "Malware review: {$headline}",
+            'Malware Review',
+            date( 'F j, Y' ),
             $content_html
         );
     }
