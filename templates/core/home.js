@@ -21,11 +21,7 @@ Object.assign(Component.prototype, {
     const role = boot.dcRole || this.props.role || 'operator';
     const swallow = err => { console.warn('CaptainCore v3 home signal failed.', err); return null; };
 
-    this.api('/activity-logs?per_page=20').then(res => {
-      const items = (res && Array.isArray(res.items)) ? res.items : [];
-      this._activity = items.map(x => this.activityRow(x));
-      this.setState({});
-    }).catch(swallow);
+    this.loadHomeActivity();
 
     if (role !== 'operator') return;
 
@@ -36,6 +32,38 @@ Object.assign(Component.prototype, {
     this.api('/update-queue').then(res => {
       if (res && !res.not_built) { this._homeQueue = res; this.setState({}); }
     }).catch(swallow);
+  },
+
+  // The home Recent-activity feed. Also re-run when a provisioning action
+  // completes, so a just-created site appears without a reload (customer
+  // request, 2026-09-22).
+  loadHomeActivity() {
+    if (!(window.CC_BOOT || {}).nonce) return;
+    this.api('/activity-logs?per_page=20').then(res => {
+      const items = (res && Array.isArray(res.items)) ? res.items : [];
+      this._activity = items.map(x => this.activityRow(x));
+      this.setState({});
+    }).catch(err => console.warn('CaptainCore v3 home signal failed.', err));
+  },
+
+  // Where an activity row leads: its entity, when that entity is still in
+  // the hydrated fleet/domain/account lists (a deleted site has nowhere to
+  // go). Environments, files and deploys log the site id; DNS records and
+  // email forwards log the domain id.
+  activityTarget(x) {
+    const id = String(x.entity_id || '');
+    if (!id || id === '0') return null;
+    const t = x.entity_type;
+    if (['site', 'environment', 'file'].includes(t)) {
+      return (this.FLEET || []).some(f => String(f.id) === id) ? () => this.openSite(id) : null;
+    }
+    if (['domain', 'dns_record', 'email_forward'].includes(t)) {
+      return (this.DOMAINS || []).some(d => String(d.id) === id) ? () => this.openDomain(id) : null;
+    }
+    if (t === 'account') {
+      return (this.ACCOUNTS || []).some(a => String(a.id) === id) ? () => this.openAccount(id) : null;
+    }
+    return null;
   },
 
   // entity_type → a short human "type" label for the activity chip. Falls
@@ -52,9 +80,11 @@ Object.assign(Component.prototype, {
   activityRow(x) {
     const name = x.user_name || 'System';
     const isSystem = !x.avatar_url && (name === 'System' || !x.user_id);
+    const text = x.description || [x.action, x.entity_type, x.entity_name].filter(Boolean).join(' ');
     return {
+      raw: x,
       t: this.relTime(x.created_at),
-      text: x.description || [x.action, x.entity_type, x.entity_name].filter(Boolean).join(' '),
+      text,
       user: name,
       type: this.activityType(x.entity_type),
       avatar: x.avatar_url || '',
@@ -64,6 +94,25 @@ Object.assign(Component.prototype, {
       showInitials: !x.avatar_url && !isSystem,
       initials: name.replace(/[^a-zA-Z0-9]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '·'
     };
+  },
+
+  // Render-time link decoration for an activityRow(): the feed usually lands
+  // before the fleet/domain/account lists do, so resolving the target at
+  // fetch time would find nothing to link. The entity's name inside the
+  // sentence is the visible affordance on a clickable row.
+  activityLinkVals(row) {
+    const x = row.raw;
+    if (!x) return { ...row, textParts: [{ text: row.text, isText: true, isLink: false }], canGo: false, cursor: 'default', go: () => {} };
+    const go = this.activityTarget(x);
+    const text = row.text || '';
+    const ename = String(x.entity_name || '');
+    const at = go && ename ? text.indexOf(ename) : -1;
+    const parts = at >= 0
+      ? [{ text: text.slice(0, at) }, { text: ename, link: true }, { text: text.slice(at + ename.length) }].filter(pt => pt.text)
+      : [{ text }];
+    return { ...row,
+      textParts: parts.map(pt => ({ text: pt.text, isLink: !!pt.link, isText: !pt.link })),
+      canGo: !!go, cursor: go ? 'pointer' : 'default', go: go || (() => {}) };
   },
 
   relTime(ts) {
@@ -138,7 +187,7 @@ Object.assign(Component.prototype, {
   computeActivityPage(s) {
     const active = s.route === 'activity';
     if (active && window.CC_BOOT && !this._actFull && !this._actFullLoading) setTimeout(() => this.loadActivityPage(s.actPage || 1), 0);
-    const rows = this._actFull || (window.CC_BOOT ? [] : (this._sampleActivity || []));
+    const rows = this._actFull ? this._actFull.map(r => this.activityLinkVals(r)) : (window.CC_BOOT ? [] : (this._sampleActivity || []));
     const meta = this._actMeta;
     const page = meta ? meta.page : (s.actPage || 1);
     const pages = meta ? meta.pages : 1;

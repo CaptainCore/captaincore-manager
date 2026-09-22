@@ -331,7 +331,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ goActivity }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">View all →</span>
                 </div>
                 <sc-for list="{{ activity }}" as="ev" hint-placeholder-count="5">
-                  <div style="display:flex;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:flex-start">
+                  <div onClick="{{ ev.go }}" style="display:flex;gap:11px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:flex-start;cursor:{{ ev.cursor }}" style-hover="background:var(--panel-2)">
                     <span style="flex:none;width:34px;font:500 var(--fs-12) var(--mono);color:var(--ink-dim);text-align:right;padding-top:4px">{{ ev.t }}</span>
                     <sc-if value="{{ ev.hasAvatar }}" hint-placeholder-val="{{ false }}">
                       <img src="{{ ev.avatar }}" alt="" style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--panel-2)">
@@ -343,7 +343,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font:600 10px var(--sans);display:grid;place-items:center">{{ ev.initials }}</span>
                     </sc-if>
                     <span style="min-width:0;flex:1">
-                      <span style="display:block;font:400 var(--fs-14)/1.5 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                      <span style="display:block;font:400 var(--fs-14)/1.5 var(--sans);color:var(--ink)"><sc-for list="{{ ev.textParts }}" as="tp" hint-placeholder-count="1"><sc-if value="{{ tp.isText }}" hint-placeholder-val="{{ true }}">{{ tp.text }}</sc-if><sc-if value="{{ tp.isLink }}" hint-placeholder-val="{{ false }}"><span style="color:var(--brand-ink);font-weight:500">{{ tp.text }}</span></sc-if></sc-for></span>
                       <span style="display:flex;align-items:center;gap:7px;margin-top:2px">
                         <span style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ ev.user }}</span>
                         <sc-if value="{{ ev.type }}" hint-placeholder-val="{{ false }}">
@@ -370,7 +370,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ openDock }}" style="margin-left:auto;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">Open console →</span>
                 </div>
                 <sc-for list="{{ jobs }}" as="j" hint-placeholder-count="3">
-                  <div style="padding:11px 16px;border-bottom:1px solid var(--rule)">
+                  <div onClick="{{ j.go }}" onContextMenu="{{ j.ctx }}" title="Open" style="padding:11px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
                     <div style="display:flex;align-items:center;gap:8px">
                       <span style="font:600 var(--fs-13) var(--mono);color:{{ j.fg }}">{{ j.label }}</span>
                       <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ j.target }}</span>
@@ -432,7 +432,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <h2 style="margin:0;font:700 16px var(--sans);letter-spacing:-.2px">Fleet activity</h2>
             </div>
             <sc-for list="{{ actRows }}" as="ev" hint-placeholder-count="10">
-              <div style="display:flex;gap:12px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:flex-start">
+              <div onClick="{{ ev.go }}" style="display:flex;gap:12px;padding:11px 18px;border-bottom:1px solid var(--rule);align-items:flex-start;cursor:{{ ev.cursor }}" style-hover="background:var(--panel-2)">
                 <span style="flex:none;width:40px;font:500 var(--fs-12) var(--mono);color:var(--ink-dim);text-align:right;padding-top:4px">{{ ev.t }}</span>
                 <sc-if value="{{ ev.hasAvatar }}" hint-placeholder-val="{{ false }}">
                   <img src="{{ ev.avatar }}" alt="" style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--panel-2)">
@@ -444,7 +444,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);font:600 var(--fs-11) var(--sans);display:grid;place-items:center">{{ ev.initials }}</span>
                 </sc-if>
                 <span style="min-width:0;flex:1">
-                  <span style="display:block;font:400 var(--fs-14)/1.55 var(--sans);color:var(--ink)">{{ ev.text }}</span>
+                  <span style="display:block;font:400 var(--fs-14)/1.55 var(--sans);color:var(--ink)"><sc-for list="{{ ev.textParts }}" as="tp" hint-placeholder-count="1"><sc-if value="{{ tp.isText }}" hint-placeholder-val="{{ true }}">{{ tp.text }}</sc-if><sc-if value="{{ tp.isLink }}" hint-placeholder-val="{{ false }}"><span style="color:var(--brand-ink);font-weight:500">{{ tp.text }}</span></sc-if></sc-for></span>
                   <span style="display:flex;align-items:center;gap:8px;margin-top:3px">
                     <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ ev.user }}</span>
                     <sc-if value="{{ ev.type }}" hint-placeholder-val="{{ false }}">

@@ -1740,6 +1740,7 @@ class Component extends DCLogic {
             this.toast(`New site ${act.name} created at Kinsta's ${dcTitle} datacenter`, { kind: 'success' });
             this.nsProgressDone(act.name, dcTitle);
             if (this.hydrate) this.hydrate();
+            if (this.loadHomeActivity) this.loadHomeActivity();
           }
           // The deploy-to-staging chain's last step links the new environment
           // server-side (connect_staging), so the open site detail is stale.
@@ -3113,7 +3114,12 @@ class Component extends DCLogic {
     ]).map(a => ({ ...a, go: this.go(a.act) }));
 
     const jobsBase = isOp ? s.jobs : s.jobs.filter(j => !/\d sites/.test(j.target));
+    // A job row on Home opens the site it targets when the target is one
+    // fleet site (a provisioning job names the new site); anything else
+    // (a bulk "12 sites" run, a preview row) opens the console instead.
+    const siteByName = name => (this._hydrated && name) ? (this.FLEET || []).find(f => f.name === String(name).trim().toLowerCase()) : null;
     const jobs = jobsBase.map(j => ({ ...j, pct: Math.round(j.pct),
+      go: () => { const f = siteByName(j.target); if (f) this.openSite(String(f.id)); else this.setState({ dockOpen: true, jobSel: j.id }); },
       right: j.state === 'running' ? Math.round(j.pct) + '%' : j.right,
       running: j.state === 'running',
       fg: j.state === 'running' ? 'var(--brand-ink)' : 'var(--ink-dim)',
@@ -3151,10 +3157,11 @@ class Component extends DCLogic {
     // activityRow(); demo rows carry just {t,text,user,type} so normalize both
     // through activityRow-compatible defaults for the avatar fields.
     const demoAct = arr => arr.map(r => ({ ...r,
+      textParts: [{ text: r.text, isText: true, isLink: false }], canGo: false, cursor: 'default', go: () => {},
       user: r.user || 'System', type: r.type || '',
       hasAvatar: false, isSystem: !r.user, showInitials: !!r.user,
       initials: (r.user || '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '·' }));
-    const activity = this._activity ? this._activity : booted ? [] : isOp ? demoAct([
+    const activity = this._activity ? this._activity.map(r => this.activityLinkVals(r)) : booted ? [] : isOp ? demoAct([
       { t: '2m', text: 'Quicksave 8f3c21a on bloomandbranch.com — 3 files changed', user: 'Austin', type: 'Site' },
       { t: '18m', text: 'Deployed staging → production on petersonlaw.com', user: 'Austin', type: 'Deploy' },
       { t: '1h', text: 'Mailgun sending verified for thewildflowerpantry.com', type: 'Email' },

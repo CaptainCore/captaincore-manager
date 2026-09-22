@@ -15,6 +15,39 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Home activity and Running now rows open the site (2026-09-22)
+
+Customer request: from Home, clicking a "Provisioned new site …" row in
+Recent activity should open that site, the same for Running now, and the
+feed should pick up a just-provisioned site without a reload.
+
+- **Activity rows link to their entity.** `/activity-logs` already returns
+  `entity_type` / `entity_id` / `entity_name` (it is `SELECT *`), so
+  `activityTarget(x)` maps site / environment / file rows to `openSite`,
+  domain / dns_record / email_forward rows to `openDomain` and account rows
+  to `openAccount`, but only when that id is still in the hydrated FLEET /
+  DOMAINS / ACCOUNTS lists (a deleted site has nowhere to go). The link is
+  resolved at RENDER time (`activityLinkVals(row)`, applied in
+  `computeHome`'s `activity` and in `computeActivityPage`), because the
+  feed usually lands before the fleet list does; resolving at fetch time
+  linked nothing. A clickable row gets a pointer cursor, hover, and the
+  entity name inside the sentence in brand colour (`textParts`), which is
+  the visible affordance. Same treatment on the full Activity page.
+- **Running now rows.** A job row on Home opens the site whose name equals
+  the job's target (a provisioning job names the new site); a bulk target
+  ("12 sites") or a preview row opens the console with that job selected.
+  Right-click keeps the job context menu.
+- **Feed refresh.** The feed loader moved out of `hydrateHome` into
+  `loadHomeActivity()`, and the provider-actions poll calls it when a
+  new-site action completes, next to the fleet rehydrate it already did.
+
+Verified with Playwright as the operator: 14 of 20 feed rows linked (the
+rest are entities no longer in the lists), pointer cursors on those rows,
+clicking one landed on `/account/sites/<id>` with the site's h1; the
+Activity page linked 80 of 100 rows and clicked through the same way. No
+job was running locally, so the Running now click path was checked by
+reading the code only. Zero page errors.
+
 ## Coverage dialog site counts open the Sites list (2026-09-22)
 
 The findings dialog the coverage map opens said "Installed on 50 sites · …
