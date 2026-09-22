@@ -110,6 +110,9 @@ Object.assign(Component.prototype, {
         // Fleet context (set by the Security → Coverage map, absent on a site tab).
         rgMeta: s.rgFleet ? s.rgFleet.meta : '',
         rgMetaShow: !!(s.rgFleet && s.rgFleet.meta),
+        rgAltShow: !!(s.rgFleet && s.rgFleet.alt),
+        rgAltLabel: s.rgFleet && s.rgFleet.alt ? s.rgFleet.alt.label : '',
+        rgAltGo: s.rgFleet && s.rgFleet.alt ? s.rgFleet.alt.go : () => {},
         rgEmptyText: d.status === 'unaudited' ? 'This build has not been audited on WP Registry yet.' : 'No findings recorded for this component.',
         rgLoadingDetail: !!s.rgLoading,
         rgCount: findings.length ? 'Findings (' + findings.length + ')' : '',

@@ -106,7 +106,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .cc-cov-cell.high,.cc-cov-pop.high{--cov:color-mix(in srgb,var(--warn) 45%,var(--bad))}
 .cc-cov-cell.critical,.cc-cov-pop.critical{--cov:var(--bad)}
 .cc-cov-cell.unaudited,.cc-cov-pop.unaudited{--cov:var(--panel-2)}
-.cc-cov-cell.malware{box-shadow:inset 0 0 0 2px var(--paper),inset 0 0 0 3px var(--bad)}
+.cc-cov-cell.flagged{box-shadow:inset 0 0 0 2px var(--paper),inset 0 0 0 4px var(--bad)}
+.cc-cov-grid.only-flagged .cc-cov-cell:not(.flagged){opacity:.12}
 .cc-cov-grid.dim-clean .cc-cov-cell.clean,.cc-cov-grid.dim-low .cc-cov-cell.low,.cc-cov-grid.dim-medium .cc-cov-cell.medium,.cc-cov-grid.dim-high .cc-cov-cell.high,.cc-cov-grid.dim-critical .cc-cov-cell.critical,.cc-cov-grid.dim-unaudited .cc-cov-cell.unaudited{opacity:.12}
 .cc-cov-pop{position:absolute;z-index:5;width:300px;max-width:calc(100% - 32px);padding:12px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);box-shadow:var(--shadow);pointer-events:none}
 .cc-cov-pop .ph{display:flex;align-items:baseline;gap:8px}
@@ -121,6 +122,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .cc-cov-pop .bar{height:4px;margin:10px 0 6px;border-radius:2px;background:var(--panel-2);overflow:hidden}
 .cc-cov-pop .bar div{height:100%;background:var(--cov,var(--panel-2));border-radius:2px}
 .cc-cov-pop .foot{font:400 var(--fs-115)/1.5 var(--mono);color:var(--ink-dim)}
+.cc-cov-pop .flag{margin-top:6px;color:var(--bad);font-weight:500}
 /* Sidebar collapse: the rail animates its width to 0, so its rows keep a fixed
    width and slide out of the clip instead of squishing on the way. */
 .cc-rail>*{min-width:216px}
@@ -2998,7 +3000,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px 0">
                   <sc-for list="{{ cmLegend }}" as="l" hint-placeholder-count="6">
-                    <span onClick="{{ l.go }}" title="{{ l.title }}" style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);font:400 var(--fs-12) var(--mono);color:var(--ink);cursor:pointer;user-select:none;opacity:{{ l.op }}" style-hover="border-color:var(--brand)"><i style="width:11px;height:11px;border-radius:3px;background:{{ l.sw }};box-shadow:inset 0 0 0 1px rgb(127 127 127/.25)"></i>{{ l.label }} <strong style="font-weight:600">{{ l.n }}</strong></span>
+                    <span onClick="{{ l.go }}" title="{{ l.title }}" style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);font:400 var(--fs-12) var(--mono);color:var(--ink);cursor:pointer;user-select:none;opacity:{{ l.op }}" style-hover="border-color:var(--brand)"><i style="width:11px;height:11px;border-radius:3px;background:{{ l.sw }};box-shadow:{{ l.ring }},inset 0 0 0 1px rgb(127 127 127/.25)"></i>{{ l.label }} <strong style="font-weight:600">{{ l.n }}</strong></span>
                   </sc-for>
                 </div>
                 <div ref="{{ cmBoardRef }}" class="cc-cov-board"></div>
@@ -4030,7 +4032,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ rgSub }}</div>
           <div style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim);margin-top:3px;word-break:break-all">{{ rgHashFull }}</div>
           <sc-if value="{{ rgMetaShow }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:8px;font:400 var(--fs-125) var(--sans);color:var(--ink)">{{ rgMeta }}</div>
+            <div style="margin-top:8px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ rgMeta }}
+              <sc-if value="{{ rgAltShow }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ rgAltGo }}" style="color:var(--brand-ink);cursor:pointer;margin-left:6px;font-weight:500">{{ rgAltLabel }}</span>
+              </sc-if>
+            </div>
           </sc-if>
           <sc-if value="{{ rgIssueShow }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:14px;border-radius:9px;background:{{ rgIssueBg }};color:{{ rgIssueFg }};padding:11px 13px;font:500 var(--fs-13)/1.55 var(--sans)">{{ rgIssue }}</div>

@@ -12840,18 +12840,26 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
  * embargoed findings count toward the verdict here even though the customer
  * Registry tab hides them.
  *
+ * Nulled and malware-flagged builds NEVER set the verdict. A nulled copy on
+ * one site says something about that site, not about the plugin, so the cell
+ * color comes from the legitimate builds only (same rule as the registry's
+ * public rollup). Flagged variants ride along as their own signal: how many
+ * sites run one, and which hash, so the map can ring the cell and the dialog
+ * can open the flagged build on request.
+ *
  * Row layout (positional, to keep ~10k rows small on the wire):
  *   0 rank, 1 slug, 2 name, 3 sites, 4 active sites, 5 status, 6 findings,
  *   7 audited builds, 8 total builds, 9 primary hash, 10 primary version,
- *   11 malware (0/1), 12 sites on an audited build, 13 top versions on the
- *   fleet (most installed first, capped at 6), 14 distinct versions,
- *   15 sites on the primary hash
+ *   11 sites on a flagged (nulled/malware) build, 12 sites on an audited
+ *   build, 13 top versions on the fleet (most installed first, capped at 6),
+ *   14 distinct versions, 15 sites on the primary hash, 16 most-installed
+ *   flagged hash, 17 flagged builds
  */
 function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 	global $wpdb;
 
 	$type = $request->get_param( 'type' ) === 'theme' ? 'theme' : 'plugin';
-	$key  = "captaincore_security_coverage_map_{$type}";
+	$key  = "captaincore_security_coverage_map_v2_{$type}";
 	if ( ! $request->get_param( 'refresh' ) ) {
 		$cached = get_transient( $key );
 		if ( is_array( $cached ) ) {
@@ -12938,13 +12946,14 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 		}
 	}
 
-	$rank_of = [ 'malware' => 0, 'critical' => 1, 'high' => 2, 'medium' => 3, 'low' => 4, 'clean' => 5 ];
+	$rank_of = [ 'critical' => 1, 'high' => 2, 'medium' => 3, 'low' => 4, 'clean' => 5 ];
 	$tiers   = [ 'clean' => 0, 'low' => 0, 'medium' => 0, 'high' => 0, 'critical' => 0, 'unaudited' => 0 ];
 	$rows    = [];
 	$installs_total   = 0;
 	$installs_audited = 0;
 	$slugs_audited    = 0;
 	$malware_slugs    = 0;
+	$malware_sites_total = 0;
 
 	foreach ( $slugs as $slug => $row ) {
 		$audited_builds = 0;
@@ -12953,6 +12962,10 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 		$best_rank      = 99;
 		$best_sites     = -1;
 		$best_hash      = '';
+		$malware_builds = 0;
+		$malware_sites  = 0;
+		$malware_hash   = '';
+		$malware_top    = -1;
 		foreach ( $row['hashes'] as $hash => $h ) {
 			$entry = $manifest[ $hash ] ?? null;
 			if ( $entry === null ) {
@@ -12960,7 +12973,16 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 			}
 			$audited_builds++;
 			$audited_sites += $h['sites'];
-			$status = ! empty( $entry['malware'] ) ? 'malware' : ( $entry['status'] ?? 'clean' );
+			if ( ! empty( $entry['malware'] ) ) {
+				$malware_builds++;
+				$malware_sites += $h['sites'];
+				if ( $h['sites'] > $malware_top ) {
+					$malware_top  = $h['sites'];
+					$malware_hash = $hash;
+				}
+				continue;
+			}
+			$status = $entry['status'] ?? 'clean';
 			$r      = $rank_of[ $status ] ?? 5;
 			if ( $r < $best_rank || ( $r === $best_rank && $h['sites'] > $best_sites ) ) {
 				$best_rank  = $r;
@@ -12981,8 +13003,7 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 			}
 		}
 
-		$malware = $best !== null && ! empty( $best['malware'] );
-		$status  = $best === null ? 'unaudited' : ( $malware ? 'critical' : ( $best['status'] ?? 'clean' ) );
+		$status = $best === null ? 'unaudited' : ( $best['status'] ?? 'clean' );
 		if ( ! isset( $tiers[ $status ] ) ) {
 			$status = 'clean';
 		}
@@ -12990,8 +13011,9 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 		if ( $best !== null ) {
 			$slugs_audited++;
 		}
-		if ( $malware ) {
+		if ( $malware_builds > 0 ) {
 			$malware_slugs++;
+			$malware_sites_total += $malware_sites;
 		}
 		$installs_total   += $row['sites'];
 		$installs_audited += $audited_sites;
@@ -13009,11 +13031,13 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 			count( $row['hashes'] ),
 			$best_hash,
 			$best_hash !== '' ? ( $row['hashes'][ $best_hash ]['version'] ?? '' ) : '',
-			$malware ? 1 : 0,
+			$malware_sites,
 			$audited_sites,
 			array_slice( array_keys( $row['versions'] ), 0, 6 ),
 			count( $row['versions'] ),
 			$best_hash !== '' ? (int) $row['hashes'][ $best_hash ]['sites'] : 0,
+			$malware_hash,
+			$malware_builds,
 		];
 	}
 
@@ -13038,6 +13062,7 @@ function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
 			'audited'          => $slugs_audited,
 			'unaudited'        => count( $rows ) - $slugs_audited,
 			'malware'          => $malware_slugs,
+			'malware_sites'    => $malware_sites_total,
 			'installs_total'   => $installs_total,
 			'installs_audited' => $installs_audited,
 			'weighted_pct'     => $installs_total > 0 ? round( $installs_audited * 100 / $installs_total, 1 ) : 0,

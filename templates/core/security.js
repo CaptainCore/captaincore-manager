@@ -73,8 +73,12 @@ Object.assign(Component.prototype, {
     ['critical',  'critical',  'var(--bad)',                                   'critical findings or malware'],
     ['unaudited', 'unaudited', 'var(--panel-2)',                               'no audited build on the fleet']
   ],
+  // Column 11 is the number of sites on a nulled/malware-flagged build; those
+  // builds never set `status` (a nulled copy is a site problem, not a plugin
+  // verdict), they ring the cell and open on request from the dialog.
   COV_COL: { rank: 0, slug: 1, name: 2, sites: 3, active: 4, status: 5, findings: 6, auditedBuilds: 7, builds: 8,
-    hash: 9, version: 10, malware: 11, auditedSites: 12, versions: 13, versionCount: 14, primarySites: 15 },
+    hash: 9, version: 10, flaggedSites: 11, auditedSites: 12, versions: 13, versionCount: 14, primarySites: 15,
+    flaggedHash: 16, flaggedBuilds: 17 },
 
   loadCoverageMap(type, force) {
     const t = type === 'theme' ? 'theme' : 'plugin';
@@ -98,20 +102,34 @@ Object.assign(Component.prototype, {
   openFleetFindings(row, type) {
     const C = this.COV_COL, hash = row[C.hash];
     const n = v => Number(v || 0).toLocaleString();
-    const bits = ['Installed on ' + n(row[C.sites]) + ' site' + (row[C.sites] === 1 ? '' : 's')
+    const sites = (k, v) => n(v) + ' site' + (v === 1 ? '' : 's');
+    const bits = ['Installed on ' + sites(0, row[C.sites])
       + (row[C.active] !== row[C.sites] ? ' (' + n(row[C.active]) + ' active)' : '')];
     if (row[C.builds]) bits.push(row[C.auditedBuilds] + ' of ' + row[C.builds] + ' build' + (row[C.builds] === 1 ? '' : 's') + ' audited');
     if (row[C.status] !== 'unaudited' && row[C.builds] > 1)
-      bits.push('showing the worst build, on ' + n(row[C.primarySites]) + ' site' + (row[C.primarySites] === 1 ? '' : 's'));
+      bits.push('showing the worst legitimate build, on ' + sites(0, row[C.primarySites]));
+    const flagged = row[C.flaggedSites] > 0;
+    if (flagged) bits.push(sites(0, row[C.flaggedSites]) + ' run' + (row[C.flaggedSites] === 1 ? 's' : '') + ' a nulled or malware-flagged build');
     const seed = { display_name: row[C.name], slug: row[C.slug], version: row[C.version], status: row[C.status],
-      malware: !!row[C.malware], hash, component_type: type, findings: null };
+      malware: false, hash, component_type: type, findings: null };
+    // The flagged build opens on request, never by default: its verdict is
+    // about the site carrying it, not the plugin.
+    const alt = flagged && row[C.flaggedHash] ? { label: 'Open the flagged build →',
+      go: () => this.openFleetHash(row[C.flaggedHash],
+        { display_name: row[C.name], slug: row[C.slug], version: '', status: 'critical', malware: true, hash: row[C.flaggedHash], component_type: type, findings: null },
+        'Nulled or malware-flagged build · on ' + sites(0, row[C.flaggedSites]) + (row[C.flaggedBuilds] > 1 ? ' across ' + row[C.flaggedBuilds] + ' flagged builds (most installed shown)' : ''),
+        { label: '← Back to the legitimate build', go: () => this.openFleetFindings(row, type) }) } : null;
     if (!hash) {
       // No content hash on the fleet yet (a sync predating hashes): nothing to look up.
       this.setState({ rgHash: 'nohash:' + row[C.slug], rgLoading: false, rgOpenIdx: -1, rgDetail: seed,
-        rgFleet: { meta: bits.join(' · ') + ' · no content hash synced yet' } });
+        rgFleet: { meta: bits.join(' · ') + ' · no content hash synced yet', alt } });
       return;
     }
-    this.setState({ rgHash: hash, rgLoading: true, rgOpenIdx: -1, rgDetail: seed, rgFleet: { meta: bits.join(' · ') } });
+    this.openFleetHash(hash, seed, bits.join(' · '), alt);
+  },
+
+  openFleetHash(hash, seed, meta, alt) {
+    this.setState({ rgHash: hash, rgLoading: true, rgOpenIdx: -1, rgDetail: seed, rgFleet: { meta, alt } });
     this.api('/security-coverage/hash/' + hash)
       .then(res => { if (this.state.rgHash !== hash) return;
         this.setState({ rgDetail: (res && res.hash && res.status !== 'unaudited') ? res : seed, rgLoading: false }); })
@@ -124,8 +142,8 @@ Object.assign(Component.prototype, {
     const html = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      html.push('<i class="cc-cov-cell ' + r[C.status] + (r[C.malware] ? ' malware' : '') + '" data-i="' + i + '" role="button" tabindex="0" aria-label="'
-        + esc(r[C.name] + ', rank ' + r[C.rank] + ', ' + (r[C.status] === 'unaudited' ? 'not audited' : r[C.status])) + '"></i>');
+      html.push('<i class="cc-cov-cell ' + r[C.status] + (r[C.flaggedSites] ? ' flagged' : '') + '" data-i="' + i + '" role="button" tabindex="0" aria-label="'
+        + esc(r[C.name] + ', rank ' + r[C.rank] + ', ' + (r[C.status] === 'unaudited' ? 'not audited' : r[C.status]) + (r[C.flaggedSites] ? ', flagged build present' : '')) + '"></i>');
     }
     el.innerHTML = '<div class="cc-cov-grid">' + html.join('') + '</div><div class="cc-cov-pop" hidden></div>';
     el._cmRows = rows; el._cmType = type;
@@ -142,16 +160,18 @@ Object.assign(Component.prototype, {
         + (r[C.versionCount] > 3 ? ' +' + (r[C.versionCount] - 3) + ' more' : '');
       const share = r[C.sites] ? Math.round(r[C.auditedSites] * 100 / r[C.sites]) : 0;
       let foot;
-      if (!audited) foot = r[C.builds] ? 'none of ' + r[C.builds] + ' build' + (r[C.builds] === 1 ? '' : 's') + ' on the fleet audited yet' : 'no content hash synced yet';
+      if (!audited) foot = r[C.flaggedBuilds] && r[C.flaggedBuilds] === r[C.auditedBuilds] ? 'no legitimate build audited yet'
+        : r[C.builds] ? 'none of ' + r[C.builds] + ' build' + (r[C.builds] === 1 ? '' : 's') + ' on the fleet audited yet' : 'no content hash synced yet';
       else {
         foot = r[C.auditedBuilds] + ' / ' + r[C.builds] + ' builds audited · ' + share + '% of installs';
         if (r[C.builds] > 1 && r[C.primarySites] < r[C.sites]) foot += '<br>worst build v' + esc(r[C.version]) + ' on ' + n(r[C.primarySites]) + ' site' + (r[C.primarySites] === 1 ? '' : 's');
       }
+      if (r[C.flaggedSites]) foot += '<div class="flag">⚠ ' + n(r[C.flaggedSites]) + ' site' + (r[C.flaggedSites] === 1 ? ' runs' : 's run') + ' a nulled or malware-flagged build</div>';
       p.className = 'cc-cov-pop ' + st;
       p.innerHTML =
         '<div class="ph"><i></i><b>' + esc(r[C.name]) + '</b><span class="r">#' + r[C.rank] + '</span></div>' +
         '<div class="slug">' + esc(r[C.slug]) + '</div>' +
-        '<div class="row"><span class="grade">' + (audited ? (r[C.malware] ? 'malware' : st) : 'unaudited') + '</span>' +
+        '<div class="row"><span class="grade">' + (audited ? st : 'unaudited') + '</span>' +
           '<span class="meta">' + n(r[C.sites]) + ' sites' + (vers ? ' <span>' + vers + '</span>' : '') + '</span></div>' +
         '<div class="bar"><div style="width:' + share + '%"></div></div>' +
         '<div class="foot">' + (audited && r[C.findings] ? r[C.findings] + ' finding' + (r[C.findings] === 1 ? '' : 's') + ' · ' : '') + foot + '</div>';
@@ -193,10 +213,16 @@ Object.assign(Component.prototype, {
       { k: 'Generated', v: bundle.generated ? String(bundle.generated).slice(0, 10) : '—', sub: bundle.cached ? 'cached up to 10 minutes' : 'fresh', fg: 'var(--ink)' }
     ] : [];
     const cmLegend = sum ? this.COV_TIERS.filter(([k]) => sum.tiers && sum.tiers[k]).map(([k, label, sw, blurb]) => ({
-      label, n: n(sum.tiers[k]), sw, title: blurb,
+      label, n: n(sum.tiers[k]), sw, title: blurb, ring: 'none',
       op: off[k] ? '.45' : '1',
       go: () => this.setState(st => ({ cmOff: { ...(st.cmOff || {}), [k]: !(st.cmOff || {})[k] } })) })) : [];
-    const dimClass = Object.keys(off).filter(k => off[k]).map(k => ' dim-' + k).join('');
+    // Flagged is a highlight, not a tier: toggling it dims every cell WITHOUT a
+    // nulled/malware build, so the ringed cells stand alone.
+    if (sum && sum.malware) cmLegend.push({ label: 'flagged', n: n(sum.malware), sw: 'var(--paper)', ring: 'inset 0 0 0 2px var(--bad)',
+      title: n(sum.malware) + ' ' + noun + (sum.malware === 1 ? ' has' : 's have') + ' a nulled or malware-flagged build on ' + n(sum.malware_sites) + ' site' + (sum.malware_sites === 1 ? '' : 's') + '. Flagged builds never set a cell\'s color; click to show only these.',
+      op: s.cmOnlyFlagged ? '1' : '.85',
+      go: () => this.setState(st => ({ cmOnlyFlagged: !st.cmOnlyFlagged })) });
+    const dimClass = Object.keys(off).filter(k => off[k]).map(k => ' dim-' + k).join('') + (s.cmOnlyFlagged ? ' only-flagged' : '');
     const key = type + '|' + (bundle ? (bundle.generated || '') + '|' + rows.length : '');
     return {
       cmTiles, cmLegend,
@@ -212,7 +238,7 @@ Object.assign(Component.prototype, {
       cmErrShow: !!(bundle && bundle.err),
       cmShow: !!bundle && !bundle.err && rows.length > 0,
       cmEmpty: !!bundle && !bundle.err && rows.length === 0,
-      cmNote: 'Cells run left to right, top to bottom in install order, so the top-left cell is the most installed ' + noun + '. Hover for details; click to open the findings for its worst build. Embargoed findings are included here and never in the customer Registry tab.',
+      cmNote: 'Cells run left to right, top to bottom in install order, so the top-left cell is the most installed ' + noun + '. Hover for details; click to open the findings for its worst legitimate build. A ringed cell has a nulled or malware-flagged copy on at least one site; that copy never sets the color, since it says something about the site rather than the ' + noun + '. Embargoed findings are included here and never in the customer Registry tab.',
       cmBoardRef: (el) => { if (!el) return;
         if (el._cmKey !== key) { el._cmKey = key; this.covMapBuild(el, rows, type); }
         if (el.firstChild && el.firstChild.className !== 'cc-cov-grid' + dimClass) el.firstChild.className = 'cc-cov-grid' + dimClass; },

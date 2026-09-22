@@ -3198,3 +3198,18 @@ from the transient (12.7 s cold, mostly the four manifest fetches), tooltip
 text and position, click → dialog with 19 findings for the worst build,
 legend chip dims a tier, Themes toggle loads 1,778 cells, light mode, no
 console errors.
+
+**Follow-up (2026-09-21): flagged builds no longer set the verdict.** A
+nulled Smush Pro copy on one site was coloring the whole slug MALWARE on the
+production map. A nulled or malware-flagged build says something about the
+site carrying it, not about the plugin, so the map now mirrors the registry's
+own public rollup: those hashes are excluded from the worst-build pick and
+tracked separately (sites on a flagged build, flagged build count, the
+most-installed flagged hash; row columns 11, 16, 17; transient key bumped to
+v2 so a cached old shape is never served). The cell wears a red ring, the
+tooltip gets a red "N sites run a nulled or malware-flagged build" line, the
+legend gains a "flagged" highlight chip (dims every unflagged cell), and the
+dialog opens the worst legitimate build with an "Open the flagged build →"
+link, whose own dialog links back. Verified via Playwright locally on the two
+flagged slugs: tooltip, both dialogs, the back link, the chip, no console
+errors.
