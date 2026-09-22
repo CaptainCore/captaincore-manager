@@ -425,7 +425,7 @@ class DB {
         $all_filter_clauses = [];
 
         // Helper: build a REGEXP that matches a single JSON object containing the given key-value pairs.
-        $create_pattern = function( $name, $version = null, $status = null ) {
+        $create_pattern = function( $name, $version = null, $status = null, $hash = null ) {
             // esc_sql() keeps a request-supplied value inside the REGEXP string
             // literal; quoting the regex metacharacters keeps it inside the
             // literal part of the PATTERN. Without the second step a filter
@@ -440,6 +440,9 @@ class DB {
             }
             if ( $status !== null ) {
                 $conditions[] = '"status":"' . $quote( $status ) . '"';
+            }
+            if ( $hash !== null ) {
+                $conditions[] = '"hash":"' . $quote( $hash ) . '"';
             }
 
             $permutations = function( $items ) use ( &$permutations ) {
@@ -484,7 +487,14 @@ class DB {
                 if ( empty( $version['slug'] ) ) { continue; }
                 $type_column = self::sanitize_component_column( $version['type'] ?? '' );
                 if ( empty( $type_column ) ) { continue; }
-                $pattern  = $create_pattern( $version['slug'], $version['name'] );
+                // A version entry may name an exact build instead: {slug, hash}
+                // matches the content hash the sync stored beside the version,
+                // so the Security coverage map can open "the 7 sites on this
+                // build" rather than every site on that version string.
+                $hash    = ( ! empty( $version['hash'] ) && preg_match( '/^[a-fA-F0-9]{64}$/', (string) $version['hash'] ) ) ? strtolower( (string) $version['hash'] ) : null;
+                $ver     = ( isset( $version['name'] ) && $version['name'] !== '' && $version['name'] !== 'Any' ) ? $version['name'] : null;
+                if ( $hash === null && $ver === null ) { continue; }
+                $pattern  = $create_pattern( $version['slug'], $ver, null, $hash );
                 // A per-entry mode wins over the request-wide one, so a theme
                 // version can be included while a plugin version is excluded.
                 $entry_mode = ( ! empty( $version['mode'] ) && $version['mode'] === 'exclude' ) ? 'exclude' : ( empty( $version['mode'] ) ? $version_mode : 'include' );

@@ -4060,7 +4060,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ rgSub }}</div>
           <div style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim);margin-top:3px;word-break:break-all">{{ rgHashFull }}</div>
           <sc-if value="{{ rgMetaShow }}" hint-placeholder-val="{{ false }}">
-            <div style="margin-top:8px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ rgMeta }}
+            <div style="margin-top:8px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)"><sc-for list="{{ rgMetaParts }}" as="mp" hint-placeholder-count="1"><sc-if value="{{ mp.isText }}" hint-placeholder-val="{{ true }}">{{ mp.text }}</sc-if><sc-if value="{{ mp.isLink }}" hint-placeholder-val="{{ false }}"><span onClick="{{ mp.go }}" title="Open these sites" style="color:var(--brand-ink);cursor:pointer;font-weight:500;text-decoration:underline;text-decoration-color:color-mix(in srgb, var(--brand-ink) 40%, transparent);text-underline-offset:2px">{{ mp.text }}</span></sc-if></sc-for>
               <sc-if value="{{ rgAltShow }}" hint-placeholder-val="{{ false }}">
                 <span onClick="{{ rgAltGo }}" style="color:var(--brand-ink);cursor:pointer;margin-left:6px;font-weight:500">{{ rgAltLabel }}</span>
               </sc-if>

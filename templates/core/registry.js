@@ -108,8 +108,11 @@ Object.assign(Component.prototype, {
         rgAuditUrl: d.hash ? 'https://wpregistry.io/finding/' + d.hash : '',
         rgAuditLinkShow: !!d.hash,
         // Fleet context (set by the Security → Coverage map, absent on a site tab).
-        rgMeta: s.rgFleet ? s.rgFleet.meta : '',
-        rgMetaShow: !!(s.rgFleet && s.rgFleet.meta),
+        // meta is a string or a list of {text, go?} parts; a part with go
+        // renders as a link (the coverage dialog's site counts open Sites).
+        rgMetaParts: !s.rgFleet ? [] : (Array.isArray(s.rgFleet.meta) ? s.rgFleet.meta : [{ text: s.rgFleet.meta || '' }])
+          .map(pt => ({ text: pt.text || '', isLink: !!pt.go, isText: !pt.go, go: pt.go || (() => {}) })),
+        rgMetaShow: !!(s.rgFleet && s.rgFleet.meta && s.rgFleet.meta.length),
         rgAltShow: !!(s.rgFleet && s.rgFleet.alt),
         rgAltLabel: s.rgFleet && s.rgFleet.alt ? s.rgFleet.alt.label : '',
         rgAltGo: s.rgFleet && s.rgFleet.alt ? s.rgFleet.alt.go : () => {},

@@ -103,13 +103,17 @@ Object.assign(Component.prototype, {
     const C = this.COV_COL, hash = row[C.hash];
     const n = v => Number(v || 0).toLocaleString();
     const sites = (k, v) => n(v) + ' site' + (v === 1 ? '' : 's');
-    const bits = ['Installed on ' + sites(0, row[C.sites])
-      + (row[C.active] !== row[C.sites] ? ' (' + n(row[C.active]) + ' active)' : '')];
-    if (row[C.builds]) bits.push(row[C.auditedBuilds] + ' of ' + row[C.builds] + ' build' + (row[C.builds] === 1 ? '' : 's') + ' audited');
+    // Meta line as parts: every site count is a link that opens the Sites
+    // list filtered to this slug (all builds) or to one exact build (hash).
+    const slug = row[C.slug];
+    const link = (v, h) => ({ text: sites(0, v), go: () => this.openSitesForBuild(type, slug, h ? '' : row[C.version], h || '') });
+    const bits = [[{ text: 'Installed on ' }, link(row[C.sites]), ...(row[C.active] !== row[C.sites] ? [{ text: ' (' + n(row[C.active]) + ' active)' }] : [])]];
+    if (row[C.builds]) bits.push([{ text: row[C.auditedBuilds] + ' of ' + row[C.builds] + ' build' + (row[C.builds] === 1 ? '' : 's') + ' audited' }]);
     if (row[C.status] !== 'unaudited' && row[C.builds] > 1)
-      bits.push('showing the worst legitimate build, on ' + sites(0, row[C.primarySites]));
+      bits.push([{ text: 'showing the worst legitimate build, on ' }, link(row[C.primarySites], hash)]);
     const flagged = row[C.flaggedSites] > 0;
-    if (flagged) bits.push(sites(0, row[C.flaggedSites]) + ' run' + (row[C.flaggedSites] === 1 ? 's' : '') + ' a nulled or malware-flagged build');
+    if (flagged) bits.push([link(row[C.flaggedSites], row[C.flaggedHash]), { text: ' run' + (row[C.flaggedSites] === 1 ? 's' : '') + ' a nulled or malware-flagged build' }]);
+    const joinBits = list => list.flatMap((b, i) => i ? [{ text: ' · ' }, ...b] : b);
     const seed = { display_name: row[C.name], slug: row[C.slug], version: row[C.version], status: row[C.status],
       malware: false, hash, component_type: type, findings: null };
     // The flagged build opens on request, never by default: its verdict is
@@ -117,15 +121,15 @@ Object.assign(Component.prototype, {
     const alt = flagged && row[C.flaggedHash] ? { label: 'Open the flagged build →',
       go: () => this.openFleetHash(row[C.flaggedHash],
         { display_name: row[C.name], slug: row[C.slug], version: '', status: 'critical', malware: true, hash: row[C.flaggedHash], component_type: type, findings: null },
-        'Nulled or malware-flagged build · on ' + sites(0, row[C.flaggedSites]) + (row[C.flaggedBuilds] > 1 ? ' across ' + row[C.flaggedBuilds] + ' flagged builds (most installed shown)' : ''),
+        [{ text: 'Nulled or malware-flagged build · on ' }, link(row[C.flaggedSites], row[C.flaggedHash]), ...(row[C.flaggedBuilds] > 1 ? [{ text: ' across ' + row[C.flaggedBuilds] + ' flagged builds (most installed shown)' }] : [])],
         { label: '← Back to the legitimate build', go: () => this.openFleetFindings(row, type) }) } : null;
     if (!hash) {
       // No content hash on the fleet yet (a sync predating hashes): nothing to look up.
       this.setState({ rgHash: 'nohash:' + row[C.slug], rgLoading: false, rgOpenIdx: -1, rgDetail: seed,
-        rgFleet: { meta: bits.join(' · ') + ' · no content hash synced yet', alt } });
+        rgFleet: { meta: [...joinBits(bits), { text: ' · no content hash synced yet' }], alt } });
       return;
     }
-    this.openFleetHash(hash, seed, bits.join(' · '), alt);
+    this.openFleetHash(hash, seed, joinBits(bits), alt);
   },
 
   openFleetHash(hash, seed, meta, alt) {

@@ -15,6 +15,43 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Coverage dialog site counts open the Sites list (2026-09-22)
+
+The findings dialog the coverage map opens said "Installed on 50 sites · …
+on 7 sites · 1 site runs a nulled or malware-flagged build" with no way to
+see which sites. Every site count in that meta line is now a link that
+closes the dialog and opens Sites filtered to the plugin (or theme):
+
+- "Installed on N sites" → the slug, every build;
+- "showing the worst legitimate build, on N sites" → the slug plus that
+  build's content hash;
+- "N sites run a nulled or malware-flagged build" (and the flagged view's
+  "on N sites") → the slug plus the flagged hash.
+
+Exact-build filtering needed one server change: a `versions` entry sent to
+`POST /filters/sites` may carry `hash` (64 hex) instead of a version
+`name`, and `DB::fetch_sites_filtered` matches it against the `"hash"` key
+the sync stores in the environment's plugins/themes JSON (same REGEXP
+builder, one more key). Checked locally on a plugin with 147 sites: version
+3.2 matched 142, its most-installed hash 93, a bogus hash 0.
+
+Client side, the theme/plugin chips gained a hash sub-filter (`fPlugHash` /
+`fThemeHash`, in `SUB_KEYS` as `hash`): the chip reads
+"Plugin · slug · build ad24f099", the request sends the hash entry instead
+of the version one, picking a version in the popover drops the hash, and
+Remove filter / Clear reset it. `openSitesForBuild(kind, slug, version,
+hash)` in sites-filters.js is the entry point; the router syncs the URL to
+`/account/sites` on its own. `rgFleet.meta` is now a string OR a list of
+`{text, go?}` parts (`rgMetaParts` in registry.js), so the site-detail
+Registry tab, which never sets rgFleet, is untouched. The list header also
+stopped saying "1 sites · 1 environments".
+
+Verified with Playwright on a flagged cell: the dialog rendered "50 sites",
+"7 sites" and "1 site" as links; "7 sites" landed on Sites with the build
+chip, the POST body carried `{name:'', hash, slug, type, mode}` and the
+header read "7 sites · 7 environments"; "1 site" did the same with the
+flagged hash and one row. Zero page errors.
+
 ## Security → Coverage no longer shows design samples while loading (2026-09-22)
 
 Opening `/account/security/coverage` showed "87% · 92% · 128 / 128 · 74%"

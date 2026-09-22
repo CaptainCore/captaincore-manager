@@ -35,7 +35,7 @@ class Component extends DCLogic {
     q: '', fProv: 'Any', fHealth: 'All', sel: {},
     fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS',
-    fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fOp: 'AND', labelsSel: {},
+    fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
     capSel: '', capLimit: 60,
     rgHash: '', rgDetail: null, rgLoading: false, rgOpenIdx: -1,
@@ -1106,7 +1106,7 @@ class Component extends DCLogic {
     // Shimmer rows while the real fleet hydrates (same booted/_hydrated gate as
     // homeSkel). Empty once hydrated, so the skeleton markup renders nothing.
     const sitesSkel = !!window.CC_BOOT && !this._hydrated;
-    const countLabel = sitesSkel ? 'Loading fleet…' : filtered.length + ' sites · ' + envCount + ' environments';
+    const countLabel = sitesSkel ? 'Loading fleet…' : filtered.length + ' site' + (filtered.length === 1 ? '' : 's') + ' · ' + envCount + ' environment' + (envCount === 1 ? '' : 's');
     return {
       pinnedShow: pinnedStrip.length > 0,
       pinnedStrip,
@@ -1175,7 +1175,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       // Filter-to-console (legacy parity): hand the whole filtered set — every
       // page, not just the visible one — to the dock terminal as its target
       // list. Only offered while a filter narrows the fleet, so a stray click

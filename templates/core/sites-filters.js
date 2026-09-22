@@ -45,12 +45,26 @@ Object.assign(Component.prototype, {
   // Sub-facet state keys per chip kind. Ver/Status pick a value, VerIs/Is
   // flip that value between IS and IS NOT (server: per-entry include/exclude).
   SUB_KEYS: {
-    theme:  { name: 'fTheme',  ver: 'fThemeVer', verIs: 'fThemeVerIs', status: 'fThemeStatus', statusIs: 'fThemeIs', type: 'themes',  label: 'theme' },
-    plugin: { name: 'fPlugin', ver: 'fPlugVer',  verIs: 'fPlugVerIs',  status: 'fPlugStatus', statusIs: 'fPlugIs',  type: 'plugins', label: 'plugin' }
+    theme:  { name: 'fTheme',  ver: 'fThemeVer', verIs: 'fThemeVerIs', status: 'fThemeStatus', statusIs: 'fThemeIs', hash: 'fThemeHash', type: 'themes',  label: 'theme' },
+    plugin: { name: 'fPlugin', ver: 'fPlugVer',  verIs: 'fPlugVerIs',  status: 'fPlugStatus', statusIs: 'fPlugIs',  hash: 'fPlugHash',  type: 'plugins', label: 'plugin' }
   },
   subFacetReset(kind) {
     const k = this.SUB_KEYS[kind];
-    return { [k.ver]: 'Any', [k.verIs]: 'IS', [k.status]: 'Any', [k.statusIs]: 'IS' };
+    return { [k.ver]: 'Any', [k.verIs]: 'IS', [k.status]: 'Any', [k.statusIs]: 'IS', [k.hash]: '' };
+  },
+
+  // Open the Sites list filtered to one theme/plugin — optionally to one
+  // exact build (content hash) — from anywhere (the Security coverage
+  // dialog's site counts). Picking a version in the chip popover drops the
+  // hash again; Remove filter clears both.
+  openSitesForBuild(kind, slug, version, hash) {
+    const k = this.SUB_KEYS[kind === 'theme' ? 'theme' : 'plugin'];
+    const other = kind === 'theme' ? 'plugin' : 'theme';
+    this.setState({ route: 'sites', sitesPage: 1, q: '', ddOpen: '', ddQ: '',
+      rgHash: '', rgDetail: null, rgOpenIdx: -1, rgFleet: null,
+      [k.name]: slug, ...this.subFacetReset(kind), ...this.subFacetReset(other), [this.SUB_KEYS[other].name]: 'Any',
+      [k.ver]: hash ? 'Any' : (version || 'Any'), [k.hash]: hash || '' });
+    if (this._hydrated) this.applyServerFilter();
   },
 
   // Version + status option lists for one theme/plugin name. The two
@@ -76,6 +90,7 @@ Object.assign(Component.prototype, {
   // popover: "Plugin · elementor-pro · ≠ 4.2.3 · inactive".
   subFacetSuffix(s, kind) {
     const k = this.SUB_KEYS[kind]; const out = [];
+    if (s[k.hash]) out.push('build ' + s[k.hash].slice(0, 8));
     if (s[k.ver] && s[k.ver] !== 'Any') out.push((s[k.verIs] === 'IS NOT' ? '≠ ' : '') + s[k.ver]);
     if (s[k.status] && s[k.status] !== 'Any') out.push((s[k.statusIs] === 'IS NOT' ? 'not ' : '') + s[k.status]);
     return out.length ? ' · ' + out.join(' · ') : '';
@@ -93,7 +108,7 @@ Object.assign(Component.prototype, {
       fg: s[key] === label ? 'var(--ink)' : 'var(--ink-dim)',
       go: () => { this.setState({ [key]: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } }));
     return {
-      verOpts: this.subFacetOpts(vers, s[k.ver], k.ver),
+      verOpts: this.subFacetOpts(vers, s[k.ver], k.ver, { [k.hash]: '' }),
       statusOpts: this.subFacetOpts(stats, s[k.status], k.status),
       verIsChips: chips(k.verIs),
       isChips: chips(k.statusIs),
@@ -104,12 +119,12 @@ Object.assign(Component.prototype, {
 
   // Rows for a version/status sub-facet inside a theme/plugin chip popover:
   // largest site count first; picking keeps the popover open for stacking.
-  subFacetOpts(options, cur, key) {
+  subFacetOpts(options, cur, key, extraReset) {
     const sorted = (options || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0) || String(a.name).localeCompare(String(b.name)));
     const row = (label, badge) => ({ label, badge,
       mark: cur === label || (label === 'Any' && !cur) ? '✓' : '',
       bg: cur === label || (label === 'Any' && !cur) ? 'var(--brand-soft)' : 'transparent',
-      pick: () => { this.setState({ [key]: label, sitesPage: 1 }); if (this._hydrated) this.applyServerFilter(); } });
+      pick: () => { this.setState({ [key]: label, sitesPage: 1, ...(extraReset || {}) }); if (this._hydrated) this.applyServerFilter(); } });
     return [row('Any', ''), ...sorted.map(o => row(String(o.name), (o.count || 0) + ' sites'))];
   },
 
@@ -131,7 +146,8 @@ Object.assign(Component.prototype, {
         if (!sel) return;
         const k = this.SUB_KEYS[kind];
         const mode = key => s[key] === 'IS NOT' ? 'exclude' : 'include';
-        if (s[k.ver] && s[k.ver] !== 'Any') versions.push({ name: s[k.ver], slug: s[k.name], type: k.type, mode: mode(k.verIs) });
+        if (s[k.hash]) versions.push({ name: '', hash: s[k.hash], slug: s[k.name], type: k.type, mode: 'include' });
+        else if (s[k.ver] && s[k.ver] !== 'Any') versions.push({ name: s[k.ver], slug: s[k.name], type: k.type, mode: mode(k.verIs) });
         if (s[k.status] && s[k.status] !== 'Any') statuses.push({ name: s[k.status], slug: s[k.name], type: k.type, mode: mode(k.statusIs) });
       });
       const body = {
