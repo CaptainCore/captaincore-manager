@@ -15,6 +15,60 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## DNS editor: legacy table semantics, unclipped type picker (2026-09-22)
+
+Three asks against the DNS tab, all restoring what the legacy Vue table did.
+
+1. **The type dropdown was cut off.** The add bar's picker opened upward
+   (`bottom:38px`, absolute) inside the records card, which has
+   `overflow:hidden`, so the filter box and the top options were clipped. It
+   is now a fixed overlay anchored through `ddToggleAt` (the pattern the New
+   site dialog uses), one per pending row, and opens downward from the chip.
+2. **Delete strikes the row through and offers Undo.** `del` used to drop the
+   row from the list and queue its id in `dnsDel`, so a mis-click could only
+   be reversed with Discard. It now toggles a `deleted` flag: the row stays in
+   place in red with a line through every column and a grey background, the
+   link reads Undo, clicking the row no longer opens the editor, and Save
+   turns each struck row into a DELETE call.
+3. **Add record appends an open row; press it as often as you like.** The
+   type / name / value add bar and its Add record gate are gone. The button
+   appends a blank row (`isNew`) that renders as its own editor: per-row type
+   chip + picker, name, the sub-value rows for multi-value types (MX pairs,
+   SRV quads, round-robin lists with + Add value / ✕), TTL, and a ✕ that
+   removes the pending row. Picking a new type resets the value shape the way
+   the legacy `changeRecordType` did. The rows stay open until Save; a row
+   left blank is dropped at save time.
+
+The editor bindings moved into one `dnsEditorVals(s)` in domains.js, spread
+by both `computeDomain` (demo shell) and `realDomainVals`, so the template has
+a single editor block: `r.editing` covers an existing row opened in place
+(Done / Cancel) and a pending new row (✕), switched by `r.isNew`. Existing
+edits keep the `dnsEdit` / `dnsEN` / `dnsEV` / `dnsETtl` / `dnsESubs` state;
+new rows edit themselves through `dnsPatchRow(uid, patch)`. Because the DC
+runtime keys `sc-for` items by index and binds `value` like `defaultValue`,
+every editor input seeds through a keyed ref (`uid` for new rows,
+`uid:dnsEditSeq` for an existing row's edit session, `suid` for sub-values),
+so removing a row above never leaves stale text in a reused input. `dnsDirty`
+is derived: any new, edited or struck row, or the state flag zone import sets.
+
+`saveDnsReal` now filters struck rows into the delete list, cleans each new
+row's sub-values (blank rows dropped), folds duplicates through
+`dnsGroupRecs`, and runs the DELETE calls to completion before the POST/PUT
+writes, so a name+type deleted and re-added in one save does not collide with
+the record it replaces at Constellix.
+
+Verified 2026-09-22 with Playwright on a local domain page with the zone GET
+mocked and every write captured: Delete struck the row (line-through, red)
+and showed Undo plus the Save bar; Undo restored it and hid the bar; three
+presses of Add record gave three open editors and ✕ removed one; the type
+picker's filter box was the element under the pointer at its own top edge
+(nothing clipped) and took focus; picking MX swapped in priority/server rows,
++ Add value added a second pair, and removing the first pair kept the
+second's text; a new MX @ row folded into the existing MX @ record as a PUT;
+a new CNAME www row posted; an in-place edit of the A record put; and the
+struck TXT record's DELETE finished ~300 ms before the first write started.
+Zero page errors.
+
 ## History dates always carry the year (2026-09-15)
 
 Customer feedback: the Backups list showed "Sep 15, 12:21 AM" and the year was

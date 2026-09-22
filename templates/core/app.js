@@ -62,7 +62,7 @@ class Component extends DCLogic {
     zoneOpen: false, zoneText: '', nsvOpen: false, nsvText: '', nsCustom: null,
     ctOpen: false, contact: null, ctDraft: {},
     snapFilter: 'Everything', dq: '', domainId: null, domTab: 'dns',
-    dnsRecs: null, dnsDirty: false, dnsT: 'A', dnsN: '', dnsV: '', zoneBusy: '',
+    dnsRecs: null, dnsDirty: false, zoneBusy: '',
     mgHoverIdx: -1, mgHoverX: 0, mgHoverY: 0,
     fwds: null, fwdAlias: '', fwdDest: '', reg: { auto: true, lock: true, priv: true },
     ddOpen: '', ddQ: '', ddCat: '',
@@ -1812,7 +1812,7 @@ class Component extends DCLogic {
 
   openDomain(id) {
     this.setState({ route: 'domain', domainId: id, domTab: 'dns', paletteOpen: false,
-      dnsRecs: this.DNS_RECS.map(r => ({ ...r })), dnsDirty: false, dnsT: 'A', dnsN: '', dnsV: '',
+      dnsRecs: this.DNS_RECS.map(r => ({ ...r })), dnsDirty: false,
       fwds: this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',
       reg: { auto: true, lock: true, priv: true } });
   }
@@ -1927,11 +1927,6 @@ class Component extends DCLogic {
       fg: s.domTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.domTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ domTab: id }) }));
-    const typeBg = { A: 'var(--brand-soft)', AAAA: 'var(--brand-soft)', MX: 'var(--warn-soft)', TXT: 'var(--ok-soft)', SPF: 'var(--ok-soft)' };
-    const dnsRows = (s.dnsRecs || []).map(r => ({ ...r, bg: typeBg[r.type] || 'var(--panel-2)',
-      editing: s.dnsEdit === r.uid, notEditing: s.dnsEdit !== r.uid,
-      startEdit: () => this.setState({ dnsEdit: r.uid, dnsEN: r.name, dnsEV: r.value, dnsETtl: r.ttl }),
-      del: (e) => { e.stopPropagation(); this.setState(st => ({ dnsRecs: st.dnsRecs.filter(x => x.uid !== r.uid), dnsDirty: true })); } }));
     const zoneRecs = s.zoneOpen ? this.parseZone(s.zoneText) : [];
     const ct = s.contact || { Name: 'Sarah Whitfield', Organization: 'Bloom & Branch LLC', Email: 'sarah@bloomandbranch.com', Phone: '+1 (717) 555-0164', Address: '412 Larkspur Lane', 'City / State': 'Lancaster, PA 17601', Country: 'United States' };
     const mkTog = (key, label) => ({ label,
@@ -1958,13 +1953,8 @@ class Component extends DCLogic {
       zoneDnsLabel: 'Delete DNS zone', zoneFwdLabel: 'Delete email forwarding', zoneSendLabel: 'Delete sending zone',
       zoneDelDns: () => {}, zoneDelFwd: () => {}, zoneDelSend: () => {},
       domShowDelete: false, domDelete: () => {}, domDeleteLabel: 'Delete domain…',
-      dnsRows, dnsDirty: s.dnsDirty, dnsT: s.dnsT, dnsN: s.dnsN, dnsV: s.dnsV,
-      dnsEN: s.dnsEN, onDnsEN: e => this.setState({ dnsEN: e.target.value }),
-      dnsEV: s.dnsEV, onDnsEV: e => this.setState({ dnsEV: e.target.value }),
-      dnsETtl: s.dnsETtl, onDnsETtl: e => this.setState({ dnsETtl: e.target.value }),
-      dnsEditDone: () => this.setState(st => ({ dnsRecs: st.dnsRecs.map(x => x.uid === st.dnsEdit ? { ...x, name: st.dnsEN.trim() || '@', value: st.dnsEV.trim() || x.value, ttl: st.dnsETtl.trim() || '3600' } : x), dnsEdit: 0, dnsDirty: true })),
-      dnsEditCancel: () => this.setState({ dnsEdit: 0, dnsESubs: null }),
-      dnsEIsMulti: false, dnsEIsSingle: true, dnsESubRows: [], dnsEAddSub: () => {},
+      // Record editor (rows, edit/delete/add) — shared with the real zone, domains.js.
+      ...this.dnsEditorVals(s),
       dnsSpin: false, dnsSkelShow: false, dnsSkelRows: [],
       openZoneDlg: () => this.setState({ zoneOpen: true, zoneText: '' }),
       closeZone: () => this.setState({ zoneOpen: false }),
@@ -1993,13 +1983,6 @@ class Component extends DCLogic {
       ctLine1: ct.Name + ' · ' + ct.Organization,
       ctLine2: ct.Address + ', ' + ct['City / State'] + ' · ' + ct.Country,
       ctLine3: ct.Email + ' · ' + ct.Phone,
-      ddDnsOpen: s.ddOpen === 'dns',
-      ddToggleDns: () => this.setState(st => ({ ddOpen: st.ddOpen === 'dns' ? '' : 'dns', ddQ: '' })),
-      ddDnsOpts: this.ddOpts(['A', 'AAAA', 'ANAME', 'CNAME', 'MX', 'TXT', 'SPF', 'SRV', 'HTTP'], s.dnsT, 'dnsT'),
-      onDnsN: e => this.setState({ dnsN: e.target.value }),
-      onDnsV: e => this.setState({ dnsV: e.target.value }),
-      addRec: () => { if (!this.state.dnsV.trim()) return;
-        this.setState(st => ({ dnsRecs: [...st.dnsRecs, { uid: Date.now(), type: st.dnsT, name: st.dnsN.trim() || '@', value: st.dnsV.trim(), ttl: '3600' }], dnsDirty: true, dnsN: '', dnsV: '' })); },
       saveDns: () => { this.runJob('dns-bulk-save', d.name); this.setState({ dnsDirty: false }); },
       discardDns: () => this.setState({ dnsRecs: this.DNS_RECS.map(r => ({ ...r })), dnsDirty: false }),
       importZone: () => this.runJob('dns-import', 'zone file → ' + d.name),

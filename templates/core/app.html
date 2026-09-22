@@ -1917,33 +1917,68 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
               <sc-for list="{{ dnsRows }}" as="r" hint-placeholder-count="7">
                 <div style="border-bottom:1px solid var(--rule)">
+                  <!-- View row. A row marked for deletion stays in place, struck
+                       through, with Undo in place of Delete (legacy table behaviour). -->
                   <sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
-                    <div onClick="{{ r.startEdit }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer" style-hover="background:var(--panel-2)">
-                      <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
-                      <span style="flex:none;width:150px;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
-                      <span style="flex:1;min-width:0;font:400 var(--fs-125) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.value }}</span>
-                      <span style="flex:none;font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ r.ttl }}</span>
-                      <span onClick="{{ r.del }}" style="flex:none;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                    <div onClick="{{ r.startEdit }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer;background:{{ r.rowBg }};color:{{ r.fg }}" style-hover="background:var(--panel-2)">
+                      <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0;text-decoration:{{ r.deco }}">{{ r.type }}</span>
+                      <span style="flex:none;width:150px;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:{{ r.deco }}">{{ r.name }}</span>
+                      <span style="flex:1;min-width:0;font:400 var(--fs-125) var(--mono);color:{{ r.vfg }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:{{ r.deco }}">{{ r.value }}</span>
+                      <span style="flex:none;font:400 var(--fs-115) var(--mono);color:{{ r.vfg }};text-decoration:{{ r.deco }}">{{ r.ttl }}</span>
+                      <span onClick="{{ r.del }}" style="flex:none;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">{{ r.delLabel }}</span>
                     </div>
                   </sc-if>
+                  <!-- Editor: an existing row opened in place (Done / Cancel) or a
+                       pending new row, which stays open with its own type picker and ✕. -->
                   <sc-if value="{{ r.editing }}" hint-placeholder-val="{{ false }}">
                     <div style="padding:8px 16px;background:var(--panel)">
                       <div style="display:flex;align-items:center;gap:10px">
-                        <span style="flex:none;width:58px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
-                        <input value="{{ dnsEN }}" onInput="{{ onDnsEN }}" style="width:150px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                        <sc-if value="{{ dnsEIsSingle }}" hint-placeholder-val="{{ true }}">
-                          <input value="{{ dnsEV }}" onInput="{{ onDnsEV }}" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                        <sc-if value="{{ r.notNew }}" hint-placeholder-val="{{ true }}">
+                          <span style="flex:none;width:88px;text-align:center;font:600 var(--fs-11) var(--mono);background:{{ r.bg }};border-radius:6px;padding:3px 0">{{ r.type }}</span>
                         </sc-if>
-                        <sc-if value="{{ dnsEIsMulti }}" hint-placeholder-val="{{ false }}">
+                        <sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}">
+                          <div style="flex:none">
+                            <div onClick="{{ r.ddToggle }}" title="Record type" style="display:flex;align-items:center;gap:8px;width:88px;box-sizing:border-box;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)">
+                              <span style="font:600 var(--fs-11) var(--mono);flex:1">{{ r.type }}</span>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                            </div>
+                            <sc-if value="{{ r.ddOpen }}" hint-placeholder-val="{{ false }}">
+                              <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                              <!-- Fixed overlay anchored to the chip (ddToggleAt) so the
+                                   records card's overflow clip cannot cut the list off. -->
+                              <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:160px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                                <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Filter types…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;margin-bottom:4px">
+                                <div style="max-height:176px;overflow-y:auto">
+                                  <sc-for list="{{ r.ddOpts }}" as="o" hint-placeholder-count="5">
+                                    <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
+                                      <span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span>
+                                      <span style="font:500 var(--fs-12) var(--mono)">{{ o.label }}</span>
+                                    </div>
+                                  </sc-for>
+                                </div>
+                              </div>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                        <input ref="{{ r.refName }}" onInput="{{ r.onName }}" placeholder="name (@ for root)" style="width:150px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                        <sc-if value="{{ r.isSingle }}" hint-placeholder-val="{{ true }}">
+                          <input ref="{{ r.refValue }}" onInput="{{ r.onValue }}" placeholder="value" style="flex:1;min-width:0;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
+                        </sc-if>
+                        <sc-if value="{{ r.isMulti }}" hint-placeholder-val="{{ false }}">
                           <div style="flex:1"></div>
                         </sc-if>
-                        <input value="{{ dnsETtl }}" onInput="{{ onDnsETtl }}" style="width:64px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none">
-                        <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
-                        <span onClick="{{ dnsEditCancel }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                        <input ref="{{ r.refTtl }}" onInput="{{ r.onTtl }}" placeholder="3600" title="TTL" style="width:64px;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none">
+                        <sc-if value="{{ r.notNew }}" hint-placeholder-val="{{ true }}">
+                          <button onClick="{{ dnsEditDone }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Done</button>
+                          <span onClick="{{ dnsEditCancel }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                        </sc-if>
+                        <sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}">
+                          <span onClick="{{ r.remove }}" title="Remove this new record" style="flex:none;cursor:pointer;color:var(--ink-dim);font:600 var(--fs-13) var(--sans);width:24px;text-align:center" style-hover="color:var(--bad)">✕</span>
+                        </sc-if>
                       </div>
-                      <sc-if value="{{ dnsEIsMulti }}" hint-placeholder-val="{{ false }}">
-                        <div style="display:flex;flex-direction:column;gap:6px;padding:8px 0 4px 68px">
-                          <sc-for list="{{ dnsESubRows }}" as="sv" hint-placeholder-count="2">
+                      <sc-if value="{{ r.isMulti }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:6px;padding:8px 0 4px 98px">
+                          <sc-for list="{{ r.subRows }}" as="sv" hint-placeholder-count="2">
                             <div style="display:flex;align-items:center;gap:8px">
                               <sc-if value="{{ sv.isMx }}" hint-placeholder-val="{{ false }}">
                                 <input ref="{{ sv.refPriority }}" onInput="{{ sv.onPriority }}" placeholder="10" title="Priority" style="width:70px;height:30px;border:1px solid var(--brand);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
@@ -1963,7 +1998,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                               </sc-if>
                             </div>
                           </sc-for>
-                          <span onClick="{{ dnsEAddSub }}" style="align-self:flex-start;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">+ Add value</span>
+                          <span onClick="{{ r.addSub }}" style="align-self:flex-start;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">+ Add value</span>
                         </div>
                       </sc-if>
                     </div>
@@ -1971,29 +2006,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
               <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel)">
-                <div style="position:relative">
-                  <div onClick="{{ ddToggleDns }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer;min-width:88px" style-hover="border-color:var(--brand)">
-                    <span style="font:500 var(--fs-12) var(--mono);flex:1">{{ dnsT }}</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
-                  </div>
-                  <sc-if value="{{ ddDnsOpen }}" hint-placeholder-val="{{ false }}">
-                    <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                    <div style="position:absolute;bottom:38px;left:0;z-index:40;width:160px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                      <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Filter types…" style="width:100%;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;margin-bottom:4px">
-                      <div style="max-height:176px;overflow-y:auto">
-                        <sc-for list="{{ ddDnsOpts }}" as="o" hint-placeholder-count="5">
-                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)">
-                            <span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span>
-                            <span style="font:500 var(--fs-12) var(--mono)">{{ o.label }}</span>
-                          </div>
-                        </sc-for>
-                      </div>
-                    </div>
-                  </sc-if>
-                </div>
-                <input value="{{ dnsN }}" onInput="{{ onDnsN }}" placeholder="name (@ for root)" style="width:150px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                <input value="{{ dnsV }}" onInput="{{ onDnsV }}" placeholder="value" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                <button onClick="{{ addRec }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">Add record</button>
+                <button onClick="{{ addRec }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 13px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">+ Add record</button>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">New rows stay open until you save the zone.</span>
               </div>
             </div>
             <sc-if value="{{ dnsDirty }}" hint-placeholder-val="{{ false }}">

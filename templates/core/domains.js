@@ -28,7 +28,7 @@ Object.assign(Component.prototype, {
   openDomain(id) {
     this.setState({ route: 'domain', domainId: id, domTab: 'dns', paletteOpen: false,
       dnsRecs: this._hydrated ? [] : this.DNS_RECS.map(r => ({ ...r })),
-      dnsDirty: false, dnsDel: [], dnsT: 'A', dnsN: '', dnsV: '', dnsEdit: 0,
+      dnsDirty: false, dnsDel: [], dnsEdit: 0,
       fwds: this._hydrated ? [] : this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',
       fwdEdit: '', fwdEA: '', fwdED: '', fwdSaving: false,
       mgSuppOpen: false, mgDeployOpen: false, mgDepQ: '', mgDepTarget: null, mgDepFrom: '', mgDepBusy: false,
@@ -147,6 +147,128 @@ Object.assign(Component.prototype, {
       : { value: String(x) });
   },
 
+  DNS_TYPES: ['A', 'AAAA', 'ANAME', 'CNAME', 'MX', 'TXT', 'SPF', 'SRV', 'HTTP'],
+  DNS_TYPE_BG: { A: 'var(--brand-soft)', AAAA: 'var(--brand-soft)', MX: 'var(--warn-soft)', TXT: 'var(--ok-soft)', SPF: 'var(--ok-soft)' },
+
+  dnsBlankSub(type) {
+    return type === 'MX' ? { priority: '10', server: '' }
+      : type === 'SRV' ? { priority: '0', weight: '0', port: '0', host: '' } : { value: '' };
+  },
+
+  dnsNewSub(type) {
+    this._suid = (this._suid || 0) + 1;
+    return { ...this.dnsBlankSub(type), suid: 's' + this._suid };
+  },
+
+  dnsPatchRow(uid, patch) {
+    this.setState(st => ({ dnsRecs: (st.dnsRecs || []).map(x => x.uid === uid
+      ? { ...x, ...(typeof patch === 'function' ? patch(x) : patch) } : x) }));
+  },
+
+  dnsRowIsEmpty(r) {
+    if (this.DNS_SINGLE_TYPES.includes(r.type)) return !String(r.value || '').trim();
+    return this.dnsCleanSubs(r.subs).length === 0;
+  },
+
+  // Sub-value editor rows (MX pairs, SRV quads, round-robin value lists) over
+  // any subs list: update(fn) stores fn(list). Inputs seed via suid-keyed
+  // refs — the DC runtime keys list items by index and binds value like
+  // defaultValue, so removing a middle row would otherwise leave stale text
+  // in reused DOM nodes.
+  dnsSubRowVals(subs, update) {
+    const list = subs || [];
+    return list.map((sub, i) => {
+      const set = (k, v) => update(l => l.map((x, j) => j === i ? { ...x, [k]: v } : x));
+      const seed = val => el => { if (el && el._suid !== sub.suid) { el._suid = sub.suid; el.value = val == null ? '' : val; } };
+      return {
+        isMx: 'server' in sub, isSrv: 'host' in sub, isVal: 'value' in sub,
+        refPriority: seed(sub.priority), onPriority: e => set('priority', e.target.value),
+        refWeight: seed(sub.weight), onWeight: e => set('weight', e.target.value),
+        refPort: seed(sub.port), onPort: e => set('port', e.target.value),
+        refServer: seed(sub.server), onServer: e => set('server', e.target.value),
+        refHost: seed(sub.host), onHost: e => set('host', e.target.value),
+        refValue: seed(sub.value), onValue: e => set('value', e.target.value),
+        canRemove: list.length > 1,
+        remove: () => update(l => l.filter((_, j) => j !== i))
+      };
+    });
+  },
+
+  // The record editor's bindings (legacy DNS table semantics, shared by the
+  // demo shell and the real zone):
+  //   · an existing row opens in place on click (Done / Cancel);
+  //   · Delete strikes the row through and turns into Undo — nothing leaves
+  //     the list until Save, so a mis-click costs one more click;
+  //   · Add record appends a blank row that STAYS in edit mode (own type
+  //     picker, name, values, TTL, ✕) — press it as often as you like.
+  // Row inputs seed through uid-keyed refs (index-keyed list, see above).
+  dnsEditorVals(s) {
+    const q = (s.ddQ || '').trim().toUpperCase();
+    const seq = s.dnsEditSeq || 0;
+    const seedKey = (key, val) => el => { if (el && el._dnsKey !== key) { el._dnsKey = key; el.value = val == null ? '' : val; } };
+    const rows = (s.dnsRecs || []).map(r => {
+      const isNew = !!r.isNew;
+      const editing = isNew || s.dnsEdit === r.uid;
+      const base = { ...r, bg: this.DNS_TYPE_BG[r.type] || 'var(--panel-2)',
+        isNew, notNew: !isNew, editing, notEditing: !editing,
+        deco: r.deleted ? 'line-through' : 'none',
+        fg: r.deleted ? 'var(--bad)' : 'var(--ink)',
+        vfg: r.deleted ? 'var(--bad)' : 'var(--ink-dim)',
+        rowBg: r.deleted ? 'var(--panel-2)' : 'transparent',
+        delLabel: r.deleted ? 'Undo' : 'Delete',
+        startEdit: () => { if (r.deleted) return;
+          this.setState(st => ({ dnsEdit: r.uid, dnsEditSeq: (st.dnsEditSeq || 0) + 1, dnsEN: r.name, dnsEV: r.value, dnsETtl: r.ttl, dnsESubs: this.dnsSubsFor(r) })); },
+        del: e => { e.stopPropagation(); this.dnsPatchRow(r.uid, x => ({ deleted: !x.deleted })); } };
+      if (!editing) return base;
+      if (isNew) {
+        const single = this.DNS_SINGLE_TYPES.includes(r.type);
+        const update = fn => this.dnsPatchRow(r.uid, x => ({ subs: fn(x.subs || []) }));
+        return { ...base, isSingle: single, isMulti: !single,
+          refName: seedKey(r.uid + ':n', r.name), onName: e => this.dnsPatchRow(r.uid, { name: e.target.value }),
+          refValue: seedKey(r.uid + ':v', r.value), onValue: e => this.dnsPatchRow(r.uid, { value: e.target.value }),
+          refTtl: seedKey(r.uid + ':t', r.ttl), onTtl: e => this.dnsPatchRow(r.uid, { ttl: e.target.value }),
+          subRows: single ? [] : this.dnsSubRowVals(r.subs, update),
+          addSub: () => update(l => [...l, this.dnsNewSub(r.type)]),
+          // Per-row type picker: a fixed overlay anchored to the chip
+          // (ddToggleAt), so the records card's overflow clip cannot cut it.
+          ddOpen: s.ddOpen === 'dnsT:' + r.uid,
+          ddToggle: e => this.ddToggleAt('dnsT:' + r.uid, e),
+          ddOpts: this.DNS_TYPES.filter(t => !q || t.includes(q)).map(t => ({ label: t,
+            mark: t === r.type ? '✓' : '', bg: t === r.type ? 'var(--brand-soft)' : 'transparent',
+            pick: () => {
+              if (t !== r.type) this.dnsPatchRow(r.uid, { type: t, value: '', subs: this.DNS_SINGLE_TYPES.includes(t) ? null : [this.dnsNewSub(t)] });
+              this.setState({ ddOpen: '', ddQ: '' }); } })),
+          remove: () => this.setState(st => ({ dnsRecs: (st.dnsRecs || []).filter(x => x.uid !== r.uid), ddOpen: '' })) };
+      }
+      const k = r.uid + ':' + seq;
+      const update = fn => this.setState(st => ({ dnsESubs: fn(st.dnsESubs || []) }));
+      return { ...base, isSingle: !s.dnsESubs, isMulti: !!s.dnsESubs,
+        refName: seedKey(k + ':n', s.dnsEN), onName: e => this.setState({ dnsEN: e.target.value }),
+        refValue: seedKey(k + ':v', s.dnsEV), onValue: e => this.setState({ dnsEV: e.target.value }),
+        refTtl: seedKey(k + ':t', s.dnsETtl), onTtl: e => this.setState({ dnsETtl: e.target.value }),
+        subRows: this.dnsSubRowVals(s.dnsESubs, update),
+        addSub: () => update(l => [...l, this.dnsNewSub(r.type)]) };
+    });
+    return {
+      dnsRows: rows,
+      dnsDirty: !!s.dnsDirty || rows.some(r => r.isNew || r.edited || r.deleted),
+      dnsEditDone: () => this.setState(st => {
+        const subs = st.dnsESubs ? this.dnsCleanSubs(st.dnsESubs) : null;
+        return { dnsRecs: st.dnsRecs.map(x => x.uid !== st.dnsEdit ? x
+          : (subs && subs.length)
+            ? { ...x, name: st.dnsEN.trim() || '@', subs, value: this.dnsSubsToText(x.type, subs), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }
+            : { ...x, name: st.dnsEN.trim() || '@', ...(st.dnsESubs ? {} : { value: st.dnsEV.trim() || x.value }), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }),
+          dnsEdit: 0, dnsESubs: null, dnsDirty: true };
+      }),
+      dnsEditCancel: () => this.setState({ dnsEdit: 0, dnsESubs: null }),
+      addRec: () => {
+        this._nuid = (this._nuid || 0) + 1;
+        const row = { uid: 'n' + Date.now() + '-' + this._nuid, isNew: true, type: 'A', name: '', value: '', subs: [this.dnsNewSub('A')], ttl: '3600' };
+        this.setState(st => ({ dnsRecs: [...(st.dnsRecs || []), row] }));
+      }
+    };
+  },
+
   // Legacy groupDNS() port. Constellix keeps ONE record per name+type and
   // stacks the values inside it, so a second TXT "@" (or A / MX / …) row must
   // fold into the existing row rather than POST as a new record — the API
@@ -218,27 +340,40 @@ Object.assign(Component.prototype, {
     const dom = this._domain;
     if (!dom || dom.saving) return;
     dom.saving = true;
-    // Fold duplicate name+type rows before building calls (zone import and
-    // edit-renames can create them; the add bar already merges on entry).
-    const s = this.dnsGroupRecs(this.state.dnsRecs, this.state.dnsDel);
-    this.setState({ dnsRecs: s.recs, dnsDel: s.del });
-    const calls = [];
-    s.recs.forEach(r => {
-      const body = { type: r.type, name: r.name === '@' ? '' : r.name,
-        value: this.dnsNormalizeValue(r.type, (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
-          ? this.dnsSubsForApi(r.type, r.subs)
-          : this.dnsValueForApi(r.type, r.value)), ttl: parseInt(r.ttl, 10) || 3600 };
-      if (!r.recId) calls.push(this.api('/dns/' + dom.domainId + '/records', { method: 'POST', body }));
-      else if (r.edited) calls.push(this.api('/dns/' + dom.domainId + '/records/' + r.recId, { method: 'PUT', body }));
-    });
-    s.del.forEach(id => calls.push(this.api('/dns/' + dom.domainId + '/records/' + id, { method: 'DELETE' })));
-    Promise.allSettled(calls).then(rs => {
-      if (this._domain !== dom) return;
-      dom.saving = false;
-      const failed = rs.filter(x => x.status === 'rejected' || (x.value && x.value.code && x.value.data && x.value.data.status >= 400)).length;
-      dom.dnsErr = failed ? failed + ' record change' + (failed === 1 ? '' : 's') + ' failed — zone reloaded.' : '';
-      this.loadDnsZone();
-    });
+    const all = this.state.dnsRecs || [];
+    // Rows struck through with Delete become DELETE calls; a new row carries
+    // its own sub-values (cleaned here), and a new row left blank is dropped.
+    const del = [...(this.state.dnsDel || []), ...all.filter(r => r.deleted && r.recId).map(r => r.recId)];
+    const live = all.filter(r => !r.deleted).map(r => {
+      if (!r.isNew) return r;
+      const subs = r.subs ? this.dnsCleanSubs(r.subs) : null;
+      return { ...r, name: String(r.name || '').trim() || '@', ttl: String(r.ttl || '').trim() || '3600', subs,
+        value: subs ? this.dnsSubsToText(r.type, subs) : String(r.value || '').trim() };
+    }).filter(r => !r.isNew || !this.dnsRowIsEmpty(r));
+    // Fold duplicate name+type rows before building calls (zone import,
+    // edit-renames and several new rows for one name can create them).
+    const s = this.dnsGroupRecs(live, del);
+    this.setState({ dnsRecs: s.recs, dnsDel: s.del, dnsEdit: 0, dnsESubs: null });
+    const bodyFor = r => ({ type: r.type, name: r.name === '@' ? '' : r.name,
+      value: this.dnsNormalizeValue(r.type, (r.subs && !this.DNS_SINGLE_TYPES.includes(r.type))
+        ? this.dnsSubsForApi(r.type, r.subs)
+        : this.dnsValueForApi(r.type, r.value)), ttl: parseInt(r.ttl, 10) || 3600 });
+    const writes = () => Promise.allSettled(s.recs.map(r => {
+      if (!r.recId) return this.api('/dns/' + dom.domainId + '/records', { method: 'POST', body: bodyFor(r) });
+      if (r.edited) return this.api('/dns/' + dom.domainId + '/records/' + r.recId, { method: 'PUT', body: bodyFor(r) });
+      return null;
+    }).filter(Boolean));
+    // Deletes land first so a name+type re-added in the same save does not
+    // collide with the record it replaces (Constellix keeps one per name+type).
+    Promise.allSettled(s.del.map(id => this.api('/dns/' + dom.domainId + '/records/' + id, { method: 'DELETE' })))
+      .then(dr => writes().then(wr => [...dr, ...wr]))
+      .then(rs => {
+        if (this._domain !== dom) return;
+        dom.saving = false;
+        const failed = rs.filter(x => x.status === 'rejected' || (x.value && x.value.code && x.value.data && x.value.data.status >= 400)).length;
+        dom.dnsErr = failed ? failed + ' record change' + (failed === 1 ? '' : 's') + ' failed — zone reloaded.' : '';
+        this.loadDnsZone();
+      });
   },
 
   activateDnsZone() {
@@ -644,7 +779,6 @@ Object.assign(Component.prototype, {
     const info = dom.info || {};
     const provider = (info.provider && !info.provider.errors) ? info.provider : null;
     const details = info.details || {};
-    const typeBg = { A: 'var(--brand-soft)', AAAA: 'var(--brand-soft)', MX: 'var(--warn-soft)', TXT: 'var(--ok-soft)', SPF: 'var(--ok-soft)' };
     const dnsNote = dom.dnsLoading ? 'Loading DNS records…'
       : dom.saving ? 'Saving record changes…'
       : dom.noZone ? 'No DNS zone is active for this domain.'
@@ -655,13 +789,6 @@ Object.assign(Component.prototype, {
       go: () => { this.setState({ domTab: id });
         if (id === 'forwarding') this.loadForwards();
         else if (id === 'sending') this.loadMailgun(); } }));
-    const dnsRows = (s.dnsRecs || []).map(r => ({ ...r, bg: typeBg[r.type] || 'var(--panel-2)',
-      editing: s.dnsEdit === r.uid, notEditing: s.dnsEdit !== r.uid,
-      startEdit: () => this.setState({ dnsEdit: r.uid, dnsEN: r.name, dnsEV: r.value, dnsETtl: r.ttl, dnsESubs: this.dnsSubsFor(r) }),
-      del: (e) => { e.stopPropagation(); this.setState(st => ({
-        dnsRecs: st.dnsRecs.filter(x => x.uid !== r.uid),
-        dnsDel: r.recId ? [...(st.dnsDel || []), r.recId] : (st.dnsDel || []),
-        dnsDirty: true })); } }));
     const owner = (provider && provider.contacts && (provider.contacts.owner || provider.contacts.admin)) || {};
     const ct = {
       Name: owner.name || [owner.firstName, owner.lastName].filter(Boolean).join(' ') || '—',
@@ -797,7 +924,6 @@ Object.assign(Component.prototype, {
       closeDma: () => this.setState({ dmaOpen: false }),
       dmaQ: s.dmaQ || '', onDmaQ: e => this.setState({ dmaQ: e.target.value }),
       dmaRows, dmaHasRows: dmaRows.length > 0, dmaEmpty: !!s.dmaOpen && dmaRows.length === 0,
-      dnsRows,
       dnsNotice: !!dnsNote, dnsNoticeText: dnsNote,
       // Loading affordance: spinner in the notice bar + shimmer skeleton rows
       // in the (otherwise empty) records card while the zone fetch runs.
@@ -809,50 +935,8 @@ Object.assign(Component.prototype, {
       // Operator zone management — create is the existing per-tab Activate
       // button; this card adds the teardown side for all three zone types.
       ...this.zoneAdminVals(s, dom, d, details, fwdActive),
-      dnsEditDone: () => this.setState(st => {
-        const subs = st.dnsESubs ? this.dnsCleanSubs(st.dnsESubs) : null;
-        return { dnsRecs: st.dnsRecs.map(x => x.uid !== st.dnsEdit ? x
-          : (subs && subs.length)
-            ? { ...x, name: st.dnsEN.trim() || '@', subs, value: this.dnsSubsToText(x.type, subs), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }
-            : { ...x, name: st.dnsEN.trim() || '@', ...(st.dnsESubs ? {} : { value: st.dnsEV.trim() || x.value }), ttl: st.dnsETtl.trim() || '3600', edited: !!x.recId }),
-          dnsEdit: 0, dnsESubs: null, dnsDirty: true };
-      }),
-      // Sub-value editor for the row being edited (MX pairs, SRV quads,
-      // round-robin value lists). Inputs seed via suid-keyed refs — the DC
-      // runtime binds value like defaultValue, and removing a middle row
-      // would otherwise leave stale text in reused DOM nodes.
-      dnsEIsMulti: !!s.dnsESubs,
-      dnsEIsSingle: !s.dnsESubs,
-      dnsESubRows: (s.dnsESubs || []).map((sub, i) => {
-        const set = (k, v) => this.setState(st => ({ dnsESubs: (st.dnsESubs || []).map((x, j) => j === i ? { ...x, [k]: v } : x) }));
-        const seed = val => el => { if (el && el._suid !== sub.suid) { el._suid = sub.suid; el.value = val == null ? '' : val; } };
-        return {
-          isMx: 'server' in sub, isSrv: 'host' in sub, isVal: 'value' in sub,
-          refPriority: seed(sub.priority), onPriority: e => set('priority', e.target.value),
-          refWeight: seed(sub.weight), onWeight: e => set('weight', e.target.value),
-          refPort: seed(sub.port), onPort: e => set('port', e.target.value),
-          refServer: seed(sub.server), onServer: e => set('server', e.target.value),
-          refHost: seed(sub.host), onHost: e => set('host', e.target.value),
-          refValue: seed(sub.value), onValue: e => set('value', e.target.value),
-          canRemove: (s.dnsESubs || []).length > 1,
-          remove: () => this.setState(st => ({ dnsESubs: (st.dnsESubs || []).filter((_, j) => j !== i) }))
-        };
-      }),
-      dnsEAddSub: () => this.setState(st => {
-        const rec = (st.dnsRecs || []).find(x => x.uid === st.dnsEdit) || {};
-        const blank = rec.type === 'MX' ? { priority: '10', server: '' }
-          : rec.type === 'SRV' ? { priority: '0', weight: '0', port: '0', host: '' } : { value: '' };
-        this._suid = (this._suid || 0) + 1;
-        return { dnsESubs: [...(st.dnsESubs || []), { ...blank, suid: 's' + this._suid }] };
-      }),
-      // Add bar: a value for a name+type that already has a row lands inside
-      // that row (Constellix one-record-per-name+type; see dnsGroupRecs).
-      addRec: () => { if (!this.state.dnsV.trim()) return;
-        this.setState(st => {
-          const row = { uid: 'n' + Date.now(), type: st.dnsT, name: st.dnsN.trim() || '@', value: st.dnsV.trim(), ttl: '3600' };
-          const grouped = this.dnsGroupRecs([...(st.dnsRecs || []), row], st.dnsDel);
-          return { dnsRecs: grouped.recs, dnsDel: grouped.del, dnsDirty: true, dnsN: '', dnsV: '' };
-        }); },
+      // Row editors, delete toggles, add-record: shared with the demo shell.
+      ...this.dnsEditorVals(s),
       saveDns: () => this.saveDnsReal(),
       discardDns: () => this.loadDnsZone(),
       zoneReplace: () => this.setState(st => ({
