@@ -58,13 +58,175 @@ Object.assign(Component.prototype, {
     this.setState({ dockOpen: true, termSel: ids });
   },
 
+  // ── Coverage map (Security → Coverage) ─────────────────────────────────
+  // GET /security-coverage/map?type=plugin|theme → {summary, rows[]} with one
+  // positional row per slug (see captaincore_security_coverage_map_func for the
+  // layout). Rendered outside React: the DC runtime has no innerHTML binding,
+  // and ~6k cells with a hover tooltip re-rendering through setState would
+  // crawl, so the board's ref builds the grid once per payload and a delegated
+  // listener drives the tooltip + click. Admin projection (operators only).
+  COV_TIERS: [
+    ['clean',     'clean',     'var(--ok)',                                    'audited, nothing found'],
+    ['low',       'low',       'color-mix(in srgb, var(--ok) 55%, var(--panel-2))', 'low-severity findings'],
+    ['medium',    'medium',    'var(--warn)',                                  'medium-severity findings'],
+    ['high',      'high',      'color-mix(in srgb, var(--warn) 45%, var(--bad))',   'high-severity findings'],
+    ['critical',  'critical',  'var(--bad)',                                   'critical findings or malware'],
+    ['unaudited', 'unaudited', 'var(--panel-2)',                               'no audited build on the fleet']
+  ],
+  COV_COL: { rank: 0, slug: 1, name: 2, sites: 3, active: 4, status: 5, findings: 6, auditedBuilds: 7, builds: 8,
+    hash: 9, version: 10, malware: 11, auditedSites: 12, versions: 13, versionCount: 14, primarySites: 15 },
+
+  loadCoverageMap(type, force) {
+    const t = type === 'theme' ? 'theme' : 'plugin';
+    this._cm = this._cm || {};
+    if (this._cm[t + ':loading']) return;
+    if (this._cm[t] && !force) return;
+    this._cm[t + ':loading'] = true;
+    this.setState({});
+    this.api('/security-coverage/map?type=' + t + (force ? '&refresh=1' : ''))
+      .then(res => {
+        this._cm[t + ':loading'] = false;
+        this._cm[t] = (res && Array.isArray(res.rows)) ? res : { rows: [], summary: null, err: (res && res.message) || 'Could not load the coverage map.' };
+        this.setState({});
+      })
+      .catch(() => { this._cm[t + ':loading'] = false;
+        this._cm[t] = { rows: [], summary: null, err: 'Could not load the coverage map.' }; this.setState({}); });
+  },
+
+  // Click on a cell: open the shared findings dialog for the slug's primary
+  // build (its worst audited hash, or the most-installed hash when unaudited).
+  openFleetFindings(row, type) {
+    const C = this.COV_COL, hash = row[C.hash];
+    const n = v => Number(v || 0).toLocaleString();
+    const bits = ['Installed on ' + n(row[C.sites]) + ' site' + (row[C.sites] === 1 ? '' : 's')
+      + (row[C.active] !== row[C.sites] ? ' (' + n(row[C.active]) + ' active)' : '')];
+    if (row[C.builds]) bits.push(row[C.auditedBuilds] + ' of ' + row[C.builds] + ' build' + (row[C.builds] === 1 ? '' : 's') + ' audited');
+    if (row[C.status] !== 'unaudited' && row[C.builds] > 1)
+      bits.push('showing the worst build, on ' + n(row[C.primarySites]) + ' site' + (row[C.primarySites] === 1 ? '' : 's'));
+    const seed = { display_name: row[C.name], slug: row[C.slug], version: row[C.version], status: row[C.status],
+      malware: !!row[C.malware], hash, component_type: type, findings: null };
+    if (!hash) {
+      // No content hash on the fleet yet (a sync predating hashes): nothing to look up.
+      this.setState({ rgHash: 'nohash:' + row[C.slug], rgLoading: false, rgOpenIdx: -1, rgDetail: seed,
+        rgFleet: { meta: bits.join(' · ') + ' · no content hash synced yet' } });
+      return;
+    }
+    this.setState({ rgHash: hash, rgLoading: true, rgOpenIdx: -1, rgDetail: seed, rgFleet: { meta: bits.join(' · ') } });
+    this.api('/security-coverage/hash/' + hash)
+      .then(res => { if (this.state.rgHash !== hash) return;
+        this.setState({ rgDetail: (res && res.hash && res.status !== 'unaudited') ? res : seed, rgLoading: false }); })
+      .catch(() => { if (this.state.rgHash === hash) this.setState({ rgLoading: false }); });
+  },
+
+  covMapBuild(el, rows, type) {
+    const C = this.COV_COL;
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const html = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      html.push('<i class="cc-cov-cell ' + r[C.status] + (r[C.malware] ? ' malware' : '') + '" data-i="' + i + '" role="button" tabindex="0" aria-label="'
+        + esc(r[C.name] + ', rank ' + r[C.rank] + ', ' + (r[C.status] === 'unaudited' ? 'not audited' : r[C.status])) + '"></i>');
+    }
+    el.innerHTML = '<div class="cc-cov-grid">' + html.join('') + '</div><div class="cc-cov-pop" hidden></div>';
+    el._cmRows = rows; el._cmType = type;
+    if (el._cmBound) return;
+    el._cmBound = true;
+    const grid = () => el.firstChild, pop = () => el.lastChild;
+    let current = null;
+    const n = v => Number(v || 0).toLocaleString();
+    const show = cell => {
+      const r = el._cmRows[+cell.getAttribute('data-i')];
+      if (!r) return;
+      const st = r[C.status], audited = st !== 'unaudited', p = pop();
+      const vers = (r[C.versions] || []).slice(0, 3).map(v => 'v' + esc(v)).join(', ')
+        + (r[C.versionCount] > 3 ? ' +' + (r[C.versionCount] - 3) + ' more' : '');
+      const share = r[C.sites] ? Math.round(r[C.auditedSites] * 100 / r[C.sites]) : 0;
+      let foot;
+      if (!audited) foot = r[C.builds] ? 'none of ' + r[C.builds] + ' build' + (r[C.builds] === 1 ? '' : 's') + ' on the fleet audited yet' : 'no content hash synced yet';
+      else {
+        foot = r[C.auditedBuilds] + ' / ' + r[C.builds] + ' builds audited · ' + share + '% of installs';
+        if (r[C.builds] > 1 && r[C.primarySites] < r[C.sites]) foot += '<br>worst build v' + esc(r[C.version]) + ' on ' + n(r[C.primarySites]) + ' site' + (r[C.primarySites] === 1 ? '' : 's');
+      }
+      p.className = 'cc-cov-pop ' + st;
+      p.innerHTML =
+        '<div class="ph"><i></i><b>' + esc(r[C.name]) + '</b><span class="r">#' + r[C.rank] + '</span></div>' +
+        '<div class="slug">' + esc(r[C.slug]) + '</div>' +
+        '<div class="row"><span class="grade">' + (audited ? (r[C.malware] ? 'malware' : st) : 'unaudited') + '</span>' +
+          '<span class="meta">' + n(r[C.sites]) + ' sites' + (vers ? ' <span>' + vers + '</span>' : '') + '</span></div>' +
+        '<div class="bar"><div style="width:' + share + '%"></div></div>' +
+        '<div class="foot">' + (audited && r[C.findings] ? r[C.findings] + ' finding' + (r[C.findings] === 1 ? '' : 's') + ' · ' : '') + foot + '</div>';
+      p.hidden = false;
+      const b = el.getBoundingClientRect(), c = cell.getBoundingClientRect();
+      let left = c.left - b.left + c.width + 10, top = c.top - b.top + c.height + 10;
+      if (left + 300 > b.width) left = Math.max(0, c.left - b.left - 310);
+      if (top + p.offsetHeight > b.height) top = Math.max(0, c.top - b.top - p.offsetHeight - 10);
+      p.style.left = left + 'px'; p.style.top = top + 'px';
+      if (current && current !== cell) current.classList.remove('is-on');
+      current = cell; cell.classList.add('is-on');
+    };
+    const hide = () => { pop().hidden = true; if (current) { current.classList.remove('is-on'); current = null; } };
+    el.addEventListener('mouseover', e => { const c = e.target.closest('.cc-cov-cell'); if (c) show(c); });
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focusin', e => { const c = e.target.closest('.cc-cov-cell'); if (c) show(c); });
+    el.addEventListener('focusout', e => { if (!el.contains(e.relatedTarget)) hide(); });
+    const open = c => { const r = el._cmRows[+c.getAttribute('data-i')]; if (r) this.openFleetFindings(r, el._cmType); };
+    el.addEventListener('click', e => { const c = e.target.closest('.cc-cov-cell'); if (c) open(c); });
+    el.addEventListener('keydown', e => { const c = e.target.closest('.cc-cov-cell');
+      if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(c); } });
+  },
+
+  covMapVals(s) {
+    const type = s.cmType === 'theme' ? 'theme' : 'plugin';
+    const cm = this._cm || {};
+    if (s.route === 'security' && s.secTab === 'coverage' && !cm[type] && !cm[type + ':loading']) setTimeout(() => this.loadCoverageMap(type), 0);
+    const bundle = cm[type];
+    const loading = !!cm[type + ':loading'];
+    const sum = bundle && bundle.summary;
+    const rows = bundle ? bundle.rows : [];
+    const off = s.cmOff || {};
+    const n = v => Number(v || 0).toLocaleString();
+    const noun = type === 'theme' ? 'theme' : 'plugin';
+    const cmTiles = sum ? [
+      { k: 'Install-weighted', v: (sum.weighted_pct || 0) + '%', sub: 'installs on an audited build', fg: sum.weighted_pct >= 80 ? 'var(--ink)' : 'var(--warn)' },
+      { k: 'Audited', v: n(sum.audited), sub: (sum.total ? Math.round(sum.audited * 100 / sum.total) : 0) + '% of ' + n(sum.total) + ' ' + noun + 's', fg: 'var(--ink)' },
+      { k: 'Gap', v: n(sum.unaudited), sub: 'no audited build yet', fg: sum.unaudited ? 'var(--warn)' : 'var(--ink)' },
+      { k: 'Generated', v: bundle.generated ? String(bundle.generated).slice(0, 10) : '—', sub: bundle.cached ? 'cached up to 10 minutes' : 'fresh', fg: 'var(--ink)' }
+    ] : [];
+    const cmLegend = sum ? this.COV_TIERS.filter(([k]) => sum.tiers && sum.tiers[k]).map(([k, label, sw, blurb]) => ({
+      label, n: n(sum.tiers[k]), sw, title: blurb,
+      op: off[k] ? '.45' : '1',
+      go: () => this.setState(st => ({ cmOff: { ...(st.cmOff || {}), [k]: !(st.cmOff || {})[k] } })) })) : [];
+    const dimClass = Object.keys(off).filter(k => off[k]).map(k => ' dim-' + k).join('');
+    const key = type + '|' + (bundle ? (bundle.generated || '') + '|' + rows.length : '');
+    return {
+      cmTiles, cmLegend,
+      cmTypes: [['plugin', 'Plugins'], ['theme', 'Themes']].map(([id, label]) => ({ label,
+        fg: type === id ? 'var(--ink)' : 'var(--ink-dim)', bg: type === id ? 'var(--panel-2)' : 'transparent',
+        go: () => { this.setState({ cmType: id, cmOff: {} }); this.loadCoverageMap(id); } })),
+      cmTitle: (type === 'theme' ? 'Theme' : 'Plugin') + ' coverage map',
+      cmLead: 'One cell per ' + noun + ' across active production sites, ranked by install count. Color is the worst audited build present on the fleet.',
+      cmLoading: loading && !bundle,
+      cmRefreshing: loading && !!bundle,
+      cmRefresh: () => this.loadCoverageMap(type, true),
+      cmErr: (bundle && bundle.err) || '',
+      cmErrShow: !!(bundle && bundle.err),
+      cmShow: !!bundle && !bundle.err && rows.length > 0,
+      cmEmpty: !!bundle && !bundle.err && rows.length === 0,
+      cmNote: 'Cells run left to right, top to bottom in install order, so the top-left cell is the most installed ' + noun + '. Hover for details; click to open the findings for its worst build. Embargoed findings are included here and never in the customer Registry tab.',
+      cmBoardRef: (el) => { if (!el) return;
+        if (el._cmKey !== key) { el._cmKey = key; this.covMapBuild(el, rows, type); }
+        if (el.firstChild && el.firstChild.className !== 'cc-cov-grid' + dimClass) el.firstChild.className = 'cc-cov-grid' + dimClass; },
+      ...this.regDialogVals(s)
+    };
+  },
+
   realSecurityVals(s) {
     if (s.route === 'security' && !this._sec && !this._secLoading) setTimeout(() => this.loadSecurity(), 0);
     const sec = this._sec;
     const loading = this._secLoading && !sec;
     if (!sec) return { threats: [], secLoading: loading, secEmpty: !loading, secEmptyText: loading ? 'Loading security data…' : '',
       secSkelRows: loading ? Array.from({ length: 4 }, () => ({})) : [],
-      coreFails: [], plugFails: [], covShowActions: false };
+      coreFails: [], plugFails: [], covShowActions: false, ...this.covMapVals(s) };
     const notes = notesFor => notesFor; // unused; notes render from tracking
     const threats = (sec.threats.threats || []).map(t => {
       const id = [t.type, t.slug, t.version].join('|');
@@ -138,6 +300,7 @@ Object.assign(Component.prototype, {
       ckEmptyCore: !coreFails.length, ckEmptyPlug: !plugFails.length,
       covTiles, covBars, covShowActions: false,
       covNote: cov ? ((cov.without_hashes ? ((cov.without_hashes.plugin || 0) + (cov.without_hashes.theme || 0)) + ' components have no content hash yet.' : '')) : '',
+      ...this.covMapVals(s),
       ...this.realCoreRunVals(s)
     };
   },

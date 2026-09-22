@@ -3167,3 +3167,34 @@ Verified via Playwright on a local domain with the forwards routes mocked
 (no Mailgun key locally): Edit opens with the current values, Save sends the
 PUT with the edited alias and split recipients, the row re-renders from the
 reloaded list, Cancel restores the row, no console errors.
+
+### Security → Coverage: fleet coverage map (2026-09-21)
+The Coverage tab gained the WP Registry / WP Manifest style map: one cell per
+plugin (or theme, via a toggle) across active production sites, laid out in
+install order, colored by the worst audited build present on the fleet.
+`GET /security-coverage/map?type=plugin|theme` (manage_options) aggregates every
+production environment's components by slug, resolves each content hash
+against the four registry manifests in the ADMIN projection (embargoed
+findings count here, unlike the customer Registry tab), and returns positional
+rows plus a summary (install-weighted coverage, audited/gap counts, tier
+counts). The result sits in a 10-minute transient; `refresh=1` (the card's
+Refresh link) bypasses it. `GET /security-coverage/hash/{hash}` returns the
+admin-projection findings for a cell's primary build, through
+`SiteAuditCoverage::findings_by_hash( $hash, false )` (new `$public` arg,
+default true, so every existing caller stays public).
+
+The grid is built outside React: ~6k cells with a hover tooltip would crawl
+through setState, so the board's `ref` writes the cells once per payload and a
+delegated listener drives the tooltip, keyboard focus, and click. Clicking a
+cell opens the same findings dialog as the site Registry tab; the dialog
+builder moved out of `computeRegistry` into `regDialogVals(s)` so both routes
+render it, and it gained an optional fleet-context line ("Installed on N sites
+· x of y builds audited · showing the worst build, on N sites") and an
+unaudited-specific empty text. Legend chips toggle tiers dim; the tier colors
+are the Minn tokens (ok / warn / bad and two color-mix steps).
+
+Verified via Playwright as a local administrator: 5,990 plugin cells in 1.9 s
+from the transient (12.7 s cold, mostly the four manifest fetches), tooltip
+text and position, click → dialog with 19 findings for the worst build,
+legend chip dims a tier, Themes toggle loads 1,778 cells, light mode, no
+console errors.

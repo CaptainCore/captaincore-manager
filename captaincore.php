@@ -10706,6 +10706,36 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Security coverage map (admin only) — one cell per plugin/theme slug across
+	// the fleet, ranked by install count, colored by the worst audited build.
+	register_rest_route(
+		'captaincore/v1', '/security-coverage/map', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_coverage_map_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'type'    => [ 'required' => false, 'type' => 'string' ],
+				'refresh' => [ 'required' => false, 'type' => 'string' ],
+			],
+			'show_in_index'       => false,
+		]
+	);
+
+	// Security coverage map detail (admin only) — findings for one content hash,
+	// ADMIN projection (embargoed findings included; operators only).
+	register_rest_route(
+		'captaincore/v1', '/security-coverage/hash/(?P<hash>[a-fA-F0-9]{64})', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_coverage_hash_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Component queue endpoint (admin only) — un-audited component hashes across the fleet
 	register_rest_route(
 		'captaincore/v1', '/component-queue', [
@@ -12795,6 +12825,249 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 			'files'      => [ 'unique_hashes' => $total['file'],      'audited' => $audited['file'] ],
 		],
 	];
+}
+
+/**
+ * REST endpoint: Fleet coverage map — one row per plugin (or theme) slug.
+ *
+ * Every active production environment contributes its installed components.
+ * Rows aggregate by slug: how many sites carry it, which content hashes those
+ * installs resolve to, and what the registry says about each hash. A slug's
+ * cell color is the WORST verdict among its audited builds (malware > critical
+ * > high > medium > low > clean); a slug with no audited build is unaudited.
+ *
+ * Admin projection on purpose: this route is manage_options-gated, so
+ * embargoed findings count toward the verdict here even though the customer
+ * Registry tab hides them.
+ *
+ * Row layout (positional, to keep ~10k rows small on the wire):
+ *   0 rank, 1 slug, 2 name, 3 sites, 4 active sites, 5 status, 6 findings,
+ *   7 audited builds, 8 total builds, 9 primary hash, 10 primary version,
+ *   11 malware (0/1), 12 sites on an audited build, 13 top versions on the
+ *   fleet (most installed first, capped at 6), 14 distinct versions,
+ *   15 sites on the primary hash
+ */
+function captaincore_security_coverage_map_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$type = $request->get_param( 'type' ) === 'theme' ? 'theme' : 'plugin';
+	$key  = "captaincore_security_coverage_map_{$type}";
+	if ( ! $request->get_param( 'refresh' ) ) {
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) ) {
+			$cached['cached'] = true;
+			return $cached;
+		}
+	}
+
+	$env_table   = "{$wpdb->prefix}captaincore_environments";
+	$sites_table = "{$wpdb->prefix}captaincore_sites";
+	$column      = $type === 'theme' ? 'themes' : 'plugins';
+
+	$environments = $wpdb->get_results( "
+		SELECT e.{$column} AS components
+		FROM {$env_table} e
+		JOIN {$sites_table} s ON e.site_id = s.site_id
+		WHERE s.status = 'active'
+		  AND s.provider IS NOT NULL
+		  AND e.environment = 'Production'
+		  AND e.{$column} IS NOT NULL
+	" );
+
+	// slug → aggregate
+	$slugs = [];
+	foreach ( $environments as $env ) {
+		$components = json_decode( $env->components );
+		if ( ! is_array( $components ) ) {
+			continue;
+		}
+		// A site lists a slug once, even if the payload repeats it.
+		$seen = [];
+		foreach ( $components as $c ) {
+			$slug = isset( $c->name ) ? (string) $c->name : '';
+			if ( $slug === '' || isset( $seen[ $slug ] ) ) {
+				continue;
+			}
+			$seen[ $slug ] = true;
+			if ( ! isset( $slugs[ $slug ] ) ) {
+				$slugs[ $slug ] = [
+					'slug'     => $slug,
+					'name'     => '',
+					'sites'    => 0,
+					'active'   => 0,
+					'versions' => [],
+					'hashes'   => [],
+				];
+			}
+			$row = &$slugs[ $slug ];
+			$row['sites']++;
+			$status = isset( $c->status ) ? (string) $c->status : '';
+			if ( $status !== 'inactive' ) {
+				$row['active']++;
+			}
+			$title = isset( $c->title ) && $c->title !== '' ? html_entity_decode( (string) $c->title ) : '';
+			if ( $title !== '' && $row['name'] === '' ) {
+				$row['name'] = $title;
+			}
+			$version = isset( $c->version ) ? (string) $c->version : '';
+			if ( $version !== '' ) {
+				$row['versions'][ $version ] = ( $row['versions'][ $version ] ?? 0 ) + 1;
+			}
+			$hash = isset( $c->hash ) ? strtolower( (string) $c->hash ) : '';
+			if ( $hash !== '' ) {
+				if ( ! isset( $row['hashes'][ $hash ] ) ) {
+					$row['hashes'][ $hash ] = [ 'version' => $version, 'sites' => 0 ];
+				}
+				$row['hashes'][ $hash ]['sites']++;
+			}
+			unset( $row );
+		}
+	}
+
+	// Registry verdict per hash. Union all four manifests: a plugin recorded on
+	// the fleet may be audited as an mu-plugin (or vice versa) on the registry.
+	$manifest = [];
+	if ( ! empty( $slugs ) && CaptainCore\RegistryClient::ready() ) {
+		foreach ( [ 'plugins', 'themes', 'mu-plugins', 'files' ] as $endpoint ) {
+			foreach ( CaptainCore\RegistryClient::manifest( $endpoint, '', false ) as $hash => $entry ) {
+				$hash = strtolower( (string) $hash );
+				if ( ! isset( $manifest[ $hash ] ) ) {
+					$manifest[ $hash ] = (array) $entry;
+				}
+			}
+		}
+	}
+
+	$rank_of = [ 'malware' => 0, 'critical' => 1, 'high' => 2, 'medium' => 3, 'low' => 4, 'clean' => 5 ];
+	$tiers   = [ 'clean' => 0, 'low' => 0, 'medium' => 0, 'high' => 0, 'critical' => 0, 'unaudited' => 0 ];
+	$rows    = [];
+	$installs_total   = 0;
+	$installs_audited = 0;
+	$slugs_audited    = 0;
+	$malware_slugs    = 0;
+
+	foreach ( $slugs as $slug => $row ) {
+		$audited_builds = 0;
+		$audited_sites  = 0;
+		$best           = null; // the worst verdict wins the cell
+		$best_rank      = 99;
+		$best_sites     = -1;
+		$best_hash      = '';
+		foreach ( $row['hashes'] as $hash => $h ) {
+			$entry = $manifest[ $hash ] ?? null;
+			if ( $entry === null ) {
+				continue;
+			}
+			$audited_builds++;
+			$audited_sites += $h['sites'];
+			$status = ! empty( $entry['malware'] ) ? 'malware' : ( $entry['status'] ?? 'clean' );
+			$r      = $rank_of[ $status ] ?? 5;
+			if ( $r < $best_rank || ( $r === $best_rank && $h['sites'] > $best_sites ) ) {
+				$best_rank  = $r;
+				$best_sites = $h['sites'];
+				$best       = $entry;
+				$best_hash  = $hash;
+			}
+		}
+		// Unaudited slug: still hand the client its most-installed hash so the
+		// dialog can deep-link the build on WP Registry.
+		if ( $best_hash === '' ) {
+			$top = -1;
+			foreach ( $row['hashes'] as $hash => $h ) {
+				if ( $h['sites'] > $top ) {
+					$top       = $h['sites'];
+					$best_hash = $hash;
+				}
+			}
+		}
+
+		$malware = $best !== null && ! empty( $best['malware'] );
+		$status  = $best === null ? 'unaudited' : ( $malware ? 'critical' : ( $best['status'] ?? 'clean' ) );
+		if ( ! isset( $tiers[ $status ] ) ) {
+			$status = 'clean';
+		}
+		$tiers[ $status ]++;
+		if ( $best !== null ) {
+			$slugs_audited++;
+		}
+		if ( $malware ) {
+			$malware_slugs++;
+		}
+		$installs_total   += $row['sites'];
+		$installs_audited += $audited_sites;
+
+		arsort( $row['versions'] );
+		$rows[] = [
+			0,
+			$slug,
+			$row['name'] !== '' ? $row['name'] : $slug,
+			$row['sites'],
+			$row['active'],
+			$status,
+			$best !== null ? (int) ( $best['findings'] ?? 0 ) : 0,
+			$audited_builds,
+			count( $row['hashes'] ),
+			$best_hash,
+			$best_hash !== '' ? ( $row['hashes'][ $best_hash ]['version'] ?? '' ) : '',
+			$malware ? 1 : 0,
+			$audited_sites,
+			array_slice( array_keys( $row['versions'] ), 0, 6 ),
+			count( $row['versions'] ),
+			$best_hash !== '' ? (int) $row['hashes'][ $best_hash ]['sites'] : 0,
+		];
+	}
+
+	usort( $rows, function ( $a, $b ) {
+		if ( $a[3] !== $b[3] ) {
+			return $b[3] - $a[3];
+		}
+		return strcmp( $a[1], $b[1] );
+	} );
+	foreach ( $rows as $i => &$r ) {
+		$r[0] = $i + 1;
+	}
+	unset( $r );
+
+	$result = [
+		'type'      => $type,
+		'generated' => gmdate( 'c' ),
+		'cached'    => false,
+		'registry'  => CaptainCore\RegistryClient::ready(),
+		'summary'   => [
+			'total'            => count( $rows ),
+			'audited'          => $slugs_audited,
+			'unaudited'        => count( $rows ) - $slugs_audited,
+			'malware'          => $malware_slugs,
+			'installs_total'   => $installs_total,
+			'installs_audited' => $installs_audited,
+			'weighted_pct'     => $installs_total > 0 ? round( $installs_audited * 100 / $installs_total, 1 ) : 0,
+			'sites'            => count( $environments ),
+			'tiers'            => $tiers,
+		],
+		'rows'      => $rows,
+	];
+	set_transient( $key, $result, 10 * MINUTE_IN_SECONDS );
+	return $result;
+}
+
+/**
+ * REST endpoint: Findings for one content hash, for the fleet coverage map.
+ *
+ * Admin projection — embargoed findings are included, so this must stay
+ * behind manage_options. The customer-facing per-site route
+ * (captaincore_site_audit_coverage_findings_func) is the public twin.
+ */
+function captaincore_security_coverage_hash_func( WP_REST_Request $request ) {
+	$hash   = strtolower( (string) $request['hash'] );
+	$detail = CaptainCore\SiteAuditCoverage::findings_by_hash( $hash, false );
+	if ( ! $detail ) {
+		return [
+			'hash'     => $hash,
+			'status'   => 'unaudited',
+			'findings' => [],
+		];
+	}
+	return $detail;
 }
 
 /**

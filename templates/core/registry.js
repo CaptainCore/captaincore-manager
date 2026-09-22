@@ -80,6 +80,64 @@ Object.assign(Component.prototype, {
       .catch(() => { if (this.state.rgHash === row.hash) this.setState({ rgLoading: false }); });
   },
 
+  // Findings dialog vals. Shared by the site Registry tab and the fleet
+  // coverage map on Security → Coverage; whichever opened it seeded rgHash +
+  // rgDetail, and the markup at the root of app.html renders from these.
+  regDialogVals(s) {
+    const d = s.rgDetail;
+    let dlg = { rgOpen: false };
+    if (s.rgHash && d) {
+      const [bg, fg] = this.regTone(d.status, d.malware);
+      const findings = Array.isArray(d.findings) ? d.findings : [];
+      dlg = {
+        rgOpen: true,
+        rgTitle: d.display_name || d.slug || '',
+        rgVersion: d.version ? 'v' + d.version : '',
+        rgStatus: d.malware ? 'malware' : (d.status || ''),
+        rgStatusBg: bg, rgStatusFg: fg,
+        rgSub: [d.component_type, d.slug].filter(Boolean).join(' · '),
+        rgHashFull: d.hash || '',
+        rgIssue: d.key_issue || '', rgIssueShow: !!d.key_issue,
+        rgIssueBg: (d.malware || d.status === 'critical') ? 'var(--bad-soft)' : 'var(--warn-soft)',
+        rgIssueFg: (d.malware || d.status === 'critical') ? 'var(--bad)' : 'var(--warn)',
+        rgAudit: d.audit ? 'Audited by ' + (d.audit.auditor || 'unknown') + (d.audit.date ? ' on ' + String(d.audit.date).slice(0, 10) : '') : '',
+        rgAuditShow: !!d.audit,
+        // PUBLIC registry, keyed by the content hash — findings.wpregistry.io is
+        // the private origin and 401s for customers. /finding/<hash> is the
+        // worker's public page (embargo-filtered projection, same as this data).
+        rgAuditUrl: d.hash ? 'https://wpregistry.io/finding/' + d.hash : '',
+        rgAuditLinkShow: !!d.hash,
+        // Fleet context (set by the Security → Coverage map, absent on a site tab).
+        rgMeta: s.rgFleet ? s.rgFleet.meta : '',
+        rgMetaShow: !!(s.rgFleet && s.rgFleet.meta),
+        rgEmptyText: d.status === 'unaudited' ? 'This build has not been audited on WP Registry yet.' : 'No findings recorded for this component.',
+        rgLoadingDetail: !!s.rgLoading,
+        rgCount: findings.length ? 'Findings (' + findings.length + ')' : '',
+        rgCountShow: findings.length > 0,
+        // Accordion rows: rgOpenIdx tracks the expanded finding.
+        rgFindings: findings.map((f, i) => {
+          const [fbg, ffg] = this.regTone(f.severity, false);
+          const open = s.rgOpenIdx === i;
+          return { sev: f.severity || '', sevBg: fbg, sevFg: ffg,
+            title: f.title || '(untitled finding)',
+            type: (f.vuln_type || '').replace(/_/g, ' '),
+            arrow: open ? '▾' : '▸', bodyShow: open,
+            desc: f.description || '', descShow: !!f.description,
+            loc: f.location_path ? f.location_path + (f.location_lines ? ':' + f.location_lines : '') : '',
+            locShow: !!f.location_path,
+            cve: f.cve ? f.cve + (f.cvss_score ? ' (CVSS ' + f.cvss_score + ')' : '') : '',
+            cveShow: !!f.cve,
+            code: f.code_snippet || '', codeShow: !!f.code_snippet,
+            rec: f.recommendation || '', recShow: !!f.recommendation,
+            toggle: () => this.setState(st => ({ rgOpenIdx: st.rgOpenIdx === i ? -1 : i })) };
+        }),
+        rgEmpty: !s.rgLoading && findings.length === 0,
+        rgClose: () => this.setState({ rgHash: '', rgDetail: null, rgOpenIdx: -1, rgFleet: null })
+      };
+    }
+    return dlg;
+  },
+
   computeRegistry(real, s) {
     const env = real ? this.currentEnv(real, s) : null;
     const bundle = (real && real.reg && env) ? real.reg[String(env.environment_id)] : undefined;
@@ -175,54 +233,7 @@ Object.assign(Component.prototype, {
     const riskTail = offFlag ? (riskStrong ? ' · ' : '') + offFlag + ' flagged component' + (offFlag === 1 ? '' : 's')
       + ' deactivated' : '';
 
-    // Findings dialog.
-    const d = s.rgDetail;
-    let dlg = { rgOpen: false };
-    if (s.rgHash && d) {
-      const [bg, fg] = this.regTone(d.status, d.malware);
-      const findings = Array.isArray(d.findings) ? d.findings : [];
-      dlg = {
-        rgOpen: true,
-        rgTitle: d.display_name || d.slug || '',
-        rgVersion: d.version ? 'v' + d.version : '',
-        rgStatus: d.malware ? 'malware' : (d.status || ''),
-        rgStatusBg: bg, rgStatusFg: fg,
-        rgSub: [d.component_type, d.slug].filter(Boolean).join(' · '),
-        rgHashFull: d.hash || '',
-        rgIssue: d.key_issue || '', rgIssueShow: !!d.key_issue,
-        rgIssueBg: (d.malware || d.status === 'critical') ? 'var(--bad-soft)' : 'var(--warn-soft)',
-        rgIssueFg: (d.malware || d.status === 'critical') ? 'var(--bad)' : 'var(--warn)',
-        rgAudit: d.audit ? 'Audited by ' + (d.audit.auditor || 'unknown') + (d.audit.date ? ' on ' + String(d.audit.date).slice(0, 10) : '') : '',
-        rgAuditShow: !!d.audit,
-        // PUBLIC registry, keyed by the content hash — findings.wpregistry.io is
-        // the private origin and 401s for customers. /finding/<hash> is the
-        // worker's public page (embargo-filtered projection, same as this data).
-        rgAuditUrl: d.hash ? 'https://wpregistry.io/finding/' + d.hash : '',
-        rgAuditLinkShow: !!d.hash,
-        rgLoadingDetail: !!s.rgLoading,
-        rgCount: findings.length ? 'Findings (' + findings.length + ')' : '',
-        rgCountShow: findings.length > 0,
-        // Accordion rows: rgOpenIdx tracks the expanded finding.
-        rgFindings: findings.map((f, i) => {
-          const [fbg, ffg] = this.regTone(f.severity, false);
-          const open = s.rgOpenIdx === i;
-          return { sev: f.severity || '', sevBg: fbg, sevFg: ffg,
-            title: f.title || '(untitled finding)',
-            type: (f.vuln_type || '').replace(/_/g, ' '),
-            arrow: open ? '▾' : '▸', bodyShow: open,
-            desc: f.description || '', descShow: !!f.description,
-            loc: f.location_path ? f.location_path + (f.location_lines ? ':' + f.location_lines : '') : '',
-            locShow: !!f.location_path,
-            cve: f.cve ? f.cve + (f.cvss_score ? ' (CVSS ' + f.cvss_score + ')' : '') : '',
-            cveShow: !!f.cve,
-            code: f.code_snippet || '', codeShow: !!f.code_snippet,
-            rec: f.recommendation || '', recShow: !!f.recommendation,
-            toggle: () => this.setState(st => ({ rgOpenIdx: st.rgOpenIdx === i ? -1 : i })) };
-        }),
-        rgEmpty: !s.rgLoading && findings.length === 0,
-        rgClose: () => this.setState({ rgHash: '', rgDetail: null, rgOpenIdx: -1 })
-      };
-    }
+    const dlg = this.regDialogVals(s);
 
     return {
       regLoading: loading,

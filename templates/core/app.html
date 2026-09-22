@@ -95,6 +95,32 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 @keyframes ccspin{to{transform:rotate(360deg)}}
 @keyframes ccshimmer{to{background-position:-200% 0}}
 .cc-skel{display:inline-block;border-radius:6px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:ccshimmer 1.1s linear infinite}
+/* Security → Coverage map: one cell per slug, built outside React (see security.js covMapBuild). */
+.cc-cov-board{position:relative;padding:14px 16px}
+.cc-cov-grid{display:grid;grid-template-columns:repeat(auto-fill,14px);gap:3px;justify-content:space-between}
+.cc-cov-cell{display:block;width:14px;height:14px;border-radius:3px;background:var(--cov,var(--panel-2));box-shadow:inset 0 0 0 1px rgb(127 127 127/.18);cursor:pointer;transition:transform .08s ease,opacity .15s ease;outline:none}
+.cc-cov-cell:hover,.cc-cov-cell:focus-visible,.cc-cov-cell.is-on{transform:scale(1.35);outline:2px solid var(--ink);outline-offset:1px;position:relative;z-index:2}
+.cc-cov-cell.clean,.cc-cov-pop.clean{--cov:var(--ok)}
+.cc-cov-cell.low,.cc-cov-pop.low{--cov:color-mix(in srgb,var(--ok) 55%,var(--panel-2))}
+.cc-cov-cell.medium,.cc-cov-pop.medium{--cov:var(--warn)}
+.cc-cov-cell.high,.cc-cov-pop.high{--cov:color-mix(in srgb,var(--warn) 45%,var(--bad))}
+.cc-cov-cell.critical,.cc-cov-pop.critical{--cov:var(--bad)}
+.cc-cov-cell.unaudited,.cc-cov-pop.unaudited{--cov:var(--panel-2)}
+.cc-cov-cell.malware{box-shadow:inset 0 0 0 2px var(--paper),inset 0 0 0 3px var(--bad)}
+.cc-cov-grid.dim-clean .cc-cov-cell.clean,.cc-cov-grid.dim-low .cc-cov-cell.low,.cc-cov-grid.dim-medium .cc-cov-cell.medium,.cc-cov-grid.dim-high .cc-cov-cell.high,.cc-cov-grid.dim-critical .cc-cov-cell.critical,.cc-cov-grid.dim-unaudited .cc-cov-cell.unaudited{opacity:.12}
+.cc-cov-pop{position:absolute;z-index:5;width:300px;max-width:calc(100% - 32px);padding:12px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);box-shadow:var(--shadow);pointer-events:none}
+.cc-cov-pop .ph{display:flex;align-items:baseline;gap:8px}
+.cc-cov-pop .ph i{flex:none;width:10px;height:10px;border-radius:3px;background:var(--cov,var(--panel-2));position:relative;top:-1px;box-shadow:inset 0 0 0 1px rgb(127 127 127/.18)}
+.cc-cov-pop .ph b{font:600 var(--fs-14)/1.3 var(--sans);flex:1;min-width:0}
+.cc-cov-pop .ph .r{font:400 var(--fs-115) var(--mono);color:var(--ink-dim);white-space:nowrap}
+.cc-cov-pop .slug{font:400 var(--fs-115) var(--mono);color:var(--ink-dim);margin:4px 0 10px;word-break:break-all}
+.cc-cov-pop .row{display:flex;align-items:center;gap:10px;font:400 var(--fs-12) var(--mono);flex-wrap:wrap}
+.cc-cov-pop .grade{display:inline-flex;align-items:center;padding:3px 8px;border-radius:5px;color:var(--ink);background:color-mix(in srgb,var(--cov,var(--panel-2)) 28%,transparent);font:700 var(--fs-105) var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.cc-cov-pop .meta{color:var(--ink)}
+.cc-cov-pop .meta span{color:var(--ink-dim)}
+.cc-cov-pop .bar{height:4px;margin:10px 0 6px;border-radius:2px;background:var(--panel-2);overflow:hidden}
+.cc-cov-pop .bar div{height:100%;background:var(--cov,var(--panel-2));border-radius:2px}
+.cc-cov-pop .foot{font:400 var(--fs-115)/1.5 var(--mono);color:var(--ink-dim)}
 /* Sidebar collapse: the rail animates its width to 0, so its rows keep a fixed
    width and slide out of the clip instead of squishing on the way. */
 .cc-rail>*{min-width:216px}
@@ -2931,6 +2957,54 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="padding:12px 16px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ covNote }}</div>
               </sc-if>
             </div>
+
+            <!-- Coverage map: one cell per plugin/theme slug, WP Registry style. Admin only. -->
+            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                <div style="min-width:0;flex:1">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ cmTitle }}</h2>
+                  <div style="margin-top:2px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ cmLead }}</div>
+                </div>
+                <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:2px">
+                  <sc-for list="{{ cmTypes }}" as="t" hint-placeholder-count="2">
+                    <span onClick="{{ t.go }}" style="padding:4px 11px;border-radius:6px;cursor:pointer;font:500 var(--fs-12) var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ cmRefreshing }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Refreshing…</span>
+                </sc-if>
+                <sc-if value="{{ cmShow }}" hint-placeholder-val="{{ true }}">
+                  <span onClick="{{ cmRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Refresh</span>
+                </sc-if>
+              </div>
+              <sc-if value="{{ cmLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:40px 16px;text-align:center;font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">Matching every installed build against WP Registry… the first load takes a few seconds.</div>
+              </sc-if>
+              <sc-if value="{{ cmErrShow }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:24px 16px;font:400 var(--fs-14) var(--sans);color:var(--bad)">{{ cmErr }}</div>
+              </sc-if>
+              <sc-if value="{{ cmEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:40px 16px;text-align:center;font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">No hashed components on the fleet yet. Run a sync to populate hash data.</div>
+              </sc-if>
+              <sc-if value="{{ cmShow }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--rule)">
+                  <sc-for list="{{ cmTiles }}" as="t" hint-placeholder-count="4">
+                    <div style="flex:1;padding:13px 16px;border-right:1px solid var(--rule)">
+                      <div style="font:500 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div>
+                      <div style="font:600 20px var(--sans);margin-top:2px;color:{{ t.fg }}">{{ t.v }}</div>
+                      <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);margin-top:1px">{{ t.sub }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px 0">
+                  <sc-for list="{{ cmLegend }}" as="l" hint-placeholder-count="6">
+                    <span onClick="{{ l.go }}" title="{{ l.title }}" style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);font:400 var(--fs-12) var(--mono);color:var(--ink);cursor:pointer;user-select:none;opacity:{{ l.op }}" style-hover="border-color:var(--brand)"><i style="width:11px;height:11px;border-radius:3px;background:{{ l.sw }};box-shadow:inset 0 0 0 1px rgb(127 127 127/.25)"></i>{{ l.label }} <strong style="font-weight:600">{{ l.n }}</strong></span>
+                  </sc-for>
+                </div>
+                <div ref="{{ cmBoardRef }}" class="cc-cov-board"></div>
+                <div style="padding:0 16px 14px;font:400 var(--fs-115)/1.55 var(--sans);color:var(--ink-dim);max-width:760px">{{ cmNote }}</div>
+              </sc-if>
+            </div>
           </sc-if>
 
           <sc-if value="{{ secTabCore }}" hint-placeholder-val="{{ false }}">
@@ -3955,6 +4029,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="flex:1;overflow-y:auto;padding:16px 18px">
           <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ rgSub }}</div>
           <div style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim);margin-top:3px;word-break:break-all">{{ rgHashFull }}</div>
+          <sc-if value="{{ rgMetaShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:8px;font:400 var(--fs-125) var(--sans);color:var(--ink)">{{ rgMeta }}</div>
+          </sc-if>
           <sc-if value="{{ rgIssueShow }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:14px;border-radius:9px;background:{{ rgIssueBg }};color:{{ rgIssueFg }};padding:11px 13px;font:500 var(--fs-13)/1.55 var(--sans)">{{ rgIssue }}</div>
           </sc-if>
@@ -4001,7 +4078,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-for>
           <sc-if value="{{ rgEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="padding:16px 0 2px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">No findings recorded for this component.</div>
+            <div style="padding:16px 0 2px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ rgEmptyText }}</div>
           </sc-if>
         </div>
         <div style="flex:none;display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--rule)">

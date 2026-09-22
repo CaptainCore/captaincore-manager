@@ -104,18 +104,19 @@ class SiteAuditCoverage {
 	}
 
 	/**
-	 * Per-hash findings for the customer-facing audit dialog.
+	 * Per-hash findings for the audit dialog.
 	 *
-	 * PUBLIC projection, always. This renders in /account for the site owner, so
-	 * it must not carry findings still under coordinated disclosure — the admin
-	 * projection returns those in full, with titles and detail.
+	 * PUBLIC projection by default. This renders in /account for the site
+	 * owner, so it must not carry findings still under coordinated disclosure —
+	 * the admin projection returns those in full, with titles and detail. Only
+	 * the manage_options-gated fleet coverage map passes `$public = false`.
 	 */
-	public static function findings_by_hash( $hash ) {
+	public static function findings_by_hash( $hash, $public = true ) {
 		if ( ! RegistryClient::ready() ) {
 			return null;
 		}
 
-		$detail = RegistryClient::findings_by_hash( $hash, true );
+		$detail = RegistryClient::findings_by_hash( $hash, (bool) $public );
 		if ( ! is_array( $detail ) || empty( $detail['audited'] ) ) {
 			return null;
 		}
