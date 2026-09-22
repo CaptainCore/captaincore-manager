@@ -3022,6 +3022,7 @@ class Component extends DCLogic {
       { label: 'cascadecoffeeroasters.com', sub: 'Kinsta · Production', kind: 'site', icon: this.ICONS.site, act: 'site', sid: 'cascade' },
       { label: 'thewildflowerpantry.com', sub: 'DNS active · Hover', kind: 'domain', icon: this.ICONS.domains, act: 'domain', did: 'wildflowerd' },
       { label: 'midwestmakersmarket.com', sub: 'DNS active · Spaceship', kind: 'domain', icon: this.ICONS.domains, act: 'domain', did: 'midwestd' },
+      { label: 'Bloom & Branch', sub: 'Pro · 2 sites', kind: 'account', icon: this.ICONS.accounts, act: 'account', aid: 'bloom' },
       { label: 'Open terminal', sub: 'Streamed console on any site', kind: 'command', icon: this.ICONS.terminal, act: 'dock' },
       { label: 'New quicksave on…', sub: 'Git snapshot of a site', kind: 'command', icon: this.ICONS.quicksave, act: 'dock' },
       { label: 'Go to Billing → Invoices', sub: '', kind: 'command', icon: this.ICONS.billing, act: 'billing' },
@@ -3034,9 +3035,18 @@ class Component extends DCLogic {
     const needle = q.trim().toLowerCase();
     if (!needle) return items.slice(0, 8);
     const hits = items.filter(i => (i.label + ' ' + i.sub + ' ' + i.kind).toLowerCase().includes(needle));
-    // Commands rank ahead of sites/domains once a query is typed: a fleet with
-    // eight "help…" domains would otherwise bury "Help & shortcuts" past the cap.
-    return [...hits.filter(i => i.kind === 'command'), ...hits.filter(i => i.kind !== 'command')].slice(0, 8);
+    // Commands rank ahead of sites/domains/accounts once a query is typed: a
+    // fleet with eight "help…" domains would otherwise bury "Help & shortcuts"
+    // past the cap. The rest interleave by kind (site, domain, account, …) so
+    // a name shared by many sites still leaves the matching account and
+    // domain within the eight rows.
+    const byKind = {};
+    hits.filter(i => i.kind !== 'command').forEach(i => (byKind[i.kind] = byKind[i.kind] || []).push(i));
+    const lanes = ['site', 'domain', 'account'].concat(Object.keys(byKind).filter(k => !['site', 'domain', 'account'].includes(k)))
+      .map(k => byKind[k] || []).filter(l => l.length);
+    const mixed = [];
+    for (let i = 0; lanes.some(l => i < l.length); i++) lanes.forEach(l => { if (i < l.length) mixed.push(l[i]); });
+    return [...hits.filter(i => i.kind === 'command'), ...mixed].slice(0, 8);
   }
   runPal(r) {
     if (r.act === 'navtoggle') { this.toggleNav(); this.setState({ paletteOpen: false }); }
@@ -3044,6 +3054,7 @@ class Component extends DCLogic {
     else if (r.act === 'dock') this.setState({ dockOpen: true, paletteOpen: false });
     else if (r.act === 'site') this.openSite(r.sid);
     else if (r.act === 'domain') this.openDomain(r.did);
+    else if (r.act === 'account') this.openAccount(r.aid);
     else if (r.act === 'security-core') this.setState({ route: 'security', secTab: 'core', paletteOpen: false });
     else this.setState({ route: r.act, paletteOpen: false });
   }

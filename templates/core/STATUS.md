@@ -15,6 +15,24 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Accounts in the ⌘K palette (2026-09-22)
+
+The palette's placeholder already promised "sites, domains, accounts" but
+`realPalItems` only listed sites and domains. Every hydrated account now
+appears as a palette row (plan · site count as the subtitle, the Accounts
+icon, kind "account") and Enter or click runs `openAccount`, which already
+closes the palette. The demo shell has one account row so the design view
+matches. Ranking changed with it: commands still lead, but the remaining hits
+interleave by kind (site, domain, account) instead of listing every site
+first, since a name shared by four sites and four domains filled the
+eight-row cap before the account it belonged to could show. Help dialog text
+updated. Verified with Playwright: typing a name that matches sites, domains
+and an account showed site/domain/account alternating, and clicking the
+account row landed on `/account/accounts/<id>` with the palette closed.
+
+The "New rows stay open until you save the zone." hint beside + Add record
+was removed at Austin's request the same day.
+
 ## DNS editor: legacy table semantics, unclipped type picker (2026-09-22)
 
 Three asks against the DNS tab, all restoring what the legacy Vue table did.

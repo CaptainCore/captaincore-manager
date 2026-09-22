@@ -189,7 +189,10 @@ Object.assign(Component.prototype, {
       kind: 'site', icon: this.ICONS.site, act: 'site', sid: x.id }));
     const doms = this.DOMAINS.filter(d => d.dns).map(d => ({ label: d.name, sub: 'DNS active',
       kind: 'domain', icon: this.ICONS.domains, act: 'domain', did: d.id }));
-    return [...sites, ...doms,
+    const accs = this.ACCOUNTS.map(a => ({ label: a.name,
+      sub: [a.plan, a.sites + ' site' + (a.sites === 1 ? '' : 's')].filter(Boolean).join(' \u00b7 '),
+      kind: 'account', icon: this.ICONS.accounts, act: 'account', aid: a.id }));
+    return [...sites, ...doms, ...accs,
       { label: 'Open terminal', sub: 'Streamed console on any site', kind: 'command', icon: this.ICONS.terminal, act: 'dock' },
       { label: (this.state.navHidden ? 'Show' : 'Hide') + ' sidebar', sub: '\u2318.', kind: 'command', icon: 'M3 3h18v18H3z M9 3v18', act: 'navtoggle' },
       { label: 'Go to Billing \u2192 Invoices', sub: '', kind: 'command', icon: this.ICONS.billing, act: 'billing' },
