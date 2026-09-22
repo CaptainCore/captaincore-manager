@@ -701,13 +701,16 @@ class Component extends DCLogic {
         diff: c.diff.map(([kind, text]) => ({ text,
           fg: kind === 'add' ? 'var(--ok)' : kind === 'del' ? 'var(--bad)' : 'var(--ink-dim)',
           bg: kind === 'add' ? 'var(--ok-soft)' : kind === 'del' ? 'var(--bad-soft)' : 'transparent' })) })),
-      covTiles: [
+      // Coverage tiles/bars are design samples: never shown on a booted
+      // dashboard, where covSkelRows shimmer until the security payload lands.
+      covSkelRows: (!!window.CC_BOOT && !this._hydrated) ? Array.from({ length: 4 }, () => ({})) : [],
+      covTiles: window.CC_BOOT ? [] : [
         { k: 'Fleet coverage', v: '87%', fg: 'var(--ink)' },
         { k: 'With fresh hashes', v: '92%', fg: 'var(--ink)' },
         { k: 'Vulns scanned', v: '128 / 128', fg: 'var(--ink)' },
         { k: 'Audits < 30d old', v: '74%', fg: 'var(--warn)' }
       ],
-      covBars: [['Core', 100], ['Plugins', 89], ['Themes', 81], ['Must-use / dropins', 64]].map(([k, pct]) => ({ k, pct,
+      covBars: window.CC_BOOT ? [] : [['Core', 100], ['Plugins', 89], ['Themes', 81], ['Must-use / dropins', 64]].map(([k, pct]) => ({ k, pct,
         fill: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)' })),
       queueStale: () => this.runJob('audit-queue', '9 stale sites'),
       steerQueue: () => { this.runJob('drift --steer --force', '14 sites · updates before audit'); this.setState({ dockOpen: true }); },

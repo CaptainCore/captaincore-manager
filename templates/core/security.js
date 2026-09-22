@@ -252,7 +252,9 @@ Object.assign(Component.prototype, {
     const loading = this._secLoading && !sec;
     if (!sec) return { threats: [], secLoading: loading, secEmpty: !loading, secEmptyText: loading ? 'Loading security data…' : '',
       secSkelRows: loading ? Array.from({ length: 4 }, () => ({})) : [],
-      coreFails: [], plugFails: [], covShowActions: false, ...this.covMapVals(s) };
+      coreFails: [], plugFails: [], covShowActions: false,
+      covTiles: [], covBars: [], covNote: '', covSkelRows: loading ? Array.from({ length: 4 }, () => ({})) : [],
+      ...this.covMapVals(s) };
     const notes = notesFor => notesFor; // unused; notes render from tracking
     const threats = (sec.threats.threats || []).map(t => {
       const id = [t.type, t.slug, t.version].join('|');
@@ -324,7 +326,7 @@ Object.assign(Component.prototype, {
       secEmptyText: 'No active threats across the fleet.',
       coreFails, plugFails,
       ckEmptyCore: !coreFails.length, ckEmptyPlug: !plugFails.length,
-      covTiles, covBars, covShowActions: false,
+      covTiles, covBars, covShowActions: false, covSkelRows: [],
       covNote: cov ? ((cov.without_hashes ? ((cov.without_hashes.plugin || 0) + (cov.without_hashes.theme || 0)) + ' components have no content hash yet.' : '')) : '',
       ...this.covMapVals(s),
       ...this.realCoreRunVals(s)

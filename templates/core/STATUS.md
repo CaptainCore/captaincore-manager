@@ -15,6 +15,23 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Security → Coverage no longer shows design samples while loading (2026-09-22)
+
+Opening `/account/security/coverage` showed "87% · 92% · 128 / 128 · 74%"
+and the Core/Plugins/Themes/Must-use bars for several seconds before the
+real numbers replaced them. `computeSecurity` in app.js carried the design's
+sample `covTiles` / `covBars` unguarded, and `realSecurityVals` only
+overrode threats and checksum rows while its fetch was in flight, so the
+samples leaked through on a booted dashboard. The samples are now
+`window.CC_BOOT ? [] : […]` like THREATS / CORE_FAILS, the not-yet-loaded
+branch of `realSecurityVals` returns empty tiles and bars, and a new
+`covSkelRows` list renders four shimmer cells in the tiles strip and four
+shimmer rows under "Coverage by component type" (the threat-list skeleton
+markup) until `security-coverage` answers. Verified with Playwright with the
+four security endpoints delayed: no sample text during the load, 24
+skeleton cells, then the real "Fleet coverage" / "Audited builds" tiles and
+zero skeleton cells once the payload landed.
+
 ## Accounts in the ⌘K palette (2026-09-22)
 
 The palette's placeholder already promised "sites, domains, accounts" but
