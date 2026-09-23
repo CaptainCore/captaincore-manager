@@ -535,7 +535,7 @@ class Component extends DCLogic {
         revoke: () => this.setState(st => ({ trusted: st.trusted.filter(x => x.uid !== td.uid) })) })),
       accTermOpen: () => this.openAccountTerminal(acc.id, acc.name),
       accSites: this.FLEET.filter(x => x.account === acc.name).map(x => { const [health, dot] = healthOf(x);
-        return { ...x, health, dot, open: () => this.openSite(x.id) }; }),
+        return { ...x, health, dot, open: () => this.openSite(x.id), ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(x)) }; }),
       accDomains: this.DOMAINS.filter(d => d.account === acc.name).map(d => ({ ...d,
         expFg: d.warn ? 'var(--bad)' : 'var(--ink-dim)', open: () => this.openDomain(d.id) })),
       planUsage: [
@@ -2907,12 +2907,22 @@ class Component extends DCLogic {
   siteCtxEntries(x) {
     return [
       { label: 'Open site', act: () => this.openSite(x.id) },
-      { label: 'Login to WordPress ↗', act: () => { if (this._hydrated) this.magicLogin(x.id, 'production'); else this.runJob('magiclogin', x.name); } },
+      ...this.siteLoginEntries(x),
       { label: this.pinnedIds().indexOf(String(x.id)) === -1 ? 'Pin to top' : 'Unpin', act: () => this.togglePin(x.id) },
       { label: 'Visit site ↗', act: () => window.open('https://' + x.name, '_blank') },
       { label: 'Open terminal', act: () => this.setState({ dockOpen: true }) },
       { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
     ];
+  }
+
+  // Login entries split per environment: Production always, Staging only when
+  // the site has one (`envs` is the 'Prod · Staging' summary string).
+  siteLoginEntries(x) {
+    const login = (env) => () => { if (this._hydrated) this.magicLogin(x.id, env); else this.runJob('magiclogin', x.name); };
+    const hasStaging = String(x.envs || '').indexOf('Staging') !== -1;
+    return hasStaging
+      ? [{ label: 'Login to Production ↗', act: login('production') }, { label: 'Login to Staging ↗', act: login('staging') }]
+      : [{ label: 'Login to WordPress ↗', act: login('production') }];
   }
 
   // Screenshot thumbs 404 on the public bucket whenever a site has never been

@@ -474,7 +474,8 @@ Object.assign(Component.prototype, {
         return { name: x.name, envs: f ? f.envs : '', provider: f ? f.provider : '',
           health: (x.visits ? Number(x.visits).toLocaleString() + ' visits · ' : '') + this.fmtStorage(x.storage),
           dot: health === 'Healthy' ? 'var(--ok)' : health === 'Vulnerability' ? 'var(--bad)' : 'var(--warn)',
-          open: () => this.openSite(String(x.site_id)) }; }),
+          open: () => this.openSite(String(x.site_id)),
+          ctx: (e) => this.openCtxMenu(e, this.siteCtxEntries(f || { id: String(x.site_id), name: x.name, envs: '' })) }; }),
       accDomains: (d.domains || []).map(x => ({ name: x.name, registrar: '', expires: '', expFg: 'var(--ink-dim)',
         open: () => this.openDomain(String(x.domain_id)) })),
       planUsage: [
