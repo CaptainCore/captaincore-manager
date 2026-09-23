@@ -65,7 +65,11 @@ Object.assign(Component.prototype, {
         const flags = ['archived', 'spam', 'deleted'].filter(k => Number(b[k]));
         const url = b.url || '';
         const actions = [act('open ↗', () => this.safeOpen(url))];
+        // Subsites sign in on their own URL as one of their own admins (or
+        // a super admin), which the collector lists per subsite.
+        const canLogin = (b.admins && b.admins.length) || (ms.super_admins && ms.super_admins.length);
         if (b.main) actions.push(act('log in', () => this.magicLogin(real.siteId, envLower), true));
+        else if (canLogin) actions.push(act('log in', () => this.magicLogin(real.siteId, envLower, null, { blog: b.id, label: b.name || url }), true));
         else actions.push(act('admin ↗', () => this.safeOpen(url.replace(/\/?$/, '/') + 'wp-admin/')));
         return { key: 'b' + b.id, name: b.name || url, sub: url.replace(/^https?:\/\//, ''),
           badges: [...(b.main ? [{ t: 'main', bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }] : []),
@@ -96,6 +100,10 @@ Object.assign(Component.prototype, {
         if (site) {
           actions.push(act('manage', () => this.openSite(site.id)));
           actions.push(act('log in', () => this.magicLogin(site.id, 'production'), true));
+        } else if (url && t.helper && t.admins && t.admins.length) {
+          // Not a CaptainCore site: sign in through the host with the
+          // tenant's own admins, on its mapped domain.
+          actions.push(act('log in', () => this.magicLogin(real.siteId, envLower, null, { tenant: t.id, label: t.name || url }), true));
         }
         all.push({ key: 't' + t.id, name: t.name || t.domain || ('Tenant ' + t.id),
           sub: (url ? url.replace(/^https?:\/\//, '') : (t.domain || 'no own domain · switch from WP Freighter')) + ' · #' + t.id,

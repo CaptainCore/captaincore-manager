@@ -374,10 +374,15 @@ Object.assign(Component.prototype, {
 
   realMagicLogin(real, s, user) { return this.magicLogin(real.siteId, s.env.toLowerCase(), user); },
 
-  magicLogin(siteId, envLower, user) {
-    const who = (user && (user.display_name || user.user_login)) ? ' as ' + (user.display_name || user.user_login) : '';
+  // `target` signs into one multisite subsite ({ blog: id }) or WP Freighter
+  // tenant ({ tenant: id }) of this environment; the server resolves its URL
+  // and administrators from the last sync.
+  magicLogin(siteId, envLower, user, target) {
+    const who = (user && (user.display_name || user.user_login)) ? ' as ' + (user.display_name || user.user_login)
+      : (target && target.label ? ' to ' + target.label : '');
     const tid = this.toast('Signing in' + who + '…', { kind: 'loading' });
-    const path = '/sites/' + siteId + '/' + envLower + '/magiclogin' + (user && user.ID ? '/' + user.ID : '');
+    const q = target && target.blog ? '?blog=' + encodeURIComponent(target.blog) : (target && target.tenant ? '?tenant=' + encodeURIComponent(target.tenant) : '');
+    const path = '/sites/' + siteId + '/' + envLower + '/magiclogin' + (user && user.ID ? '/' + user.ID : '') + q;
     this.api(path).then(url => {
       if (typeof url === 'string' && /^https?:\/\//i.test(url.trim())) {
         this.safeOpen(url.trim());

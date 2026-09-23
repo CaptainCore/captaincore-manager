@@ -5489,6 +5489,55 @@ function captaincore_site_magiclogin_func( $request ) {
 	$environment    = ( new CaptainCore\Environments )->get( $environment_id );
 	$current_email  = ( new CaptainCore\User )->fetch()["email"];
 	$users          = json_decode( $environment->users );
+	$target_url     = $environment->home_url;
+
+	// A multisite subsite (?blog=<id>) or a WP Freighter tenant (?tenant=<id>)
+	// signs in on its own URL with its own administrators, both read from the
+	// environment details sync-data stored. The URL never comes from the
+	// request: the signed token is only ever sent to an address the CLI
+	// reported for this environment. Every subsite and tenant shares the
+	// install's wp-config, so the helper there accepts the same signature.
+	$blog_id   = absint( $request->get_param( 'blog' ) );
+	$tenant_id = absint( $request->get_param( 'tenant' ) );
+	if ( $blog_id || $tenant_id ) {
+		$details = json_decode( $environment->details ?? '' );
+		$target  = null;
+		$admins  = [];
+		if ( $blog_id ) {
+			foreach ( (array) ( $details->network_sites->sites ?? [] ) as $b ) {
+				if ( (int) ( $b->id ?? 0 ) === $blog_id ) {
+					$target = $b;
+					break;
+				}
+			}
+			$admins = array_merge( (array) ( $target->admins ?? [] ), (array) ( $details->network_sites->super_admins ?? [] ) );
+		} else {
+			if ( ( $details->freighter->role ?? '' ) === 'host' ) {
+				foreach ( (array) ( $details->freighter->tenants ?? [] ) as $t ) {
+					if ( (int) ( $t->id ?? 0 ) === $tenant_id ) {
+						$target = $t;
+						break;
+					}
+				}
+			}
+			if ( $target && empty( $target->helper ) ) {
+				return new WP_Error( 'magiclogin_no_helper', 'The CaptainCore helper is not installed on that tenant.', [ 'status' => 409 ] );
+			}
+			$admins = (array) ( $target->admins ?? [] );
+		}
+		$url = $target->url ?? '';
+		if ( ! $target || ! preg_match( '#^https?://#i', $url ) ) {
+			return new WP_Error( 'magiclogin_unknown_site', 'That site is not in the last sync for this environment.', [ 'status' => 404 ] );
+		}
+		if ( empty( $admins ) ) {
+			return new WP_Error( 'magiclogin_no_admin', 'No administrator is known for that site.', [ 'status' => 409 ] );
+		}
+		$target_url = untrailingslashit( $url );
+		$user_id    = '';
+		$users      = array_map( function ( $a ) {
+			return (object) [ 'ID' => 0, 'user_login' => $a->login ?? '', 'user_email' => $a->email ?? '', 'roles' => 'administrator' ];
+		}, $admins );
+	}
 
 	// Match user by ID
 	if ( ! empty( $user_id ) ) {
@@ -5566,7 +5615,7 @@ function captaincore_site_magiclogin_func( $request ) {
 	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
 		$args["sslverify"] = false;
 	}
-	$response = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+	$response = wp_remote_post( "{$target_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
 	if ( is_wp_error( $response ) ) {
 		return new WP_Error( 'magiclogin_failed', $response->get_error_message(), [ 'status' => 502 ] );
 	}
