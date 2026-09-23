@@ -21,6 +21,7 @@ Object.assign(Component.prototype, {
     const net = row.network || {};
     const byId = {}; this.FLEET.forEach(x => { byId[x.id] = x; });
     const envLower = String(env.environment || 'Production').toLowerCase();
+    const isOp = ((window.CC_BOOT || {}).dcRole || 'operator') === 'operator';
     const q = (s.netQ || '').trim().toLowerCase();
     // Subsites can sit untouched for years, so past two months read in
     // months, then years (relTime alone would say "3512d").
@@ -100,10 +101,12 @@ Object.assign(Component.prototype, {
         if (site) {
           actions.push(act('manage', () => this.openSite(site.id)));
           actions.push(act('log in', () => this.magicLogin(site.id, 'production'), true));
-        } else if (url && t.helper && t.admins && t.admins.length) {
+        } else if (url && t.admins && t.admins.length && (t.helper || isOp)) {
           // Not a CaptainCore site: sign in through the host with the
-          // tenant's own admins, on its mapped domain.
-          actions.push(act('log in', () => this.magicLogin(real.siteId, envLower, null, { tenant: t.id, label: t.name || url }), true));
+          // tenant's own admins, on its mapped domain. Without a working
+          // helper the server installs it first (operators only).
+          actions.push(act('log in', () => this.magicLogin(real.siteId, envLower, null,
+            { tenant: t.id, label: (t.name || url) + (t.helper ? '' : ' (installing helper)') }), true));
         }
         all.push({ key: 't' + t.id, name: t.name || t.domain || ('Tenant ' + t.id),
           sub: (url ? url.replace(/^https?:\/\//, '') : (t.domain || 'no own domain · switch from WP Freighter')) + ' · #' + t.id,

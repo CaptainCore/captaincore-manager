@@ -5520,9 +5520,6 @@ function captaincore_site_magiclogin_func( $request ) {
 					}
 				}
 			}
-			if ( $target && empty( $target->helper ) ) {
-				return new WP_Error( 'magiclogin_no_helper', 'The CaptainCore helper is not installed on that tenant.', [ 'status' => 409 ] );
-			}
 			$admins = (array) ( $target->admins ?? [] );
 		}
 		$url = $target->url ?? '';
@@ -5597,30 +5594,90 @@ function captaincore_site_magiclogin_func( $request ) {
 		}
 	}
 
-	$timestamp = time();
-	$token     = hash_hmac( 'sha256', (string) $timestamp, $environment->token );
-	$args      = [
-		"timeout" => 45,
-		"body"    => json_encode( [
-				"command"    => "login",
-				"user_login" => $login,
-				"token"      => $token,
-				"timestamp"  => $timestamp,
-			] ),
-		"method"    => 'POST',
-	];
-	// This is the one request that carries a token capable of minting an admin
-	// session and receives a working login URL back, so it verifies TLS like
-	// every other outbound call - relaxed only under the debug constant.
-	if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
-		$args["sslverify"] = false;
-	}
-	$response = wp_remote_post( "{$target_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+	// Signed per attempt: the helper rejects a timestamp older than 30s, and
+	// a helper install between attempts can take longer than that.
+	$request_login = function () use ( $environment, $login, $target_url ) {
+		$timestamp = time();
+		$args      = [
+			"timeout" => 45,
+			"body"    => json_encode( [
+					"command"    => "login",
+					"user_login" => $login,
+					"token"      => hash_hmac( 'sha256', (string) $timestamp, $environment->token ),
+					"timestamp"  => $timestamp,
+				] ),
+			"method"    => 'POST',
+		];
+		// This is the one request that carries a token capable of minting an admin
+		// session and receives a working login URL back, so it verifies TLS like
+		// every other outbound call - relaxed only under the debug constant.
+		if ( defined( 'CAPTAINCORE_DEBUG' ) && CAPTAINCORE_DEBUG ) {
+			$args["sslverify"] = false;
+		}
+		return wp_remote_post( "{$target_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+	};
+
+	// No helper answering there: admin-ajax replies 400 when nothing handles
+	// the action (a stub helper, or none at all). The sync says so up front
+	// for a tenant. Operators get one automatic install of the helper through
+	// the CLI server, then a retry; `--tenant` runs it inside a Freighter
+	// tenant of the host, and a subsite shares its network's mu-plugins.
+	$tenant_needs_helper = $tenant_id && empty( $target->helper );
+	$response            = $tenant_needs_helper ? null : $request_login();
 	if ( is_wp_error( $response ) ) {
 		return new WP_Error( 'magiclogin_failed', $response->get_error_message(), [ 'status' => 502 ] );
 	}
+	if ( $tenant_needs_helper || wp_remote_retrieve_response_code( $response ) === 400 ) {
+		if ( ! ( new CaptainCore\User )->is_admin() ) {
+			return new WP_Error( 'magiclogin_no_helper', 'The CaptainCore helper is not installed on that site. Ask an administrator to sign in once to install it.', [ 'status' => 409 ] );
+		}
+		$installed = captaincore_install_helper( $site_id, $environment, $tenant_id );
+		if ( is_wp_error( $installed ) ) {
+			return $installed;
+		}
+		$response = $request_login();
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'magiclogin_failed', $response->get_error_message(), [ 'status' => 502 ] );
+		}
+	}
 	$login_url = trim( wp_remote_retrieve_body( $response ) );
 	return $login_url;
+}
+
+/**
+ * Install the CaptainCore helper on an environment, or inside one WP Freighter
+ * tenant of it, by running the deploy-helper remote script through the CLI
+ * server, then record it on the tenant row so the next login skips this.
+ *
+ * @return true|WP_Error
+ */
+function captaincore_install_helper( $site_id, $environment, $tenant_id = 0 ) {
+	$site = CaptainCore\Sites::get( $site_id );
+	if ( ! $site || ! preg_match( '/^[a-z0-9_]+$/i', (string) $site->site ) ) {
+		return new WP_Error( 'helper_install_failed', 'Unknown site.', [ 'status' => 404 ] );
+	}
+	$env_name = CaptainCore\Run::safe_environment( $environment->environment );
+	$argv     = [ 'ssh', "{$site->site}-{$env_name}", '--script=deploy-helper' ];
+	if ( $tenant_id ) {
+		$argv[] = '--tenant=' . absint( $tenant_id );
+	}
+	$result = CaptainCore\Run::execute( $argv );
+	$output = is_array( $result ) ? (string) ( $result['response'] ?? '' ) : '';
+	if ( is_wp_error( $result ) || strpos( $output, 'captaincore-helper.php' ) === false ) {
+		return new WP_Error( 'helper_install_failed', 'Could not install the CaptainCore helper' . ( $tenant_id ? " on tenant {$tenant_id}" : '' ) . '.', [ 'status' => 502 ] );
+	}
+	if ( $tenant_id ) {
+		$details = json_decode( $environment->details ?? '' );
+		foreach ( (array) ( $details->freighter->tenants ?? [] ) as $t ) {
+			if ( (int) ( $t->id ?? 0 ) === (int) $tenant_id ) {
+				$t->helper = true;
+			}
+		}
+		if ( $details ) {
+			( new CaptainCore\Environments )->update( [ 'details' => wp_json_encode( $details ) ], [ 'environment_id' => $environment->environment_id ] );
+		}
+	}
+	return true;
 }
 
 function captaincore_processes_func( $request ) {
