@@ -150,6 +150,8 @@ Object.assign(Component.prototype, {
           unassigned: !x.account_id || x.account_id == '0',
           removed: !!x.removed,
           plugins: {}, home_url: x.home_url, screenshot: x.screenshot,
+          network: x.network || null,
+          netType: ({ multisite: 'Multisite', host: 'Freighter host', tenant: 'Freighter tenant' })[(x.network && x.network.type) || ''] || 'Standalone',
           environmentsRaw: x.environments || [] };
       });
       this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: this.decodeHtml(a.name),

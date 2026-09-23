@@ -33,7 +33,7 @@ class Component extends DCLogic {
     // (right-click the view toggle to set it).
     view: (() => { try { const v = localStorage.getItem('cc-sites-view'); return ['table', 'cards', 'list'].includes(v) ? v : 'table'; } catch (e) { return 'table'; } })(),
     q: '', fProv: 'Any', fHealth: 'All', sel: {},
-    fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any',
+    fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS',
     fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
@@ -971,6 +971,9 @@ class Component extends DCLogic {
     if (!inactive(s.fProv)) conds.push(x => x.provider === s.fProv);
     if (!inactive(s.fBackup)) conds.push(x => x.backup === s.fBackup);
     if (!inactive(s.fCore)) conds.push(x => x.core === s.fCore);
+    // Network: multisite / Freighter host / tenant from /sites `network`;
+    // 'Any network' matches all three.
+    if (!inactive(s.fNet)) conds.push(x => s.fNet === 'Any network' ? x.netType !== 'Standalone' : x.netType === s.fNet);
     if (this._hydrated) {
       // Theme/plugin resolve server-side (see sites-filters.js). One combined
       // cond over the matched site-id set; while loading, don't hide anything.
@@ -1013,6 +1016,9 @@ class Component extends DCLogic {
       { id: 'fProv', base: 'Provider', cur: s.fProv, opts: () => facetOpts(cntBy(x => x.provider), s.fProv, 'fProv') },
       { id: 'fBackup', base: 'Backup', cur: s.fBackup, opts: () => facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup') },
       { id: 'fCore', base: 'Core', cur: s.fCore, opts: () => facetOpts(cntBy(x => x.core), s.fCore, 'fCore') },
+      { id: 'fNet', base: 'Network', cur: s.fNet, opts: () => { const m = cntBy(x => x.netType || 'Standalone');
+          m['Any network'] = fleet.filter(x => x.netType && x.netType !== 'Standalone').length;
+          return facetOpts(m, s.fNet, 'fNet'); } },
       // Theme and Plugin chips open a Version/Status popover (sub: 'theme' |
       // 'plugin'); the sub-facet state keys live on SUB_KEYS in sites-filters.js.
       { id: 'fTheme', base: 'Theme', cur: s.fTheme, sub: 'theme', opts: () => this._hydrated
@@ -1175,7 +1181,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       // Filter-to-console (legacy parity): hand the whole filtered set — every
       // page, not just the visible one — to the dock terminal as its target
       // list. Only offered while a filter narrows the fleet, so a stray click
