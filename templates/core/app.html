@@ -965,6 +965,50 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </div>
             </div>
+            <!-- Network sites: multisite subsites, WP Freighter tenants (network.js) -->
+            <sc-if value="{{ netTenantShow }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ netTenantGo }}" style="margin-top:14px;display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;cursor:pointer" style-hover="border-color:var(--brand)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21h18 M5 21V8l7-5 7 5v13 M9 21v-6h6v6"></path></svg>
+                <span style="font:600 var(--fs-13) var(--sans)">{{ netTenantText }}</span>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ netTenantSub }}</span>
+                <div style="flex:1"></div>
+                <sc-if value="{{ netTenantLink }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink)">Open host →</span></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ netShow }}" hint-placeholder-val="{{ false }}">
+              <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ netTitle }}</h2>
+                  <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ netMeta }}</span>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ netFilterShow }}" hint-placeholder-val="{{ false }}">
+                    <input value="{{ netQ }}" onInput="{{ onNetQ }}" placeholder="Filter sites…" title="Filter network sites" style="width:200px;max-width:100%;height:28px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 9px;outline:none">
+                  </sc-if>
+                </div>
+                <div style="max-height:520px;overflow:auto">
+                  <sc-for list="{{ netRows }}" as="nr" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);opacity:{{ nr.op }}" style-hover="background:var(--panel-2)">
+                      <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:7px;min-width:0">
+                          <span style="font:500 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nr.name }}</span>
+                          <sc-for list="{{ nr.badges }}" as="bd" hint-placeholder-count="1">
+                            <span style="flex:none;font:500 var(--fs-115) var(--mono);background:{{ bd.bg }};color:{{ bd.fg }};border-radius:99px;padding:1px 8px">{{ bd.t }}</span>
+                          </sc-for>
+                        </div>
+                        <div style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nr.sub }}</div>
+                      </div>
+                      <span title="{{ nr.whenTitle }}" style="flex:none;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ nr.when }}</span>
+                      <sc-for list="{{ nr.actions }}" as="na" hint-placeholder-count="2">
+                        <button onClick="{{ na.go }}" style="flex:none;border:1px solid {{ na.bd }};background:{{ na.bg }};color:{{ na.fg }};font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="border-color:var(--brand)">{{ na.label }}</button>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ netEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:14px 16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ netEmptyText }}</div>
+                  </sc-if>
+                </div>
+              </section>
+            </sc-if>
             <div class="cc-cols" style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px;align-items:start">
               <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Credentials</h2><div style="flex:1"></div><sc-if value="{{ edsShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ eeOpenDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Edit</span></sc-if></div>

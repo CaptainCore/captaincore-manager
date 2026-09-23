@@ -2298,6 +2298,7 @@ class Component extends DCLogic {
       tabRegistry: leaf === 'registry', tabScheduled: leaf === 'scheduled',
       tabFiles: leaf === 'files',
       tabSiteDomains: leaf === 'sitedomains',
+      ...(this.computeNetwork ? this.computeNetwork(real, s) : { netShow: false, netTenantShow: false, netRows: [], netFilterShow: false }),
       ...this.envDomainsVals(real, s),
       credRows,
       statTiles: [
