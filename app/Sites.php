@@ -230,6 +230,7 @@ class Sites extends DB {
             $site->connection_errors = isset( $details->connection_errors ) ? $details->connection_errors : "";
             $site->removed           = isset( $details->removed ) ? $details->removed : false;
             $site->subsites          = $details->subsites;
+            $site->network           = $details->network ?? null;
             $site->storage           = $details->storage;
             $site->visits            = $details->visits;
             $site->labels            = ( isset( $details->labels ) && is_array( $details->labels ) ) ? $details->labels : [];

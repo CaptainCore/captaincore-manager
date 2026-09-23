@@ -157,6 +157,8 @@ return array(
     'CaptainCore\\MalwareFindings' => $baseDir . '/app/MalwareFindings.php',
     'CaptainCore\\MalwareFindingsCLI' => $baseDir . '/app/MalwareFindingsCLI.php',
     'CaptainCore\\MuManifestCLI' => $baseDir . '/app/MuManifestCLI.php',
+    'CaptainCore\\Network' => $baseDir . '/app/Network.php',
+    'CaptainCore\\NetworkCLI' => $baseDir . '/app/NetworkCLI.php',
     'CaptainCore\\OrphanRowsCLI' => $baseDir . '/app/OrphanRowsCLI.php',
     'CaptainCore\\PendingVerification' => $baseDir . '/app/PendingVerification.php',
     'CaptainCore\\Process' => $baseDir . '/app/Process.php',

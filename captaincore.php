@@ -167,6 +167,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore provider-sync', 'CaptainCore\ProviderSyncCLI' );
 	WP_CLI::add_command( 'captaincore remote', 'CaptainCore\RemoteCLI' );
 	WP_CLI::add_command( 'captaincore site-label', 'CaptainCore\SiteLabelCLI' );
+	WP_CLI::add_command( 'captaincore network', 'CaptainCore\NetworkCLI' );
 	WP_CLI::add_command( 'captaincore session-alerts', 'CaptainCore\SessionAlertsCLI' );
 	WP_CLI::add_command( 'captaincore core-update-runs', 'CaptainCore\CoreUpdateRunsCLI' );
 	WP_CLI::add_command( 'captaincore orphan-rows', 'CaptainCore\OrphanRowsCLI' );
@@ -1424,6 +1425,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		// Rebuild the cache for this site using the central method
 		CaptainCore\Sites::update_environments_cache( $site_id );
+
+		// Multisite / WP Freighter shape, for this site and every site on the
+		// same SSH endpoint (a host and its tenants), cached on site details.
+		CaptainCore\Network::refresh( $site_id );
 
 		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
