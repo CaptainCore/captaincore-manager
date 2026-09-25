@@ -249,6 +249,11 @@ class Account {
         $maintenance_site_id = [];
         $sites = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
         foreach ( $sites as $site ) {
+            // WP Freighter tenants ride on their host's plan: the host's
+            // storage and visits already cover the whole install.
+            if ( Network::is_tenant( $site->details ) ) {
+                continue;
+            }
             if ( empty ( $site->provider_id ) || $site->provider_id == "1" ) {
                 $site_ids[] = $site->site_id;
                 continue;
@@ -465,6 +470,9 @@ class Account {
             $sites   = $wpdb->get_results( "SELECT site_id, name, provider_id, details FROM {$wpdb->prefix}captaincore_sites WHERE site_id IN ($ids_str)" );
             foreach ( $sites as $site ) {
                 $details = json_decode( $site->details );
+                if ( Network::is_tenant( $details ) ) {
+                    continue;
+                }
                 $website_for_customer_storage = empty( $details->storage ) ? 0 : $details->storage;
                 $website_for_customer_visits  = empty( $details->visits ) ? 0 : $details->visits;
                 if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {

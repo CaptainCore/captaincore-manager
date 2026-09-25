@@ -45,6 +45,54 @@ class NetworkCLI {
 	}
 
 	/**
+	 * Create site records for WP Freighter tenants that have none, and move
+	 * existing tenants onto their host's current connection. sync-data does
+	 * this after every host sync; this runs it by hand.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<host>]
+	 * : Host site ID. Omit for every Freighter host.
+	 *
+	 * [--dry-run]
+	 * : Report what would be created or updated without changing anything.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp captaincore network provision --dry-run
+	 *     wp captaincore network provision 388
+	 *
+	 * @when after_wp_load
+	 */
+	public function provision( $args, $assoc_args ) {
+		global $wpdb;
+		$dry   = ! empty( $assoc_args['dry-run'] );
+		$hosts = empty( $args[0] ) ? [] : [ (int) $args[0] ];
+		if ( ! $hosts ) {
+			foreach ( $wpdb->get_results( "SELECT site_id, details FROM {$wpdb->prefix}captaincore_sites WHERE status = 'active'" ) as $s ) {
+				if ( ( json_decode( $s->details )->network->type ?? '' ) === 'host' ) {
+					$hosts[] = (int) $s->site_id;
+				}
+			}
+		}
+		$rows = [];
+		foreach ( $hosts as $host_id ) {
+			$r = Network::provision( $host_id, $dry );
+			foreach ( $r['created'] as $c ) {
+				$rows[] = [ 'host' => $host_id, 'action' => $dry ? 'would create' : 'created', 'tenant' => $c['tenant_id'], 'site' => $c['site'], 'name' => $c['name'] ];
+			}
+			foreach ( $r['updated'] as $u ) {
+				$rows[] = [ 'host' => $host_id, 'action' => ( $dry ? 'would update ' : 'updated ' ) . implode( ',', $u['fields'] ), 'tenant' => $u['tenant_id'], 'site' => $u['site_id'], 'name' => '' ];
+			}
+		}
+		if ( ! $rows ) {
+			\WP_CLI::success( 'Every tenant already has a site record on its host\'s connection.' );
+			return;
+		}
+		\WP_CLI\Utils\format_items( 'table', $rows, [ 'host', 'action', 'tenant', 'site', 'name' ] );
+	}
+
+	/**
 	 * List sites that are multisite networks, Freighter hosts or tenants.
 	 *
 	 * ## OPTIONS

@@ -46,6 +46,174 @@ class Network {
 	}
 
 	/**
+	 * Is this site a WP Freighter tenant? True when its details carry a
+	 * STACKED_SITE_ID environment var (every tenant, manual or auto-created)
+	 * or the resolved network shape says so. Tenants are never billed; their
+	 * host is.
+	 *
+	 * @param object|string $details Site details (decoded or JSON).
+	 */
+	public static function is_tenant( $details ) {
+		if ( is_string( $details ) ) {
+			$details = json_decode( $details );
+		}
+		if ( ! is_object( $details ) ) {
+			return false;
+		}
+		if ( ( $details->network->type ?? '' ) === 'tenant' ) {
+			return true;
+		}
+		foreach ( (array) ( $details->environment_vars ?? [] ) as $var ) {
+			$var = (object) $var;
+			if ( in_array( $var->key ?? '', [ 'STACKED_SITE_ID', 'STACKED_ID' ], true ) && ( $var->value ?? '' ) !== '' ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Give every tenant of a Freighter host a site record, and keep the
+	 * tenants' connection in step with the host. Runs after each host sync,
+	 * so a tenant added in WP Freighter is managed (backups, updates, stats)
+	 * by the next day without anyone adding it by hand. On for every host
+	 * unless its site details set `tenants_auto` to false.
+	 *
+	 * New tenant sites take the host's account, customer, provider and SSH
+	 * key, the host's production connection, and STACKED_SITE_ID; a mapped
+	 * tenant is named after its domain, an unmapped one
+	 * `tenant-<id>.<host domain>`. Each is handed to the CLI's normal
+	 * onboarding (site sync --update-extras: keys, helper, sync-data,
+	 * Fathom tracker, defaults, capture).
+	 *
+	 * @return array{created: array, updated: array}
+	 */
+	public static function provision( $host_site_id, $dry_run = false ) {
+		$out  = [ 'created' => [], 'updated' => [] ];
+		$host = Sites::get( $host_site_id );
+		if ( ! $host || $host->status !== 'active' ) {
+			return $out;
+		}
+		$host_details = json_decode( $host->details );
+		if ( ( $host_details->network->type ?? '' ) !== 'host' || ( isset( $host_details->tenants_auto ) && ! $host_details->tenants_auto ) ) {
+			return $out;
+		}
+		$host_env = ( new Environments )->where( [ 'site_id' => $host->site_id, 'environment' => 'Production' ] );
+		$host_env = $host_env[0] ?? null;
+		if ( ! $host_env ) {
+			return $out;
+		}
+		$freighter = json_decode( $host_env->details ?? '' )->freighter ?? null;
+		if ( ! $freighter || ( $freighter->role ?? '' ) !== 'host' ) {
+			return $out;
+		}
+
+		// Connection fields a tenant shares with its host. Copied, then kept
+		// equal on every host sync, so a migrated host carries its tenants.
+		$connection = [];
+		foreach ( [ 'address', 'username', 'password', 'protocol', 'port', 'home_directory', 'database_username', 'database_password' ] as $field ) {
+			$connection[ $field ] = $host_env->$field;
+		}
+
+		$linked = [];
+		foreach ( (array) ( $host_details->network->tenant_sites ?? [] ) as $t ) {
+			$linked[ (int) $t->tenant_id ] = (int) $t->site_id;
+		}
+
+		// Existing tenants: follow the host's connection.
+		foreach ( $linked as $tenant_id => $site_id ) {
+			foreach ( ( new Environments )->where( [ 'site_id' => $site_id, 'environment' => 'Production' ] ) as $env ) {
+				$changes = [];
+				foreach ( $connection as $field => $value ) {
+					if ( (string) $env->$field !== (string) $value ) {
+						$changes[ $field ] = $value;
+					}
+				}
+				if ( ! $changes ) {
+					continue;
+				}
+				$out['updated'][] = [ 'site_id' => $site_id, 'tenant_id' => $tenant_id, 'fields' => array_keys( $changes ) ];
+				if ( ! $dry_run ) {
+					( new Environments )->update( $changes, [ 'environment_id' => $env->environment_id ] );
+					Run::CLI( [ 'site', 'sync', (string) $site_id ], true );
+				}
+			}
+		}
+
+		// New tenants: create and onboard.
+		$host_domain = preg_replace( '#^https?://#', '', untrailingslashit( (string) ( $freighter->main_url ?: $host_env->home_url ) ) );
+		foreach ( (array) ( $freighter->tenants ?? [] ) as $t ) {
+			$tenant_id = (int) ( $t->id ?? 0 );
+			if ( ! $tenant_id || isset( $linked[ $tenant_id ] ) ) {
+				continue;
+			}
+			$mapped = ! empty( $t->url ) && ! empty( $t->domain );
+			$name   = $mapped ? strtolower( trim( $t->domain ) ) : "tenant-{$tenant_id}.{$host_domain}";
+			$slug   = self::unique_slug( preg_replace( '/[^a-z0-9]/', '', strtolower( $host->site ) ) . 't' . $tenant_id );
+			$row    = [ 'tenant_id' => $tenant_id, 'name' => $name, 'site' => $slug, 'mapped' => $mapped ];
+			if ( $dry_run ) {
+				$out['created'][] = $row;
+				continue;
+			}
+			$now     = current_time( 'mysql' );
+			$site_id = Sites::insert( [
+				'account_id'       => $host->account_id,
+				'customer_id'      => $host->customer_id,
+				'name'             => $name,
+				'site'             => $slug,
+				'provider'         => $host->provider,
+				'provider_id'      => $host->provider_id,
+				'provider_site_id' => null,
+				'created_at'       => $now,
+				'updated_at'       => $now,
+				'details'          => wp_json_encode( [
+					'key'              => $host_details->key ?? '',
+					'environment_vars' => [ [ 'key' => 'STACKED_SITE_ID', 'value' => (string) $tenant_id ] ],
+					'subsites'         => '',
+					'storage'          => '',
+					'visits'           => '',
+					'mailgun'          => '',
+					'core'             => '',
+					'home_url'         => $mapped ? $t->url : '',
+					'tenant_of'        => (int) $host->site_id,
+					'backup_settings'  => [ 'mode' => 'direct', 'interval' => 'daily', 'active' => true ],
+				] ),
+				'screenshot'       => '0',
+				'status'           => 'active',
+			] );
+			if ( ! $site_id ) {
+				continue;
+			}
+			( new Environments )->insert( array_merge( $connection, [
+				'site_id'         => $site_id,
+				'environment'     => 'Production',
+				'home_url'        => $mapped ? $t->url : '',
+				'created_at'      => $now,
+				'updated_at'      => $now,
+				// An unmapped tenant has no URL of its own to watch.
+				'monitor_enabled' => $mapped ? $host_env->monitor_enabled : '0',
+				'updates_enabled' => $host_env->updates_enabled,
+			] ) );
+			ActivityLog::log( 'created', 'site', $site_id, $name, "Added WP Freighter tenant {$tenant_id} of {$host->name}", [], $host->customer_id ?: null );
+			Run::CLI( [ 'site', 'sync', (string) $site_id, '--update-extras' ], true );
+			$out['created'][] = $row + [ 'site_id' => $site_id ];
+		}
+
+		if ( $out['created'] && ! $dry_run ) {
+			self::refresh( $host->site_id );
+		}
+		return $out;
+	}
+
+	private static function unique_slug( $base ) {
+		$slug = $base;
+		for ( $n = 2; Sites::where( [ 'site' => $slug ] ); $n++ ) {
+			$slug = $base . $n;
+		}
+		return $slug;
+	}
+
+	/**
 	 * Recompute every active site. Returns the number of sites whose cached
 	 * network shape changed.
 	 */

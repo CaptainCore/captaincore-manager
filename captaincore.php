@@ -1430,6 +1430,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		// same SSH endpoint (a host and its tenants), cached on site details.
 		CaptainCore\Network::refresh( $site_id );
 
+		// A Freighter host's sync also creates site records for new tenants
+		// and keeps existing tenants on the host's connection. A no-op for
+		// every other site.
+		if ( $current_environment->environment === 'Production' ) {
+			CaptainCore\Network::provision( $site_id );
+		}
+
 		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
 
@@ -1490,7 +1497,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$details->subsites = $post->data->subsite_count ?? '';
 		}
 
-		if ( ! empty( $post->data->home_url ) && $current_environment->environment == "Production" ) {
+		// An unmapped WP Freighter tenant reports its host's URL as home (it
+		// has none of its own), so it keeps the name it was given instead of
+		// taking the host's domain.
+		$incoming_freighter = json_decode( $post->data->details ?? '' )->freighter ?? null;
+		$unmapped_tenant    = $incoming_freighter && ( $incoming_freighter->role ?? '' ) === 'tenant'
+			&& untrailingslashit( (string) ( $incoming_freighter->main_url ?? '' ) ) === untrailingslashit( (string) ( $post->data->home_url ?? '' ) );
+		if ( ! empty( $post->data->home_url ) && $current_environment->environment == "Production" && ! $unmapped_tenant ) {
 			$details->home_url = $post->data->home_url;
 			$home_url = str_replace( [ "http://www.", "https://www.", "http://", "https://", "www." ], "", $post->data->home_url );
 			$current_site->name = $home_url;
