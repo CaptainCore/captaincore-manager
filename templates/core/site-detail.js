@@ -45,7 +45,7 @@ Object.assign(Component.prototype, {
       this.syncFleetFromDetail(detail);
       bump();
     }).catch(() => bump());
-    this.api('/sites/' + id + '/users').then(u => { detail.users = u || {}; bump(); }).catch(() => bump());
+    this.loadSiteUsers(detail);
     this.loadTimeline();
   },
 
@@ -1136,9 +1136,58 @@ Object.assign(Component.prototype, {
   },
 
   // ── Users ─────────────────────────────────────────────────────
+  // One page of users per environment ({ users, total, page, pages }):
+  // some sites store over 100,000 users, and fetching and rebuilding all of
+  // them on every render froze the page. Page and search live on the loaded
+  // site, so they reset when another site opens.
+  USERS_PER_PAGE: 50,
+  loadSiteUsers(detail, page, search) {
+    detail = detail || this._detail;
+    if (!detail) return;
+    if (page !== undefined) detail.usersPage = page;
+    if (search !== undefined) detail.usersQ = search;
+    const q = '?per_page=' + this.USERS_PER_PAGE + '&page=' + (detail.usersPage || 1)
+      + (detail.usersQ ? '&search=' + encodeURIComponent(detail.usersQ) : '');
+    const seq = detail.usersSeq = (detail.usersSeq || 0) + 1;
+    detail.usersLoading = true;
+    this.api('/sites/' + detail.siteId + '/users' + q).then(u => {
+      if (this._detail !== detail || seq !== detail.usersSeq) return;
+      detail.users = u || {}; detail.usersLoading = false;
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { if (seq === detail.usersSeq) { detail.usersLoading = false; this.setState({ tick: this.state.tick }); } });
+  },
+
+  realUsersPage(real, s) {
+    const d = (real && real.users && real.users[s.env]) || null;
+    if (!d) return { total: 0, page: 1, pages: 1, list: [] };
+    if (Array.isArray(d)) return { total: d.length, page: 1, pages: 1, list: d };
+    return { total: Number(d.total) || 0, page: Number(d.page) || 1, pages: Number(d.pages) || 1, list: d.users || [] };
+  },
+
+  computeUsersPager(real, s) {
+    const pg = this.realUsersPage(real, s);
+    const per = this.USERS_PER_PAGE;
+    const from = pg.total ? (pg.page - 1) * per + 1 : 0;
+    const to = Math.min(pg.total, pg.page * per);
+    const q = (real && real.usersQ) || '';
+    return {
+      usersQ: q,
+      onUsersQ: (e) => { const v = e.target.value; clearTimeout(this._usersQT);
+        this._usersQT = setTimeout(() => this.loadSiteUsers(real, 1, v.trim()), 300); },
+      usersMeta: !real ? '' : real.usersLoading && !real.users ? 'Loading users…'
+        : pg.total === 0 ? (q ? 'No users match “' + q + '”.' : 'No users synced yet.')
+        : 'Showing ' + from.toLocaleString() + '–' + to.toLocaleString() + ' of ' + pg.total.toLocaleString() + (q ? ' matching' : '') + ' · administrators first',
+      usersPagerShow: pg.pages > 1,
+      usersPageLabel: 'Page ' + pg.page.toLocaleString() + ' of ' + pg.pages.toLocaleString(),
+      usersPrevOp: pg.page > 1 ? '1' : '.4', usersNextOp: pg.page < pg.pages ? '1' : '.4',
+      usersPrev: () => { if (pg.page > 1) this.loadSiteUsers(real, pg.page - 1); },
+      usersNext: () => { if (pg.page < pg.pages) this.loadSiteUsers(real, pg.page + 1); }
+    };
+  },
+
   realUserRows(real, s) {
     if (!real.users) return [];
-    const list = real.users[s.env] || [];
+    const list = this.realUsersPage(real, s).list;
     return list.map(u => {
       const login = u.user_login || '';
       return {
@@ -1153,11 +1202,7 @@ Object.assign(Component.prototype, {
   },
 
   reloadSiteUsers() {
-    const detail = this._detail;
-    if (!detail) return;
-    this.api('/sites/' + detail.siteId + '/users').then(u => {
-      if (this._detail === detail) { detail.users = u || {}; this.setState({ tick: this.state.tick }); }
-    }).catch(() => {});
+    this.loadSiteUsers(this._detail);
   },
 
   // Shell-safe single-quoted CLI argument (v1 wrapped args in single quotes;

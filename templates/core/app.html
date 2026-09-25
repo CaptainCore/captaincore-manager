@@ -1737,6 +1737,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="display:flex;align-items:center;margin-top:16px">
               <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">WordPress users on this environment.</span>
               <div style="flex:1"></div>
+              <input value="{{ usersQ }}" onInput="{{ onUsersQ }}" placeholder="Search users…" title="Search users" style="width:220px;max-width:40vw;height:32px;margin-right:8px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none">
               <button onClick="{{ openNsu }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">+ New user</button>
             </div>
             <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
@@ -1750,6 +1751,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <button onClick="{{ u.ctx }}" title="More actions" style="border:none;background:none;color:var(--ink-dim);font:600 var(--fs-14) var(--sans);width:28px;height:28px;border-radius:7px;cursor:pointer" style-hover="background:var(--paper);color:var(--ink)">⋯</button>
                 </div>
               </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ usersMeta }}</span>
+              <div style="flex:1"></div>
+              <sc-if value="{{ usersPagerShow }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ usersPrev }}" title="Previous page" style="opacity:{{ usersPrevOp }};border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer">← Prev</button>
+                <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ usersPageLabel }}</span>
+                <button onClick="{{ usersNext }}" title="Next page" style="opacity:{{ usersNextOp }};border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer">Next →</button>
+              </sc-if>
             </div>
           </sc-if>
 

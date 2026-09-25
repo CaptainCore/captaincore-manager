@@ -2509,6 +2509,7 @@ class Component extends DCLogic {
       ...(this.computeEditSite ? this.computeEditSite(real, s) : { edsShow: false, edsOpen: false }),
       ...(this.computeEnvEdit ? this.computeEnvEdit(real, s) : { eeOpen: false }),
       dUsers, logChips, logLines,
+      ...(real ? this.computeUsersPager(real, s) : { usersQ: '', onUsersQ: () => {}, usersMeta: '', usersPagerShow: false }),
       nsuOpen: !!s.nsuOpen,
       openNsu: () => this.setState({ nsuOpen: true, nsu: { role: 'subscriber' }, nsuMsg: '' }),
       closeNsu: () => this.setState({ nsuOpen: false }),

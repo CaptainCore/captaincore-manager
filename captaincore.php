@@ -3365,7 +3365,15 @@ function captaincore_sites_users_func( WP_REST_Request $request ) {
 	if ( ! captaincore_verify_permissions( $post_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
 	}
-	return ( new CaptainCore\Site( $post_id ) )->users();
+	$args = [];
+	if ( $request->get_param( 'per_page' ) !== null ) {
+		$args = [
+			'per_page' => $request->get_param( 'per_page' ),
+			'page'     => $request->get_param( 'page' ) ?? 1,
+			'search'   => (string) $request->get_param( 'search' ),
+		];
+	}
+	return ( new CaptainCore\Site( $post_id ) )->users( $args );
 }
 
 function captaincore_dns_bulk_func( WP_REST_Request $request ) {

@@ -1855,20 +1855,57 @@ class Site {
         return $update_logs;
     }
 
-    public function users() {
+    /**
+     * WordPress users per environment, administrators first.
+     *
+     * With no paging args this returns the full list (the legacy UI's shape).
+     * With `per_page` each environment instead returns one page:
+     * { users, total, page, per_page, pages }, filtered by `search` over login,
+     * email and display name. Some sites store over 100,000 users (20+ MB);
+     * sending all of them froze the dashboard.
+     *
+     * @param array $args { page, per_page, search }
+     */
+    public function users( $args = [] ) {
         $db_environments = new Environments();
         $environments    = $db_environments->fetch_environments( $this->site_id );
-        $results = (object) [];
+        $results         = (object) [];
+        $per_page        = isset( $args['per_page'] ) ? max( 1, min( 200, (int) $args['per_page'] ) ) : 0;
+        $search          = strtolower( trim( (string) ( $args['search'] ?? '' ) ) );
         foreach( $environments as $environment ) {
             $users = empty( $environment->users ) ? [] : json_decode( $environment->users );
+            if ( ! is_array( $users ) ) {
+                $users = [];
+            }
             array_multisort(
                 array_column($users, 'roles'), SORT_ASC,
                 array_column($users, 'user_login'), SORT_ASC,
                 $users
             );
-            if ( $users != "" ) {
+            if ( ! $per_page ) {
                 $results->{$environment->environment} = $users;
+                continue;
             }
+            if ( $search !== '' ) {
+                $users = array_values( array_filter( $users, function ( $u ) use ( $search ) {
+                    foreach ( [ 'user_login', 'user_email', 'display_name' ] as $field ) {
+                        if ( isset( $u->$field ) && strpos( strtolower( (string) $u->$field ), $search ) !== false ) {
+                            return true;
+                        }
+                    }
+                    return false;
+                } ) );
+            }
+            $total = count( $users );
+            $pages = max( 1, (int) ceil( $total / $per_page ) );
+            $page  = max( 1, min( $pages, (int) ( $args['page'] ?? 1 ) ) );
+            $results->{$environment->environment} = (object) [
+                'users'    => array_slice( $users, ( $page - 1 ) * $per_page, $per_page ),
+                'total'    => $total,
+                'page'     => $page,
+                'per_page' => $per_page,
+                'pages'    => $pages,
+            ];
         }
         return $results;
     }
