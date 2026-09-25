@@ -1170,9 +1170,15 @@ Object.assign(Component.prototype, {
     const from = pg.total ? (pg.page - 1) * per + 1 : 0;
     const to = Math.min(pg.total, pg.page * per);
     const q = (real && real.usersQ) || '';
+    // The box shows what was typed (state, per keystroke); the search it
+    // runs is debounced. Binding it to the last *fetched* term let any
+    // re-render in between reset the box and eat keystrokes.
+    const draft = s.usersQDraft && s.usersQDraft.siteId === (real && real.siteId) ? s.usersQDraft.v : q;
     return {
-      usersQ: q,
-      onUsersQ: (e) => { const v = e.target.value; clearTimeout(this._usersQT);
+      usersQ: draft,
+      onUsersQ: (e) => { const v = e.target.value; const siteId = real && real.siteId;
+        this.setState({ usersQDraft: { siteId, v } });
+        clearTimeout(this._usersQT);
         this._usersQT = setTimeout(() => this.loadSiteUsers(real, 1, v.trim()), 300); },
       usersMeta: !real ? '' : real.usersLoading && !real.users ? 'Loading users…'
         : pg.total === 0 ? (q ? 'No users match “' + q + '”.' : 'No users synced yet.')
