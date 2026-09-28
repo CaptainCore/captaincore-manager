@@ -2709,6 +2709,17 @@ Seven fixes from a screenshot review, all verified live headless (28 checks):
   queue without this browser running its final step ends with an honest
   wrap-up line (`nsProgressGone`) instead of spinning forever. Jobs keyed by
   site name on `this._nsJobs`.
+- **Deploys sync the environment they overwrite.** Push to production,
+  pull to staging and push to another site end in `trackProviderOp`; when the
+  op leaves the active list it now calls `syncDeployedEnv(siteId, env, name)`
+  (app.js), a `sync-data` dock job on `/sites/{id}/{env}/sync/data` that
+  reloads the open detail on finish. The deploy-to-staging chain in
+  `pollProviderActions` uses the same helper. A push finished after a reload
+  (or a customer's fire-and-forget push) completes in `pollProviderActions`,
+  which reads `target_site_id` / `target_environment` / `target_name` from the
+  `push_environment` action JSON; ops this tab tracks are claimed in
+  `this._trackedOps` so they sync once. Verified with mocked provider routes
+  (tracked pull, resumed push, claimed push skipped, deploy-to-staging).
 - **Handbook rows are fully clickable and editable.** Row click opens the
   viewer (hover affordance); a per-row Edit link (stopPropagation) opens the
   new Edit-process dialog — v1's exact contract: `GET /processes/{id}/raw`

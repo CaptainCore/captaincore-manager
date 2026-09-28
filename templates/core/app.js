@@ -1755,15 +1755,29 @@ class Component extends DCLogic {
             if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
             // Legacy parity (syncSiteEnvironment): pull the new environment's
             // stats/inventory right away so the Staging tab isn't empty.
-            if (act.site_id && this.startJob) this.startJob({
-              label: 'sync-data', target: act.name + ' · Staging', command: 'syncSite', siteId: act.site_id,
-              dispatch: () => this.api('/sites/' + act.site_id + '/staging/sync/data'),
-              onFinish: () => { if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail(); }
-            });
+            this.syncDeployedEnv(act.site_id, 'Staging', act.name);
+          }
+          // A push resumed after a reload finishes here instead of in the
+          // tab's trackProviderOp, which syncs the ones it is tracking itself.
+          if (!still && act.command === 'push_environment' && !(this._trackedOps || {})[a.provider_key]) {
+            this.syncDeployedEnv(act.target_site_id, act.target_environment, act.target_name);
           }
         }).catch(() => {})), Promise.resolve());
       chain.then(() => { if (list.length) this._paTimer = setTimeout(() => this.pollProviderActions(), 10000); });
     }).catch(() => {});
+  }
+
+  // A deploy overwrites the target environment, but the Manager keeps its
+  // pre-deploy plugins, themes and core version until the next sync. Pull
+  // fresh data now and refresh the open detail once it lands.
+  syncDeployedEnv(siteId, environment, name) {
+    if (!siteId || !environment || !this.startJob) return;
+    const reload = () => { if (this._detail && String(this._detail.siteId) === String(siteId) && this.reloadSiteDetail) this.reloadSiteDetail(); };
+    this.startJob({
+      label: 'sync-data', target: (name || '') + ' · ' + environment, command: 'syncSite', siteId,
+      dispatch: () => this.api('/sites/' + siteId + '/' + String(environment).toLowerCase() + '/sync/data'),
+      onFinish: reload
+    });
   }
 
   // ── New-site provisioning progress (console) ──────────────────

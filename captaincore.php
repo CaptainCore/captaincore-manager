@@ -5420,6 +5420,10 @@ function captaincore_push_environment_func( WP_REST_Request $request ) {
 			"source_site_id"            => $source_site->site_id,
 			"source_environment_id"     => $source_environment_id,
 			"target_environment_id" 	=> $target_environment_id,
+			// The browser syncs the overwritten target once the push lands.
+			"target_site_id"            => $target_site->site_id,
+			"target_environment"        => $target_env->environment,
+			"target_name"               => $target_site->name,
 			"provider_id"               => $source_site->provider_id,
 		];
 		// Assumes Kinsta for now, this part could also be abstracted

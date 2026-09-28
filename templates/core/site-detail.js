@@ -400,7 +400,8 @@ Object.assign(Component.prototype, {
     const target = direction === 'up' ? prod : stag;
     const name = (real.site && real.site.name) || '';
     this.realPushTo(real, source.environment_id, target.environment_id,
-      source.environment.toLowerCase() + ' → ' + target.environment.toLowerCase() + ' on ' + name);
+      source.environment.toLowerCase() + ' → ' + target.environment.toLowerCase() + ' on ' + name,
+      { siteId: real.siteId, environment: target.environment, name });
   },
 
   // Targets for "Push to another site" — the provider endpoint returns every
@@ -441,7 +442,8 @@ Object.assign(Component.prototype, {
           if (!t.environment_id) return;
           if (!real) { this.runJob('deploy', label); return; }
           const env = real.envs && real.envs.find(e => e.environment === s.env);
-          if (env) this.realPushTo(real, env.environment_id, t.environment_id, label);
+          if (env) this.realPushTo(real, env.environment_id, t.environment_id, label,
+            { siteId: t.site_id, environment: t.environment, name: t.name });
           return;
         }
         if (real) this.realPush(real, dir);
@@ -482,7 +484,9 @@ Object.assign(Component.prototype, {
     };
   },
 
-  realPushTo(real, sourceEnvId, targetEnvId, label) {
+  // target = { siteId, environment, name } of the environment being
+  // overwritten; it gets a sync-data run once the push lands.
+  realPushTo(real, sourceEnvId, targetEnvId, label, target) {
     // Push is a provider operation (202 + operation_id), not a token job —
     // the dock entry is resolved by polling /provider-actions/check until the
     // registered action leaves the active list (v1: checkProviderActions).
@@ -500,7 +504,7 @@ Object.assign(Component.prototype, {
         // fire-and-forget behavior.
         if (res && res.operation_id && (window.CC_BOOT || {}).dcRole === 'operator') {
           job.stream.push('Tracking provider operation ' + res.operation_id + '…');
-          this.trackProviderOp(job, res.operation_id, real.siteId);
+          this.trackProviderOp(job, res.operation_id, real.siteId, 0, target);
         } else {
           this.finishJob(job, 'done');
         }
@@ -512,10 +516,13 @@ Object.assign(Component.prototype, {
   // operationId is no longer active (started/waiting). "waiting" actions get
   // their follow-up step run via /provider-actions/{id}/run — that is what
   // flips a finished operation to done (v1: runProviderActions).
-  trackProviderOp(job, operationId, siteId, attempts) {
+  trackProviderOp(job, operationId, siteId, attempts, target) {
     attempts = attempts || 0;
+    // Claim the sync for this op so app.js's pollProviderActions skips it.
+    (this._trackedOps = this._trackedOps || {})[operationId] = true;
     if (attempts > 90) { // ~15 min safety cap
       job.stream.push('Stopped tracking — the operation is taking unusually long. Check the provider dashboard.');
+      delete this._trackedOps[operationId];
       this.finishJob(job, 'done');
       return;
     }
@@ -531,13 +538,15 @@ Object.assign(Component.prototype, {
           this.finishJob(job, 'done');
           // Environments changed on the target — refresh the open detail.
           if (this._detail && this._detail.siteId === siteId) { this._detail = null; this.loadSiteDetail(siteId); }
+          if (target) this.syncDeployedEnv(target.siteId, target.environment, target.name);
           return;
         }
         this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 10) + 6) }));
-        this.trackProviderOp(job, operationId, siteId, attempts + 1);
+        this.trackProviderOp(job, operationId, siteId, attempts + 1, target);
       }).catch(() => {
         // Poll failure (auth/network) — end gracefully rather than spin.
         job.stream.push('Could not poll operation status; assuming it completes in the background.');
+        delete this._trackedOps[operationId];
         this.finishJob(job, 'done');
       });
     }, attempts === 0 ? 8000 : 10000);
