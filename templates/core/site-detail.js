@@ -537,11 +537,18 @@ Object.assign(Component.prototype, {
     }
     this.api('/providers/' + site.provider + '/deploy-to-staging', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
       if (!res || res.code) { job.stream.push('Error: ' + ((res && res.message) || 'Could not start the staging build.')); this.finishJob(job, 'error'); return; }
-      job.stream.push('Creating a staging environment from production (operation ' + res + ').');
-      job.stream.push('This can take several minutes. It appears on the site and syncs once the host finishes.');
-      this.finishJob(job, 'done');
-      if (this.pollProviderActions) this.pollProviderActions();
+      this.trackStagingBuild(job, real.siteId, res);
     }).catch(err => { job.stream.push('Error: ' + (err && err.message || err)); this.finishJob(job, 'error'); });
+  },
+
+  // Hand a started staging build to pollProviderActions, which streams each
+  // step into the job (stgProgress) and finishes it once the environment is
+  // linked (stgProgressDone) — the job stays running until then.
+  trackStagingBuild(job, siteId, operationId) {
+    job.stream.push('Kinsta accepted the request (operation ' + operationId + ').');
+    job.stream.push('Building staging can take several minutes. Progress shows here, and the new environment syncs once it is linked.');
+    (this._stgJobs = this._stgJobs || {})[String(siteId)] = job.id;
+    if (this.pollProviderActions) this.pollProviderActions();
   },
 
   // Poll /provider-actions/check every 10s until the action registered for
@@ -898,9 +905,9 @@ Object.assign(Component.prototype, {
     this.api('/providers/' + provider + '/deploy-to-staging', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
       this.setState({ edsEnvBusy: '' });
       if (!res || res.code || res === false) { this.toast((res && res.message) || 'Could not start the staging build', { kind: 'error' }); return; }
-      this.toast('Staging environment is being created — it will appear here once the host finishes', { kind: 'success' });
       this.setState({ edsOpen: false });
-      if (this.pollProviderActions) this.pollProviderActions();
+      const jobId = this.startJob({ label: 'deploy', target: 'production → new staging on ' + name, command: 'push', siteId: real.siteId });
+      this.trackStagingBuild(this._jobObjs[jobId], real.siteId, res);
     }).catch(() => { this.setState({ edsEnvBusy: '' }); this.toast('Could not start the staging build', { kind: 'error' }); });
   },
 

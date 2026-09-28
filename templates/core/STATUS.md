@@ -2731,6 +2731,16 @@ Seven fixes from a screenshot review, all verified live headless (28 checks):
   return a WP_Error carrying Kinsta's message instead of null/false, and a
   refused clone no longer records a keyless action. Verified with faked
   Kinsta HTTP (refused + accepted) and a clicked-through UI with mocked routes.
+- **Staging builds stream progress.** The deploy job used to finish the
+  moment Kinsta accepted the clone, so the dock showed nothing for the several
+  minutes the build ran. `trackStagingBuild` now registers the job on
+  `this._stgJobs[site_id]` and `pollProviderActions` feeds it through
+  `stgProgress` (one line per status|step|operation, bar creeps each poll),
+  `stgProgressDone` when run() links the environment, and `stgProgressGone`
+  when the chain leaves the queue some other way. Create staging (Edit site)
+  uses the same job instead of a toast. A build resumed after a reload gets a
+  "Resumed tracking" row. Note: `check()` persists nothing on a 202 poll, so
+  an action row showing `attempts: 1` + a 404 response is normal mid-build.
 - **New sites get their customer account at request time.** With no
   customer picked, `Kinsta::new_site` creates the account (named after the
   domain) as soon as Kinsta accepts the create (or rate-limits it for a

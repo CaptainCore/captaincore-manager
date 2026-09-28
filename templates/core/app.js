@@ -1739,6 +1739,11 @@ class Component extends DCLogic {
       nsRows.forEach(a => this.nsProgress(a));
       const nsNames = new Set(nsRows.map(a => (a.action || {}).name));
       Object.keys(this._nsJobs || {}).forEach(n => { if (!nsNames.has(n)) this.nsProgressGone(n); });
+      // Staging builds (Pull to staging, Create staging) stream the same way.
+      const stgRows = list.filter(a => (a.action || {}).command === 'deploy-to-staging');
+      stgRows.forEach(a => this.stgProgress(a));
+      const stgIds = new Set(stgRows.map(a => String((a.action || {}).site_id)));
+      Object.keys(this._stgJobs || {}).forEach(id => { if (!stgIds.has(id)) this.stgProgressGone(id); });
       const chain = list.filter(a => a.status === 'waiting').reduce((p, a) => p.then(() =>
         this.api('/provider-actions/' + a.provider_action_id + '/run').then(active => {
           const act = a.action || {};
@@ -1758,6 +1763,7 @@ class Component extends DCLogic {
           // server-side (connect_staging), so the open site detail is stale.
           if (!still && act.command === 'deploy-to-staging') {
             this.toast(`Staging environment ready for ${act.name}`, { kind: 'success' });
+            this.stgProgressDone(act.site_id);
             if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
             // Legacy parity (syncSiteEnvironment): pull the new environment's
             // stats/inventory right away so the Staging tab isn't empty.
@@ -1825,6 +1831,55 @@ class Component extends DCLogic {
     delete (this._nsJobs || {})[name];
     if (!job) return;
     job.stream.push('✓ ' + name + " provisioned at Kinsta's " + dcTitle + ' datacenter. Site data sync is running in the background.');
+    this.finishJob(job, 'done');
+  }
+
+  // Staging-build progress (the deploy-to-staging chain): one dock line per
+  // state change, like nsProgress. Jobs are keyed by site id on
+  // this._stgJobs; trackStagingBuild seeds one, and a build resumed after a
+  // reload gets its own row. The bar creeps each poll so a long clone
+  // visibly stays alive.
+  stgProgress(a) {
+    const act = a.action || {};
+    const id = String(act.site_id || '');
+    if (!id) return;
+    this._stgJobs = this._stgJobs || {};
+    this._jobObjs = this._jobObjs || {};
+    let job = this._jobObjs[this._stgJobs[id]];
+    if (!job) {
+      const jobId = this.startJob({ label: 'deploy', target: 'production → staging on ' + (act.name || 'site'), command: 'push', siteId: act.site_id });
+      job = this._jobObjs[jobId];
+      this._stgJobs[id] = jobId;
+      job.stream.push('Resumed tracking — the staging build is already underway.');
+    }
+    this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 6) + 2) }));
+    const key = (a.status || '') + '|' + (act.step || '') + '|' + (a.provider_key || '');
+    if (job._paKey === key) return;
+    job._paKey = key;
+    const backup = String(act.step) === '1';
+    if (a.status === 'started') job.stream.push(backup
+      ? 'Kinsta is backing up production (operation ' + a.provider_key + ')…'
+      : 'Kinsta is ' + (act.environment_staging_id ? 'restoring that backup into staging' : 'building the staging environment') + ' (operation ' + a.provider_key + ')…');
+    if (a.status === 'waiting') job.stream.push('✓ Kinsta operation complete — ' + (backup ? 'starting the restore into staging…' : 'linking the staging environment…'));
+  }
+
+  stgProgressDone(siteId) {
+    const id = String(siteId || '');
+    const job = this._jobObjs && this._jobObjs[(this._stgJobs || {})[id]];
+    delete (this._stgJobs || {})[id];
+    if (!job) return;
+    job.stream.push('✓ Staging environment linked. Its data sync is running as its own job.');
+    this.finishJob(job, 'done');
+  }
+
+  // Same as nsProgressGone: the chain left the queue without this browser
+  // running its last step (another session did, or the server failed it).
+  stgProgressGone(siteId) {
+    const id = String(siteId || '');
+    const job = this._jobObjs && this._jobObjs[(this._stgJobs || {})[id]];
+    delete (this._stgJobs || {})[id];
+    if (!job) return;
+    job.stream.push("The staging build left the queue (finished in another session or marked failed by the server). Check the site's environments.");
     this.finishJob(job, 'done');
   }
 
