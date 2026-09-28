@@ -364,8 +364,24 @@ class Kinsta {
             ? "Creating site $site->name at Kinsta datacenter $site->datacenter"
             : "Creating site $site->name at Kinsta via site clone";
 
+        // No customer named: create the site's account now rather than when
+        // the chain links the site minutes later, so DNS zones and invites can
+        // go to it straight away. run() passes customer_id on to Site::create,
+        // which then skips making its own. A refused request gets no account;
+        // a rate-limited one is retried by check(), so it does.
+        $customer_name = "";
+        $accepted      = ! empty( $response->operation_id ) || ( $response->message ?? '' ) == "Too many requests, please try again later.";
+        if ( $accepted && empty( $site->customer_id ) ) {
+            $customer_name     = empty( $site->domain ) ? "{$site->name}.kinsta.cloud" : $site->domain;
+            $site->customer_id = \CaptainCore\Site::create_customer_account( $customer_name );
+        }
+
         self::add_action( $response->operation_id ?? "", $site );
-        return $response->operation_id ?? null;
+        return [
+            "operation_id"  => $response->operation_id ?? null,
+            "customer_id"   => empty( $customer_name ) ? null : $site->customer_id,
+            "customer_name" => $customer_name,
+        ];
     }
 
     /**

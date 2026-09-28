@@ -131,6 +131,33 @@ class Site {
         return $site;
     }
 
+    /**
+     * The customer account a new site gets when none was named: the first
+     * hosting plan, named after the site. Provider new-site requests call this
+     * as soon as the host accepts them, so the account can be used for DNS
+     * zones and invites while the site is still provisioning.
+     *
+     * @return int The new account id.
+     */
+    public static function create_customer_account( $name ) {
+        $time_now      = date( 'Y-m-d H:i:s' );
+        $plan          = null;
+        $hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
+        if ( is_array( $hosting_plans ) ) {
+            $plan        = $hosting_plans[0];
+            $plan->usage = (object) [ "storage" => "0", "visits" => "", "sites" => "" ];
+        }
+        return ( new Accounts )->insert( [
+            "name"       => $name,
+            'created_at' => $time_now,
+            'updated_at' => $time_now,
+            'defaults'   => json_encode( [ "email" => "", "timezone" => "", "recipes" => [], "users" => [] ] ),
+            'plan'       => json_encode( $plan ),
+            'metrics'    => json_encode( [ "sites" => "1", "users" => "0", "domains" => "0" ] ),
+            'status'     => 'active',
+        ] );
+    }
+
     public function create( $site ) {
 
         // Work with array as PHP object
@@ -326,21 +353,7 @@ class Site {
 
         // Generate new customer if needed
         if ( empty( $site->customer_id ) ) {
-            $hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
-            if ( is_array( $hosting_plans ) ) {
-                $plan        = $hosting_plans[0];
-                $plan->usage = (object) [ "storage" => "0", "visits" => "", "sites" => "" ];
-            }
-            $new_account = [
-                "name"       => $site->name,
-                'created_at' => $time_now,
-                'updated_at' => $time_now,
-                'defaults'   => json_encode( [ "email" => "", "timezone" => "", "recipes" => [], "users" => [] ] ),
-                'plan'       => json_encode( $plan ),
-                'metrics'    => json_encode( [ "sites" => "1", "users" => "0", "domains" => "0" ] ),
-                'status'     => 'active',
-            ];
-            $site->customer_id = ( new Accounts )->insert( $new_account );
+            $site->customer_id = self::create_customer_account( $site->name );
             ( new Sites )->update( [ "customer_id" => $site->customer_id ], [ "site_id" => $site_id ] );
         }
 

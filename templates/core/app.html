@@ -5283,7 +5283,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ r.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 var(--fs-12) var(--sans);padding:2px 4px" style-hover="color:var(--ink)">✕</span>
                 </div>
               </sc-for>
-              <span style="margin-left:122px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Assigned accounts get shared access. If no customer account is set, the site is placed in a new account.</span>
+              <span style="margin-left:122px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Assigned accounts get shared access. If no customer account is set, a new account named after the domain is created right away.</span>
             </sc-if>
             <sc-for list="{{ nsErrors }}" as="e" hint-placeholder-count="0">
               <div style="font:500 var(--fs-125) var(--sans);color:var(--bad);background:var(--bad-soft);border-radius:9px;padding:9px 12px">{{ e.text }}</div>

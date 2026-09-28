@@ -2731,6 +2731,19 @@ Seven fixes from a screenshot review, all verified live headless (28 checks):
   return a WP_Error carrying Kinsta's message instead of null/false, and a
   refused clone no longer records a keyless action. Verified with faked
   Kinsta HTTP (refused + accepted) and a clicked-through UI with mocked routes.
+- **New sites get their customer account at request time.** With no
+  customer picked, `Kinsta::new_site` creates the account (named after the
+  domain) as soon as Kinsta accepts the create (or rate-limits it for a
+  retry), stores `customer_id` in the new-site action, and returns
+  `{ operation_id, customer_id, customer_name }`. `run()` hands that id to
+  `Site::create`, which skips making its own. The account shape lives in
+  `Site::create_customer_account()` (first hosting plan, sites metric 1).
+  `createKinstaSite` logs "Created account …" in the dock job and calls
+  `reloadAccounts()`, so DNS and share pickers list it before the site
+  finishes. A refused create makes no account; a chain that fails later
+  keeps it (it may already hold a DNS zone). Verified with faked Kinsta HTTP
+  (accepted / refused / customer picked / Site::create hand-off) and a mocked
+  dialog run.
 - **Handbook rows are fully clickable and editable.** Row click opens the
   viewer (hover affordance); a per-row Edit link (stopPropagation) opens the
   new Edit-process dialog — v1's exact contract: `GET /processes/{id}/raw`

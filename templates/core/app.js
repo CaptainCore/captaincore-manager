@@ -1708,6 +1708,12 @@ class Component extends DCLogic {
       const jobId = this.startJob({ label: 'new-site', target: name + ' · Kinsta ' + st.nsDc, command: 'new-site', expand: true });
       const job = this._jobObjs[jobId];
       job.stream.push('Kinsta accepted the request' + (site.clone_site_id ? ' — cloning from ' + st.nsClone : '') + '.');
+      // The server creates the customer account up front when none was
+      // picked; refresh the account list so DNS and share pickers offer it now.
+      if (res && res.customer_id) {
+        job.stream.push('Created account ' + res.customer_name + ' (#' + res.customer_id + ') for the site.');
+        if (this.reloadAccounts) this.reloadAccounts();
+      }
       job.stream.push('Waiting for the Kinsta operation to start…');
       this._nsJobs = this._nsJobs || {};
       this._nsJobs[name] = jobId;
