@@ -395,7 +395,10 @@ Object.assign(Component.prototype, {
     if (!real.envs) return;
     const prod = real.envs.find(e => e.environment === 'Production');
     const stag = real.envs.find(e => e.environment === 'Staging');
-    if (!prod || !stag) return;
+    // No Staging row yet: a pull builds one at the host instead of silently
+    // doing nothing; a push has nothing to push from.
+    if (prod && !stag && direction === 'down') { this.realPullToNewStaging(real); return; }
+    if (!prod || !stag) { this.toast('This site has no ' + (prod ? 'staging' : 'production') + ' environment', { kind: 'error' }); return; }
     const source = direction === 'up' ? stag : prod;
     const target = direction === 'up' ? prod : stag;
     const name = (real.site && real.site.name) || '';
@@ -426,12 +429,16 @@ Object.assign(Component.prototype, {
       : dir === 'down' ? 'staging on ' + site.name
       : (t.environment || '').toLowerCase() + ' on ' + (t.name || '');
     const label = from + ' → ' + to;
+    // A pull on a site with no Staging row creates one (realPullToNewStaging).
+    const newStaging = dir === 'down' && !!(real && real.envs) && !real.envs.some(e => e.environment === 'Staging');
     return {
       depOpen: !!dir,
       depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : 'Push to another site',
       depFrom: from, depTo: to,
-      depWarn: 'This overwrites ' + to + ' with a copy of ' + from + '. Anything on the target that isn’t in the copy will be lost.',
-      depBtn: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
+      depWarn: newStaging
+        ? 'This site has no staging environment yet. The host creates one from a copy of ' + from + ', which can take several minutes.'
+        : 'This overwrites ' + to + ' with a copy of ' + from + '. Anything on the target that isn’t in the copy will be lost.',
+      depBtn: dir === 'up' ? 'Push to production' : newStaging ? 'Create staging' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
       // Red whenever a production environment is about to be overwritten.
       depBtnBg: (dir === 'up' || (dir === 'other' && t.environment === 'Production')) ? 'var(--bad)' : 'var(--brand)',
       closeDep: () => this.setState({ deployConfirm: '', ptoSel: null }),
@@ -510,6 +517,31 @@ Object.assign(Component.prototype, {
         }
       })
       .catch(err => { job.stream.push('Error: ' + (err && err.message || err)); this.finishJob(job, 'error'); });
+  },
+
+  // Pull to staging on a site with no Staging row — the same chain as Edit
+  // site → Create staging. Kinsta clones live into a new staging environment
+  // (or restores into one it has that the Manager never linked); then
+  // pollProviderActions links it, toasts, and syncs the new environment.
+  realPullToNewStaging(real) {
+    const site = real.site || {};
+    const jobId = this.startJob({
+      label: 'deploy', target: 'production → new staging on ' + (site.name || ''),
+      command: 'push', siteId: real.siteId
+    });
+    const job = this._jobObjs[jobId];
+    if (!site.provider || !site.provider_site_id) {
+      job.stream.push('Error: this site has no staging environment and no linked host to create one. Add it in Edit site → Environments.');
+      this.finishJob(job, 'error');
+      return;
+    }
+    this.api('/providers/' + site.provider + '/deploy-to-staging', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
+      if (!res || res.code) { job.stream.push('Error: ' + ((res && res.message) || 'Could not start the staging build.')); this.finishJob(job, 'error'); return; }
+      job.stream.push('Creating a staging environment from production (operation ' + res + ').');
+      job.stream.push('This can take several minutes. It appears on the site and syncs once the host finishes.');
+      this.finishJob(job, 'done');
+      if (this.pollProviderActions) this.pollProviderActions();
+    }).catch(err => { job.stream.push('Error: ' + (err && err.message || err)); this.finishJob(job, 'error'); });
   },
 
   // Poll /provider-actions/check every 10s until the action registered for

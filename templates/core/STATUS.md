@@ -2720,6 +2720,17 @@ Seven fixes from a screenshot review, all verified live headless (28 checks):
   `push_environment` action JSON; ops this tab tracks are claimed in
   `this._trackedOps` so they sync once. Verified with mocked provider routes
   (tracked pull, resumed push, claimed push skipped, deploy-to-staging).
+- **Pull to staging creates staging when there is none.** `realPush` used to
+  `return` silently when the site had no Staging row, so the confirm dialog
+  closed and nothing was sent (no job, no provider action). A pull now goes
+  through `realPullToNewStaging` → `POST /providers/{p}/deploy-to-staging`
+  (Kinsta clones live, or backup+restores into an unlinked staging), then
+  `pollProviderActions` links, toasts and syncs it. The dialog says "Create
+  staging" with a no-staging-yet warning; "Push staging → production" hides
+  behind `hasStaging`. `Kinsta::deploy_to_staging` / `create_staging_and_deploy`
+  return a WP_Error carrying Kinsta's message instead of null/false, and a
+  refused clone no longer records a keyless action. Verified with faked
+  Kinsta HTTP (refused + accepted) and a clicked-through UI with mocked routes.
 - **Handbook rows are fully clickable and editable.** Row click opens the
   viewer (hover affordance); a per-row Edit link (stopPropagation) opens the
   new Edit-process dialog — v1's exact contract: `GET /processes/{id}/raw`

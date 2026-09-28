@@ -570,6 +570,14 @@ class Kinsta {
         ];
         $response = \CaptainCore\Remote\Kinsta::post( "sites/{$site->provider_site_id}/environments/clone", $data );
 
+        // A refused clone has no operation to track; recording one anyway
+        // left a keyless action polling forever and the caller saw nothing.
+        if ( empty( $response->operation_id ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the staging clone.';
+            error_log( "CaptainCore deploy-to-staging: Kinsta refused the staging clone for site #$site_id: $message" );
+            return new \WP_Error( 'kinsta_clone_failed', "Kinsta could not create the staging environment: $message", [ 'status' => 502 ] );
+        }
+
         $action = (object) [
             "command"                   => "deploy-to-staging",
             "step"                      => 2,
@@ -587,7 +595,7 @@ class Kinsta {
     public static function deploy_to_staging( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
         if ( empty( $site->provider_site_id ) ) {
-            return;
+            return new \WP_Error( 'not_linked', 'This site is not linked to a Kinsta site.', [ 'status' => 400 ] );
         }
         $environments = self::environments( $site->provider_site_id );
         $api_key      = self::credentials("api");
@@ -611,7 +619,8 @@ class Kinsta {
         $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/$environment_production_id/manual-backups", $data );
 
         if ( empty ( $response->operation_id ) ) {
-            return false;
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the production backup.';
+            return new \WP_Error( 'kinsta_backup_failed', "Kinsta could not back up production for the deploy: $message", [ 'status' => 502 ] );
         }
 
         $connect_staging = false;
