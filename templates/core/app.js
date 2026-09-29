@@ -70,7 +70,7 @@ class Component extends DCLogic {
     invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
     secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
-    audits: null, audSite: 'bloomandbranch.com', audTypes: { Core: true, Plugins: true }, 
+    audits: null, audSite: '', audTypes: { Core: true, Plugins: true }, 
     repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
@@ -741,7 +741,7 @@ class Component extends DCLogic {
     const audits = s.audits || this.AUDITS_INIT;
     const stBg = { Published: 'var(--ok-soft)', Complete: 'var(--brand-soft)', Running: 'var(--warn-soft)', Queued: 'var(--panel-2)' };
     return {
-      audSite: s.audSite,
+      audSite: s.audSite || 'Select a site…',
       ddAudOpen: s.ddOpen === 'aud',
       ddToggleAud: () => this.setState(st => ({ ddOpen: st.ddOpen === 'aud' ? '' : 'aud', ddQ: '' })),
       ddAudOpts: this.ddOpts(this.FLEET.map(f => f.name), s.audSite, 'audSite'),

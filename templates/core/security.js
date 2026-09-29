@@ -579,6 +579,14 @@ Object.assign(Component.prototype, {
   AUDIT_TYPE_LABEL: { security_audit: 'Security', malware_incident: 'Malware', performance_review: 'Performance',
     accessibility_audit: 'Accessibility', debug_report: 'Debug', incident_report: 'Incident' },
 
+  // The list endpoint returns report_path only; published reports live at /reports/<file>.
+  auditReportUrl(a) {
+    if (a.report_url) return a.report_url;
+    if (!a.report_path) return '';
+    const home = ((window.CC_BOOT && window.CC_BOOT.homeLink) || location.origin).replace(/\/+$/, '');
+    return home + '/reports/' + a.report_path;
+  },
+
   openAuditReport(a) {
     if (a.report_url) { this.safeOpen(a.report_url); return; }
     const boot = window.CC_BOOT || {};
@@ -612,7 +620,8 @@ Object.assign(Component.prototype, {
         cancellable: a.status === 'requested',
         view: () => this.openAuditReport(a),
         togglePub: () => this.api('/site-audits/' + a.site_audit_id + '/publish', { method: published ? 'DELETE' : 'POST', body: {} }).then(reload).catch(() => {}),
-        copyLink: () => { try { navigator.clipboard.writeText(a.report_url || ''); } catch (e) {}
+        copyLink: () => { const url = this.auditReportUrl(a); if (!url) return;
+          try { navigator.clipboard.writeText(url); } catch (e) {}
           this.setState({ copied: 'aud' + a.site_audit_id }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); },
         mark: s.copied === 'aud' + a.site_audit_id ? 'Copied ✓' : 'Copy link',
         cancel: async () => { if (!(await this.uiConfirm('Cancel this audit request?', { label: 'Cancel request', danger: true }))) return;
