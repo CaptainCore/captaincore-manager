@@ -371,7 +371,7 @@ class ProviderAction {
                     "key"              => "",
                     "shared_with"      => $current_action->shared_with,
                     "account_id"       => $current_action->account_id,
-                    "customer_id"      => empty( $current_action->customer_id ) ? "" : $current_action->customer_id,
+                    "customer_id"      => empty( $current_action->customer_id ) || ! empty( $current_action->customer_created ) ? "" : $current_action->customer_id,
                     "verify"           => $verify,
                     "provider"         => "kinsta",
                     "provider_id"      => $current_action->provider_id,
@@ -390,7 +390,7 @@ class ProviderAction {
                             "updates_enabled"   => "1"
                         ]
                     ],
-                ] );
+                ], empty( $current_action->customer_created ) ? 0 : (int) $current_action->customer_id );
     
                 // Site::create validates (name / slug / production address /
                 // username) and returns { errors } with NO site_id on failure.

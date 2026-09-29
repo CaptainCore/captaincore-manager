@@ -2754,6 +2754,15 @@ Seven fixes from a screenshot review, all verified live headless (28 checks):
   keeps it (it may already hold a DNS zone). Verified with faked Kinsta HTTP
   (accepted / refused / customer picked / Site::create hand-off) and a mocked
   dialog run.
+- **Fix: customer-initiated creates orphaned by the up-front account.** A
+  non-admin's new-site chain handed the server-made account to
+  `Site::create` as `customer_id`, which the non-admin check rejects (the
+  user does not belong to it) — "Invalid customer account", 5 link
+  attempts, failed; the site existed at Kinsta but never reached the
+  dashboard. `new_site` now flags the id `customer_created` (stripped from
+  input), and `run()` passes it as `Site::create`'s PHP-only second
+  argument, which places the site in it instead of a fresh account.
+  Verified as a non-admin via wp eval (old path errors, new path does not).
 - **Handbook rows are fully clickable and editable.** Row click opens the
   viewer (hover affordance); a per-row Edit link (stopPropagation) opens the
   new Edit-process dialog — v1's exact contract: `GET /processes/{id}/raw`

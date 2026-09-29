@@ -369,11 +369,15 @@ class Kinsta {
         // go to it straight away. run() passes customer_id on to Site::create,
         // which then skips making its own. A refused request gets no account;
         // a rate-limited one is retried by check(), so it does.
+        // customer_created marks the id as server-made so run() can hand it to
+        // Site::create as trusted; never take it from the request.
+        unset( $site->customer_created );
         $customer_name = "";
         $accepted      = ! empty( $response->operation_id ) || ( $response->message ?? '' ) == "Too many requests, please try again later.";
         if ( $accepted && empty( $site->customer_id ) ) {
             $customer_name     = empty( $site->domain ) ? "{$site->name}.kinsta.cloud" : $site->domain;
-            $site->customer_id = \CaptainCore\Site::create_customer_account( $customer_name );
+            $site->customer_id      = \CaptainCore\Site::create_customer_account( $customer_name );
+            $site->customer_created = true;
         }
 
         self::add_action( $response->operation_id ?? "", $site );

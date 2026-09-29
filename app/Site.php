@@ -158,7 +158,13 @@ class Site {
         ] );
     }
 
-    public function create( $site ) {
+    /**
+     * @param int $created_customer_id An account the provisioning chain made
+     *        itself for this site (Kinsta::new_site). It is PHP-only, so
+     *        the non-admin customer_id check never sees it; the site is
+     *        placed in it instead of a fresh account.
+     */
+    public function create( $site, $created_customer_id = 0 ) {
 
         // Work with array as PHP object
         $site = (object) $site;
@@ -353,7 +359,7 @@ class Site {
 
         // Generate new customer if needed
         if ( empty( $site->customer_id ) ) {
-            $site->customer_id = self::create_customer_account( $site->name );
+            $site->customer_id = $created_customer_id > 0 ? (int) $created_customer_id : self::create_customer_account( $site->name );
             ( new Sites )->update( [ "customer_id" => $site->customer_id ], [ "site_id" => $site_id ] );
         }
 
