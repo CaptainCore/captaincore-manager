@@ -40,10 +40,10 @@ Object.assign(Component.prototype, {
   reportTargetBody() {
     const s = this.state;
     if (s.repMode === 'Account') {
-      const a = this.ACCOUNTS.find(x => x.name === s.repTarget) || this.ACCOUNTS[0];
+      const a = this.ACCOUNTS.find(x => x.name === s.repTarget);
       return a ? { account_id: Number(a.id) } : null;
     }
-    const f = this.FLEET.find(x => x.name === s.repTarget) || this.FLEET[0];
+    const f = this.FLEET.find(x => x.name === s.repTarget);
     return f ? { site_ids: [Number(f.id)] } : null;
   },
 
@@ -51,7 +51,7 @@ Object.assign(Component.prototype, {
 
   previewReport() {
     const body = this.reportTargetBody();
-    if (!body) return;
+    if (!body) { this.setState({ repSendMsg: this.reportPickMsg() }); return; }
     this.setState({ repPreviewOpen: true, repPreviewHtml: '', repPreviewLoading: true });
     this.api(this.reportBase() + '/preview', { method: 'POST', body: { ...body, ...this.reportRange(this.state.repRange) } })
       .then(res => this.setState({ repPreviewHtml: (res && res.html) || '<p style="padding:24px;font-family:sans-serif">No report content.</p>', repPreviewLoading: false }))
@@ -61,7 +61,8 @@ Object.assign(Component.prototype, {
   async sendReport() {
     const body = this.reportTargetBody();
     const recipient = (this.state.repEmail || '').trim();
-    if (!body || !recipient) { this.setState({ repSendMsg: 'Enter a recipient email first.' }); return; }
+    if (!body) { this.setState({ repSendMsg: this.reportPickMsg() }); return; }
+    if (!recipient) { this.setState({ repSendMsg: 'Enter a recipient email first.' }); return; }
     if (!(await this.uiConfirm('Send this report to ' + recipient + '?', { label: 'Send report' }))) return;
     this.setState({ repSendMsg: 'Sending…' });
     this.api(this.reportBase() + '/send', { method: 'POST', body: { ...body, ...this.reportRange(this.state.repRange), recipient } })
@@ -69,17 +70,27 @@ Object.assign(Component.prototype, {
       .catch(() => this.setState({ repSendMsg: 'Send failed.' }));
   },
 
+  reportPickMsg() { return this.state.repMode === 'Account' ? 'Select an account first.' : 'Select a site first.'; },
+
+  // Prefill the recipient for the picked target. An address we prefilled is
+  // swapped out when the target changes; one the operator typed is kept.
   fetchReportRecipient() {
     const body = this.reportTargetBody();
-    if (!body) return;
+    const email = (this.state.repEmail || '').trim();
+    const auto = email && email === this._repAutoEmail;
+    if (auto) { this._repAutoEmail = ''; this.setState({ repEmail: '' }); }
+    if (!body || (email && !auto)) return;
+    const key = this.state.repMode + ':' + this.state.repTarget;
     this.api(this.reportBase() + '/default-recipient', { method: 'POST', body }).then(res => {
-      if (res && res.email && !(this.state.repEmail || '').trim()) this.setState({ repEmail: res.email });
+      if (key !== this.state.repMode + ':' + this.state.repTarget) return;
+      if (res && res.email && !(this.state.repEmail || '').trim()) { this._repAutoEmail = res.email; this.setState({ repEmail: res.email }); }
     }).catch(() => {});
   },
 
   realReportsVals(s) {
     if (s.route === 'reports' && !this._sched && !this._schedLoading) setTimeout(() => this.loadSchedules(), 0);
-    if (s.route === 'reports' && !this._repRecipFetched) { this._repRecipFetched = true; setTimeout(() => this.fetchReportRecipient(), 0); }
+    const recipKey = s.repMode + ':' + s.repTarget;
+    if (s.route === 'reports' && this._repRecipFor !== recipKey) { this._repRecipFor = recipKey; setTimeout(() => this.fetchReportRecipient(), 0); }
     const reload = () => this.loadSchedules(true);
     const intLabel = { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' };
     const schedRows = (this._sched || []).map(r => ({
@@ -104,7 +115,8 @@ Object.assign(Component.prototype, {
       schedRows, schedEmpty: !schedRows.length,
       addSchedule: () => { const body = this.reportTargetBody();
         const recipient = (this.state.repEmail || '').trim();
-        if (!body || !recipient) { this.setState({ repSendMsg: 'Enter a recipient to schedule.' }); return; }
+        if (!body) { this.setState({ repSendMsg: this.reportPickMsg() }); return; }
+        if (!recipient) { this.setState({ repSendMsg: 'Enter a recipient to schedule.' }); return; }
         this.api('/scheduled-reports', { method: 'POST',
           body: { ...body, interval: (this.state.repInt || 'Monthly').toLowerCase(), recipient } })
           .then(reload).catch(() => {}); },

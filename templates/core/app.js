@@ -71,7 +71,7 @@ class Component extends DCLogic {
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
     secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
     audits: null, audSite: '', audTypes: { Core: true, Plugins: true }, 
-    repMode: 'Site', repTarget: 'bloomandbranch.com', repRange: 'Last month', repInt: 'Monthly',
+    repMode: 'Site', repTarget: '', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
     setTab: 'branding', brandName: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting', keyDraft: '', sshKeys: null,
@@ -771,13 +771,13 @@ class Component extends DCLogic {
 
   computeReports(s, isOp) {
     const targets = s.repMode === 'Site' ? this.FLEET.map(f => f.name) : this.ACCOUNTS.map(a => a.name);
-    const target = targets.includes(s.repTarget) ? s.repTarget : targets[0];
+    const target = targets.includes(s.repTarget) ? s.repTarget : '';
     const schedules = s.schedules || this.SCHED_INIT;
     return {
       repModeChips: ['Site', 'Account'].map(label => ({ label,
         bg: s.repMode === label ? 'var(--brand-soft)' : 'var(--paper)', fg: s.repMode === label ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.repMode === label ? 'var(--brand)' : 'var(--rule)',
-        go: () => this.setState({ repMode: label }) })),
-      repTarget: target,
+        go: () => this.setState(st => st.repMode === label ? {} : { repMode: label, repTarget: '' }) })),
+      repTarget: target || (s.repMode === 'Site' ? 'Select a site…' : 'Select an account…'),
       ddRepTOpen: s.ddOpen === 'repT',
       ddToggleRepT: () => this.setState(st => ({ ddOpen: st.ddOpen === 'repT' ? '' : 'repT', ddQ: '' })),
       ddRepTOpts: this.ddOpts(targets, target, 'repTarget'),
