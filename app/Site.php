@@ -939,6 +939,7 @@ class Site {
         $upload_uri     = get_option( 'options_remote_upload_uri' );
         $site           = ( new Sites )->get( $this->site_id );
         $image_base_url = $upload_uri . $site->site . '_' . $this->site_id . '/' . strtolower( $environment ) . '/captures/';
+        $no_screenshot  = self::capture_pages_without_screenshots( $environment_id );
 
         foreach ( $results as $result ) {
             $created_at_friendly = new \DateTime( $result->created_at );
@@ -946,6 +947,10 @@ class Site {
             $created_at_friendly = date_format( $created_at_friendly, 'D, M jS Y g:i a');
             $result->created_at_friendly =  $created_at_friendly;
             $result->pages = json_decode( $result->pages );
+            // Older captures recorded an image for these pages although none was ever taken.
+            $result->pages = array_values( array_filter( (array) $result->pages, function( $page ) use ( $no_screenshot ) {
+                return ! empty( $page->image ) && ! in_array( $page->name, $no_screenshot, true );
+            } ) );
             $result->image_base_url = $image_base_url;
             foreach ( $result->pages as $page ) {
                 $page->image_url = $image_base_url . str_replace( '#', '%23', $page->image );
@@ -1322,6 +1327,27 @@ class Site {
     public function environment_ids() {
         $environment_ids = ( new Environments )->where( [ "site_id" => $this->site_id ] );
         return array_column( $environment_ids, "environment_id" );
+    }
+
+    /**
+     * Pages the CLI tracks for HTML drift but never screenshots: the checkout,
+     * cart and account pages it discovers on ecommerce plugins, unless the site
+     * also lists them in its own capture pages.
+     */
+    public static function capture_pages_without_screenshots( $environment_id ) {
+        $environment = Environments::get( $environment_id );
+        if ( empty( $environment ) ) {
+            return [];
+        }
+        $details      = json_decode( (string) $environment->details );
+        $plugin_pages = ( ! empty( $details->capture_plugin_pages ) && is_array( $details->capture_plugin_pages ) ) ? $details->capture_plugin_pages : [];
+        if ( empty( $plugin_pages ) ) {
+            return [];
+        }
+        $configured = json_decode( (string) $environment->capture_pages );
+        $configured = is_array( $configured ) ? array_column( $configured, 'page' ) : [];
+        $configured[] = '/';
+        return array_values( array_diff( $plugin_pages, $configured ) );
     }
 
     public function fetch_environment_id( $environment ) {

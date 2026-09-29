@@ -1603,9 +1603,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$image_ending     = "_{$data->created_at}_{$git_commit_short}.jpg";
 		$capture_pages    = explode( ",", $data->capture_pages );
 		$captured_pages   = explode( ",", $data->captured_pages );
+		$no_screenshot    = CaptainCore\Site::capture_pages_without_screenshots( $environment_id );
 		$pages = [];
 		foreach( $capture_pages as $page ) {
 			$page_name = str_replace( "/", "#", $page );
+
+			// Tracked for HTML drift only; the CLI never screenshots these.
+			if ( in_array( $page, $no_screenshot, true ) ) {
+				continue;
+			}
 
 			// Add page with new screenshot
 			if ( in_array( $page, $captured_pages ) ) {
