@@ -327,6 +327,8 @@ class User {
         
         // Ensure arrays exist
         if ( ! isset( $plan->addons ) || ! is_array( $plan->addons ) ) { $plan->addons = []; }
+        // Stored "required" addons are saved copies of the maintenance addon added in step 5.
+        $plan->addons = array_values( array_filter( $plan->addons, function( $addon ) { return empty( $addon->required ); } ) );
         if ( ! isset( $plan->charges ) || ! is_array( $plan->charges ) ) { $plan->charges = []; }
         if ( ! isset( $plan->credits ) || ! is_array( $plan->credits ) ) { $plan->credits = []; }
 

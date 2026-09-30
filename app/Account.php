@@ -179,7 +179,11 @@ class Account {
         $defaults              = json_decode( $account->defaults );
         $plan                  = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $plan->name            = empty( $plan->name ) ? "" : $plan->name;
-        $plan->addons          = empty( $plan->addons ) ? [] : $plan->addons;
+        // Stored "required" addons are copies of the generated maintenance addon
+        // below that older renewals saved into the plan. Drop them so it shows once.
+        $plan->addons          = empty( $plan->addons ) ? [] : array_values( array_filter( (array) $plan->addons, function( $addon ) {
+            return empty( $addon->required );
+        } ) );
         $plan->charges         = empty( $plan->charges ) ? [] : $plan->charges;
         $plan->credits         = empty( $plan->credits ) ? [] : $plan->credits;
         $plan->limits          = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
@@ -753,6 +757,14 @@ class Account {
                 $maintenance_sites[] = $site;
             }
         }
+        // Build the billed addons in a local list. $plan is saved back to the
+        // account on an overpayment, so prepending the generated addon to
+        // $plan->addons stored a copy that billed again on every later renewal.
+        // Stored "required" addons are such copies (the plan editor strips them
+        // on save), so they are skipped rather than billed twice.
+        $addons = array_values( array_filter( (array) ( $plan->addons ?? [] ), function( $addon ) {
+            return empty( $addon->required );
+        } ) );
         if ( ! empty( $maintenance_sites ) ) {
             $maintenance_sites_addons = (object) [
                 "name"     => "Managed WordPress sites",
@@ -760,14 +772,12 @@ class Account {
                 "quantity" => count( $maintenance_sites ),
                 "required" => true
             ];
-            // Prepend to addons array for processing below
-            if ( ! isset( $plan->addons ) ) $plan->addons = [];
-            array_unshift( $plan->addons, $maintenance_sites_addons );
+            array_unshift( $addons, $maintenance_sites_addons );
         }
 
         // 6. Add Line Items: Addons
-        if ( ! empty( $plan->addons ) ) {
-            foreach ( $plan->addons as $item ) {
+        if ( ! empty( $addons ) ) {
+            foreach ( $addons as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_total( $item->price * $item->quantity );
