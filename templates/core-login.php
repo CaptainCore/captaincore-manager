@@ -24,7 +24,16 @@ $config_path    = $config_path === '/' ? '/' : $config_path . '/';
 // anything else falls back to the app home.
 $app_home    = home_url( $config_path );
 $redirect_to = isset( $_GET['redirect_to'] ) ? (string) wp_unslash( $_GET['redirect_to'] ) : '';
-if ( $redirect_to !== '' && strpos( $redirect_to, $config_path ) === 0 && strpos( $redirect_to, '//' ) === false
+// Pages outside the app can opt in by path prefix (the AI Relay page does).
+$extra_paths = (array) apply_filters( 'captaincore_login_redirect_paths', [ CaptainCore\AiRelay::page_path() ] );
+$in_allowed  = strpos( $redirect_to, $config_path ) === 0;
+foreach ( $extra_paths as $extra_path ) {
+    $extra_path = '/' . trim( (string) $extra_path, '/' ) . '/';
+    if ( $extra_path !== '//' && strpos( $redirect_to, $extra_path ) === 0 ) {
+        $in_allowed = true;
+    }
+}
+if ( $redirect_to !== '' && $in_allowed && strpos( $redirect_to, '//' ) === false
     && strpos( $redirect_to, $config_path . 'login' ) !== 0 && ! preg_match( '/[\r\n\s]/', $redirect_to ) ) {
     $app_home = home_url( $redirect_to );
 }

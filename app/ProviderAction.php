@@ -405,6 +405,13 @@ class ProviderAction {
                 }
 
                 $site_id = $response["site_id"];
+
+                // A site built for an AI Relay project stays on the staff-held
+                // account; the project records it so launch can hand it over.
+                if ( ! empty( $current_action->ai_relay_project_id ) ) {
+                    AiRelay::link_site( (int) $current_action->ai_relay_project_id, (int) $site_id, (int) $this->provider_action_id );
+                }
+
                 $account = ( new Account ( $current_action->account_id, true ) );
                 $account->calculate_totals();
     

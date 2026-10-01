@@ -667,6 +667,145 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  AI RELAY SIGNUP
+     * ------------------------------------------------------------------------- */
+
+    /**
+     * Signup link for a new AI Relay account. The link is single use and
+     * expires in an hour (AiRelay::SIGNUP_TTL).
+     */
+    static public function send_ai_relay_signup( $email, $url ) {
+        self::send_ai_relay_button_email(
+            $email,
+            "Finish creating your account",
+            "Finish creating your account",
+            "Someone (hopefully you) asked to create an account for AI Relay with this email address. Choose a password to finish. The link works once and expires in an hour.",
+            $url,
+            "Choose a password &rarr;",
+            "If you did not ask for this, ignore this email and no account will be created."
+        );
+    }
+
+    /**
+     * Sent instead of a signup link when the email already has an account, so
+     * the signup form answers the same way for known and unknown emails.
+     */
+    static public function send_ai_relay_existing_account( $email, $login_url ) {
+        self::send_ai_relay_button_email(
+            $email,
+            "You already have an account",
+            "You already have an account",
+            "Someone (hopefully you) tried to create an account for AI Relay with this email address, but it already has one. Sign in to continue.",
+            $login_url,
+            "Sign in &rarr;",
+            "Forgot your password? Use the reset link on the sign in page."
+        );
+    }
+
+    /**
+     * Where a project lives in the dashboard.
+     */
+    private static function ai_relay_project_url( $project ) {
+        $config = Configurations::get();
+        $path   = '/' . trim( (string) ( $config->path ?? '/account/' ), '/' ) . '/';
+        return home_url( $path . 'ai-relay/' . (int) $project->ai_relay_project_id );
+    }
+
+    /**
+     * To staff: a new project, a new customer message, or a paid launch.
+     */
+    static public function send_ai_relay_staff_notice( $project, $message = null, $is_new = false, $event = '' ) {
+        $owner = get_userdata( $project->user_id );
+        $who   = $owner ? $owner->display_name . ' <' . $owner->user_email . '>' : 'A customer';
+        if ( $event === 'launched' ) {
+            $subject = "AI Relay launched: {$project->name}";
+            $intro   = "{$who} launched {$project->name}. The first year was charged and the site is on their account now.";
+        } elseif ( $is_new ) {
+            $subject = "New AI Relay build: {$project->name}";
+            $intro   = "{$who} started an AI Relay build.";
+        } else {
+            $subject = "AI Relay message: {$project->name}";
+            $intro   = "{$who} added to the AI Relay thread.";
+        }
+        $body = $message ? self::ai_relay_message_html( $message ) : '';
+        self::send_ai_relay_button_email( get_option( 'admin_email' ), $subject, $subject, $intro, self::ai_relay_project_url( $project ), "Open the project &rarr;", "Reply from the project page in CaptainCore.", $body );
+    }
+
+    /**
+     * To the customer: staff replied in the thread.
+     */
+    static public function send_ai_relay_customer_notice( $project, $message ) {
+        $owner = get_userdata( $project->user_id );
+        if ( ! $owner ) {
+            return;
+        }
+        self::send_ai_relay_button_email(
+            $owner->user_email,
+            "New message about {$project->name}",
+            "New message about your site",
+            "There is a new message about {$project->name}.",
+            self::ai_relay_project_url( $project ),
+            "Read and reply &rarr;",
+            "You can reply and add files from the project page.",
+            self::ai_relay_message_html( $message )
+        );
+    }
+
+    /**
+     * To the customer: the preview is ready and Launch is available.
+     */
+    static public function send_ai_relay_preview_ready( $project ) {
+        $owner = get_userdata( $project->user_id );
+        if ( ! $owner ) {
+            return;
+        }
+        self::send_ai_relay_button_email(
+            $owner->user_email,
+            "Your preview is ready: {$project->name}",
+            "Your preview is ready",
+            "Take a look at {$project->name}. Ask for changes in the thread, or launch it when you are happy. Launching commits to one year of hosting at $240.",
+            self::ai_relay_project_url( $project ),
+            "See the preview &rarr;",
+            "Nothing is charged until you press Launch."
+        );
+    }
+
+    private static function ai_relay_message_html( $message ) {
+        $files = (array) json_decode( (string) $message->files, true );
+        $html  = '';
+        if ( trim( (string) $message->body ) !== '' ) {
+            $html .= "<p style='margin: 20px 0 0; padding: 15px; background: #F5F7FA; border-radius: 6px; text-align: left; color: #15181D;'>" . nl2br( esc_html( $message->body ) ) . "</p>";
+        }
+        if ( $files ) {
+            $html .= "<p style='margin: 12px 0 0; font-size: 14px; color: #666D7A; text-align: left;'>" . count( $files ) . " file(s) attached: " . esc_html( implode( ', ', array_column( $files, 'name' ) ) ) . "</p>";
+        }
+        return $html;
+    }
+
+    private static function send_ai_relay_button_email( $email, $subject, $headline, $intro, $url, $label, $footnote, $extra_html = '' ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $url         = esc_url( $url );
+
+        $content_html = "
+            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #565C66;'>
+                <p>" . esc_html( $intro ) . "</p>
+                {$extra_html}
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 30px auto;'>
+                    <tr>
+                        <td style='border-radius: 10px; background-color: {$brand_color};'>
+                            <a href='{$url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 10px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>{$label}</a>
+                        </td>
+                    </tr>
+                </table>
+                <p style='font-size: 14px; color: #A3ACB9;'>" . esc_html( $footnote ) . "</p>
+            </div>
+        ";
+
+        self::send_email_with_layout( $email, $subject, $headline, get_bloginfo( 'name' ), $content_html );
+    }
+
+    /* -------------------------------------------------------------------------
      *  NEW LOCATION LOGIN VERIFICATION
      * ------------------------------------------------------------------------- */
     static public function send_login_verification( $user, $verify_url, $fingerprint ) {

@@ -2430,6 +2430,78 @@ function captaincore_site_requests_create_func( WP_REST_Request $request ) {
 	return $user->fetch_requested_sites();
 }
 
+function captaincore_ai_relay_state_func( WP_REST_Request $request ) {
+	$user_id = get_current_user_id();
+	return [
+		'cards'           => CaptainCore\AiRelay::cards( $user_id ),
+		'staged'          => array_values( array_map( function ( $f ) {
+			return [ 'id' => $f['id'], 'name' => $f['name'], 'size' => (int) $f['size'] ];
+		}, CaptainCore\AiRelay::staged( $user_id ) ) ),
+		'billing_missing' => captaincore_billing_address_missing( $user_id ),
+		'open_project'    => (bool) CaptainCore\AiRelay::open_project( $user_id ),
+	];
+}
+
+function captaincore_ai_relay_signup_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::signup_start(
+		$request->get_param( 'email' ),
+		$request->get_param( 'name' ),
+		$request->get_param( 'turnstile' )
+	);
+}
+
+function captaincore_ai_relay_signup_finish_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::signup_finish( $request->get_param( 'token' ), $request->get_param( 'password' ) );
+}
+
+function captaincore_ai_relay_file_add_func( WP_REST_Request $request ) {
+	$files = $request->get_file_params();
+	return CaptainCore\AiRelay::stage_file( get_current_user_id(), $files['file'] ?? null );
+}
+
+function captaincore_ai_relay_file_delete_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::unstage_file( get_current_user_id(), $request['id'] );
+}
+
+function captaincore_ai_relay_projects_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::projects_for( get_current_user_id() );
+}
+
+function captaincore_ai_relay_project_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::project( get_current_user_id(), (int) $request['id'] );
+}
+
+function captaincore_ai_relay_project_update_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::update_project( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+}
+
+function captaincore_ai_relay_message_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::post_message( get_current_user_id(), (int) $request['id'], $request->get_param( 'body' ), (array) $request->get_param( 'files' ), (bool) $request->get_param( 'internal' ) );
+}
+
+function captaincore_ai_relay_create_site_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::create_site( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+}
+
+function captaincore_ai_relay_launch_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::launch( get_current_user_id(), (int) $request['id'] );
+}
+
+function captaincore_ai_relay_file_download_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::send_file( get_current_user_id(), (int) $request['id'], (string) $request['file'] );
+}
+
+function captaincore_ai_relay_submit_func( WP_REST_Request $request ) {
+	return CaptainCore\AiRelay::submit( get_current_user_id(), [
+		'mode'      => $request->get_param( 'mode' ),
+		'url'       => $request->get_param( 'url' ),
+		'notes'     => $request->get_param( 'notes' ),
+		'site_name' => $request->get_param( 'site_name' ),
+		'billing'   => (array) $request->get_param( 'billing' ),
+		'source_id' => $request->get_param( 'source_id' ),
+	] );
+}
+
 function captaincore_site_requests_back_func( WP_REST_Request $request ) {
 	$user    = new CaptainCore\User;
 	$value   = (object) $request->get_param( 'request' );
@@ -10183,6 +10255,113 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site-requests', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_requests_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// AI Relay (app/AiRelay.php). Signup is public and answers the same way
+	// for known and unknown emails; everything else needs a signed-in user.
+	register_rest_route(
+		'captaincore/v1', '/ai-relay', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_ai_relay_state_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/signup', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_signup_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/signup/finish', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_signup_finish_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/files', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_file_add_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/files/(?P<id>[a-f0-9]{16})', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_ai_relay_file_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_ai_relay_projects_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects/(?P<id>[\d]+)', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_ai_relay_project_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'PUT',
+				'callback'            => 'captaincore_ai_relay_project_update_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects/(?P<id>[\d]+)/messages', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_message_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects/(?P<id>[\d]+)/site', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_create_site_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects/(?P<id>[\d]+)/launch', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_launch_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/projects/(?P<id>[\d]+)/files/(?P<file>[a-f0-9]{16})', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_ai_relay_file_download_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/ai-relay/requests', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ai_relay_submit_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);

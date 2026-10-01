@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 54;
+    const REQUIRED_VERSION = 56;
 
     private static function _table() {
         global $wpdb;
@@ -1227,6 +1227,55 @@ class DB {
         KEY injected_caps_count (injected_caps_count),
         KEY max_severity (max_severity),
         KEY alerted_at (alerted_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // AI Relay (app/AiRelay.php). A project is one customer build from the
+        // public intake page; messages are its thread, both sides, with files.
+        // Staff-only fields: reviewed_message_id marks the last message staff
+        // have reviewed (anything newer from the customer needs a look), and
+        // provider_action_id tracks a site being provisioned for the build.
+        // author 'internal' messages are staff notes the customer never sees.
+        // site_id stays 0 (or points at a site held on a staff account) until
+        // launch, so no hosting details reach the customer before they pay.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_ai_relay_projects` (
+            ai_relay_project_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            account_id bigint(20) UNSIGNED NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            name varchar(255) DEFAULT '',
+            mode varchar(10) DEFAULT 'new',
+            source_url varchar(500) DEFAULT '',
+            status varchar(20) DEFAULT 'building',
+            preview_url varchar(500) DEFAULT '',
+            site_id bigint(20) UNSIGNED DEFAULT 0,
+            storage_key varchar(80) DEFAULT '',
+            order_id bigint(20) UNSIGNED DEFAULT 0,
+            provider_action_id bigint(20) UNSIGNED DEFAULT 0,
+            reviewed_message_id bigint(20) UNSIGNED DEFAULT 0,
+            reviewed_at datetime DEFAULT NULL,
+            launched_at datetime DEFAULT NULL,
+            last_message_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (ai_relay_project_id),
+        KEY account_id (account_id),
+        KEY user_id (user_id),
+        KEY status (status)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_ai_relay_messages` (
+            ai_relay_message_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            ai_relay_project_id bigint(20) UNSIGNED NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            author varchar(10) DEFAULT 'customer',
+            body longtext,
+            files longtext,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (ai_relay_message_id),
+        KEY ai_relay_project_id (ai_relay_project_id)
         ) $charset_collate;";
 
         dbDelta($sql);
