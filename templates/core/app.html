@@ -683,6 +683,22 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-for>
             </div>
           </sc-if>
+          <!-- ══ AI Relay projects (builds from the public AI Relay page; not sites until launched) ══ -->
+          <sc-if value="{{ rlShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:14px">
+              <sc-for list="{{ rlRows }}" as="r" hint-placeholder-count="1">
+                <section onClick="{{ r.open }}" style="border:1px dashed var(--brand);border-radius:13px;background:var(--paper);padding:13px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px" style-hover="border-style:solid;background:var(--panel-2)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"></path><path d="M19 16v4M17 18h4"></path></svg>
+                    <span style="font:600 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                    <div style="flex:1"></div>
+                    <span style="flex:none;font:500 var(--fs-115) var(--sans);background:{{ r.chipBg }};color:{{ r.chipFg }};border-radius:99px;padding:2px 9px">{{ r.status }}</span>
+                  </div>
+                  <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">AI Relay · {{ r.acc }} · {{ r.sub }}</div>
+                </section>
+              </sc-for>
+            </div>
+          </sc-if>
           <!-- ══ Site requests queue (customer submissions; operators step them Requested → Preparing → Ready) ══ -->
           <sc-if value="{{ srShow }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
@@ -1909,6 +1925,110 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <button onClick="{{ domLast }}" title="Last page" style="border:1px solid var(--rule);background:{{ domNextBg }};color:var(--ink);font:500 var(--fs-125) var(--sans);height:32px;padding:0 11px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">»</button>
               </sc-if>
             </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ══ AI Relay project page (ai-relay.js) ══ -->
+      <sc-if value="{{ showRelay }}" hint-placeholder-val="{{ false }}">
+        <div class="cc-page" style="max-width:960px;margin:0 auto;padding:24px 32px 120px;animation:ccfade .25s ease">
+          <span onClick="{{ rlBack }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Sites</span>
+          <sc-if value="{{ rlHasErr }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">{{ rlErr }}</div>
+          </sc-if>
+          <sc-if value="{{ rlLoading }}" hint-placeholder-val="{{ false }}">
+            <div class="cc-skel" style="width:260px;height:26px;margin-top:14px"></div>
+          </sc-if>
+          <sc-if value="{{ rlReady }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+              <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ rlName }}</h1>
+              <span style="font:500 var(--fs-12) var(--sans);background:{{ rlChipBg }};color:{{ rlChipFg }};border-radius:99px;padding:3px 10px">{{ rlStatusLabel }}</span>
+              <div style="flex:1"></div>
+              <sc-if value="{{ rlHasPreview }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ rlOpenPreview }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand)">Open preview ↗</button>
+              </sc-if>
+              <sc-if value="{{ rlCanLaunch }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ rlLaunch }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ rlLaunchLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ rlHasSite }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ rlOpenSite }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 16px;border-radius:9px;cursor:pointer">Manage site →</button>
+              </sc-if>
+            </div>
+            <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">AI Relay · {{ rlAccount }} · {{ rlStarted }} · {{ rlSource }}</div>
+            <sc-if value="{{ rlBuilding }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;padding:12px 16px;border:1px solid var(--rule);border-radius:11px;background:var(--panel-2);font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">We are building your site from what you sent. Add anything new below. Launch becomes available once the preview is ready, and nothing is charged until you press it.</div>
+            </sc-if>
+
+            <sc-if value="{{ rlIsOp }}" hint-placeholder-val="{{ false }}">
+              <section style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="font:600 var(--fs-13) var(--sans)">Staff</span>
+                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ rlOwner }}</span>
+                  <div style="flex:1"></div>
+                  <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                    <sc-for list="{{ rlStatusOpts }}" as="o" hint-placeholder-count="3">
+                      <span onClick="{{ o.go }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 140px auto;gap:10px;align-items:end">
+                  <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Preview link (shown to the customer)
+                    <input value="{{ rlPreviewInput }}" onInput="{{ onRlPreview }}" placeholder="https://" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none"></label>
+                  <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site ID to hand over
+                    <input value="{{ rlSiteInput }}" onInput="{{ onRlSite }}" placeholder="staff-held" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 11px;outline:none"></label>
+                  <button onClick="{{ rlSave }}" style="height:34px;border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:0 16px;border-radius:8px;cursor:pointer">{{ rlSaveLabel }}</button>
+                </div>
+              </section>
+            </sc-if>
+
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+              <sc-for list="{{ rlMessages }}" as="m" hint-placeholder-count="2">
+                <section style="border:1px solid var(--rule);border-radius:13px;background:{{ m.bg }};padding:13px 16px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font:600 var(--fs-13) var(--sans)">{{ m.name }}</span>
+                    <sc-if value="{{ m.hasTag }}" hint-placeholder-val="{{ false }}"><span style="font:600 10px var(--sans);letter-spacing:.04em;text-transform:uppercase;background:var(--brand);color:white;border-radius:5px;padding:2px 6px">{{ m.tag }}</span></sc-if>
+                    <div style="flex:1"></div>
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ m.when }}</span>
+                  </div>
+                  <sc-if value="{{ m.hasBody }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:8px;font:400 var(--fs-14) var(--sans);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">{{ m.body }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.hasFiles }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                      <sc-for list="{{ m.files }}" as="f" hint-placeholder-count="2">
+                        <a href="{{ f.href }}" download style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 10px;font:500 var(--fs-125) var(--sans);color:var(--ink);text-decoration:none" style-hover="border-color:var(--brand)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"></path><path d="M14 3v5h5"></path></svg>
+                          {{ f.name }} <span style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ f.size }}</span></a>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </section>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ rlCanPost }}" hint-placeholder-val="{{ false }}">
+              <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px;display:flex;flex-direction:column;gap:10px">
+                <textarea value="{{ rlBody }}" onInput="{{ onRlBody }}" placeholder="Add details, ask for changes, or drop in more files…" style="min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                <sc-if value="{{ rlHasUploads }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <sc-for list="{{ rlUploads }}" as="u" hint-placeholder-count="1">
+                      <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--rule);border-radius:8px;padding:5px 6px 5px 10px;font:500 var(--fs-125) var(--sans)">{{ u.name }} <span style="font:400 var(--fs-115) var(--sans);color:{{ u.metaFg }}">{{ u.meta }}</span>
+                        <span onClick="{{ u.drop }}" title="Remove" style="color:var(--ink-dim);width:18px;height:18px;display:grid;place-items:center;border-radius:4px;cursor:pointer" style-hover="background:var(--panel-2);color:var(--bad)">✕</span></span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="file" multiple ref="{{ rlFileRef }}" style="display:none">
+                  <span onClick="{{ rlPick }}" style="display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"></path><path d="m7 9 5-5 5 5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>Attach files</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ rlSend }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ rlSendLabel }}</button>
+                </div>
+              </section>
+            </sc-if>
+            <sc-if value="{{ rlLaunched }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">This site has launched. For anything else, reach us through support.</div>
+            </sc-if>
           </sc-if>
         </div>
       </sc-if>

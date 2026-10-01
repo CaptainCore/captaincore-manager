@@ -3377,7 +3377,7 @@ class Component extends DCLogic {
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'sites', 'site', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
+      showStub: !['home', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
@@ -3388,6 +3388,7 @@ class Component extends DCLogic {
       ...listVals, ...detailVals, ...domainsVals, ...domainVals,
       ...accountsVals, ...accountVals, ...billingVals,
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
+      ...this.relayVals(s),
       goProfile: this.go('profile'),
       // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
       // fresh mount" must compare against a slot the null call never clears
