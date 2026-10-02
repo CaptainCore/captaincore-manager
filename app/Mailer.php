@@ -717,7 +717,10 @@ class Mailer {
     static public function send_ai_relay_staff_notice( $project, $message = null, $is_new = false, $event = '' ) {
         $owner = get_userdata( $project->user_id );
         $who   = $owner ? $owner->display_name . ' <' . $owner->user_email . '>' : 'A customer';
-        if ( $event === 'launched' ) {
+        if ( $event === 'launched' && AiRelay::is_free( $project ) ) {
+            $subject = "AI Relay launched: {$project->name}";
+            $intro   = "{$who} approved {$project->name} for launch. It is an existing site on their own account, so nothing was charged. Take it live.";
+        } elseif ( $event === 'launched' ) {
             $subject = "AI Relay launched: {$project->name}";
             $intro   = "{$who} launched {$project->name}. The first year was charged and the site is on their account now.";
         } elseif ( $is_new ) {
@@ -767,7 +770,7 @@ class Mailer {
             "Work has started on {$project->name}. You can watch it come together at the link below while we build. Send changes, files or questions from your project page.",
             self::ai_relay_project_url( $project ),
             "Open your project &rarr;",
-            "Nothing is charged until you press Launch.",
+            self::ai_relay_charge_note( $project ),
             self::ai_relay_site_links_html( $project, $login_url )
         );
     }
@@ -784,12 +787,19 @@ class Mailer {
             $owner->user_email,
             "Ready to launch: {$project->name}",
             "Your site is ready to launch",
-            "Take a look at {$project->name}. Ask for changes in the thread, or launch it when you are happy. Launching commits to one year of hosting at $240.",
+            "Take a look at {$project->name}. Ask for changes in the thread, or launch it when you are happy. " . ( AiRelay::is_free( $project ) ? 'There is no charge: the site is already part of your hosting.' : 'Launching commits to one year of hosting at $240.' ),
             self::ai_relay_project_url( $project ),
             "Review and launch &rarr;",
-            "Nothing is charged until you press Launch.",
+            self::ai_relay_charge_note( $project ),
             self::ai_relay_site_links_html( $project, $login_url )
         );
+    }
+
+    /**
+     * Footnote on customer emails. Existing-site builds are never charged.
+     */
+    private static function ai_relay_charge_note( $project ) {
+        return AiRelay::is_free( $project ) ? 'There is no charge for this build.' : 'Nothing is charged until you press Launch.';
     }
 
     private static function ai_relay_site_links_html( $project, $login_url ) {

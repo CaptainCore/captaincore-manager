@@ -1956,7 +1956,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">AI Relay · {{ rlAccount }} · {{ rlStarted }} · {{ rlSource }}</div>
             <sc-if value="{{ rlBuilding }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-top:14px;padding:12px 16px;border:1px solid var(--rule);border-radius:11px;background:var(--panel-2);font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">We are building your site from what you sent. Once it is up you can open it from here while we work. Add anything new below. Launch becomes available when the site is ready, and nothing is charged until you press it.</div>
+              <div style="margin-top:14px;padding:12px 16px;border:1px solid var(--rule);border-radius:11px;background:var(--panel-2);font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ rlBuildingNote }}</div>
             </sc-if>
 
             <sc-if value="{{ rlIsOp }}" hint-placeholder-val="{{ false }}">
@@ -1974,10 +1974,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div style="display:grid;grid-template-columns:1fr 140px auto;gap:10px;align-items:end">
                   <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site link (setting or changing it emails the customer)
                     <input value="{{ rlPreviewInput }}" onInput="{{ onRlPreview }}" placeholder="https://" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none"></label>
-                  <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site ID to hand over
+                  <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site ID
                     <input value="{{ rlSiteInput }}" onInput="{{ onRlSite }}" placeholder="staff-held" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 11px;outline:none"></label>
                   <button onClick="{{ rlSave }}" style="height:34px;border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:0 16px;border-radius:8px;cursor:pointer">{{ rlSaveLabel }}</button>
                 </div>
+                <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ rlBilling }}</div>
                 <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Set-password link for the customer's editor login (optional, emailed once, never saved)
                   <input value="{{ rlLoginInput }}" onInput="{{ onRlLogin }}" placeholder="https://…/wp-login.php?action=rp&amp;key=…" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 11px;outline:none"></label>
               </section>

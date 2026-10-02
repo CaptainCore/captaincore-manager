@@ -3,7 +3,8 @@
 // launches it is NOT a site: it shows as its own card on the Sites page and
 // opens a project page with everything the customer sent, a message thread
 // (text + files, both directions) and, once staff mark the preview ready, a
-// Launch button that charges the first year and hands the site over.
+// Launch button that charges the first year and hands the site over. An
+// existing-site build (billing 'none') launches with no charge at all.
 // Backend: app/AiRelay.php. GET /ai-relay/projects, GET|PUT
 // /ai-relay/projects/<id>, POST …/messages, POST …/launch, GET …/files/<fid>,
 // POST|DELETE /ai-relay/files (staging, one file per request).
@@ -127,16 +128,18 @@ Object.assign(Component.prototype, {
     const rel = this._relay;
     if (!rel || !rel.data || this.state.rlLaunching) return;
     const p = rel.data;
-    const price = '$' + Math.round(p.price || 240);
-    const ok = await this.uiConfirm('Launch ' + p.name + '? Your card on file is charged ' + price +
-      ' now for one year of hosting, and the site moves into your account.', { label: 'Launch', danger: false });
+    const free = p.billing === 'none';
+    const ok = await this.uiConfirm(free
+      ? 'Launch ' + p.name + '? There is no charge. The site is already part of your hosting, and we will take it live and let you know.'
+      : 'Launch ' + p.name + '? Your card on file is charged $' + Math.round(p.price) +
+        ' now for one year of hosting, and the site moves into your account.', { label: 'Launch', danger: false });
     if (!ok) return;
     this.setState({ rlLaunching: true });
     const tid = this.toast('Launching…', { kind: 'loading' });
     this.api('/ai-relay/projects/' + rel.id + '/launch', { method: 'POST' }).then(res => {
       this.setState({ rlLaunching: false });
       if (!this._relayReplace(res)) { this.updateToast(tid, (res && res.message) || 'Launch failed', { kind: 'error', timeout: 8000 }); return; }
-      this.updateToast(tid, p.name + ' is live', { kind: 'success' });
+      this.updateToast(tid, free ? 'Thanks. We will take ' + p.name + ' live and let you know.' : p.name + ' is live', { kind: 'success' });
       this.loadSites && this.loadSites();
     }).catch(() => { this.setState({ rlLaunching: false }); this.updateToast(tid, 'Launch failed', { kind: 'error' }); });
   },
@@ -185,6 +188,7 @@ Object.assign(Component.prototype, {
       metaFg: u.state === 'error' ? 'var(--bad)' : 'var(--ink-dim)', drop: () => this.relayDropUpload(u)
     }));
     const open = p && (p.status === 'building' || p.status === 'preview');
+    const free = !!(p && p.billing === 'none');
 
     return Object.assign(out, {
       rlBack: () => { this.setState({ route: 'sites' }); },
@@ -197,8 +201,11 @@ Object.assign(Component.prototype, {
       rlHasPreview: !!(p && p.preview_url), rlPreviewUrl: p ? p.preview_url : '',
       rlOpenPreview: () => p && this.safeOpen(p.preview_url),
       rlBuilding: !!(p && p.status === 'building'),
+      rlBuildingNote: 'We are building your site from what you sent. Once it is up you can open it from here while we work. Add anything new below. ' +
+        (free ? 'Launch becomes available when the site is ready. There is no charge for this build.'
+              : 'Launch becomes available when the site is ready, and nothing is charged until you press it.'),
       rlCanLaunch: !!(p && p.can_launch && !isOp),
-      rlLaunchLabel: s.rlLaunching ? 'Launching…' : 'Launch · $' + Math.round((p && p.price) || 240) + '/year',
+      rlLaunchLabel: s.rlLaunching ? 'Launching…' : free ? 'Launch · No charge' : 'Launch · $' + Math.round(p ? p.price : 0) + '/year',
       rlLaunch: () => this.relayLaunch(),
       rlLaunched: !!(p && p.status === 'launched'),
       rlOpenSite: () => p && p.site_id && this.openSite(p.site_id),
@@ -229,7 +236,12 @@ Object.assign(Component.prototype, {
       rlLoginInput: s.rlLogin || '', onRlLogin: e => this.setState({ rlLogin: e.target.value }),
       rlSiteInput: s.rlSite || '', onRlSite: e => this.setState({ rlSite: e.target.value.replace(/[^0-9]/g, '') }),
       rlSave: () => this.relaySave(), rlSaveLabel: s.rlSaving ? 'Saving…' : 'Save',
-      rlOwner: p && p.user_email ? p.user_email : ''
+      rlOwner: p && p.user_email ? p.user_email : '',
+      // Billing follows the linked site: one not on the staff-held account is
+      // an existing customer site, so Launch charges nothing.
+      rlBilling: !p ? '' : free ? 'No charge. Site #' + p.site_id + ' is an existing customer site, so Launch makes no plan, invoice or account change.'
+        : p.site_id ? 'Launch charges $' + Math.round(p.price) + '/year and moves site #' + p.site_id + ' to the customer.'
+        : 'Launch charges $' + Math.round(p.price) + '/year. Link an existing customer site instead to make this build free.'
     });
   }
 

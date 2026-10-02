@@ -428,12 +428,14 @@ class AiRelay {
 			}
 			$data['preview_url'] = $preview;
 		}
+		$linked = false;
 		if ( isset( $input['site_id'] ) ) {
 			$site_id = (int) $input['site_id'];
 			if ( $site_id && ! Sites::get( $site_id ) ) {
 				return new \WP_Error( 'invalid_site', 'No site with that id.', [ 'status' => 400 ] );
 			}
 			$data['site_id'] = $site_id;
+			$linked          = $site_id && $site_id !== (int) $project->site_id;
 		}
 		if ( isset( $input['name'] ) && trim( (string) $input['name'] ) !== '' ) {
 			$data['name'] = sanitize_text_field( (string) $input['name'] );
@@ -481,6 +483,12 @@ class AiRelay {
 			$what = $to_preview ? 'Ready-to-launch email' : 'Site link email';
 			self::add_message( $project->ai_relay_project_id, $user_id, 'internal', "{$what} sent to the customer for {$fresh->preview_url}" . ( $login_url !== '' ? ' (with a set-password link, not stored).' : '.' ), [], false );
 		}
+		if ( $linked ) {
+			$note = self::is_existing_site( $fresh )
+				? "Linked existing site #{$fresh->site_id}. It is not on the staff-held account, so this build is not charged: Launch makes no plan, invoice or account change."
+				: "Linked site #{$fresh->site_id} on the staff-held account. Launch charges the first year and moves it to the customer's account.";
+			self::add_message( $project->ai_relay_project_id, $user_id, 'internal', $note, [], false );
+		}
 		return self::project( $user_id, $project->ai_relay_project_id );
 	}
 
@@ -506,9 +514,60 @@ class AiRelay {
 		}
 		set_transient( $lock, 1, 120 );
 
-		$result = self::charge_launch( $user_id, $project );
+		$result = self::is_existing_site( $project ) ? self::launch_existing( $user_id, $project ) : self::charge_launch( $user_id, $project );
 		delete_transient( $lock );
 		return $result;
+	}
+
+	/**
+	 * An existing-site build: the project's site was not provisioned by AI
+	 * Relay (those sit on the staff-held account until launch), so it already
+	 * belongs to a customer account and is billed there. These builds are
+	 * never charged.
+	 */
+	public static function is_existing_site( $project ) {
+		if ( empty( $project->site_id ) ) {
+			return false;
+		}
+		$site = Sites::get( $project->site_id );
+		if ( ! $site ) {
+			return false;
+		}
+		// Read the option directly: holding_account() would create the account.
+		$holding  = (int) get_site_option( 'captaincore_ai_relay_holding_account', 0 );
+		$accounts = array_column( AccountSite::where( [ 'site_id' => (int) $project->site_id ] ), 'account_id' );
+		$accounts = array_filter( array_map( 'intval', array_merge( $accounts, [ $site->account_id, $site->customer_id ] ) ) );
+		return ! in_array( $holding, $accounts, true );
+	}
+
+	/**
+	 * Whether this project costs the customer nothing. Before launch that is
+	 * an existing-site build; after launch, a launch that raised no order.
+	 */
+	public static function is_free( $project ) {
+		if ( $project->status === 'launched' ) {
+			return empty( $project->order_id );
+		}
+		return self::is_existing_site( $project );
+	}
+
+	/**
+	 * Launch for an existing-site build: the customer's approval to go live.
+	 * No card, plan, invoice or account link is touched. Staff take it live.
+	 */
+	private static function launch_existing( $user_id, $project ) {
+		$now = current_time( 'mysql' );
+		AiRelayProjects::update( [
+			'status'      => 'launched',
+			'launched_at' => $now,
+			'updated_at'  => $now,
+		], [ 'ai_relay_project_id' => $project->ai_relay_project_id ] );
+		self::add_message( $project->ai_relay_project_id, $user_id, 'internal', "Customer approved the launch. No charge: site #{$project->site_id} is an existing site on their own account, so no plan, invoice or account change was made. Take it live.", [], false );
+
+		$project = AiRelayProjects::get( $project->ai_relay_project_id );
+		Mailer::send_ai_relay_staff_notice( $project, null, false, 'launched' );
+
+		return self::project( $user_id, $project->ai_relay_project_id );
 	}
 
 	private static function charge_launch( $user_id, $project ) {
@@ -942,6 +1001,7 @@ class AiRelay {
 		$is_admin = ( new User( $user_id, true ) )->is_admin();
 		$labels   = [ 'building' => 'Building', 'preview' => 'Preview ready', 'launched' => 'Launched', 'cancelled' => 'Cancelled' ];
 		$account  = Accounts::get( $project->account_id );
+		$free     = self::is_free( $project );
 		$view     = [
 			'id'              => (int) $project->ai_relay_project_id,
 			'name'            => $project->name,
@@ -958,7 +1018,9 @@ class AiRelay {
 			'last_message_at' => $project->last_message_at,
 			'launched_at'     => $project->launched_at,
 			'can_launch'      => $project->status === 'preview',
-			'price'           => (float) self::launch_plan()->price,
+			// 'none' for existing-site builds, which are never charged.
+			'billing'         => $free ? 'none' : 'launch',
+			'price'           => $free ? 0.0 : (float) self::launch_plan()->price,
 		];
 		if ( $is_admin || $project->status === 'launched' ) {
 			$view['site_id'] = (int) $project->site_id;
