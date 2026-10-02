@@ -483,6 +483,31 @@ Object.assign(Component.prototype, {
         { k: 'Storage', used: gb(usage.storage).toFixed(1) + ' of ' + (limits.storage || '—') + ' GB', pct: pct(gb(usage.storage), parseFloat(limits.storage) || 0) },
         { k: 'Visits / mo', used: (Number(usage.visits) || 0).toLocaleString() + ' of ' + (Number(limits.visits) || 0).toLocaleString(), pct: pct(Number(usage.visits) || 0, Number(limits.visits) || 0) }
       ].map(u => ({ ...u, fill: u.pct >= 80 ? 'var(--warn)' : 'var(--brand)' })),
+      // Which sites the Sites count (and the "Extra Sites" renewal line) is
+      // made of. usage_breakdown applies the same rule as the invoice
+      // (Account::billing_sites): Anchor-hosted, active, not a Freighter tenant.
+      // maintenance_sites sit on a provider account other than the primary
+      // (provider_id != 1) and bill as the "Managed WordPress sites" add-on.
+      // Long lists show 10 rows until expanded.
+      ...(() => {
+        const ub = d.usage_breakdown || {};
+        const CAP = 10;
+        const row = x => ({ name: x.name,
+          meta: this.fmtStorage(x.storage) + (x.visits ? ' · ' + Number(x.visits).toLocaleString() + ' visits' : ''),
+          open: () => this.openSite(String(x.site_id)) });
+        const billed = (ub.sites || []).map(row);
+        const maint = (ub.maintenance_sites || []).map(row);
+        const more = (list, key) => ({ show: list.length > CAP,
+          label: s[key] ? 'Show fewer' : 'Show all ' + list.length,
+          go: () => this.setState({ [key]: !this.state[key] }) });
+        const bm = more(billed, 'planSitesAll'), mm = more(maint, 'planMaintAll');
+        return { planSites: s.planSitesAll ? billed : billed.slice(0, CAP), planSitesShow: billed.length > 0,
+          planSitesLabel: 'Counted toward Sites (' + billed.length + ')',
+          planSitesMore: bm.show, planSitesMoreLabel: bm.label, planSitesMoreGo: bm.go,
+          planMaint: s.planMaintAll ? maint : maint.slice(0, CAP), planMaintShow: maint.length > 0,
+          planMaintLabel: 'Managed WordPress sites add-on (' + maint.length + ')',
+          planMaintMore: mm.show, planMaintMoreLabel: mm.label, planMaintMoreGo: mm.go };
+      })(),
       // "Request changes" — small dialog → POST /billing/request-plan-changes
       // (v1 dialog_modify_plan's customer path; Mailer renders subscription.name,
       // plan.name and plan.interval, so the request message rides plan.name).

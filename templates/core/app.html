@@ -2751,6 +2751,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     </div>
                   </div>
                 </sc-for>
+                <sc-if value="{{ planSitesShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:10px 16px 4px;font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">{{ planSitesLabel }}</div>
+                  <sc-for list="{{ planSites }}" as="b" hint-placeholder-count="3">
+                    <div onClick="{{ b.open }}" style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;cursor:pointer;font:400 var(--fs-13) var(--sans)" style-hover="background:var(--panel-2)">
+                      <span style="color:var(--brand-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.name }}</span>
+                      <span style="flex:none;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ b.meta }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ planSitesMore }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ planSitesMoreGo }}" style="padding:6px 16px 4px;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ planSitesMoreLabel }}</div>
+                  </sc-if>
+                </sc-if>
+                <sc-if value="{{ planMaintShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:10px 16px 4px;border-top:1px solid var(--rule);font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim)">{{ planMaintLabel }}</div>
+                  <sc-for list="{{ planMaint }}" as="b" hint-placeholder-count="1">
+                    <div onClick="{{ b.open }}" style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;cursor:pointer;font:400 var(--fs-13) var(--sans)" style-hover="background:var(--panel-2)">
+                      <span style="color:var(--brand-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b.name }}</span>
+                      <span style="flex:none;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ b.meta }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ planMaintMore }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ planMaintMoreGo }}" style="padding:6px 16px 4px;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ planMaintMoreLabel }}</div>
+                  </sc-if>
+                </sc-if>
+                <div style="height:6px"></div>
               </section>
               <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Plan</h2></div>
