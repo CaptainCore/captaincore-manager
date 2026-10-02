@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 56;
+    const REQUIRED_VERSION = 57;
 
     private static function _table() {
         global $wpdb;
@@ -1304,6 +1304,8 @@ class DB {
             first_seen datetime DEFAULT NULL,
             last_seen datetime DEFAULT NULL,
             resolved_at datetime DEFAULT NULL,
+            resolved_by varchar(60) DEFAULT '',
+            resolution text,
             created_at datetime NOT NULL,
         PRIMARY KEY  (malware_finding_id),
         KEY site_id (site_id),

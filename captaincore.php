@@ -8346,6 +8346,26 @@ function captaincore_register_rest_endpoints() {
 			return current_user_can( 'manage_options' );
 		},
 	] );
+	// Close findings after a cleanup. The verdict is kept (a compromise stays a
+	// compromise); the note records what was removed. benign is for false positives.
+	register_rest_route( 'captaincore/v1', '/malware-findings/resolve', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$user       = wp_get_current_user();
+			$ids        = $request->get_param( 'ids' );
+			$resolution = trim( (string) $request->get_param( 'resolution' ) );
+			if ( ! is_array( $ids ) || ! $ids || count( $ids ) > 500 ) {
+				return new WP_Error( 'bad_request', 'ids must be a list of 1 to 500 finding ids.', [ 'status' => 400 ] );
+			}
+			if ( strlen( $resolution ) < 25 ) {
+				return new WP_Error( 'bad_request', 'resolution must say what was cleaned up (at least 25 characters).', [ 'status' => 400 ] );
+			}
+			return CaptainCore\MalwareFindings::resolve_findings( $ids, $resolution, 'review:' . ( $user->user_login ?? '' ) );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
 	register_rest_route( 'captaincore/v1', '/malware-findings/(?P<id>[\d]+)/verdict', [
 		'methods'             => 'POST',
 		'callback'            => function ( WP_REST_Request $request ) {
