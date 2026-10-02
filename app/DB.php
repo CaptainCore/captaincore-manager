@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 58;
+    const REQUIRED_VERSION = 59;
 
     private static function _table() {
         global $wpdb;
@@ -1290,6 +1290,7 @@ class DB {
             signature_name varchar(200) DEFAULT '',
             description text,
             matched_text text,
+            content_hash varchar(64) DEFAULT '',
             source varchar(40) DEFAULT '',
             severity varchar(20) DEFAULT '',
             family varchar(40) DEFAULT '',
