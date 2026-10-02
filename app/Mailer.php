@@ -752,22 +752,57 @@ class Mailer {
     }
 
     /**
-     * To the customer: the preview is ready and Launch is available.
+     * To the customer: their site exists. Links the site and, when given, the
+     * one-time set-password link for their editor account on it.
      */
-    static public function send_ai_relay_preview_ready( $project ) {
+    static public function send_ai_relay_site_ready( $project, $login_url = '' ) {
         $owner = get_userdata( $project->user_id );
         if ( ! $owner ) {
             return;
         }
         self::send_ai_relay_button_email(
             $owner->user_email,
-            "Your preview is ready: {$project->name}",
-            "Your preview is ready",
+            "Your site is up: {$project->name}",
+            "Your site is up",
+            "Work has started on {$project->name}. You can watch it come together at the link below while we build. Send changes, files or questions from your project page.",
+            self::ai_relay_project_url( $project ),
+            "Open your project &rarr;",
+            "Nothing is charged until you press Launch.",
+            self::ai_relay_site_links_html( $project, $login_url )
+        );
+    }
+
+    /**
+     * To the customer: the preview is ready and Launch is available.
+     */
+    static public function send_ai_relay_preview_ready( $project, $login_url = '' ) {
+        $owner = get_userdata( $project->user_id );
+        if ( ! $owner ) {
+            return;
+        }
+        self::send_ai_relay_button_email(
+            $owner->user_email,
+            "Ready to launch: {$project->name}",
+            "Your site is ready to launch",
             "Take a look at {$project->name}. Ask for changes in the thread, or launch it when you are happy. Launching commits to one year of hosting at $240.",
             self::ai_relay_project_url( $project ),
-            "See the preview &rarr;",
-            "Nothing is charged until you press Launch."
+            "Review and launch &rarr;",
+            "Nothing is charged until you press Launch.",
+            self::ai_relay_site_links_html( $project, $login_url )
         );
+    }
+
+    private static function ai_relay_site_links_html( $project, $login_url ) {
+        $html = '';
+        if ( ! empty( $project->preview_url ) ) {
+            $url   = esc_url( $project->preview_url );
+            $html .= "<p style='margin: 20px 0 0; padding: 15px; background: #F5F7FA; border-radius: 6px; text-align: left; color: #15181D;'>Your site: <a href='{$url}' style='color: #123E8C; font-weight: 600;'>" . esc_html( preg_replace( '#^https?://#', '', untrailingslashit( $project->preview_url ) ) ) . "</a>";
+            if ( $login_url !== '' ) {
+                $html .= "<br>You are an editor on it. <a href='" . esc_url( $login_url ) . "' style='color: #123E8C; font-weight: 600;'>Choose your password</a> to log in. That link works once and expires in 24 hours; after that use Lost your password on the login page.";
+            }
+            $html .= "</p>";
+        }
+        return $html;
     }
 
     private static function ai_relay_message_html( $message ) {

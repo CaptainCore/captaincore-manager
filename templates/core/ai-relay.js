@@ -110,11 +110,15 @@ Object.assign(Component.prototype, {
     if (!rel || !rel.data) return;
     const s = this.state;
     this.setState({ rlSaving: true });
+    // login_url is emailed once with the site link and never stored, so the
+    // field clears after a successful save.
     this.api('/ai-relay/projects/' + rel.id, { method: 'PUT', body: {
-      status: s.rlStatus, preview_url: (s.rlPreview || '').trim(), site_id: parseInt(s.rlSite, 10) || 0
+      status: s.rlStatus, preview_url: (s.rlPreview || '').trim(), site_id: parseInt(s.rlSite, 10) || 0,
+      login_url: (s.rlLogin || '').trim()
     } }).then(p => {
       this.setState({ rlSaving: false });
       if (!this._relayReplace(p)) { this.toast((p && p.message) || 'Could not save', { kind: 'error' }); return; }
+      this.setState({ rlLogin: '' });
       this.toast('Project updated', { kind: 'success' });
     }).catch(() => { this.setState({ rlSaving: false }); this.toast('Could not save', { kind: 'error' }); });
   },
@@ -222,6 +226,7 @@ Object.assign(Component.prototype, {
         go: () => this.setState({ rlStatus: v })
       })),
       rlPreviewInput: s.rlPreview || '', onRlPreview: e => this.setState({ rlPreview: e.target.value }),
+      rlLoginInput: s.rlLogin || '', onRlLogin: e => this.setState({ rlLogin: e.target.value }),
       rlSiteInput: s.rlSite || '', onRlSite: e => this.setState({ rlSite: e.target.value.replace(/[^0-9]/g, '') }),
       rlSave: () => this.relaySave(), rlSaveLabel: s.rlSaving ? 'Saving…' : 'Save',
       rlOwner: p && p.user_email ? p.user_email : ''

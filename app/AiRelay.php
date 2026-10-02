@@ -454,9 +454,32 @@ class AiRelay {
 		if ( $status === 'preview' && ( $data['preview_url'] ?? $project->preview_url ) === '' ) {
 			return new \WP_Error( 'preview_missing', 'Add a preview link before marking the preview ready.', [ 'status' => 400 ] );
 		}
+		// login_url is the customer's set-password link on the new site. It is
+		// emailed once with the site link and never stored here. It must sit
+		// on the same host as the site link and be a core password-reset URL.
+		$login_url = trim( (string) ( $input['login_url'] ?? '' ) );
+		$site_url  = $data['preview_url'] ?? $project->preview_url;
+		if ( $login_url !== '' ) {
+			$same_host = strtolower( (string) wp_parse_url( $login_url, PHP_URL_HOST ) ) === strtolower( (string) wp_parse_url( $site_url, PHP_URL_HOST ) );
+			if ( ! self::valid_url( $login_url ) || ! $same_host || strpos( $login_url, 'wp-login.php' ) === false || strpos( $login_url, 'action=rp' ) === false ) {
+				return new \WP_Error( 'invalid_login_url', 'login_url must be a wp-login.php?action=rp link on the same host as the site link.', [ 'status' => 400 ] );
+			}
+		}
+
 		AiRelayProjects::update( $data, [ 'ai_relay_project_id' => $project->ai_relay_project_id ] );
-		if ( ( $data['status'] ?? '' ) === 'preview' && $project->status !== 'preview' ) {
-			Mailer::send_ai_relay_preview_ready( AiRelayProjects::get( $project->ai_relay_project_id ) );
+		$fresh       = AiRelayProjects::get( $project->ai_relay_project_id );
+		$to_preview  = ( $data['status'] ?? '' ) === 'preview' && $project->status !== 'preview';
+		$url_changed = isset( $data['preview_url'] ) && $data['preview_url'] !== '' && $data['preview_url'] !== $project->preview_url;
+
+		// One email per change: "ready to launch" wins over "your site is up".
+		if ( $to_preview ) {
+			Mailer::send_ai_relay_preview_ready( $fresh, $login_url );
+		} elseif ( $url_changed || $login_url !== '' ) {
+			Mailer::send_ai_relay_site_ready( $fresh, $login_url );
+		}
+		if ( $to_preview || $url_changed || $login_url !== '' ) {
+			$what = $to_preview ? 'Ready-to-launch email' : 'Site link email';
+			self::add_message( $project->ai_relay_project_id, $user_id, 'internal', "{$what} sent to the customer for {$fresh->preview_url}" . ( $login_url !== '' ? ' (with a set-password link, not stored).' : '.' ), [], false );
 		}
 		return self::project( $user_id, $project->ai_relay_project_id );
 	}
@@ -926,7 +949,9 @@ class AiRelay {
 			'status_label'    => $labels[ $project->status ] ?? $project->status,
 			'mode'            => $project->mode,
 			'source_url'      => $project->source_url,
-			'preview_url'     => in_array( $project->status, [ 'preview', 'launched' ], true ) || $is_admin ? $project->preview_url : '',
+			// The site link is the customer's from the moment staff set it (they
+			// are an editor on it); Launch still waits for status 'preview'.
+			'preview_url'     => $project->preview_url,
 			'account_id'      => (int) $project->account_id,
 			'account'         => $account ? $account->name : '',
 			'created_at'      => $project->created_at,
