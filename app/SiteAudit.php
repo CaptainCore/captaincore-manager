@@ -56,6 +56,9 @@ class SiteAudit {
             'updated_at'        => $time_now,
         ] );
         $finding_id = ( new SiteAuditFindings )->insert( $data );
+        if ( empty( $finding_id ) ) {
+            return 0;
+        }
 
         // Update issues count on audit
         $findings = $this->findings();
@@ -69,7 +72,7 @@ class SiteAudit {
 
     public function resolve_finding( $finding_id, $resolution = '' ) {
         $time_now = date( 'Y-m-d H:i:s' );
-        ( new SiteAuditFindings )->update(
+        $updated  = ( new SiteAuditFindings )->update(
             [
                 'status'      => 'resolved',
                 'resolution'  => $resolution,
@@ -78,6 +81,12 @@ class SiteAudit {
             ],
             [ 'site_audit_finding_id' => $finding_id ]
         );
+
+        // A failed write leaves the finding open; report it rather than
+        // marking the audit remediated around it.
+        if ( $updated === false ) {
+            return false;
+        }
 
         // Check if all findings are resolved, update audit status
         $open_findings = ( new SiteAuditFindings )->where( [
@@ -90,6 +99,8 @@ class SiteAudit {
                 [ 'site_audit_id' => $this->site_audit_id ]
             );
         }
+
+        return true;
     }
 
     public function complete( $status = 'clean' ) {

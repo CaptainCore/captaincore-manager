@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 57;
+    const REQUIRED_VERSION = 58;
 
     private static function _table() {
         global $wpdb;
@@ -1185,7 +1185,7 @@ class DB {
             description longtext,
             evidence longtext,
             recommendation longtext,
-            resolution varchar(512) DEFAULT NULL,
+            resolution longtext,
             resolved_at datetime DEFAULT NULL,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,

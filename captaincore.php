@@ -12594,6 +12594,18 @@ function captaincore_verify_audit_permissions( $audit_id ) {
 }
 
 /**
+ * Error for a site-audit write the database refused (a value longer than its
+ * column under strict mode, for example). $wpdb signals that only through a
+ * false/0 return, so without this the endpoints answer 200 with nothing saved.
+ * The write routes are admin-only, so the database message is safe to return.
+ */
+function captaincore_site_audit_write_error( $what ) {
+	global $wpdb;
+	$detail = $wpdb->last_error ? ': ' . $wpdb->last_error : '.';
+	return new WP_Error( 'save_failed', "Could not save the {$what}{$detail}", [ 'status' => 500 ] );
+}
+
+/**
  * REST endpoint: Create a new security audit.
  */
 function captaincore_site_audits_create_func( WP_REST_Request $request ) {
@@ -12632,6 +12644,9 @@ function captaincore_site_audits_create_func( WP_REST_Request $request ) {
 	];
 
 	$audit_id = ( new CaptainCore\SiteAudits )->insert( $data );
+	if ( empty( $audit_id ) ) {
+		return captaincore_site_audit_write_error( 'audit' );
+	}
 	return [ 'site_audit_id' => $audit_id ];
 }
 
@@ -12691,7 +12706,9 @@ function captaincore_site_audits_update_func( WP_REST_Request $request ) {
 		$data['completed_at'] = $time_now;
 	}
 
-	( new CaptainCore\SiteAudits )->update( $data, [ 'site_audit_id' => $audit_id ] );
+	if ( ( new CaptainCore\SiteAudits )->update( $data, [ 'site_audit_id' => $audit_id ] ) === false ) {
+		return captaincore_site_audit_write_error( 'audit' );
+	}
 
 	return ( new CaptainCore\SiteAudit( $audit_id ) )->get();
 }
@@ -12924,6 +12941,9 @@ function captaincore_site_audits_add_finding_func( WP_REST_Request $request ) {
 	}
 
 	$finding_id = ( new CaptainCore\SiteAudit( $audit_id ) )->add_finding( $data );
+	if ( empty( $finding_id ) ) {
+		return captaincore_site_audit_write_error( 'finding' );
+	}
 	return [ 'site_audit_finding_id' => $finding_id ];
 }
 
@@ -12969,14 +12989,18 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 	}
 
 	if ( count( $data ) > 1 ) {
-		( new CaptainCore\SiteAuditFindings )->update( $data, [ 'site_audit_finding_id' => $finding_id ] );
+		if ( ( new CaptainCore\SiteAuditFindings )->update( $data, [ 'site_audit_finding_id' => $finding_id ] ) === false ) {
+			return captaincore_site_audit_write_error( 'finding' );
+		}
 	}
 
 	// If the caller is resolving, also stamp resolved_at and trigger the
 	// audit-level remediation check.
 	if ( $resolving ) {
 		$resolution = wp_kses_post( $params['resolution'] ?? '' );
-		( new CaptainCore\SiteAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution );
+		if ( ! ( new CaptainCore\SiteAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution ) ) {
+			return captaincore_site_audit_write_error( 'finding' );
+		}
 	}
 
 	return ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
