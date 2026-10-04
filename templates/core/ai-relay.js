@@ -218,7 +218,11 @@ Object.assign(Component.prototype, {
         tag: m.author === 'internal' ? 'Internal note' : m.author === 'staff' ? 'Team' : '',
         hasTag: m.author === 'staff' || m.author === 'internal',
         files: (m.files || []).map(f => ({ name: f.name, size: human(f.size || 0), href: fileHref(f) })),
-        hasFiles: !!(m.files || []).length
+        hasFiles: !!(m.files || []).length,
+        // Videos also play in place; their chip below still downloads them.
+        // #t=0.1 makes Safari paint the first frame before play.
+        videos: (m.files || []).filter(f => f.video).map(f => ({ src: fileHref(f) + '&inline=1#t=0.1', on: true })),
+        hasVideos: (m.files || []).some(f => f.video)
       })),
       rlCanPost: !!open,
       rlBody: s.rlBody || '', onRlBody: e => this.setState({ rlBody: e.target.value }),

@@ -2488,7 +2488,7 @@ function captaincore_ai_relay_launch_func( WP_REST_Request $request ) {
 }
 
 function captaincore_ai_relay_file_download_func( WP_REST_Request $request ) {
-	return CaptainCore\AiRelay::send_file( get_current_user_id(), (int) $request['id'], (string) $request['file'] );
+	return CaptainCore\AiRelay::send_file( get_current_user_id(), (int) $request['id'], (string) $request['file'], ! empty( $request['inline'] ), (string) $request->get_header( 'range' ) );
 }
 
 function captaincore_ai_relay_submit_func( WP_REST_Request $request ) {

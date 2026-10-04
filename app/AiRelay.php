@@ -33,7 +33,10 @@ class AiRelay {
 	const STAGED_META     = '_captaincore_ai_relay_staged';
 	const MAX_FILES       = 40;
 	const MAX_TOTAL_BYTES = 250 * 1024 * 1024;
-	const EXTENSIONS      = [ 'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'svg', 'pdf', 'doc', 'docx', 'txt', 'md', 'rtf', 'csv', 'xls', 'xlsx', 'ppt', 'pptx', 'zip' ];
+	const EXTENSIONS      = [ 'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'svg', 'pdf', 'doc', 'docx', 'txt', 'md', 'rtf', 'csv', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'mp4', 'm4v', 'mov', 'webm' ];
+	// Videos play in the thread as well as download. Nothing else is ever
+	// served with its own type.
+	const VIDEO_TYPES     = [ 'mp4' => 'video/mp4', 'm4v' => 'video/mp4', 'mov' => 'video/quicktime', 'webm' => 'video/webm' ];
 
 	/**
 	 * Limits the page enforces client side. The per-file cap is whatever PHP
@@ -656,8 +659,12 @@ class AiRelay {
 
 	/**
 	 * Stream one file from a project's thread to someone allowed to see it.
+	 * A video asked for $inline plays in the page under its own type; any
+	 * other file, or any request without $inline, downloads as plain bytes.
+	 * A single byte range in $range is honoured so players can seek, and
+	 * Safari will not play a video without one.
 	 */
-	public static function send_file( $user_id, $project_id, $file_id ) {
+	public static function send_file( $user_id, $project_id, $file_id, $inline = false, $range = '' ) {
 		$project = self::viewable( $user_id, $project_id );
 		if ( ! $project || ! preg_match( '/^[a-f0-9]{16}$/', (string) $file_id ) ) {
 			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
@@ -671,16 +678,72 @@ class AiRelay {
 				if ( ! is_file( $path ) ) {
 					break 2;
 				}
-				nocache_headers();
-				header( 'Content-Type: application/octet-stream' );
-				header( 'Content-Disposition: attachment; filename="' . str_replace( '"', '', $file['name'] ) . '"' );
-				header( 'Content-Length: ' . filesize( $path ) );
-				header( 'X-Content-Type-Options: nosniff' );
-				readfile( $path );
+				$type = $inline ? ( self::VIDEO_TYPES[ $file['ext'] ] ?? '' ) : '';
+				self::stream( $path, $file['name'], $type, (string) $range );
 				exit;
 			}
 		}
 		return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
+	}
+
+	/**
+	 * Send a file, or the one byte range asked for. $type set means show it
+	 * inline under that type; empty means a download.
+	 */
+	private static function stream( $path, $name, $type, $range ) {
+		$size  = (int) filesize( $path );
+		$start = 0;
+		$end   = $size - 1;
+		$part  = false;
+		// One range only. Anything else gets the whole file, which a client
+		// must accept.
+		if ( preg_match( '/^bytes=(\d*)-(\d*)$/', trim( $range ), $m ) && ( $m[1] !== '' || $m[2] !== '' ) ) {
+			if ( $m[1] === '' ) {
+				$start = max( 0, $size - (int) $m[2] );
+			} else {
+				$start = (int) $m[1];
+				if ( $m[2] !== '' ) {
+					$end = min( (int) $m[2], $size - 1 );
+				}
+			}
+			if ( $start >= $size || $start > $end ) {
+				status_header( 416 );
+				header( 'Content-Range: bytes */' . $size );
+				return;
+			}
+			$part = true;
+		}
+
+		while ( ob_get_level() ) {
+			ob_end_clean();
+		}
+		nocache_headers();
+		header( 'Content-Type: ' . ( $type ? $type : 'application/octet-stream' ) );
+		header( 'Content-Disposition: ' . ( $type ? 'inline' : 'attachment' ) . '; filename="' . str_replace( '"', '', $name ) . '"' );
+		header( 'Accept-Ranges: bytes' );
+		header( 'X-Content-Type-Options: nosniff' );
+		if ( $part ) {
+			status_header( 206 );
+			header( 'Content-Range: bytes ' . $start . '-' . $end . '/' . $size );
+		}
+		header( 'Content-Length: ' . ( $end - $start + 1 ) );
+
+		$fh = fopen( $path, 'rb' );
+		if ( ! $fh ) {
+			return;
+		}
+		fseek( $fh, $start );
+		$left = $end - $start + 1;
+		while ( $left > 0 && ! connection_aborted() ) {
+			$chunk = fread( $fh, min( 1048576, $left ) );
+			if ( $chunk === false || $chunk === '' ) {
+				break;
+			}
+			echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput -- raw file bytes
+			$left -= strlen( $chunk );
+			flush();
+		}
+		fclose( $fh );
 	}
 
 	/**
@@ -1039,9 +1102,10 @@ class AiRelay {
 
 	public static function public_file( $file ) {
 		return [
-			'id'   => $file['id'],
-			'name' => $file['name'],
-			'size' => (int) $file['size'],
+			'id'    => $file['id'],
+			'name'  => $file['name'],
+			'size'  => (int) $file['size'],
+			'video' => isset( self::VIDEO_TYPES[ $file['ext'] ?? '' ] ),
 		];
 	}
 

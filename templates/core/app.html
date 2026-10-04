@@ -1996,6 +1996,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ m.hasBody }}" hint-placeholder-val="{{ false }}">
                     <div style="margin-top:8px;font:400 var(--fs-14) var(--sans);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">{{ m.body }}</div>
                   </sc-if>
+                  <sc-if value="{{ m.hasVideos }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ m.videos }}" as="v" hint-placeholder-count="1">
+                      <video src="{{ v.src }}" controls="{{ v.on }}" playsInline="{{ v.on }}" preload="metadata" style="display:block;width:100%;max-height:70vh;margin-top:10px;border-radius:10px;background:#000"></video>
+                    </sc-for>
+                  </sc-if>
                   <sc-if value="{{ m.hasFiles }}" hint-placeholder-val="{{ false }}">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
                       <sc-for list="{{ m.files }}" as="f" hint-placeholder-count="2">
