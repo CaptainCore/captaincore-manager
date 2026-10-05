@@ -15139,10 +15139,25 @@ function captaincore_enforce_2fa_on_wp_login( $user, $password ) {
 
 add_filter( 'login_url', 'captaincore_override_login_url', 10, 3 );
 
+/**
+ * True when the site uses pretty permalinks. The /account app is reached through
+ * rewrite rules (CaptainCore\Router), which Plain permalinks never consult, so on
+ * Plain every app URL, /account/login included, renders the home page instead.
+ */
+function captaincore_has_pretty_permalinks() {
+    return (string) get_option( 'permalink_structure' ) !== '';
+}
+
 function captaincore_override_login_url( $login_url, $redirect, $force_reauth ) {
     
     // Do not override URL if generating via WP-CLI.
     if ( defined( 'WP_CLI' ) && WP_CLI ) {
+        return $login_url;
+    }
+
+    // On Plain permalinks the custom login page cannot load, so keep
+    // wp-login.php until a structure is chosen (the admin notice below asks).
+    if ( ! captaincore_has_pretty_permalinks() ) {
         return $login_url;
     }
 
@@ -15160,6 +15175,18 @@ function captaincore_override_login_url( $login_url, $redirect, $force_reauth ) 
     }
 
     return $custom_login_url;
+}
+
+add_action( 'admin_notices', 'captaincore_permalinks_notice' );
+
+function captaincore_permalinks_notice() {
+    if ( captaincore_has_pretty_permalinks() || ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    printf(
+        '<div class="notice notice-error"><p><strong>CaptainCore Manager needs pretty permalinks.</strong> Its dashboard and login page only load with a permalink structure other than Plain. <a href="%s">Choose one under Settings &rarr; Permalinks</a>.</p></div>',
+        esc_url( admin_url( 'options-permalink.php' ) )
+    );
 }
 
 /* -------------------------------------------------------------------------
