@@ -155,7 +155,7 @@ Object.assign(Component.prototype, {
           ? this.api('/billing/pay-invoice', { method: 'POST', body: { value: payId, source_id: result.source.id } })
           : this.api('/billing/payment-methods', { method: 'POST', body: { source_id: result.source.id } });
         return req.then(res2 => {
-          if (res2 && (res2.error || res2.code)) { const msg = res2.error || res2.message || 'Card declined';
+          if (res2 && (res2.error || res2.code || res2.result === 'fail')) { const msg = res2.error || res2.message || 'Card declined';
             fail(String(msg), payId ? 'Payment failed' : 'Card declined'); return; }
           this.closeAddCard();
           this.updateToast(tid, payId ? 'Payment submitted' : 'Card added', { kind: 'success' });
@@ -347,7 +347,7 @@ Object.assign(Component.prototype, {
         this.setState({ invPayConfirm: false });
         const tid = this.toast('Paying invoice #' + id + '…', { kind: 'loading' });
         this.api('/billing/pay-invoice', { method: 'POST', body: { value: id, payment_id: selTok } }).then(res => {
-          if (res && (res.error || res.code)) { this.updateToast(tid, String(res.error || res.message || 'Payment failed'), { kind: 'error' }); return; }
+          if (res && (res.error || res.code || res.result === 'fail')) { this.updateToast(tid, String(res.error || res.message || 'Payment failed'), { kind: 'error' }); this.loadBilling(true); return; }
           this.updateToast(tid, 'Payment submitted', { kind: 'success' });
           this._invoiceView = null;
           this.openInvoice(id);

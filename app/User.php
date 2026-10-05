@@ -1197,22 +1197,48 @@ class User {
     }
 
     public function pay_invoice( $invoice_id, $payment_id ) {
-        // Sync billing address from customer profile onto the order
-        $order    = wc_get_order( $invoice_id );
-        $customer = new \WC_Customer( $order->get_customer_id() );
-        $address  = $customer->get_billing();
-        if ( ! empty( $address['first_name'] ) ) {
-            $order->set_address( $address, 'billing' );
-            $order->save();
+        global $wpdb;
+        $order = wc_get_order( $invoice_id );
+        if ( ! $order ) {
+            return [ 'result' => 'fail', 'message' => 'Invoice not found.' ];
         }
 
-        // Check if this is an ACH token (string starting with 'ach_')
-        if ( is_string( $payment_id ) && strpos( $payment_id, 'ach_' ) === 0 ) {
-            return $this->pay_invoice_with_ach( $invoice_id, $payment_id );
+        // One payment attempt per invoice at a time. A double click, or a retry
+        // after a proxy timeout while the first charge was still running,
+        // started a second PaymentIntent (each gets a random idempotency key).
+        $lock = 'captaincore_pay_invoice_' . (int) $order->get_id();
+        if ( (string) $wpdb->get_var( $wpdb->prepare( "SELECT GET_LOCK( %s, 0 )", $lock ) ) !== '1' ) {
+            return [ 'result' => 'fail', 'message' => 'A payment for this invoice is already in progress.' ];
         }
 
-        // Otherwise, process as a card payment (existing logic)
-        return $this->pay_invoice_with_card( $invoice_id, $payment_id );
+        try {
+            // Only an invoice still waiting for money can be charged. Read after
+            // taking the lock so a payment that just finished is seen. On-hold
+            // means an ACH debit is already clearing; paid and cancelled
+            // invoices are done.
+            $order = wc_get_order( $invoice_id );
+            if ( ! $order->needs_payment() ) {
+                return [ 'result' => 'fail', 'message' => 'This invoice is not awaiting payment (status: ' . $order->get_status() . ').' ];
+            }
+
+            // Sync billing address from customer profile onto the order
+            $customer = new \WC_Customer( $order->get_customer_id() );
+            $address  = $customer->get_billing();
+            if ( ! empty( $address['first_name'] ) ) {
+                $order->set_address( $address, 'billing' );
+                $order->save();
+            }
+
+            // Check if this is an ACH token (string starting with 'ach_')
+            if ( is_string( $payment_id ) && strpos( $payment_id, 'ach_' ) === 0 ) {
+                return $this->pay_invoice_with_ach( $invoice_id, $payment_id );
+            }
+
+            // Otherwise, process as a card payment (existing logic)
+            return $this->pay_invoice_with_card( $invoice_id, $payment_id );
+        } finally {
+            $wpdb->query( $wpdb->prepare( "SELECT RELEASE_LOCK( %s )", $lock ) );
+        }
     }
 
     /**
@@ -1400,17 +1426,15 @@ class User {
             if ( ! empty( $intent->error ) ) {
                 $payment_method->maybe_remove_non_existent_customer( $intent->error, $order );
 
-                // We want to retry.
-                if ( $payment_method->is_retryable_error( $intent->error ) ) {
-                    return $payment_method->retry_after_error( $intent, $order, $retry, $force_save_source, $previous_error, $use_order_source );
-                }
-
+                // No automatic retry: the gateway's retry helper re-runs the
+                // checkout flow and was called here with undefined arguments.
+                // The error is reported and the customer can pay again.
                 $payment_method->unlock_order_payment( $order );
                 $payment_method->throw_localized_message( $intent, $order );
             }
 
+            $response = null;
             if ( ! empty( $intent ) ) {
-                $response = null;
                 // Use the last charge within the intent to proceed.
                 if ( ! empty( $intent->charges->data ) ) {
                     $response = end( $intent->charges->data );
@@ -1419,7 +1443,26 @@ class User {
                 }
             }
 
-            // Process valid response.
+            // No charge on the intent: Stripe wants the cardholder to
+            // authenticate (3-D Secure) or the card needs replacing. Nothing was
+            // collected, so leave the invoice unpaid instead of handing a
+            // missing charge to process_response().
+            if ( empty( $response ) ) {
+                $payment_method->unlock_order_payment( $order );
+                $intent_status = $intent->status ?? 'unknown';
+                $order->add_order_note( "Card payment not completed: PaymentIntent status {$intent_status}." );
+                return [
+                    'result'   => 'fail',
+                    'redirect' => '',
+                    'message'  => $intent_status === 'requires_action'
+                        ? 'Your bank needs to verify this payment, which cannot be done here. Please pay with another card.'
+                        : 'The card was not charged. Please try another card.',
+                ];
+            }
+
+            // Process valid response. The gateway sets the order's status from
+            // the charge: paid when captured and settled, on-hold when pending
+            // or only authorized.
             $payment_method->process_response( $response, $order );
 
             // Remove cart.
@@ -1430,7 +1473,20 @@ class User {
             // Unlock the order.
             $payment_method->unlock_order_payment( $order );
 
-            $order->update_status( 'completed' );
+            // Only a settled charge completes the invoice. Forcing "completed"
+            // here marked pending, authorized-only and under-review charges
+            // as paid and sent a receipt for money not collected.
+            $order = wc_get_order( $invoice_id );
+            if ( ! $order->is_paid() ) {
+                return [
+                    'result'   => 'fail',
+                    'redirect' => '',
+                    'message'  => 'The payment is pending with the card issuer. This invoice will update once it clears.',
+                ];
+            }
+            if ( $order->get_status() !== 'completed' ) {
+                $order->update_status( 'completed' );
+            }
 
             // Return thank you page redirect.
             return array(
