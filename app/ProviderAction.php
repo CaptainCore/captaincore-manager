@@ -32,12 +32,9 @@ class ProviderAction {
                     }
                     continue;
                 }
-                $api = \CaptainCore\Providers\Kinsta::credentials("api");
-                \CaptainCore\Remote\Kinsta::setApiKey( $api );
-                if ( ! empty( $action->provider_id ) ) {
-                    $api = \CaptainCore\Providers\Kinsta::credentials("api", $provider_action->provider_id);
-                    \CaptainCore\Remote\Kinsta::setApiKey( $api );
-                }
+                // Poll with the key of the Kinsta connection the action was
+                // started on (the row's provider), not the house key.
+                \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id );
                 $response         = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
                 $action->response = $response;
                 $status           = $response->status ?? '';
@@ -167,6 +164,12 @@ class ProviderAction {
         $current_action = json_decode( $provider_action->action );
         $time_now       = date( 'Y-m-d H:i:s' );
 
+        // Every Kinsta call below acts on the site this action was started
+        // for, so use that connection's key, not the house key.
+        if ( $provider->provider == "kinsta" ) {
+            \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id );
+        }
+
         if ( $current_action->command == "new-site" && ! empty( $current_action->step ) && $provider->provider == "kinsta" ) {
 
             // Check if the "Disable Edge Caching" step just finished
@@ -258,8 +261,7 @@ class ProviderAction {
         if ( $current_action->command == "deploy-to-staging" ) {
             // Manual snapshot of production environment completed, start restore process
             if ( $current_action->step == 1 ) {
-                $api_key  = $class_name::credentials("api");
-                $user_id  = $class_name::credentials("user_id");
+                $user_id  = $class_name::credentials( "user_id", $provider_action->provider_id );
                 $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$current_action->environment_production_id}/backups" );
 
                 foreach( $response->environment->backups as $backup ) {
@@ -324,10 +326,6 @@ class ProviderAction {
         }
 
         if ( $current_action->command == "new-site" ) {
-            if ( ! empty( $current_action->provider_id ) ) {
-                $api_key = \CaptainCore\Providers\Kinsta::credentials("api", $current_action->provider_id);
-                \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
-            }
             // Always derive the operation result from the recorded provider_key.
             // This used to fall back to $current_action->result, which is part of
             // the action JSON seeded by the new-site request body - letting the

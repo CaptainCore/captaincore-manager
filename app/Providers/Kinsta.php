@@ -56,6 +56,17 @@ class Kinsta {
         }
     }
 
+    /**
+     * Point Remote\Kinsta at the API key of one provider row (empty = the house
+     * connection). Remote\Kinsta keeps the key in a static, so a call that did
+     * not set it went out with whatever key an earlier call left there, or the
+     * house key, and sites on a customer-owned Kinsta connection failed with
+     * permission errors. Every site-scoped call sets it from the site's row.
+     */
+    public static function use_provider( $provider_id = "" ) {
+        \CaptainCore\Remote\Kinsta::setApiKey( self::credentials( "api", $provider_id ) );
+    }
+
     public static function list() {
         $providers = [];
         $user      = (object) ( new \CaptainCore\User )->fetch();
@@ -316,11 +327,10 @@ class Kinsta {
         $company_id  = self::credentials("company_id");
         $username    = self::credentials("username");
 
+        self::use_provider( $site->provider_id ?? "" );
         if ( ! empty( $site->provider_id ) ) {
-            $api_key     = self::credentials("api", $site->provider_id);
             $company_id  = self::credentials("company_id", $site->provider_id);
             $username    = self::credentials("username", $site->provider_id);
-            \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
         }
 
         if ( ! empty( $site->clone_site_id ) ) {
@@ -462,6 +472,7 @@ class Kinsta {
             return;
         }
         $time_now        = date("Y-m-d H:i:s");
+        self::use_provider( $site->provider_id );
         $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
 
         // A stale provider_site_id (site deleted or moved between Kinsta
@@ -541,6 +552,7 @@ class Kinsta {
                 $production_environment = $environment;
             }
         }
+        self::use_provider( $site->provider_id );
         $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
 
         foreach( $response->site->environments as $kinsta_environment ) {
@@ -576,6 +588,7 @@ class Kinsta {
         if ( empty( $site->provider_site_id ) ) {
             return;
         }
+        self::use_provider( $site->provider_id );
         $environments              = self::environments( $site->provider_site_id );
         $environment_production_id = "";
         foreach( $environments as $environment ) {
@@ -606,6 +619,7 @@ class Kinsta {
             "site_id"                   => $site_id,
             "kinsta_site_id"            => $site->provider_site_id,
             "environment_production_id" => $environment_production_id,
+            "provider_id"               => $site->provider_id,
         ];
 
         self::add_action( $response->operation_id, $action );
@@ -617,8 +631,8 @@ class Kinsta {
         if ( empty( $site->provider_site_id ) ) {
             return new \WP_Error( 'not_linked', 'This site is not linked to a Kinsta site.', [ 'status' => 400 ] );
         }
+        self::use_provider( $site->provider_id );
         $environments = self::environments( $site->provider_site_id );
-        $api_key      = self::credentials("api");
         $data         = [
             "tag" => "Deploy to staging from API"
         ];
@@ -659,6 +673,7 @@ class Kinsta {
             "kinsta_site_id"            => $site->provider_site_id,
             "environment_production_id" => $environment_production_id,
             "environment_staging_id"    => $environment_staging_id,
+            "provider_id"               => $site->provider_id,
         ];
 
         self::add_action( $response->operation_id, $action );
@@ -670,8 +685,8 @@ class Kinsta {
         if ( empty( $site->provider_site_id ) ) {
             return;
         }
+        self::use_provider( $site->provider_id );
         $environments = self::environments( $site->provider_site_id );
-        $api_key      = self::credentials("api");
 
         $environment_production_id = "";
         $environment_staging_id    = "";
@@ -710,6 +725,7 @@ class Kinsta {
             "name"                      => $name,
             "site_id"                   => $site_id,
             "kinsta_site_id"            => $site->provider_site_id,
+            "provider_id"               => $site->provider_id,
         ];
 
         self::add_action( $response->operation_id, $action );
@@ -1305,6 +1321,7 @@ class Kinsta {
             return new \WP_Error( 'kinsta_missing_id', 'Kinsta Remote ID not set for this site.' );
         }
 
+        self::use_provider( $site->provider_id );
         $env_response = \CaptainCore\Remote\Kinsta::get( "sites/{$kinsta_site_id}/environments" );
         if ( is_wp_error( $env_response ) ) {
             return $env_response;
@@ -1631,6 +1648,7 @@ class Kinsta {
         $kinsta_site_id = $site->provider_site_id;
         
         // 1. Get Environment ID (assuming 'live')
+        self::use_provider( $site->provider_id );
         $env_response = \CaptainCore\Remote\Kinsta::get( "sites/{$kinsta_site_id}/environments" );
         if ( is_wp_error( $env_response ) ) return $env_response;
 
