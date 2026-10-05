@@ -1206,16 +1206,21 @@ class User {
         // One payment attempt per invoice at a time. A double click, or a retry
         // after a proxy timeout while the first charge was still running,
         // started a second PaymentIntent (each gets a random idempotency key).
-        $lock = 'captaincore_pay_invoice_' . (int) $order->get_id();
+        // Lock names are server-wide, so they carry this database's name.
+        $lock = 'cc_pay_' . substr( md5( DB_NAME ), 0, 12 ) . '_' . (int) $order->get_id();
         if ( (string) $wpdb->get_var( $wpdb->prepare( "SELECT GET_LOCK( %s, 0 )", $lock ) ) !== '1' ) {
             return [ 'result' => 'fail', 'message' => 'A payment for this invoice is already in progress.' ];
         }
 
         try {
             // Only an invoice still waiting for money can be charged. Read after
-            // taking the lock so a payment that just finished is seen. On-hold
-            // means an ACH debit is already clearing; paid and cancelled
-            // invoices are done.
+            // taking the lock, past the request's cache, so a payment that just
+            // finished is seen. On-hold means a payment is already clearing;
+            // paid and cancelled invoices are done.
+            clean_post_cache( (int) $order->get_id() );
+            if ( class_exists( '\Automattic\WooCommerce\Caches\OrderCache' ) ) {
+                wc_get_container()->get( \Automattic\WooCommerce\Caches\OrderCache::class )->remove( (int) $order->get_id() );
+            }
             $order = wc_get_order( $invoice_id );
             if ( ! $order->needs_payment() ) {
                 return [ 'result' => 'fail', 'message' => 'This invoice is not awaiting payment (status: ' . $order->get_status() . ').' ];
@@ -1416,7 +1421,19 @@ class User {
 
             $order->set_payment_method( 'stripe' );
             $payment_method->save_source_to_order( $order, $prepared_source );
-            $intent = $payment_method->create_intent( $order, $prepared_source );
+            // An invoice is captured at once, whatever the gateway's capture
+            // setting: an authorize-only charge would leave it on hold with
+            // nothing collected (completing the order used to trigger capture).
+            $capture_now = function ( $request ) {
+                $request['capture_method'] = 'automatic';
+                return $request;
+            };
+            add_filter( 'wc_stripe_generate_create_intent_request', $capture_now );
+            try {
+                $intent = $payment_method->create_intent( $order, $prepared_source );
+            } finally {
+                remove_filter( 'wc_stripe_generate_create_intent_request', $capture_now );
+            }
             // Confirm the intent after locking the order to make sure webhooks will not interfere.
             if ( empty( $intent->error ) ) {
                 $payment_method->lock_order_payment( $order, $intent );
@@ -1443,14 +1460,22 @@ class User {
                 }
             }
 
-            // No charge on the intent: Stripe wants the cardholder to
-            // authenticate (3-D Secure) or the card needs replacing. Nothing was
-            // collected, so leave the invoice unpaid instead of handing a
-            // missing charge to process_response().
+            // No charge on the intent. Stripe either wants the cardholder to
+            // authenticate (3-D Secure), needs another card, or is still
+            // processing. Never hand a missing charge to process_response().
             if ( empty( $response ) ) {
                 $payment_method->unlock_order_payment( $order );
                 $intent_status = $intent->status ?? 'unknown';
                 $order->add_order_note( "Card payment not completed: PaymentIntent status {$intent_status}." );
+                if ( $intent_status === 'processing' ) {
+                    // Money may still arrive: hold the invoice so it cannot be paid twice.
+                    $order->update_status( 'on-hold', 'Card payment processing at Stripe.' );
+                    return [
+                        'result'   => 'fail',
+                        'redirect' => '',
+                        'message'  => 'The payment is still processing. This invoice will update once it clears.',
+                    ];
+                }
                 return [
                     'result'   => 'fail',
                     'redirect' => '',
@@ -1478,6 +1503,11 @@ class User {
             // as paid and sent a receipt for money not collected.
             $order = wc_get_order( $invoice_id );
             if ( ! $order->is_paid() ) {
+                // A charge exists but has not settled (for example held for
+                // review). Hold the invoice so a second click cannot charge again.
+                if ( $order->needs_payment() ) {
+                    $order->update_status( 'on-hold', 'Card charge pending at Stripe.' );
+                }
                 return [
                     'result'   => 'fail',
                     'redirect' => '',

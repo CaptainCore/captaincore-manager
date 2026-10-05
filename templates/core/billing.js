@@ -284,7 +284,8 @@ Object.assign(Component.prototype, {
     }
     const status = d ? String(d.status || '') : '';
     const paid = /completed|processing|paid|refunded/i.test(status);
-    const canPay = /pending|failed|on-hold/i.test(status);
+    // On-hold means a payment is already clearing; the server refuses a second one.
+    const canPay = /pending|failed/i.test(status);
     // ── Payment section (payable invoices): saved methods with a selectable
     // row (default preselected), Pay button, and add-card-and-pay. The
     // methods ride /billing/ — load it the first time a payable invoice
@@ -457,7 +458,7 @@ Object.assign(Component.prototype, {
     if (b.error) return { billShowAdd: false, billNotice: true, billNoticeText: b.error, invoices: [], payMethods: [] };
     const invoices = (b.invoices || []).map(iv => {
       const paid = /completed|processing|paid|refunded/i.test(iv.status || '');
-      const canPay = /pending|failed|on-hold/i.test(iv.status || '');
+      const canPay = /pending|failed/i.test(iv.status || '');
       return { id: '#' + iv.order_id, items: '', date: iv.date || '',
         amount: '$' + (Number(iv.total) || 0).toFixed(2),
         status: iv.status || '',
