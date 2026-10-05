@@ -1854,6 +1854,101 @@ class Mailer {
     /* -------------------------------------------------------------------------
      *  CORE CHECKSUM FAILURE ALERT (Admin Notify)
      * ------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------
+     *  MONITOR AUTO-RECOVERY (Admin Notify)
+     *  One email per attempt: what the probe found, what was done about it and
+     *  whether the site answered afterwards. See app/MonitorRecoveries.php.
+     * ------------------------------------------------------------------------- */
+    static public function send_monitor_recovery_alert( $recovery, $site_name, $to_email = '' ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $to_email    = ! empty( $to_email ) ? $to_email : get_option( 'admin_email' );
+        $probe       = ! empty( $recovery->probe ) ? json_decode( $recovery->probe ) : (object) [];
+        $environment = $recovery->environment ?: 'Production';
+        $env_label   = strtolower( $environment ) === 'production' ? '' : " ({$environment})";
+
+        $red   = [ '#F6E0DD', '#BF3B2E' ];
+        $amber = [ '#F7EFDB', '#B0761B' ];
+        $green = [ '#E2F0E9', '#166B42' ];
+        if ( $recovery->action === 'restarted' && $recovery->outcome === 'restored' ) {
+            $badge   = [ 'Restored', $green ];
+            $subject = "Monitor recovery: {$site_name}{$env_label} restored after PHP restart";
+            $intro   = 'The uptime monitor found this site down with its PHP workers saturated, restarted PHP, and the site is answering again.';
+        } elseif ( $recovery->action === 'restarted' ) {
+            $badge   = [ 'Still Down', $red ];
+            $subject = "Monitor recovery: {$site_name}{$env_label} still down after PHP restart";
+            $intro   = 'The uptime monitor restarted PHP on this site, but it still was not answering afterwards. It needs a look.';
+        } elseif ( $recovery->action === 'failed' ) {
+            $badge   = [ 'Restart Failed', $red ];
+            $subject = "Monitor recovery: PHP restart failed for {$site_name}{$env_label}";
+            $intro   = 'The uptime monitor tried to restart PHP on this site, but the request did not go through. It needs a look.';
+        } else {
+            $badge   = [ 'Not Restarted', $amber ];
+            $subject = "Monitor recovery: {$site_name}{$env_label} is down, PHP not restarted";
+            $intro   = 'The uptime monitor checked this site after it failed twice in a row. A PHP restart would not help with what it found, so none was attempted.';
+        }
+
+        $row = function( $label, $value, $last = false ) {
+            $pad = $last ? '' : 'padding-bottom: 10px; ';
+            return "<tr><td width='160' style='{$pad}color: #666D7A; font-size: 14px;'>" . esc_html( $label ) . "</td><td style='{$pad}color: #15181D; font-weight: 600; text-align: right;'>{$value}</td></tr>";
+        };
+        $card = function( $title, $rows ) {
+            return "
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <div style='margin-bottom: 12px;'><strong style='font-size: 11px; text-transform: uppercase; color: #A3ACB9; letter-spacing: 0.05em;'>{$title}</strong></div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>{$rows}</table>
+                </div>";
+        };
+
+        $failure = esc_html( $recovery->http_code ?: '000' );
+        if ( ! empty( $recovery->error ) ) {
+            $failure .= " &middot; <span style='font-weight: 400;'>" . esc_html( wp_trim_words( $recovery->error, 14 ) ) . "</span>";
+        }
+        $site_rows  = $row( 'Site', esc_html( $site_name ) );
+        $site_rows .= $row( 'URL', "<a href='" . esc_url( $recovery->url ) . "' style='color: {$brand_color}; text-decoration: none;'>" . esc_html( $recovery->url ) . "</a>" );
+        $site_rows .= $row( 'Environment', esc_html( $environment ) );
+        $site_rows .= $row( 'Failure', $failure );
+        $site_rows .= $row( 'Failed monitor runs', (int) $recovery->failed_checks );
+        $site_rows .= $row( 'Attempt', (int) $recovery->attempt . ' of 3', true );
+
+        if ( ! empty( $recovery->ssh_ok ) ) {
+            $workers     = esc_html( MonitorRecoveries::describe_workers( $recovery->busy_workers, $recovery->max_workers ) );
+            $probe_rows  = $row( 'PHP workers', $recovery->saturated ? "<span style='color: #BF3B2E;'>{$workers}</span>" : $workers );
+            $probe_rows .= $row( 'PHP-FPM processes', esc_html( $probe->fpm_processes ?? '?' ) );
+            $probe_rows .= $row( 'Longest running worker', esc_html( isset( $probe->fpm_oldest_seconds ) ? human_time_diff( 0, (int) $probe->fpm_oldest_seconds ) : '?' ) );
+            $probe_rows .= $row( 'Load average', esc_html( ( $probe->load_1 ?? '?' ) . ' / ' . ( $probe->cpus ?? '?' ) . ' CPUs' ) );
+            $probe_rows .= $row( 'PHP-FPM running since', esc_html( $probe->fpm_master_started ?? '?' ), true );
+        } else {
+            $probe_rows = $row( 'SSH', "<span style='color: #BF3B2E;'>Could not connect</span>" . ( ! empty( $probe->ssh_error ) ? ' &middot; ' . esc_html( wp_trim_words( $probe->ssh_error, 12 ) ) : '' ), true );
+        }
+
+        if ( $recovery->action === 'restarted' ) {
+            $action_rows  = $row( 'Action', 'PHP restarted through Kinsta' );
+            $action_rows .= $row( 'Operation', esc_html( $recovery->operation_status === '200' ? 'Completed' : ( $recovery->operation_status ?: 'Unknown' ) ) );
+            $after        = $recovery->outcome === 'restored'
+                ? "<span style='color: #166B42;'>" . esc_html( $recovery->after_http_code ) . " &middot; answering</span>"
+                : "<span style='color: #BF3B2E;'>" . esc_html( $recovery->after_http_code ?: '000' ) . "</span>" . ( ! empty( $recovery->after_error ) ? ' &middot; ' . esc_html( wp_trim_words( $recovery->after_error, 12 ) ) : '' );
+            $action_rows .= $row( 'Check after restart', $after, true );
+        } else {
+            $action_rows  = $row( 'Action', $recovery->action === 'failed' ? 'PHP restart requested, not accepted' : 'None' );
+            $action_rows .= $row( 'Reason', esc_html( $recovery->reason ?: '' ), true );
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: {$badge[1][0]}; color: {$badge[1][1]}; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>{$badge[0]}</div>
+                </div>
+                <p style='margin-bottom: 25px;'>{$intro}</p>
+                " . $card( 'Site', $site_rows ) . "
+                " . $card( 'PHP probe', $probe_rows ) . "
+                " . $card( 'Recovery', $action_rows ) . "
+            </div>
+        ";
+
+        self::send_email_with_layout( $to_email, $subject, "Monitor Auto-Recovery", $site_name, $content_html );
+    }
+
     static public function send_checksum_alert( $site_name, $environment_name, $home_url, $checksum_details ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';

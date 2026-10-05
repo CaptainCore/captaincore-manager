@@ -1310,6 +1310,39 @@ class Kinsta {
     }
 
     /**
+     * Restart an environment's PHP engine (POST sites/tools/restart-php).
+     * Kinsta answers 202 with an operation id; poll it with operation_status().
+     *
+     * @return object|\WP_Error { operation_id, message, status }
+     */
+    public static function restart_php( $site_id, $environment = 'production' ) {
+        $env_id = self::resolve_env_id( $site_id, strtolower( $environment ) );
+        if ( is_wp_error( $env_id ) ) {
+            return $env_id;
+        }
+        // resolve_env_id() already pointed Remote\Kinsta at the site's own key.
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/tools/restart-php", [ "environment_id" => $env_id ] );
+        if ( ! $response || empty( $response->operation_id ) ) {
+            $message = $response->message ?? 'No operation id returned.';
+            return new \WP_Error( 'kinsta_restart_php_failed', "Kinsta did not accept the PHP restart: {$message}" );
+        }
+        return $response;
+    }
+
+    /**
+     * Current status of a Kinsta operation, with the site's own key.
+     * Kinsta reports 202 while running, 200 when done and 500 on failure.
+     *
+     * @return string "200", "202", "500", or "" when the poll itself failed
+     */
+    public static function operation_status( $site_id, $operation_id ) {
+        $site = \CaptainCore\Sites::get( $site_id );
+        self::use_provider( $site->provider_id ?? "" );
+        $response = \CaptainCore\Remote\Kinsta::get( "operations/{$operation_id}" );
+        return (string) ( $response->status ?? "" );
+    }
+
+    /**
      * Resolve a CaptainCore site + environment to Kinsta's environment id.
      */
     private static function resolve_env_id( $site_id, $environment = 'production' ) {

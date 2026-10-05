@@ -175,13 +175,17 @@ class ProcessLog {
         }
     }
 
-    public static function insert( $message, $site_id ) {
+    /**
+     * Add a timeline entry to one or more sites. $public = 0 keeps it off the
+     * customer's view of the timeline (Site::process_logs() shows it to admins only).
+     */
+    public static function insert( $message, $site_id, $public = 1 ) {
         $time_now        = date( 'Y-m-d H:i:s' );
         $site_ids        = is_array( $site_id ) ? $site_id : [ $site_id ];
         $process_log_new = (object) [
             "process_id"   => 0,
             'user_id'      => get_current_user_id(),
-            'public'       => 1,
+            'public'       => $public ? 1 : 0,
             'description'  => $message,
             'status'       => 'completed',
             'created_at'   => $time_now,

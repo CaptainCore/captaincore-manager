@@ -159,6 +159,7 @@ return array(
     'CaptainCore\\MailgunCLI' => $baseDir . '/app/MailgunCLI.php',
     'CaptainCore\\MalwareFindings' => $baseDir . '/app/MalwareFindings.php',
     'CaptainCore\\MalwareFindingsCLI' => $baseDir . '/app/MalwareFindingsCLI.php',
+    'CaptainCore\\MonitorRecoveries' => $baseDir . '/app/MonitorRecoveries.php',
     'CaptainCore\\MuManifestCLI' => $baseDir . '/app/MuManifestCLI.php',
     'CaptainCore\\Network' => $baseDir . '/app/Network.php',
     'CaptainCore\\NetworkCLI' => $baseDir . '/app/NetworkCLI.php',

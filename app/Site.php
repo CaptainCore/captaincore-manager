@@ -2051,9 +2051,15 @@ class Site {
             cache_users( $user_ids );
         }
 
+        // Private entries (public = 0, e.g. monitor auto-recovery notes) are for admins only.
+        $show_private = ( new User )->is_admin();
+
         foreach ( $results as $result ) {
             $item = isset( $logs_by_id[ (int) $result->process_log_id ] ) ? clone $logs_by_id[ (int) $result->process_log_id ] : null;
             if ( ! $item ) {
+                continue;
+            }
+            if ( ! $show_private && isset( $item->public ) && (int) $item->public === 0 ) {
                 continue;
             }
             $item->created_at      = strtotime( $item->created_at );

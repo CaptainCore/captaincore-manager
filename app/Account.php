@@ -367,10 +367,16 @@ class Account {
         // rows for a fleet-wide log run to the hundreds. Keyed lookup instead.
         $site_id_keys = array_flip( $site_ids );
 
+        // Private entries (public = 0, e.g. monitor auto-recovery notes) are for admins only.
+        $show_private = ( new User )->is_admin();
+
         $process_logs = [];
         foreach ( $fetch_process_logs as $result ) {
             $plid = $result->process_log_id;
             if ( ! isset( $logs_map[ $plid ] ) || isset( $seen[ $plid ] ) ) {
+                continue;
+            }
+            if ( ! $show_private && isset( $logs_map[ $plid ]->public ) && (int) $logs_map[ $plid ]->public === 0 ) {
                 continue;
             }
             $seen[ $plid ] = true;

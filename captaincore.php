@@ -1241,6 +1241,136 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
+	// Uptime monitor auto-recovery, step 1 of 2 (CLI: `captaincore monitor recover`).
+	// The CLI posts its PHP-FPM probe for a site that failed two monitor runs in a
+	// row. The restart decision is made here, from the probe and the failure, so
+	// the CLI cannot talk the Manager into a restart the evidence doesn't support.
+	if ( $command === 'monitor-recovery-start' ) {
+		if ( empty( $current_site ) ) {
+			return new WP_Error( 'site_required', 'monitor-recovery-start requires a site_id.', [ 'status' => 400 ] );
+		}
+		$d       = is_object( $data ) ? $data : (object) [];
+		$probe   = isset( $d->probe ) && is_object( $d->probe ) ? $d->probe : (object) [];
+		$ssh_ok  = ! empty( $d->ssh_ok );
+		$busy    = ( isset( $probe->busy_workers ) && is_numeric( $probe->busy_workers ) ) ? (int) $probe->busy_workers : null;
+		$max     = ( isset( $probe->max_workers ) && is_numeric( $probe->max_workers ) && (int) $probe->max_workers > 0 ) ? (int) $probe->max_workers : null;
+		$code    = substr( (string) ( $d->http_code ?? '' ), 0, 10 );
+		$error   = substr( (string) ( $d->error ?? '' ), 0, 1000 );
+		$env     = ! empty( $environment ) ? ucfirst( strtolower( $environment ) ) : 'Production';
+		$attempt = max( 1, (int) ( $d->attempt ?? 1 ) );
+
+		$saturated = $ssh_ok && $max !== null && $busy !== null && $busy >= $max;
+		// A restart only helps when PHP is not answering in time: a timeout, a
+		// dropped connection or a gateway error. A 500, 403/404, DNS or TLS
+		// failure gets recorded and emailed, never restarted.
+		$restartable_failure = in_array( $code, [ '502', '503', '504' ], true )
+			|| ( in_array( $code, [ '', '0', '000' ], true ) && preg_match( '/timeout|timed out|deadline exceeded|\beof\b|connection reset|broken pipe/i', $error ) );
+
+		$action = 'skipped';
+		$reason = '';
+		$operation_id = '';
+		if ( ! empty( $d->dry_run ) ) {
+			$reason = 'Dry run, no restart requested.';
+		} elseif ( $current_site->provider !== 'kinsta' ) {
+			$reason = 'Automatic PHP restart is only available on Kinsta (provider: ' . ( $current_site->provider ?: 'none' ) . ').';
+		} elseif ( ! $restartable_failure ) {
+			$reason = 'The failure (' . ( $code ?: '000' ) . ') is not one a PHP restart fixes.';
+		} elseif ( $ssh_ok && ! $saturated ) {
+			$reason = $max !== null && $busy !== null
+				? 'The PHP pool was not saturated (' . CaptainCore\MonitorRecoveries::describe_workers( $busy, $max ) . ').'
+				: 'The probe could not read the PHP pool, so a restart was not justified.';
+		} elseif ( $recent = CaptainCore\MonitorRecoveries::recent_restart( (int) $site_id, (int) $environment_id ) ) {
+			$reason = "PHP was already restarted at {$recent->created_at} UTC.";
+		} else {
+			$restart = \CaptainCore\Providers\Kinsta::restart_php( (int) $site_id, $env );
+			if ( is_wp_error( $restart ) ) {
+				$action = 'failed';
+				$reason = $restart->get_error_message();
+			} else {
+				$action       = 'restarted';
+				$operation_id = (string) $restart->operation_id;
+				$reason       = $ssh_ok ? CaptainCore\MonitorRecoveries::describe_workers( $busy, $max ) . '.' : 'SSH could not reach the site.';
+			}
+		}
+
+		$now   = date( 'Y-m-d H:i:s' );
+		$row   = [
+			'site_id'          => (int) $site_id,
+			'environment_id'   => (int) $environment_id,
+			'environment'      => $env,
+			'url'              => substr( (string) ( $d->url ?? '' ), 0, 255 ),
+			'http_code'        => $code,
+			'error'            => $error,
+			'failed_checks'    => (int) ( $d->failed_checks ?? 0 ),
+			'attempt'          => $attempt,
+			'ssh_ok'           => $ssh_ok ? 1 : 0,
+			'saturated'        => $saturated ? 1 : 0,
+			'busy_workers'     => $busy,
+			'max_workers'      => $max,
+			'probe'            => wp_json_encode( $probe ),
+			'action'           => $action,
+			'reason'           => substr( $reason, 0, 255 ),
+			'operation_id'     => $operation_id,
+			'operation_status' => $action === 'restarted' ? '202' : '',
+			'outcome'          => $action === 'restarted' ? 'pending' : 'not_attempted',
+			'created_at'       => $now,
+			'updated_at'       => $now,
+			'completed_at'     => $action === 'restarted' ? null : $now,
+		];
+		$recovery_id = CaptainCore\MonitorRecoveries::insert( $row );
+
+		// A restart is reported once the CLI has re-checked the site (finish).
+		// Anything else is final now.
+		if ( $action !== 'restarted' && empty( $d->dry_run ) ) {
+			$recovery = CaptainCore\MonitorRecoveries::get( $recovery_id );
+			\CaptainCore\Mailer::send_monitor_recovery_alert( $recovery, $current_site->name, $d->email ?? '' );
+			CaptainCore\MonitorRecoveries::update( [ 'notified_at' => date( 'Y-m-d H:i:s' ) ], [ 'monitor_recovery_id' => $recovery_id ] );
+			$verb = $action === 'failed' ? 'tried to restart PHP, but the restart was not accepted' : 'checked PHP and did not restart it';
+			CaptainCore\ProcessLog::insert( "Uptime monitor {$verb} after {$row['failed_checks']} failed checks ({$env}). {$reason}", (int) $site_id, 0 );
+		}
+
+		$response = [
+			"monitor_recovery_id" => $recovery_id,
+			"action"              => $action,
+			"reason"              => $reason,
+			"operation_id"        => $operation_id,
+			"saturated"           => $saturated,
+		];
+	}
+
+	// Uptime monitor auto-recovery, step 2 of 2: the CLI re-checked the site after
+	// the restart. Record the outcome, email it and note it on the site timeline.
+	if ( $command === 'monitor-recovery-finish' ) {
+		$d           = is_object( $data ) ? $data : (object) [];
+		$recovery_id = (int) ( $d->monitor_recovery_id ?? 0 );
+		$recovery    = $recovery_id ? CaptainCore\MonitorRecoveries::get( $recovery_id ) : null;
+		if ( empty( $recovery ) || empty( $current_site ) || (int) $recovery->site_id !== (int) $site_id ) {
+			return new WP_Error( 'recovery_not_found', 'Unknown monitor recovery for this site.', [ 'status' => 404 ] );
+		}
+		if ( ! empty( $recovery->completed_at ) ) {
+			// Already reported; a retried request must not send a second email.
+			return [ "monitor_recovery_id" => $recovery_id, "outcome" => $recovery->outcome, "already_finished" => true ];
+		}
+		$restored  = ! empty( $d->restored );
+		$op_status = ! empty( $recovery->operation_id ) ? \CaptainCore\Providers\Kinsta::operation_status( (int) $site_id, $recovery->operation_id ) : '';
+		$now       = date( 'Y-m-d H:i:s' );
+		CaptainCore\MonitorRecoveries::update( [
+			'outcome'          => $restored ? 'restored' : 'still_down',
+			'after_http_code'  => substr( (string) ( $d->after_http_code ?? '' ), 0, 10 ),
+			'after_error'      => substr( (string) ( $d->after_error ?? '' ), 0, 1000 ),
+			'operation_status' => $op_status !== '' ? $op_status : $recovery->operation_status,
+			'updated_at'       => $now,
+			'completed_at'     => $now,
+			'notified_at'      => $now,
+		], [ 'monitor_recovery_id' => $recovery_id ] );
+		$recovery = CaptainCore\MonitorRecoveries::get( $recovery_id );
+		\CaptainCore\Mailer::send_monitor_recovery_alert( $recovery, $current_site->name, $d->email ?? '' );
+		$workers = $recovery->ssh_ok ? CaptainCore\MonitorRecoveries::describe_workers( $recovery->busy_workers, $recovery->max_workers ) : "SSH could not reach the site";
+		$result  = $restored ? 'The site is answering again.' : 'The site was still down afterwards.';
+		CaptainCore\ProcessLog::insert( "Uptime monitor restarted PHP after {$recovery->failed_checks} failed checks ({$recovery->environment}, {$workers}). {$result}", (int) $site_id, 0 );
+		$response = [ "monitor_recovery_id" => $recovery_id, "outcome" => $recovery->outcome, "operation_status" => $recovery->operation_status ];
+	}
+
 	// Record malware findings and email only the ones not already open.
 	// A finding reported every night by the same scanner updates its row
 	// (last_seen, seen_count) instead of sending the same email again.

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 59;
+    const REQUIRED_VERSION = 60;
 
     private static function _table() {
         global $wpdb;
@@ -1366,6 +1366,47 @@ class DB {
         KEY error_class (error_class),
         KEY status (status),
         KEY site_id (site_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Uptime monitor auto-recovery (app/MonitorRecoveries.php). One row per
+        // attempt: the CLI probes a site that failed two monitor runs in a row,
+        // the Manager restarts PHP through the provider when the probe shows a
+        // saturated pool, and the CLI reports whether the site came back.
+        // `probe` holds the raw key:value probe as JSON.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_monitor_recoveries` (
+            monitor_recovery_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED DEFAULT NULL,
+            environment varchar(20) DEFAULT NULL,
+            url varchar(255) DEFAULT NULL,
+            http_code varchar(10) DEFAULT NULL,
+            error text,
+            failed_checks int(11) DEFAULT 0,
+            attempt int(11) DEFAULT 1,
+            ssh_ok tinyint(1) DEFAULT 0,
+            saturated tinyint(1) DEFAULT 0,
+            busy_workers int(11) DEFAULT NULL,
+            max_workers int(11) DEFAULT NULL,
+            probe longtext,
+            action varchar(20) DEFAULT NULL,
+            reason varchar(255) DEFAULT NULL,
+            operation_id varchar(255) DEFAULT NULL,
+            operation_status varchar(20) DEFAULT NULL,
+            outcome varchar(20) DEFAULT NULL,
+            after_http_code varchar(10) DEFAULT NULL,
+            after_error text,
+            notified_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime DEFAULT NULL,
+            completed_at datetime DEFAULT NULL,
+        PRIMARY KEY  (monitor_recovery_id),
+        KEY site_id (site_id),
+        KEY environment_id (environment_id),
+        KEY action (action),
+        KEY outcome (outcome),
+        KEY created_at (created_at)
         ) $charset_collate;";
 
         dbDelta($sql);
