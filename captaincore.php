@@ -6575,7 +6575,9 @@ function captaincore_keys_set_primary_func( WP_REST_Request $request ) {
 	( new CaptainCore\Keys )->update( [ 'main' => 1, 'updated_at' => $time_now ], [ "key_id" => $key_id ] );
 
 	$configurations = ( new CaptainCore\Configurations )->get();
-	$configurations->default_key = $key_id;
+	// Stored as a string: the CLI uses default_key as the key file name, and
+	// CLIs up to 1.0.0 decoded a JSON number to "", dropping the key from ssh -i.
+	$configurations->default_key = (string) $key_id;
 	update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
 	( new CaptainCore\Configurations )->sync();
 
