@@ -27,6 +27,10 @@ Object.assign(Component.prototype, {
     return (list.length && list[0] && list[0].code) ? list[0] : null;
   },
 
+  // force: true refetches; 'render' is the call made on every render of the
+  // site page, which must never touch state for an unchanged key (each
+  // setState renders again) and never retries a failed load (that refetched
+  // three Fathom endpoints on every pass). Opening the tab retries a failure.
   loadStats(force) {
     const real = this._detail;
     if (!this._hydrated || !real) return;
@@ -35,9 +39,13 @@ Object.assign(Component.prototype, {
     if (!e) return;
     const st = this._stats = this._stats || {};
     const key = [real.siteId, e.environment, s.statG, s.statR].join('|');
+    const cur = st.current && st.current.key === key ? st.current : null;
     const tracker = this.statTracker(real, s);
-    if (!tracker) { st.current = { key, empty: true }; st.pages = st.refs = null; this.setState({}); return; }
-    if (!force && st.current && st.current.key === key && !st.current.error) return;
+    if (!tracker) {
+      if (!(cur && cur.empty)) { st.current = { key, empty: true }; st.pages = st.refs = null; this.setState({}); }
+      return;
+    }
+    if (force !== true && cur && !cur.empty && (!cur.error || force === 'render')) return;
     st.current = { key, loading: true };
     st.pages = st.refs = null;
     this.setState({});

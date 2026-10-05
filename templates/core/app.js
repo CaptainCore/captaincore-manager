@@ -2128,7 +2128,7 @@ class Component extends DCLogic {
     // against re-fetching, so calling on render is cheap.
     if (real && real.envs && s.route === 'site') setTimeout(() => {
       const tab = this.state.siteTab;
-      if (tab === 'stats') this.loadStats();
+      if (tab === 'stats') this.loadStats('render');
       else if (tab === 'logs') this.loadLogs();
       else if (tab === 'versions') this.loadQuicksaves();
       else if (tab === 'backups') this.loadBackups();
