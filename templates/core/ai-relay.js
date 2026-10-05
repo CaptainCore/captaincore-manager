@@ -138,6 +138,7 @@ Object.assign(Component.prototype, {
     const tid = this.toast('Launching…', { kind: 'loading' });
     this.api('/ai-relay/projects/' + rel.id + '/launch', { method: 'POST' }).then(res => {
       this.setState({ rlLaunching: false });
+      if (res && res.code === 'payment_pending') { this.updateToast(tid, res.message, { kind: 'info', timeout: 8000 }); return; }
       if (!this._relayReplace(res)) { this.updateToast(tid, (res && res.message) || 'Launch failed', { kind: 'error', timeout: 8000 }); return; }
       this.updateToast(tid, free ? 'Thanks. We will take ' + p.name + ' live and let you know.' : p.name + ' is live', { kind: 'success' });
       this.loadSites && this.loadSites();

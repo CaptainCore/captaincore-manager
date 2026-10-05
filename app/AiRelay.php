@@ -506,20 +506,37 @@ class AiRelay {
 		if ( ! $project ) {
 			return new \WP_Error( 'not_found', 'Project not found.', [ 'status' => 404 ] );
 		}
-		if ( $project->status !== 'preview' ) {
-			return new \WP_Error( 'not_ready', 'This site can launch once the preview is ready.', [ 'status' => 400 ] );
+		// Launch charges the launching user's card and makes them the plan's
+		// billing owner, so it belongs to the person who requested the build,
+		// not to any member of the account.
+		if ( (int) $project->user_id !== (int) $user_id ) {
+			return new \WP_Error( 'not_owner', 'Only the person who requested this build can launch it.', [ 'status' => 403 ] );
 		}
 
 		// One launch at a time per project: a double click must not bill twice.
-		$lock = 'cc_relay_launch_' . (int) $project->ai_relay_project_id;
-		if ( get_transient( $lock ) ) {
+		// A database lock, because a transient check-then-set let two requests
+		// through together.
+		global $wpdb;
+		$lock = 'cc_relay_' . substr( md5( DB_NAME ), 0, 12 ) . '_' . (int) $project->ai_relay_project_id;
+		if ( (string) $wpdb->get_var( $wpdb->prepare( "SELECT GET_LOCK( %s, 0 )", $lock ) ) !== '1' ) {
 			return new \WP_Error( 'busy', 'Launch is already in progress.', [ 'status' => 409 ] );
 		}
-		set_transient( $lock, 1, 120 );
-
-		$result = self::is_existing_site( $project ) ? self::launch_existing( $user_id, $project ) : self::charge_launch( $user_id, $project );
-		delete_transient( $lock );
-		return $result;
+		try {
+			// Read again under the lock so a launch that just finished is seen.
+			$project = AiRelayProjects::get( (int) $project->ai_relay_project_id );
+			if ( $project->status !== 'preview' ) {
+				return new \WP_Error( 'not_ready', 'This site can launch once the preview is ready.', [ 'status' => 400 ] );
+			}
+			if ( ! empty( $project->order_id ) ) {
+				$pending = wc_get_order( (int) $project->order_id );
+				if ( $pending && $pending->has_status( [ 'on-hold', 'processing' ] ) ) {
+					return new \WP_Error( 'payment_pending', 'Your launch payment is still clearing. We will finish the launch once it does.', [ 'status' => 409 ] );
+				}
+			}
+			return self::is_existing_site( $project ) ? self::launch_existing( $user_id, $project ) : self::charge_launch( $user_id, $project );
+		} finally {
+			$wpdb->query( $wpdb->prepare( "SELECT RELEASE_LOCK( %s )", $lock ) );
+		}
 	}
 
 	/**
@@ -578,8 +595,28 @@ class AiRelay {
 			return new \WP_Error( 'card_required', 'Add a card in Billing before launching.', [ 'status' => 400 ] );
 		}
 
+		// Nothing to hand over without a site: never charge for an empty launch.
+		if ( empty( $project->site_id ) ) {
+			return new \WP_Error( 'no_site', 'This build has no site linked yet. We will let you know when it is ready to launch.', [ 'status' => 400 ] );
+		}
+
 		$account_id = (int) $project->account_id;
 		$account    = Accounts::get( $account_id );
+
+		// Launch sets the account's whole plan. A project filed on an account
+		// already in use (a plan, or sites of its own; possible for projects
+		// submitted before 2026-10-04) moves to a fresh account instead, so
+		// that account keeps its plan and its sites are not billed under the
+		// launch plan.
+		if ( ! $account || self::in_use( $account ) ) {
+			$from       = $account_id;
+			$account_id = self::new_account( new User( $user_id, true ), $project->name );
+			AiRelayProjects::update( [ 'account_id' => $account_id, 'updated_at' => current_time( 'mysql' ) ], [ 'ai_relay_project_id' => $project->ai_relay_project_id ] );
+			self::add_message( $project->ai_relay_project_id, $user_id, 'internal', "Launch moved this project from account #{$from}, which already has a plan, to new account #{$account_id}, so that plan was left as it was.", [], false );
+			$project = AiRelayProjects::get( $project->ai_relay_project_id );
+			$account = Accounts::get( $account_id );
+		}
+
 		$previous   = (string) $account->plan;
 		$preset     = self::launch_plan();
 		$plan       = (object) [
@@ -589,7 +626,7 @@ class AiRelay {
 			'limits'          => $preset->limits,
 			'usage'           => (object) [ 'sites' => 1, 'storage' => 0, 'visits' => 0 ],
 			'addons'          => [],
-			'billing_user_id' => (int) $user_id,
+			'billing_user_id' => (string) $user_id,
 			'auto_pay'        => 'true',
 			'next_renewal'    => gmdate( 'Y-m-d H:i:s', strtotime( '+' . (int) $preset->interval . ' month' ) ),
 		];
@@ -600,6 +637,17 @@ class AiRelay {
 		$after = wc_get_orders( [ 'limit' => 1, 'meta_key' => 'captaincore_account_id', 'meta_value' => $account_id, 'orderby' => 'ID', 'order' => 'DESC' ] );
 		$order = $after ? $after[0] : null;
 		$new   = $order && ( ! $before || (int) $order->get_id() !== (int) $before[0] );
+
+		if ( $new && ! $order->is_paid() && ! $order->needs_payment() ) {
+			// On hold or processing: an ACH debit or a card charge under review
+			// is still clearing. Cancelling would not stop the money and nothing
+			// would ever finish the launch, so keep the plan and the invoice and
+			// leave the handover to staff once it clears.
+			AiRelayProjects::update( [ 'order_id' => $order->get_id(), 'updated_at' => current_time( 'mysql' ) ], [ 'ai_relay_project_id' => $project->ai_relay_project_id ] );
+			self::add_message( $project->ai_relay_project_id, $user_id, 'internal', "Customer pressed Launch. Invoice #{$order->get_id()} is {$order->get_status()} (payment still clearing). Once it is paid, hand site #{$project->site_id} to account #{$account_id} and mark the project launched.", [], false );
+			Mailer::send_ai_relay_staff_notice( AiRelayProjects::get( $project->ai_relay_project_id ), null, false, 'launched' );
+			return new \WP_Error( 'payment_pending', 'Your payment is processing. We will finish the launch as soon as it clears.', [ 'status' => 202 ] );
+		}
 
 		if ( ! $new || ! $order->is_paid() ) {
 			if ( $new ) {
@@ -956,15 +1004,55 @@ class AiRelay {
 	}
 
 	/**
-	 * The account the request belongs to: the user's only account, or a new
-	 * one without a plan (billing starts when staff set one at launch). A user
-	 * with several accounts gets a fresh one so the site bills on its own.
+	 * The account a new build bills to. The user's only account is reused when
+	 * it has no plan yet and they are a full member of it; anything else gets
+	 * a fresh account without a plan (billing starts at launch). Reusing any
+	 * single account let a launch replace an existing customer's plan, or
+	 * bill a plan onto an account an invited member does not own.
 	 */
 	private static function account_for( User $user, $name ) {
 		$accounts = $user->accounts();
 		if ( count( $accounts ) === 1 ) {
-			return (int) $accounts[0];
+			$account = Accounts::get( (int) $accounts[0] );
+			$members = array_map( 'intval', array_column( AccountUser::where( [ 'account_id' => (int) $accounts[0] ] ), 'user_id' ) );
+			if ( $account && ! self::in_use( $account ) && $members === [ (int) $user->user_id() ] ) {
+				return (int) $accounts[0];
+			}
 		}
+		return self::new_account( $user, $name );
+	}
+
+	/**
+	 * Whether an account already carries a plan or sites of its own, so a
+	 * launch plan must not be put on it.
+	 */
+	private static function in_use( $account ) {
+		global $wpdb;
+		if ( self::has_plan( $account ) ) {
+			return true;
+		}
+		$id    = (int) $account->account_id;
+		$sites = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}captaincore_sites WHERE ( account_id = %d OR customer_id = %d ) AND status = 'active'",
+			$id, $id
+		) );
+		return $sites > 0 || count( AccountSite::where( [ 'account_id' => $id ] ) ) > 0;
+	}
+
+	/**
+	 * Whether an account already carries a billed plan.
+	 */
+	private static function has_plan( $account ) {
+		$plan = empty( $account->plan ) ? null : json_decode( $account->plan );
+		return is_object( $plan ) && ( ! empty( $plan->next_renewal ) || (float) ( $plan->price ?? 0 ) > 0
+			|| ( is_array( $plan->addons ?? null ) && count( $plan->addons ) > 0 ) );
+	}
+
+	/**
+	 * A new account for this user, without a plan.
+	 */
+	private static function new_account( User $user, $name ) {
+		$accounts   = $user->accounts();
 		$now        = current_time( 'mysql' );
 		$account_id = ( new Accounts )->insert( [
 			'name'       => $name ? $name : 'AI Relay',
@@ -1080,7 +1168,7 @@ class AiRelay {
 			'created_at'      => $project->created_at,
 			'last_message_at' => $project->last_message_at,
 			'launched_at'     => $project->launched_at,
-			'can_launch'      => $project->status === 'preview',
+			'can_launch'      => $project->status === 'preview' && (int) $project->user_id === (int) $user_id,
 			// 'none' for existing-site builds, which are never charged.
 			'billing'         => $free ? 'none' : 'launch',
 			'price'           => $free ? 0.0 : (float) self::launch_plan()->price,
