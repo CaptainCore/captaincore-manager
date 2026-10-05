@@ -3426,3 +3426,35 @@ dialog opens the worst legitimate build with an "Open the flagged build →"
 link, whose own dialog links back. Verified via Playwright locally on the two
 flagged slugs: tooltip, both dialogs, the back link, the chip, no console
 errors.
+
+### Settings → SSH keys: add a key, set the primary (2026-10-05)
+
+The SSH keys tab could only list and delete. Adding a key or choosing the
+primary one meant the legacy UI, and the card still carried the design
+sample's inline "Add key" input (one line, asking for a public key), which
+did nothing on a real install. Keys here are the private keys the CLI uses
+to reach sites, so the card is now titled SSH keys and says so.
+
+- **+ Add key** opens a dialog (name, private key textarea, "Use as the
+  primary key" toggle, on by default only when no key is primary).
+  `POST /keys` has the CLI install the key with `captaincore key add` and
+  keeps the record only when that returns a fingerprint; a refused key
+  answers 400 with the CLI's reason, shown in the dialog, which stays open
+  with the key still pasted. A public key is caught in the browser first.
+  The pasted key is cleared from state when the dialog closes.
+- **Make primary** on every other row (confirm) calls `PUT /keys/{id}/primary`,
+  which stores `default_key` and syncs the configuration to the CLI.
+- The Primary badge now follows `primary` from `GET /keys/` (the key id in
+  `default_key`, what the CLI actually falls back to) instead of the per-user
+  `main` column, which can disagree with it.
+- Deleting the primary key warns that sites without their own override
+  will stop connecting.
+- Full MD5 fingerprint per row (ellipsis on narrow screens).
+
+Verified via Playwright as a local administrator with every keys route
+mocked (nothing reached the CLI): card, typing in the dialog keeps every
+keystroke, public key refused without a request, CLI refusal keeps the
+dialog and the key, add + primary sends `POST /keys` then
+`PUT /keys/9/primary`, Make primary via the confirm, cancelled primary
+delete sends nothing, 390px width without horizontal scroll, dark mode.
+

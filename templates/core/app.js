@@ -74,7 +74,7 @@ class Component extends DCLogic {
     repMode: 'Site', repTarget: '', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
     archList: null, archUrl: '', archErr: false,
-    setTab: 'branding', brandName: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting', keyDraft: '', sshKeys: null,
+    setTab: 'branding', brandName: (window.CC_BOOT && window.CC_BOOT.name) || 'Anchor Hosting', sshKeys: null,
     recipeDlgOpen: false, recipeEditId: null, recipeTitle: '', recipeContent: '', recipePublic: false,
     procDlgOpen: false, procDlgName: '', procDlgBody: '',
     defDlgOpen: false, defEmail: '', defTimezone: '', defRecipes: [], defUsers: [],
@@ -643,7 +643,7 @@ class Component extends DCLogic {
     { id: 'ar2', name: 'legacy-multisite-export.zip', size: '6.2 GB', mod: 'May 18, 2026' },
     { id: 'ar3', name: 'photography-portfolio.zip', size: '940 MB', mod: 'Mar 30, 2026' }
   ];
-  KEYS_INIT = window.CC_BOOT ? [] : [{ id: 'k1', name: 'MacBook Pro', fp: 'SHA256:pR2wVd…3kQz', primary: true }];
+  KEYS_INIT = window.CC_BOOT ? [] : [{ id: 'k1', name: 'Fleet key', fp: 'MD5:c0:b7:91:f5:97:59:91:4b:cb:93:ae:fa:8a:3b:f4:58', primary: true }];
   TIMELINE_INIT = window.CC_BOOT ? [] : [
     { uid: 1, text: 'Install Elementor Pro', who: 'Austin Ginder', when: 'Apr 9, 2026 · 4:32 PM' },
     { uid: 2, text: 'Security update: updated gravityforms to 2.9.31', who: 'Austin Ginder', when: 'Apr 5, 2026 · 8:24 AM' },
@@ -864,11 +864,12 @@ class Component extends DCLogic {
         verify: () => this.runJob(p.action.toLowerCase() + '-provider', p.name),
         doImport: () => this.runJob('provider-import', p.name + ' — remote sites + billing preview') })),
       defRows: (booted ? [] : [['Default email', 'support@anchor.host'], ['Timezone', 'America/New_York'], ['Recipes on new site', 'security-baseline · smtp-setup'], ['Default users', 'anchor-admin (Administrator)']]).map(([k, v]) => ({ k, v })),
-      keyRows: keys.map(k => ({ ...k,
+      keyRows: keys.map(k => ({ ...k, notPrimary: !k.primary, makePrimary: () => {},
         del: () => this.setState(st => ({ sshKeys: (st.sshKeys || this.KEYS_INIT).filter(x => x.id !== k.id) })) })),
-      keyDraft: s.keyDraft, onKeyDraft: e => this.setState({ keyDraft: e.target.value }),
-      addKey: () => { const v = this.state.keyDraft.trim(); if (!v.startsWith('ssh-')) return;
-        this.setState(st => ({ sshKeys: [...(st.sshKeys || this.KEYS_INIT), { id: 'k' + Date.now(), name: v.split(' ').pop() || 'new key', fp: 'SHA256:' + Math.random().toString(36).slice(2, 8) + '…', primary: false }], keyDraft: '' })); },
+      keysEmpty: false, newKey: () => {},
+      keyDlgOpen: false, keyTitle: '', onKeyTitle: () => {}, keyBody: '', onKeyBody: () => {}, keyErr: '', keyHasErr: false,
+      keyPrimaryBg: 'var(--rule)', keyPrimaryJust: 'flex-start', toggleKeyPrimary: () => {},
+      keySaveLabel: 'Add key', keySaveOpacity: '1', closeKeyDlg: () => {}, saveKey: () => {},
       rotateKey: () => this.runJob('rotate-management-key', 'fleet-wide SSH key rotation'),
       // Management-key card is design-sample only (fake fingerprint, no rotate
       // route) — never render it on the real app.

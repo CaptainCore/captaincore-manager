@@ -124,8 +124,8 @@ reads) · `/sites/{id}/{env}/monitor` (uptime toggle — read-only at site-detai
 `dialog_mailgun_details` · `PUT /domains/{id}/account` (domain→account assignment,
 STATUS.md:809-811) · `POST /domain/{id}/update-site-link`.
 
-**Smaller:** `PUT /keys/{id}` + `/keys/{id}/primary` (SSH key edit/set-primary; only DELETE is
-real, settings.js:80-82) · `POST /me/pins` (v3 pins are `localStorage` only, app.js:2568-2583 —
+**Smaller:** `PUT /keys/{id}` (SSH key rename/replace; add and set-primary landed 2026-10-05, see
+STATUS.md) · `POST /me/pins` (v3 pins are `localStorage` only, app.js:2568-2583 —
 they no longer follow the user across devices, and per-environment granularity became
 per-site) · `POST /me/email-subscriber` (Profile → Notifications section absent) ·
 `/plugin-diff-preview` (checksum rows show the modified-file list as text, security.js:110-117) ·
@@ -272,7 +272,8 @@ class above proves a dock row is not evidence that anything ran.
 | recipe save / delete / run | settings.js:316 / :327 | ☐ | |
 | process log add / edit / delete | version-recovery.js:509/517/529 | ☐ | |
 | archive store / share | archives.js:22 / :44 | ☐ | |
-| SSH key delete | settings.js:82 | ☐ | |
+| SSH key delete | settings.js:93 | ☐ | |
+| SSH key add / set primary | settings.js saveKeyReal / setPrimaryKeyReal | ☐ | the add runs `captaincore key add` on the CLI server |
 | report preview / send | reports.js:56 / :67 | ☐ | |
 | scheduled report save / delete | reports.js:123 | ☐ | |
 

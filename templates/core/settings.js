@@ -7,8 +7,9 @@
 //   GET /recipes/         [{recipe_id,title,content,public}]
 //   GET /processes/       [{process_id,name,updated_at,…}] — Handbook
 // Save branding: PUT /configurations/global (full config, name merged).
-// Provider verify: GET /providers/{id}/verify. Key delete: DELETE /keys/{id}
-// (+ confirm). Recipe run inserts into the terminal (reuses insertRecipe).
+// Provider verify: GET /providers/{id}/verify. SSH keys: POST /keys (add,
+// installed by the CLI), PUT /keys/{id}/primary, DELETE /keys/{id} (+ confirm).
+// Recipe run inserts into the terminal (reuses insertRecipe).
 
 Object.assign(Component.prototype, {
 
@@ -78,9 +79,18 @@ Object.assign(Component.prototype, {
       ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—'],
       ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—']
     ].map(([k, v]) => ({ k, v, editable: true }));
-    const keyRows = set.keys.map(k => ({ name: k.title, fp: 'MD5:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
-      del: async () => { if (!(await this.uiConfirm('Delete SSH key "' + k.title + '"? This affects fleet site access.'))) return;
-        this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
+    // `primary` is the key the CLI falls back to (default_key), set by GET /keys/;
+    // a Manager older than that field only has the per-user `main` flag.
+    const isPrimaryKey = k => k.primary === undefined ? k.main == 1 : !!k.primary;
+    const keyRows = set.keys.map(k => { const primary = isPrimaryKey(k);
+      return { name: k.title, fp: k.fingerprint ? 'MD5:' + k.fingerprint : 'No fingerprint on record', primary, notPrimary: !primary,
+        makePrimary: () => this.setPrimaryKeyReal(k),
+        del: async () => {
+          const msg = primary
+            ? 'Delete the primary SSH key "' + k.title + '"?\n\nEvery site without its own SSH key override connects with it, and will fail to connect until another key is made primary.'
+            : 'Delete SSH key "' + k.title + '"?\n\nSites that use it as their SSH key override will fail to connect.';
+          if (!(await this.uiConfirm(msg))) return;
+          this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }; });
     // Customers manage only their OWN recipes: list() marks non-owned rows
     // user_id "system" (content-stripped) — those get no Edit, and running a
     // public recipe goes through the confirm-run path (dispatch by recipe_id;
@@ -121,6 +131,12 @@ Object.assign(Component.prototype, {
       brandSwatches, brandSaveLabel: s.copied === 'brand' ? 'Saved ✓' : 'Save branding',
       saveBrand: () => this.saveBranding(),
       provRows, defRows, keyRows, recipeRows, handRows,
+      keysEmpty: !keyRows.length,
+      // The first key defaults to primary: without one, only sites with their
+      // own override can use a key at all.
+      newKey: () => this.setState({ keyDlgOpen: true, keyTitle: '', keyBody: '', keyErr: '', keySaving: false,
+        keyMakePrimary: !set.keys.some(isPrimaryKey) }),
+      ...this.keyDialogVals(s),
       cookScopeTabs,
       cookTabEmpty: !recipeRows.length,
       cookTabEmptyText: cookScope === 'mine'
@@ -298,6 +314,64 @@ Object.assign(Component.prototype, {
     this.api('/providers/' + id, { method: 'DELETE' })
       .then(() => { this.updateToast(tid, 'Provider deleted', { kind: 'success' }); this.loadSettings(true); })
       .catch(() => this.updateToast(tid, 'Delete failed', { kind: 'error' }));
+  },
+
+  keyDialogVals(s) {
+    return {
+      keyDlgOpen: !!s.keyDlgOpen,
+      keyTitle: s.keyTitle || '', onKeyTitle: e => this.setState({ keyTitle: e.target.value }),
+      keyBody: s.keyBody || '', onKeyBody: e => this.setState({ keyBody: e.target.value, keyErr: '' }),
+      keyErr: s.keyErr || '', keyHasErr: !!s.keyErr,
+      keyPrimaryBg: s.keyMakePrimary ? 'var(--brand)' : 'var(--rule)',
+      keyPrimaryJust: s.keyMakePrimary ? 'flex-end' : 'flex-start',
+      toggleKeyPrimary: () => this.setState(st => ({ keyMakePrimary: !st.keyMakePrimary })),
+      keySaveLabel: s.keySaving ? 'Installing…' : 'Add key',
+      keySaveOpacity: s.keySaving ? '.6' : '1',
+      // The pasted key never outlives the dialog in component state.
+      closeKeyDlg: () => { if (!this.state.keySaving) this.setState({ keyDlgOpen: false, keyBody: '', keyErr: '' }); },
+      saveKey: () => this.saveKeyReal()
+    };
+  },
+
+  // POST /keys has the CLI install the key (`captaincore key add`) and keeps the
+  // record only when that returns a fingerprint, so a refused key answers 400
+  // with the CLI's reason. The dialog stays open with the key still pasted so
+  // it can be fixed.
+  saveKeyReal() {
+    if (this.state.keySaving) return;
+    const title = (this.state.keyTitle || '').trim();
+    const key = (this.state.keyBody || '').trim();
+    if (!title || !key) { this.setState({ keyErr: 'A name and the private key are both required.' }); return; }
+    if (/^(ssh-|ecdsa-|sk-)/.test(key)) { this.setState({ keyErr: 'That is a public key. Paste the private key, which begins with -----BEGIN and ends with PRIVATE KEY-----.' }); return; }
+    if (!/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/.test(key)) { this.setState({ keyErr: 'Paste the private key, which begins with -----BEGIN and ends with PRIVATE KEY-----.' }); return; }
+    const makePrimary = !!this.state.keyMakePrimary;
+    this.setState({ keySaving: true, keyErr: '' });
+    this.api('/keys', { method: 'POST', body: { title, key } })
+      .then(res => {
+        if (!res || res.code || !res.key_id) {
+          this.setState({ keySaving: false, keyErr: (res && res.message) || 'The SSH key was not installed.' });
+          return;
+        }
+        this.setState({ keySaving: false, keyDlgOpen: false, keyTitle: '', keyBody: '' });
+        if (makePrimary) { this.setPrimaryKeyReal(res, { added: true }); return; }
+        this.toast('SSH key "' + title + '" added', { kind: 'success' });
+        this.loadSettings(true);
+      })
+      .catch(() => this.setState({ keySaving: false, keyErr: 'The request failed before the key was installed. Try again.' }));
+  },
+
+  // PUT /keys/{id}/primary stores default_key and pushes the configuration to
+  // the CLI, so the change takes effect on the next connection.
+  async setPrimaryKeyReal(k, opts = {}) {
+    if (!opts.added && !(await this.uiConfirm('Make "' + k.title + '" the primary SSH key?\n\nEvery site without its own SSH key override will connect with it from now on.', { label: 'Make primary' }))) return;
+    const tid = this.toast(opts.added ? 'Key added, making it primary…' : 'Changing the primary key…', { kind: 'loading' });
+    this.api('/keys/' + k.key_id + '/primary', { method: 'PUT', body: {} })
+      .then(r => {
+        if (!r || !r.success) throw new Error('primary');
+        this.updateToast(tid, '"' + k.title + '" is now the primary key', { kind: 'success' });
+      })
+      .catch(() => this.updateToast(tid, opts.added ? 'Key added, but it could not be made primary' : 'Could not change the primary key', { kind: 'error' }))
+      .then(() => this.loadSettings(true));
   },
 
   // Shared with the per-account editor: state.defTarget (an account id set by

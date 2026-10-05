@@ -6492,7 +6492,14 @@ function captaincore_keys_func( $request ) {
 
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
-		return ( new CaptainCore\Keys )->all( "title", "ASC" );
+		// `primary` is the key the CLI falls back to (the default_key
+		// configuration). `main` is per user and can disagree with it.
+		$default_key = (string) ( CaptainCore\Configurations::get()->default_key ?? '' );
+		$keys        = ( new CaptainCore\Keys )->all( "title", "ASC" );
+		foreach ( $keys as $key ) {
+			$key->primary = $default_key !== '' && (string) $key->key_id === $default_key;
+		}
+		return $keys;
 	}
 	return [];
 
