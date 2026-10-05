@@ -19460,7 +19460,10 @@ const app = createApp({
 					this.snackbar.message = "New SSH key added.";
 					this.snackbar.show = true;
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => {
+					this.snackbar.message = ( error.response && error.response.data && error.response.data.message ) || "The SSH key could not be saved.";
+					this.snackbar.show = true;
+				});
 		},
 		viewKey( key_id ) {
 			key = this.keys.filter( key => key.key_id == key_id )[0];
@@ -19493,7 +19496,10 @@ const app = createApp({
 					this.keys.push( response.data );
 					this.keys.sort((a, b) => (a.title > b.title) ? 1 : -1)
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => {
+					this.snackbar.message = ( error.response && error.response.data && error.response.data.message ) || "The SSH key could not be saved.";
+					this.snackbar.show = true;
+				});
 		},
 		deleteKey() {
 			delete_key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0];

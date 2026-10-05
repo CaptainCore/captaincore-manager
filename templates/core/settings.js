@@ -78,7 +78,7 @@ Object.assign(Component.prototype, {
       ['Recipes on new site', (d.recipes || []).length ? (d.recipes || []).length + ' recipe(s)' : '—'],
       ['Default users', (d.users || []).length ? (d.users || []).length + ' user(s)' : '—']
     ].map(([k, v]) => ({ k, v, editable: true }));
-    const keyRows = set.keys.map(k => ({ name: k.title, fp: 'SHA256:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
+    const keyRows = set.keys.map(k => ({ name: k.title, fp: 'MD5:' + (k.fingerprint || '').slice(0, 20) + '…', primary: k.main == 1,
       del: async () => { if (!(await this.uiConfirm('Delete SSH key "' + k.title + '"? This affects fleet site access.'))) return;
         this.api('/keys/' + k.key_id, { method: 'DELETE' }).then(reload).catch(() => {}); } }));
     // Customers manage only their OWN recipes: list() marks non-owned rows

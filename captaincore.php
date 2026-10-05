@@ -6498,6 +6498,25 @@ function captaincore_keys_func( $request ) {
 
 }
 
+/**
+ * The MD5 fingerprint `captaincore key add` prints on success, or '' when the
+ * CLI did not install the key. Its output is then an error message, or empty
+ * when the CLI server could not be reached. Before this check that output was
+ * saved as the key's fingerprint and the dashboard showed the key as added.
+ */
+function captaincore_key_fingerprint_from_cli( $response ) {
+	$response = is_string( $response ) ? trim( $response ) : '';
+	return preg_match( '/^(?:[0-9a-f]{2}:){15}[0-9a-f]{2}$/', $response ) ? $response : '';
+}
+
+function captaincore_key_install_error( $response ) {
+	$detail = is_string( $response ) ? trim( preg_replace( '/^Error:\s*/', '', strtok( trim( $response ), "\n" ) ) ) : '';
+	if ( $detail === '' ) {
+		$detail = 'the CLI server did not respond.';
+	}
+	return new WP_Error( 'captaincore_key_install_failed', 'The SSH key was not installed: ' . $detail, [ 'status' => 400 ] );
+}
+
 function captaincore_keys_create_func( WP_REST_Request $request ) {
 	$key      = (object) $request->get_json_params();
 	$time_now = date( 'Y-m-d H:i:s' );
@@ -6518,9 +6537,14 @@ function captaincore_keys_create_func( WP_REST_Request $request ) {
 
 	$key_id  = ( new CaptainCore\Keys )->insert( $new_key );
 	$ssh_key = base64_encode( $key->key );
-	$response = CaptainCore\Run::CLI( "key add $ssh_key --id=$key_id" );
+	$response    = CaptainCore\Run::CLI( "key add $ssh_key --id=$key_id" );
+	$fingerprint = captaincore_key_fingerprint_from_cli( $response );
+	if ( $fingerprint === '' ) {
+		( new CaptainCore\Keys )->delete( $key_id );
+		return captaincore_key_install_error( $response );
+	}
 
-	$key_update = [ 'fingerprint' => $response ];
+	$key_update = [ 'fingerprint' => $fingerprint ];
 	( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
 
 	return ( new CaptainCore\Keys )->get( $key_id );
@@ -6545,9 +6569,13 @@ function captaincore_keys_update_func( WP_REST_Request $request ) {
 	( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
 
 	if ( ! empty( $key->key ) ) {
-		$ssh_key  = base64_encode( $key->key );
-		$response = CaptainCore\Run::CLI( "key add $ssh_key --id={$key_id}" );
-		( new CaptainCore\Keys )->update( [ 'fingerprint' => $response ], [ "key_id" => $key_id ] );
+		$ssh_key     = base64_encode( $key->key );
+		$response    = CaptainCore\Run::CLI( "key add $ssh_key --id={$key_id}" );
+		$fingerprint = captaincore_key_fingerprint_from_cli( $response );
+		if ( $fingerprint === '' ) {
+			return captaincore_key_install_error( $response );
+		}
+		( new CaptainCore\Keys )->update( [ 'fingerprint' => $fingerprint ], [ "key_id" => $key_id ] );
 	}
 
 	return ( new CaptainCore\Keys )->get( $key_id );
