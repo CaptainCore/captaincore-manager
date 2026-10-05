@@ -2995,14 +2995,20 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	}
 	if ( $cmd == 'backup' ) {
 		$run_in_background = true;
-		$args = array_merge( [ 'backup' ], $sites );
+		$args = array_merge( [ 'backup', 'generate' ], $sites );
 	}
 	if ( $cmd == 'snapshot' ) {
 		$run_in_background = true;
 		$user_id = get_current_user_id();
 		$args    = array_merge( [ 'snapshot', 'generate' ], $sites );
 		if ( $value ) { $args[] = '--email=' . $value; }
-		if ( $date && $value ) { $args[] = '--rollback=' . $date; }
+		// Point-in-time: build the snapshot from this restic backup instead of a fresh one.
+		if ( $backup_id ) {
+			if ( ! is_string( $backup_id ) || ! preg_match( '/^[0-9a-f]{8,64}$/', $backup_id ) ) {
+				return new WP_Error( 'invalid_backup_id', 'Invalid backup id.', [ 'status' => 400 ] );
+			}
+			$args[] = '--backup-id=' . $backup_id;
+		}
 		$args[] = '--user-id=' . $user_id;
 		$args[] = '--notes=' . $notes;
 		if ( $filters ) { $args[] = '--filter=' . implode( ",", $filters ); }
@@ -4578,7 +4584,7 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
             $args = array_merge( [ 'scan-errors' ], $target_list );
             break;
         case 'backup':
-            $args = array_merge( [ 'backup' ], $target_list );
+            $args = array_merge( [ 'backup', 'generate' ], $target_list );
             break;
         case 'snapshot':
             $args = array_merge( [ 'snapshot', 'generate' ], $target_list );
@@ -6543,7 +6549,7 @@ function captaincore_site_captures_new_func( $request ) {
 	$site        = new CaptainCore\Site( $site_id );
 
 	// Remote Sync
-	captaincore_run_background_command( "capture $site_id-$environment" );
+	captaincore_run_background_command( "capture generate $site_id-$environment" );
 	return $site_id;
 }
 

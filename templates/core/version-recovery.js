@@ -415,17 +415,16 @@ Object.assign(Component.prototype, {
     this.setState({ bkSel: {} });
   },
 
-  // "Restore" from a backup = point-in-time snapshot via --rollback={date}.
+  // "Restore" from a backup = point-in-time snapshot built from that restic backup (--backup-id).
   realBackupRestore(real, s) {
     const b = (real.backups || []).find(x => x.id === s.bkDialog) || {};
     const email = (window.CC_BOOT || {}).userEmail || '';
-    const date = b._raw && b._raw.time ? b._raw.time : '';
     this.startJob({
       label: 'snapshot', target: 'point-in-time from ' + (b.idShort || 'backup') + ' → ' + email,
       command: 'snapshot', siteId: real.siteId,
       dispatch: () => this.api('/sites/cli', { method: 'POST', body: {
         post_id: Number(real.siteId), command: 'snapshot', environment: s.env,
-        value: email, date, notes: 'Point-in-time snapshot from backup ' + b.id
+        value: email, backup_id: b.id, notes: 'Point-in-time snapshot from backup ' + b.id
       } }),
       onFinish: () => { real.snapshots = undefined; this.loadSnapshots(); }
     });
