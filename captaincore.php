@@ -6366,10 +6366,8 @@ function captaincore_invoices_pdf_func( WP_REST_Request $request ) {
 	foreach ( $order_items as $item_id => $item ) {
 		$subtotal          = str_replace( "<bdi>", "", $order->get_formatted_line_subtotal( $item ) );
 		$subtotal          = str_replace( "</bdi>", "", $subtotal );
-		$details           = $item->get_meta_data()[0]->get_data();
-		if ( $details['key'] == "Details" ) {
-			$description = $details['value'];
-		}
+		// Not every line item carries Details meta (addons often have none).
+		$description       = $item->get_meta( 'Details' );
 		$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
 	}
 
@@ -6415,7 +6413,7 @@ function captaincore_invoices_pdf_func( WP_REST_Request $request ) {
 	$account_id        = $order->get_meta( 'captaincore_account_id' );
 	$account           = ( new CaptainCore\Accounts )->get( $account_id );
 	$customer_billing  = ( new CaptainCore\Account( $account_id ) )->get_billing();
-	$customer_country  = WC()->countries->countries[ $customer_billing->country ];
+	$customer_country  = WC()->countries->countries[ $customer_billing->country ] ?? '';
 	$store_raw_country = get_option( 'woocommerce_default_country' );
 	$split_country     = explode( ":", $store_raw_country );
 	$store_country     = WC()->countries->countries[ $split_country[0] ];

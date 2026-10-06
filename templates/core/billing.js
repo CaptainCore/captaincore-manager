@@ -382,14 +382,19 @@ Object.assign(Component.prototype, {
   downloadInvoicePdf(orderId) {
     const boot = window.CC_BOOT || {};
     fetch(boot.restRoot + 'captaincore/v1/invoices/' + orderId + '/pdf', { headers: { 'X-WP-Nonce': boot.nonce } })
-      .then(r => r.blob())
+      .then(r => {
+        // Never save an error page under a .pdf name.
+        const type = r.headers.get('Content-Type') || '';
+        if (!r.ok || type.indexOf('application/pdf') === -1) throw new Error('pdf');
+        return r.blob();
+      })
       .then(blob => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = 'invoice-' + orderId + '.pdf';
         a.click();
         URL.revokeObjectURL(a.href);
-      }).catch(() => {});
+      }).catch(() => this.toast('Could not download invoice #' + orderId, { kind: 'error' }));
   },
 
   // Billing-details half of the card dialog: a summary once the address is
