@@ -48,7 +48,7 @@ class Component extends DCLogic {
     deployConfirm: '', ptoOpen: false, ptoTargets: null, ptoQ: '', ptoSel: null, epOpen: false, delOpen: false, rmOpen: false, ucOpen: false,
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
-    nsProto: 'sftp', nsPort: '2222',
+    nsProto: 'sftp', nsPort: '22', nsHome: '',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
     nsToken: '', nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
@@ -1253,6 +1253,7 @@ class Component extends DCLogic {
       nsUser: s.nsUser, onNsUser: e => this.setState({ nsUser: e.target.value }),
       nsPass: s.nsPass, onNsPass: e => this.setState({ nsPass: e.target.value }),
       nsPort: s.nsPort, onNsPort: e => this.setState({ nsPort: e.target.value }),
+      nsHome: s.nsHome, onNsHome: e => this.setState({ nsHome: e.target.value }),
       nsProtoChips: ['sftp', 'ssh'].map(l => chip(l, s.nsProto, 'nsProto')),
       nsAcc: s.nsAcc,
       ddNsAccOpen: s.ddOpen === 'nsAcc',
@@ -1656,13 +1657,14 @@ class Component extends DCLogic {
     const name = (st.nsName || '').trim();
     const addr = (st.nsAddr || '').trim();
     const user = (st.nsUser || '').trim();
-    const port = (st.nsPort || '2222').trim();
+    const port = (st.nsPort || '22').trim();
+    const home = (st.nsHome || '').trim();
     if (!name || !addr || !user) { this.toast('Site name, server address and user are required', { kind: 'error' }); return; }
     if (!/^\d+$/.test(port)) { this.toast('Port must be a number', { kind: 'error' }); return; }
     const slug = name.toLowerCase().replace(/\.[a-z]+$/, '').replace(/[^a-z0-9]/g, '');
     if (slug.length < 3) { this.toast('Could not derive a site slug (3+ letters or digits) from the name', { kind: 'error' }); return; }
     const mkEnv = (env, monitor) => ({ environment: env, site: slug, address: addr, username: user,
-      password: st.nsPass || '', protocol: st.nsProto || 'sftp', port, home_directory: '',
+      password: st.nsPass || '', protocol: st.nsProto || 'sftp', port, home_directory: home,
       monitor_enabled: monitor, updates_enabled: '1', offload_enabled: false,
       offload_provider: '', offload_access_key: '', offload_secret_key: '', offload_bucket: '', offload_path: '' });
     const envs = [mkEnv('Production', '1')];
@@ -1674,7 +1676,7 @@ class Component extends DCLogic {
     this.api('/sites', { method: 'POST', body: { site } }).then(res => {
       if (res && res.errors && res.errors.length) { this.updateToast(tid, res.errors[0], { kind: 'error' }); return; }
       this.updateToast(tid, name + ' connected', { kind: 'success' });
-      this.setState({ nsOpen: false, nsName: '', nsAddr: '', nsUser: '', nsPass: '', nsShared: [], nsCustomerId: '', nsBillingId: '' });
+      this.setState({ nsOpen: false, nsName: '', nsAddr: '', nsUser: '', nsPass: '', nsHome: '', nsShared: [], nsCustomerId: '', nsBillingId: '' });
       if (res && res.site_id) this.openSite(res.site_id);
     }).catch(() => this.updateToast(tid, 'Could not create the site', { kind: 'error' }));
   }
