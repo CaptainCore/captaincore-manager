@@ -134,6 +134,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .cc-md pre code{background:transparent;padding:0}
 .cc-md h1,.cc-md h2,.cc-md h3,.cc-md h4{font:600 var(--fs-14) var(--sans);margin:6px 0 4px}
 .cc-md blockquote{margin:4px 0;padding:2px 12px;border-left:3px solid var(--rule);color:var(--ink-dim)}
+/* AI Relay thread: letter-scale spacing, where the timeline is compact. */
+.cc-md--thread p,.cc-md--thread ul,.cc-md--thread ol{margin:0 0 .75em}.cc-md--thread > :last-child{margin-bottom:0}
+.cc-md--thread li{margin:0 0 .3em}
 /* API-docs viewer: document-scale type over the timeline-scale .cc-md base. */
 .cc-apidoc{font:400 var(--fs-135)/1.7 var(--sans)}
 .cc-apidoc h1{font:700 20px var(--sans);margin:0 0 12px;letter-spacing:-.01em}
@@ -1994,7 +1997,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ m.when }}</span>
                   </div>
                   <sc-if value="{{ m.hasBody }}" hint-placeholder-val="{{ false }}">
-                    <div style="margin-top:8px;font:400 var(--fs-14) var(--sans);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere">{{ m.body }}</div>
+                    <div ref="{{ m.bodyRef }}" class="cc-md cc-md--thread" style="margin-top:8px;font:400 var(--fs-14) var(--sans);line-height:1.6;overflow-wrap:anywhere"></div>
                   </sc-if>
                   <sc-if value="{{ m.hasVideos }}" hint-placeholder-val="{{ false }}">
                     <sc-for list="{{ m.videos }}" as="v" hint-placeholder-count="1">
@@ -2016,7 +2019,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
             <sc-if value="{{ rlCanPost }}" hint-placeholder-val="{{ false }}">
               <section style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px;display:flex;flex-direction:column;gap:10px">
-                <textarea value="{{ rlBody }}" onInput="{{ onRlBody }}" placeholder="Add details, ask for changes, or drop in more files…" style="min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                <textarea value="{{ rlBody }}" onInput="{{ onRlBody }}" placeholder="Add details, ask for changes, or drop in more files… Markdown supported." style="min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
                 <sc-if value="{{ rlHasUploads }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;gap:8px;flex-wrap:wrap">
                     <sc-for list="{{ rlUploads }}" as="u" hint-placeholder-count="1">

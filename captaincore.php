@@ -1014,10 +1014,12 @@ function captaincore_missive_func( WP_REST_Request $request ) {
  *
  * @param string $text   Markdown source.
  * @param bool   $inline Render as a single line instead of a block.
+ * @param bool   $breaks Keep single line breaks, as typed in a textarea.
  * @return string
  */
-function captaincore_markdown( $text, $inline = false, $trusted = false ) {
+function captaincore_markdown( $text, $inline = false, $trusted = false, $breaks = false ) {
 	$parsedown = new \Parsedown();
+	$parsedown->setBreaksEnabled( $breaks );
 
 	// Safe mode escapes raw HTML in the source instead of passing it through.
 	// wp_kses_post() below already made this safe on its own; safe mode is a

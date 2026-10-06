@@ -369,11 +369,21 @@ class AiRelay {
 				'name'       => $m->author === 'staff' ? get_bloginfo( 'name' ) : ( $author ? $author->display_name : '' ),
 				'internal'   => $m->author === 'internal',
 				'body'       => (string) $m->body,
+				'body_html'  => self::body_html( $m->body ),
 				'files'      => array_map( [ __CLASS__, 'public_file' ], (array) json_decode( (string) $m->files, true ) ),
 				'created_at' => $m->created_at,
 			];
 		}, $thread ) );
 		return $view;
+	}
+
+	/**
+	 * A thread message as HTML: Markdown (bold, lists, links) with every typed
+	 * line break kept. Both sides write these, so it goes through the
+	 * safe-mode renderer like any other customer-supplied Markdown.
+	 */
+	public static function body_html( $body ) {
+		return trim( captaincore_markdown( (string) $body, false, false, true ) );
 	}
 
 	/**

@@ -819,7 +819,15 @@ class Mailer {
         $files = (array) json_decode( (string) $message->files, true );
         $html  = '';
         if ( trim( (string) $message->body ) !== '' ) {
-            $html .= "<p style='margin: 20px 0 0; padding: 15px; background: #F5F7FA; border-radius: 6px; text-align: left; color: #15181D;'>" . nl2br( esc_html( $message->body ) ) . "</p>";
+            // Email clients ignore stylesheets, so the rendered Markdown's
+            // block tags get their spacing inline.
+            $body = strtr( AiRelay::body_html( $message->body ), [
+                '<p>'  => "<p style='margin: 0 0 12px;'>",
+                '<ul>' => "<ul style='margin: 0 0 12px; padding-left: 22px;'>",
+                '<ol>' => "<ol style='margin: 0 0 12px; padding-left: 22px;'>",
+                '<li>' => "<li style='margin: 0 0 6px;'>",
+            ] );
+            $html .= "<div style='margin: 20px 0 0; padding: 15px 15px 3px; background: #F5F7FA; border-radius: 6px; text-align: left; color: #15181D;'>{$body}</div>";
         }
         if ( $files ) {
             $html .= "<p style='margin: 12px 0 0; font-size: 14px; color: #666D7A; text-align: left;'>" . count( $files ) . " file(s) attached: " . esc_html( implode( ', ', array_column( $files, 'name' ) ) ) . "</p>";

@@ -214,6 +214,13 @@ Object.assign(Component.prototype, {
       rlMessages: msgs.map(m => ({
         name: m.name || (m.author === 'staff' ? 'Anchor' : 'Customer'),
         when: when(m.created_at), body: m.body || '', hasBody: !!(m.body || '').trim(),
+        // Raw-HTML escape hatch (the timeline .cc-md ref pattern): the server
+        // renders the Markdown safely; links leave the dashboard in a new tab.
+        bodyRef: el => { if (!el) return;
+          const want = m.body_html || String(m.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          if (el._md === want) return;
+          el._md = want; el.innerHTML = want;
+          el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener noreferrer'; }); },
         // Internal notes are staff-only (the server never sends them to a customer).
         bg: m.author === 'internal' ? 'var(--panel-2)' : m.author === 'staff' ? 'var(--brand-soft)' : 'var(--paper)',
         tag: m.author === 'internal' ? 'Internal note' : m.author === 'staff' ? 'Team' : '',
