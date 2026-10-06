@@ -46,6 +46,9 @@ class UpdateQueueCLI {
 
 		$data = \captaincore_build_update_queue_data( $live_wporg );
 
+		// Tells the WP-Cron fallback that a system cron owns the queue.
+		update_option( 'captaincore_update_queue_cli_at', time(), false );
+
 		if ( $format === 'json' ) {
 			\WP_CLI::line( wp_json_encode( [
 				'generated_at' => $data['generated_at'],

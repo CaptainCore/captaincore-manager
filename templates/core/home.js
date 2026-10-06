@@ -30,7 +30,9 @@ Object.assign(Component.prototype, {
     }).catch(swallow);
 
     this.api('/update-queue').then(res => {
-      if (res && !res.not_built) { this._homeQueue = res; this.setState({}); }
+      this._homeQueueNotBuilt = !!(res && res.not_built);
+      if (res && !res.not_built) this._homeQueue = res;
+      this.setState({});
     }).catch(swallow);
   },
 
@@ -143,6 +145,11 @@ Object.assign(Component.prototype, {
           title: q.needs_update + ' component' + (q.needs_update === 1 ? '' : 's') + ' have updates pending',
           sub: 'Update queue' + (q.generated_at ? ' · built ' + this.relTime(q.generated_at) + ' ago' : ''),
           action: 'Update', act: 'sites' });
+      }
+      if (this._homeQueueNotBuilt) {
+        rows.push({ dot: 'var(--ink-dim)', title: 'Pending updates have not been checked yet',
+          sub: 'Schedule wp captaincore update-queue to run daily on the Manager host',
+          action: 'Sites', act: 'sites' });
       }
       const unassigned = this.FLEET.filter(x => x.unassigned).length;
       if (unassigned > 0) {

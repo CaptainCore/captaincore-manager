@@ -134,6 +134,15 @@ function captaincore_maybe_upgrade_db() {
 add_action( 'init', 'captaincore_maybe_upgrade_db' );
 add_action( 'admin_init', 'captaincore_maybe_upgrade_db' );
 
+// Hourly check behind captaincore_update_queue_fallback(). It returns at once
+// whenever the system cron builds the queue, as it does on anchor.host.
+function captaincore_schedule_update_queue_fallback() {
+	if ( ! wp_next_scheduled( 'captaincore_update_queue_fallback' ) ) {
+		wp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, 'hourly', 'captaincore_update_queue_fallback' );
+	}
+}
+add_action( 'init', 'captaincore_schedule_update_queue_fallback' );
+
 function captaincore_cron_run() {
 	CaptainCore\Accounts::auto_switch_plans();
     CaptainCore\Accounts::process_renewals();
@@ -13829,6 +13838,44 @@ function captaincore_update_queue_func( WP_REST_Request $request ) {
 	$data['not_built'] = false;
 	return $data;
 }
+
+/**
+ * WP-Cron fallback for the update queue. `wp captaincore update-queue` from
+ * system cron is the primary builder, but nothing schedules it on a new
+ * install, so pending updates never appeared anywhere. This builds the queue
+ * only when that command has not run in the last 48 hours and the cache is
+ * missing or over 20 hours old (it expires after 25), so an install with the
+ * system cron in place never builds here. It is for small installs: the build
+ * makes one wp.org lookup per component, and a fleet of thousands of sites
+ * takes far longer than a web request may run, so past 300 active sites
+ * (filter: captaincore_update_queue_fallback_max_sites) the system cron is
+ * required.
+ */
+function captaincore_update_queue_fallback() {
+	global $wpdb;
+	if ( (int) get_option( 'captaincore_update_queue_cli_at', 0 ) > time() - 2 * DAY_IN_SECONDS ) {
+		return;
+	}
+	$max_sites = (int) apply_filters( 'captaincore_update_queue_fallback_max_sites', 300 );
+	if ( (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->base_prefix}captaincore_sites WHERE status = 'active'" ) > $max_sites ) {
+		return;
+	}
+	$data = get_transient( 'cc_update_queue' );
+	if ( is_array( $data ) && ! empty( $data['generated_at'] ) && strtotime( $data['generated_at'] ) > time() - 20 * HOUR_IN_SECONDS ) {
+		return;
+	}
+	if ( get_transient( 'cc_update_queue_building' ) ) {
+		return;
+	}
+	set_transient( 'cc_update_queue_building', 1, HOUR_IN_SECONDS );
+	if ( function_exists( 'set_time_limit' ) ) {
+		set_time_limit( 600 );
+	}
+	wp_raise_memory_limit( 'cron' );
+	captaincore_build_update_queue_data( true );
+	delete_transient( 'cc_update_queue_building' );
+}
+add_action( 'captaincore_update_queue_fallback', 'captaincore_update_queue_fallback' );
 
 /**
  * REST: POST /update-queue/run — dispatch a fleet update for one component via
