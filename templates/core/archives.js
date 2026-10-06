@@ -35,6 +35,7 @@ Object.assign(Component.prototype, {
     this.api('/my-jobs/' + token).then(res => {
       const status = res && res.status;
       if (status === 'completed') { this.setState({ archStoreMsg: 'Archive stored.' }); this.loadArchives(true); return; }
+      if (status === 'failed' || status === 'cancelled') { this.setState({ archStoreMsg: status === 'failed' ? 'Store failed.' : 'Store cancelled.' }); return; }
       const p = res && res.progress;
       if (p && p.phase) this.setState({ archStoreMsg: p.phase + (p.percent != null ? ' ' + p.percent + '%' : '') + '…' });
       setTimeout(() => this.pollArchiveJob(token, tries + 1), 4000);

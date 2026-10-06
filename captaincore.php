@@ -2915,10 +2915,11 @@ function captaincore_jobs_get_func( WP_REST_Request $request ) {
 	}
 	$response = json_decode( $response["body"] );
 
-	if ( $response && $response->Status == "Completed" ) {
+	// A finished job carries its output whether it succeeded or failed.
+	if ( $response && in_array( $response->Status, [ "Completed", "Failed" ], true ) ) {
 		return [
 			"response" => $response->Response,
-			"status"   => "completed",
+			"status"   => strtolower( $response->Status ),
 			"job_id"   => $job_id,
 		];
 	}
@@ -10784,10 +10785,11 @@ function captaincore_register_rest_endpoints() {
 					return new WP_Error( 'parse_error', "Failed to parse CLI response: {$body}", [ 'status' => 502 ] );
 				}
 
-				if ( $response->Status == "Completed" ) {
+				// A finished job carries its output whether it succeeded or failed.
+				if ( in_array( $response->Status ?? '', [ "Completed", "Failed" ], true ) ) {
 					return [
 						"response" => $response->Response,
-						"status"   => "completed",
+						"status"   => strtolower( $response->Status ),
 						"token"    => $token,
 					];
 				}
