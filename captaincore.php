@@ -11892,12 +11892,13 @@ function captaincore_ach_add_payment_method( WP_REST_Request $request ) {
 }
 
 /**
- * REST endpoint: Verify bank account using micro-deposit amounts
+ * REST endpoint: Verify bank account using its micro-deposit (SM code or two amounts)
  */
 function captaincore_ach_verify_bank_account( WP_REST_Request $request ) {
 	$params = $request->get_json_params();
 	$token_id = $params['token_id'] ?? '';
 	$amounts = $params['amounts'] ?? [];
+	$descriptor_code = sanitize_text_field( $params['descriptor_code'] ?? '' );
 	
 	// Handle both ACH tokens (string like "ach_xxx") and legacy WC tokens (integer)
 	if ( is_numeric( $token_id ) ) {
@@ -11910,14 +11911,14 @@ function captaincore_ach_verify_bank_account( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_param', 'token_id is required', [ 'status' => 400 ] );
 	}
 	
-	if ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) {
-		return new WP_Error( 'invalid_amounts', 'Two deposit amounts are required', [ 'status' => 400 ] );
+	if ( $descriptor_code === '' && ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) ) {
+		return new WP_Error( 'invalid_amounts', 'The deposit code or two deposit amounts are required', [ 'status' => 400 ] );
 	}
 	
-	$amounts = array_map( 'intval', $amounts );
+	$amounts = is_array( $amounts ) ? array_map( 'intval', $amounts ) : [];
 	
 	$user = new CaptainCore\User();
-	$result = $user->verify_bank_account( $token_id, $amounts );
+	$result = $user->verify_bank_account( $token_id, $amounts, $descriptor_code );
 	
 	if ( isset( $result->error ) ) {
 		return new WP_Error( 'verify_error', $result->error, [ 'status' => 400 ] );
@@ -11942,6 +11943,7 @@ function captaincore_ach_admin_verify_bank_account( WP_REST_Request $request ) {
 	$token_id = $params['token_id'] ?? '';
 	$user_id = intval( $params['user_id'] ?? 0 );
 	$amounts = $params['amounts'] ?? [];
+	$descriptor_code = sanitize_text_field( $params['descriptor_code'] ?? '' );
 	
 	// Handle both ACH tokens (string like "ach_xxx") and legacy WC tokens (integer)
 	if ( is_numeric( $token_id ) ) {
@@ -11954,11 +11956,11 @@ function captaincore_ach_admin_verify_bank_account( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_param', 'token_id is required', [ 'status' => 400 ] );
 	}
 	
-	if ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) {
-		return new WP_Error( 'invalid_amounts', 'Two deposit amounts are required', [ 'status' => 400 ] );
+	if ( $descriptor_code === '' && ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) ) {
+		return new WP_Error( 'invalid_amounts', 'The deposit code or two deposit amounts are required', [ 'status' => 400 ] );
 	}
 	
-	$amounts = array_map( 'intval', $amounts );
+	$amounts = is_array( $amounts ) ? array_map( 'intval', $amounts ) : [];
 	
 	// For ACH tokens stored in user meta, we need the user_id
 	if ( is_string( $token_id ) && strpos( $token_id, 'ach_' ) === 0 ) {
@@ -11975,7 +11977,7 @@ function captaincore_ach_admin_verify_bank_account( WP_REST_Request $request ) {
 		$token_owner = new CaptainCore\User( $token->get_user_id(), true );
 	}
 	
-	$result = $token_owner->verify_bank_account( $token_id, $amounts );
+	$result = $token_owner->verify_bank_account( $token_id, $amounts, $descriptor_code );
 	
 	if ( isset( $result->error ) ) {
 		return new WP_Error( 'verify_error', $result->error, [ 'status' => 400 ] );

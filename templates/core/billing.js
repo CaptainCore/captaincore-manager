@@ -200,9 +200,10 @@ Object.assign(Component.prototype, {
         if (setupIntent.status === 'requires_payment_method') { this.setState({ achSaving: false }); this.dismissToast(tid); return; } // user cancelled
         const finish = () => this.api('/billing/ach/payment-method', { method: 'POST', body: { setup_intent_id: setupIntentId } }).then(res => {
           this.setState({ achSaving: false });
-          if (res && res.error) { this.setState({ achErr: res.error }); this.updateToast(tid, 'Bank not added', { kind: 'error' }); return; }
+          // A failure arrives as a WP_Error body ({ code, message }), so test for success.
+          if (!res || !res.success) { this.setState({ achErr: (res && (res.error || res.message)) || 'Could not save the bank account.' }); this.updateToast(tid, 'Bank not added', { kind: 'error' }); return; }
           this.setState({ achDlgOpen: false });
-          this.updateToast(tid, res && res.verified ? 'Bank account added' : 'Bank added — verification pending', { kind: 'success' });
+          this.updateToast(tid, res.verified ? 'Bank account added' : (res.message || 'Bank added, verification pending'), { kind: 'success' });
           this.loadBilling(true);
         }).catch(() => { this.setState({ achSaving: false, achErr: 'Could not save the bank account.' }); this.updateToast(tid, 'Could not save the bank account', { kind: 'error' }); });
         if (setupIntent.status === 'requires_confirmation') {
@@ -223,14 +224,26 @@ Object.assign(Component.prototype, {
     this.setState({ billAddrOpen: true, billAddrDraft: { ...a }, billAddrTried: false });
   },
 
-  openVerifyAch(token) { this.setState({ verifyDlgOpen: true, verifyToken: token, verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false }); },
+  // Stripe proves a bank one of two ways: a $0.01 deposit whose description
+  // carries a code starting with SM (its default), or two small deposits.
+  // Records saved before the type was stored have none and get the code.
+  openVerifyAch(token, type) { this.setState({ verifyDlgOpen: true, verifyToken: token, verifyByAmounts: type === 'amounts', verifyCode: '', verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false }); },
   closeVerifyAch() { this.setState({ verifyDlgOpen: false }); },
   submitVerifyAch() {
-    const a1 = parseInt(this.state.verifyA1, 10), a2 = parseInt(this.state.verifyA2, 10);
-    if (!a1 || !a2 || a1 <= 0 || a2 <= 0) { this.setState({ verifyErr: 'Enter both amounts in cents.' }); return; }
+    const body = { token_id: this.state.verifyToken };
+    if (this.state.verifyByAmounts) {
+      const a1 = parseInt(this.state.verifyA1, 10), a2 = parseInt(this.state.verifyA2, 10);
+      if (!a1 || !a2 || a1 <= 0 || a2 <= 0) { this.setState({ verifyErr: 'Enter both amounts in cents.' }); return; }
+      body.amounts = [a1, a2];
+    } else {
+      const code = (this.state.verifyCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!/^SM[A-Z0-9]{4}$/.test(code)) { this.setState({ verifyErr: 'Enter the 6-character code starting with SM.' }); return; }
+      body.descriptor_code = code;
+    }
     const tid = this.toast('Verifying bank…', { kind: 'loading' });
-    this.api('/billing/ach/verify', { method: 'POST', body: { token_id: this.state.verifyToken, amounts: [a1, a2] } }).then(res => {
-      if (res && res.error) { this.setState({ verifyErr: res.error }); this.updateToast(tid, 'Verification failed', { kind: 'error' }); return; }
+    this.api('/billing/ach/verify', { method: 'POST', body }).then(res => {
+      // A failure arrives as a WP_Error body ({ code, message }), so test for success.
+      if (!res || !res.success) { this.setState({ verifyErr: (res && (res.error || res.message)) || 'Verification failed.' }); this.updateToast(tid, 'Verification failed', { kind: 'error' }); return; }
       this.setState({ verifyDlgOpen: false });
       this.updateToast(tid, (res && res.message) || 'Bank account verified', { kind: 'success' });
       this.loadBilling(true);
@@ -485,7 +498,7 @@ Object.assign(Component.prototype, {
           ? [m.bank_name, m.account_type].filter(Boolean).join(' · ')
           : (pm.expires ? 'Expires ' + pm.expires : ''),
         isPrimary: !!pm.is_default, canPrimary: !pm.is_default,
-        needsVerify, verify: () => this.openVerifyAch(pm.token),
+        needsVerify, verify: () => this.openVerifyAch(pm.token, pm.microdeposit_type),
         setPrimary: () => this.api('/billing/payment-methods/' + pm.token + '/primary', { method: 'PUT' })
           .then(() => this.loadBilling(true)).catch(() => {}),
         remove: async () => { if (!(await this.uiConfirm('Remove ' + (m.brand || 'payment method') + ' ··' + (m.last4 || '') + '?'))) return;
@@ -526,6 +539,8 @@ Object.assign(Component.prototype, {
       onAchName: e => this.setState({ achName: e.target.value, achErr: '' }),
       closeAddAch: () => this.closeAddAch(), submitAch: () => this.submitAch(),
       verifyDlgOpen: !!s.verifyDlgOpen, verifyA1: s.verifyA1 || '', verifyA2: s.verifyA2 || '', verifyErr: s.verifyErr || '',
+      verifyByAmounts: !!s.verifyByAmounts, verifyByCode: !s.verifyByAmounts, verifyCode: s.verifyCode || '',
+      onVerifyCode: e => this.setState({ verifyCode: e.target.value, verifyErr: '' }),
       onVerifyA1: e => this.setState({ verifyA1: e.target.value, verifyErr: '' }),
       onVerifyA2: e => this.setState({ verifyA2: e.target.value, verifyErr: '' }),
       closeVerifyAch: () => this.closeVerifyAch(), submitVerifyAch: () => this.submitVerifyAch(),

@@ -682,6 +682,7 @@ class User {
                 'is_default' => $ach_method['is_default'] ?? false,
                 'token'      => $ach_method['token_id'],
                 'verified'   => $ach_method['verified'] ?? false,
+                'microdeposit_type' => $ach_method['microdeposit_type'] ?? '',
             ];
         }
 
@@ -876,6 +877,7 @@ class User {
                 'last4'                     => $payment_method->us_bank_account->last4 ?? '',
                 'fingerprint'               => $payment_method->us_bank_account->fingerprint ?? '',
                 'verified'                  => $is_verified,
+                'microdeposit_type'         => $is_verified ? '' : ( $setup_intent->next_action->verify_with_microdeposits->microdeposit_type ?? '' ),
                 'is_default'                => false,
                 'created_at'                => current_time( 'mysql' ),
             ];
@@ -895,7 +897,9 @@ class User {
                 'verified' => $is_verified,
                 'message'  => $is_verified 
                     ? 'Bank account added and verified successfully' 
-                    : 'Bank account added. Micro-deposits will be sent within 1-2 business days for verification.',
+                    : ( $ach_method['microdeposit_type'] === 'amounts'
+                        ? 'Bank account added. Two small deposits will arrive in 1-2 business days. Enter their amounts to verify.'
+                        : 'Bank account added. A $0.01 deposit will arrive in 1-2 business days. Enter the code starting with SM from its description to verify.' ),
             ];
         } catch ( \Exception $e ) {
             return (object) [ 'error' => $e->getMessage() ];
@@ -916,7 +920,7 @@ class User {
             "Bank: %s\n" .
             "Account Type: %s\n" .
             "Last 4: %s\n\n" .
-            "The customer will need to verify using the micro-deposit amounts once received.",
+            "The customer will need to verify using the micro-deposit once it arrives.",
             $user->display_name,
             $user->user_email,
             $ach_method['bank_name'],
@@ -941,10 +945,14 @@ class User {
     }
 
     /**
-     * Verify a bank account using micro-deposit amounts.
+     * Verify a bank account with its micro-deposit proof.
      * Can be called by customer (self-service) or admin.
+     *
+     * Stripe picks the proof per SetupIntent: a descriptor code (one $0.01
+     * deposit whose description carries a six-character code starting with
+     * SM) or two deposit amounts in cents.
      */
-    public function verify_bank_account( $token_id, $amounts ) {
+    public function verify_bank_account( $token_id, $amounts = [], $descriptor_code = '' ) {
         try {
             // Check if this is an ACH token stored in user meta
             $ach_data = $this->find_ach_method_by_token( $token_id );
@@ -962,20 +970,9 @@ class User {
                     return (object) [ 'error' => 'No SetupIntent found for this payment method' ];
                 }
                 
-                // Verify with Stripe - amounts must be in cents as separate array items
-                $amounts_int = array_map( 'intval', $amounts );
-                
-                $verify_result = \WC_Stripe_API::request(
-                    [ 
-                        'amounts[0]' => $amounts_int[0],
-                        'amounts[1]' => $amounts_int[1],
-                    ],
-                    "setup_intents/{$setup_intent_id}/verify_microdeposits"
-                );
-                
-                
+                $verify_result = $this->verify_ach_microdeposits( $setup_intent_id, $amounts, $descriptor_code );
                 if ( ! empty( $verify_result->error ) ) {
-                    return (object) [ 'error' => $verify_result->error->message ];
+                    return $verify_result;
                 }
                 
                 // Update verification status in user meta
@@ -1011,38 +1008,9 @@ class User {
                 return (object) [ 'error' => 'No SetupIntent found for this token' ];
             }
 
-            // Validate amounts (should be two integers representing cents)
-            if ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) {
-                return (object) [ 'error' => 'Please provide exactly two deposit amounts' ];
-            }
-
-            $amount1 = intval( $amounts[0] );
-            $amount2 = intval( $amounts[1] );
-
-            if ( $amount1 <= 0 || $amount2 <= 0 ) {
-                return (object) [ 'error' => 'Invalid deposit amounts' ];
-            }
-
-            // Call Stripe to verify microdeposits - amounts must be sent as separate array items
-            $verify_params = [
-                'amounts[0]' => $amount1,
-                'amounts[1]' => $amount2,
-            ];
-
-            $result = \WC_Stripe_API::request( 
-                $verify_params, 
-                "setup_intents/{$setup_intent_id}/verify_microdeposits" 
-            );
-
-            if ( ! empty( $result->error ) ) {
-                // Handle specific error cases
-                if ( strpos( $result->error->message, 'incorrect' ) !== false ) {
-                    return (object) [ 'error' => 'The amounts entered are incorrect. Please check your bank statement and try again.' ];
-                }
-                if ( strpos( $result->error->message, 'exceeded' ) !== false ) {
-                    return (object) [ 'error' => 'Too many verification attempts. Please contact support.' ];
-                }
-                return (object) [ 'error' => $result->error->message ];
+            $verify_result = $this->verify_ach_microdeposits( $setup_intent_id, $amounts, $descriptor_code );
+            if ( ! empty( $verify_result->error ) ) {
+                return $verify_result;
             }
 
             // Update token as verified
@@ -1056,6 +1024,65 @@ class User {
         } catch ( \Exception $e ) {
             return (object) [ 'error' => $e->getMessage() ];
         }
+    }
+
+    /**
+     * Send a micro-deposit proof to Stripe. The SetupIntent is read first: it
+     * says which proof Stripe sent (a code or two amounts), and an intent that
+     * already succeeded (verified on Stripe's hosted page) needs no proof.
+     */
+    private function verify_ach_microdeposits( $setup_intent_id, $amounts, $descriptor_code ) {
+        $setup_intent = \WC_Stripe_API::request( [], "setup_intents/{$setup_intent_id}", 'GET' );
+        if ( ! empty( $setup_intent->error ) ) {
+            return (object) [ 'error' => $setup_intent->error->message ];
+        }
+        if ( $setup_intent->status === 'succeeded' ) {
+            return (object) [ 'success' => true ];
+        }
+
+        $type = $setup_intent->next_action->verify_with_microdeposits->microdeposit_type ?? '';
+        if ( $setup_intent->status !== 'requires_action' || empty( $type ) ) {
+            return (object) [ 'error' => 'This bank account can no longer be verified. Please remove it and add it again.' ];
+        }
+
+        if ( $type === 'descriptor_code' ) {
+            $code = strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', (string) $descriptor_code ) );
+            if ( ! preg_match( '/^SM[A-Z0-9]{4}$/', $code ) ) {
+                return (object) [ 'error' => 'Enter the 6-character code starting with SM from the $0.01 deposit description.' ];
+            }
+            $params = [ 'descriptor_code' => $code ];
+        } else {
+            $amounts = array_values( array_map( 'intval', (array) $amounts ) );
+            if ( count( $amounts ) !== 2 || $amounts[0] <= 0 || $amounts[1] <= 0 ) {
+                return (object) [ 'error' => 'Enter both deposit amounts in cents.' ];
+            }
+            // Amounts must be sent as separate array items
+            $params = [
+                'amounts[0]' => $amounts[0],
+                'amounts[1]' => $amounts[1],
+            ];
+        }
+
+        $result = \WC_Stripe_API::request( $params, "setup_intents/{$setup_intent_id}/verify_microdeposits" );
+
+        if ( ! empty( $result->error ) ) {
+            $error_code = $result->error->code ?? '';
+            if ( str_ends_with( $error_code, '_mismatch' ) ) {
+                return (object) [ 'error' => $type === 'descriptor_code'
+                    ? 'That code does not match the deposit. Please check your bank statement and try again.'
+                    : 'The amounts entered are incorrect. Please check your bank statement and try again.' ];
+            }
+            if ( str_ends_with( $error_code, '_attempts_exceeded' ) || str_ends_with( $error_code, '_timeout' ) ) {
+                return (object) [ 'error' => 'This bank account can no longer be verified. Please remove it and add it again.' ];
+            }
+            return (object) [ 'error' => $result->error->message ];
+        }
+
+        if ( ( $result->status ?? '' ) !== 'succeeded' ) {
+            return (object) [ 'error' => 'Stripe has not confirmed this bank account yet. Please try again shortly.' ];
+        }
+
+        return (object) [ 'success' => true ];
     }
 
     /**
@@ -1100,6 +1127,7 @@ class User {
                     'account_type' => $method['account_type'] ?? '',
                     'last4'        => $method['last4'] ?? '',
                     'added_date'   => $method['created_at'] ?? 'Unknown',
+                    'microdeposit_type' => $method['microdeposit_type'] ?? '',
                 ];
             }
         }

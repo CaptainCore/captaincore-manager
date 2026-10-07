@@ -5779,9 +5779,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeVerifyAch }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
-          <span style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)">Enter the two micro-deposit amounts (in cents) from your bank statement.</span>
-          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Amount 1</span><input value="{{ verifyA1 }}" onInput="{{ onVerifyA1 }}" placeholder="e.g. 32" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
-          <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Amount 2</span><input value="{{ verifyA2 }}" onInput="{{ onVerifyA2 }}" placeholder="e.g. 45" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
+          <sc-if value="{{ verifyByCode }}" hint-placeholder-val="{{ true }}">
+            <span style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)">Find the $0.01 deposit on your bank statement. Its description includes a 6-character code starting with SM. Enter that code.</span>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Code</span><input value="{{ verifyCode }}" onInput="{{ onVerifyCode }}" placeholder="e.g. SM11AA" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none;text-transform:uppercase"></div>
+          </sc-if>
+          <sc-if value="{{ verifyByAmounts }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)">Enter the two micro-deposit amounts (in cents) from your bank statement.</span>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Amount 1</span><input value="{{ verifyA1 }}" onInput="{{ onVerifyA1 }}" placeholder="e.g. 32" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Amount 2</span><input value="{{ verifyA2 }}" onInput="{{ onVerifyA2 }}" placeholder="e.g. 45" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
+          </sc-if>
           <sc-if value="{{ verifyErr }}" hint-placeholder-val="{{ false }}">
             <span style="font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ verifyErr }}</span>
           </sc-if>

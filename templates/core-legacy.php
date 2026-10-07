@@ -10206,8 +10206,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<v-btn @click="verify_bank.show = false" icon="mdi-close" variant="text"></v-btn>
 											</v-toolbar>
 											<v-card-text>
-												<p class="mb-4">Stripe sent two small deposits to your bank account. Enter the amounts below to verify your account.</p>
-												<v-row>
+												<p class="mb-4" v-if="!verify_bank.by_amounts">Stripe sent a $0.01 deposit to your bank account. Its description on your bank statement includes a 6-character code starting with SM. Enter that code to verify your account.</p>
+												<v-text-field v-if="!verify_bank.by_amounts"
+													v-model="verify_bank.code"
+													label="Code starting with SM"
+													variant="underlined"
+													placeholder="SM11AA"
+													maxlength="6"
+												></v-text-field>
+												<p class="mb-4" v-if="verify_bank.by_amounts">Stripe sent two small deposits to your bank account. Enter the amounts below to verify your account.</p>
+												<v-row v-if="verify_bank.by_amounts">
 													<v-col cols="6">
 														<v-text-field 
 															v-model="verify_bank.amount1" 
@@ -10316,8 +10324,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-card-text>
 										<p class="mb-2"><strong>Customer:</strong> {{ admin_verify_bank.user_name }}</p>
 										<p class="mb-4"><strong>Bank:</strong> {{ admin_verify_bank.bank_name }} ({{ admin_verify_bank.account_type }}) ending in {{ admin_verify_bank.last4 }}</p>
-										<p class="mb-4">Enter the two micro-deposit amounts the customer received:</p>
-										<v-row>
+										<p class="mb-4" v-if="!admin_verify_bank.by_amounts">Enter the code starting with SM from the $0.01 deposit the customer received:</p>
+										<v-text-field v-if="!admin_verify_bank.by_amounts"
+											v-model="admin_verify_bank.code"
+											label="Code starting with SM"
+											variant="underlined"
+											placeholder="SM11AA"
+											maxlength="6"
+										></v-text-field>
+										<p class="mb-4" v-if="admin_verify_bank.by_amounts">Enter the two micro-deposit amounts the customer received:</p>
+										<v-row v-if="admin_verify_bank.by_amounts">
 											<v-col cols="6">
 												<v-text-field 
 													v-model="admin_verify_bank.amount1" 
@@ -13784,8 +13800,8 @@ const app = createApp({
             }
         },
 		new_payment: { card: {}, show: false, error: "", success: "", type: "card", loading: false, account_holder_name: "" },
-		verify_bank: { show: false, token_id: null, amount1: "", amount2: "", error: "", success: "", loading: false },
-		admin_verify_bank: { show: false, token_id: null, user_id: null, user_name: "", user_email: "", bank_name: "", account_type: "", last4: "", amount1: "", amount2: "", error: "", success: "", loading: false },
+		verify_bank: { show: false, token_id: null, by_amounts: false, code: "", amount1: "", amount2: "", error: "", success: "", loading: false },
+		admin_verify_bank: { show: false, token_id: null, user_id: null, user_name: "", user_email: "", bank_name: "", account_type: "", last4: "", by_amounts: false, code: "", amount1: "", amount2: "", error: "", success: "", loading: false },
 		pending_ach_verifications: [],
 		current_user_id: <?php echo get_current_user_id(); ?>,
 		current_user_email: <?php echo json_encode( $user->email ); ?>,
@@ -20293,10 +20309,29 @@ const app = createApp({
 				}
 			}
 		},
+		// Stripe proves a bank with a $0.01 deposit carrying a code starting
+		// with SM (its default) or with two small deposits.
+		achVerifyProof( form ) {
+			if ( form.by_amounts ) {
+				const amount1 = parseInt( form.amount1 )
+				const amount2 = parseInt( form.amount2 )
+				if ( !amount1 || !amount2 || amount1 <= 0 || amount2 <= 0 ) {
+					return { error: "Please enter both deposit amounts in cents" }
+				}
+				return { amounts: [ amount1, amount2 ] }
+			}
+			const code = ( form.code || "" ).toUpperCase().replace( /[^A-Z0-9]/g, "" )
+			if ( ! /^SM[A-Z0-9]{4}$/.test( code ) ) {
+				return { error: "Please enter the 6-character code starting with SM" }
+			}
+			return { descriptor_code: code }
+		},
 		openVerifyBankAccount( item ) {
 			this.verify_bank = {
 				show: true,
 				token_id: item.token,
+				by_amounts: item.microdeposit_type === 'amounts',
+				code: "",
 				amount1: "",
 				amount2: "",
 				error: "",
@@ -20309,11 +20344,9 @@ const app = createApp({
 			this.verify_bank.error = ""
 			this.verify_bank.success = ""
 			
-			const amount1 = parseInt( this.verify_bank.amount1 )
-			const amount2 = parseInt( this.verify_bank.amount2 )
-			
-			if ( !amount1 || !amount2 || amount1 <= 0 || amount2 <= 0 ) {
-				this.verify_bank.error = "Please enter both deposit amounts in cents"
+			const proof = this.achVerifyProof( this.verify_bank )
+			if ( proof.error ) {
+				this.verify_bank.error = proof.error
 				this.verify_bank.loading = false
 				return
 			}
@@ -20321,7 +20354,7 @@ const app = createApp({
 			try {
 				const response = await axios.post( '/wp-json/captaincore/v1/billing/ach/verify', {
 					token_id: this.verify_bank.token_id,
-					amounts: [ amount1, amount2 ]
+					...proof
 				}, {
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
@@ -20381,6 +20414,8 @@ const app = createApp({
 				bank_name: item.bank_name,
 				account_type: item.account_type,
 				last4: item.last4,
+				by_amounts: item.microdeposit_type === 'amounts',
+				code: "",
 				amount1: "",
 				amount2: "",
 				error: "",
@@ -20393,11 +20428,9 @@ const app = createApp({
 			this.admin_verify_bank.error = ""
 			this.admin_verify_bank.success = ""
 			
-			const amount1 = parseInt( this.admin_verify_bank.amount1 )
-			const amount2 = parseInt( this.admin_verify_bank.amount2 )
-			
-			if ( !amount1 || !amount2 || amount1 <= 0 || amount2 <= 0 ) {
-				this.admin_verify_bank.error = "Please enter both deposit amounts in cents"
+			const proof = this.achVerifyProof( this.admin_verify_bank )
+			if ( proof.error ) {
+				this.admin_verify_bank.error = proof.error
 				this.admin_verify_bank.loading = false
 				return
 			}
@@ -20406,7 +20439,7 @@ const app = createApp({
 				const response = await axios.post( '/wp-json/captaincore/v1/billing/ach/admin-verify', {
 					token_id: this.admin_verify_bank.token_id,
 					user_id: this.admin_verify_bank.user_id,
-					amounts: [ amount1, amount2 ]
+					...proof
 				}, {
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
