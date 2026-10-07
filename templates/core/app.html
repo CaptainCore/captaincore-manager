@@ -2606,7 +2606,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </div>
 
           <sc-if value="{{ accTabUsers }}" hint-placeholder-val="{{ true }}">
-            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper)">
               <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">People</h2></div>
               <sc-for list="{{ accUsers }}" as="u" hint-placeholder-count="3">
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule)">
@@ -2632,7 +2632,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <span onClick="{{ iv.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
                 </div>
               </sc-for>
-              <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel)">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-radius:0 0 12px 12px">
                 <input value="{{ invEmail }}" onInput="{{ onInvEmail }}" placeholder="email@example.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
                 <div style="position:relative">
                   <div onClick="{{ ddToggleInv }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer;min-width:130px" style-hover="border-color:var(--brand)">
