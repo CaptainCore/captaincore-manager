@@ -68,19 +68,41 @@ Object.assign(Component.prototype, {
     else if (tab === 'forwarding') this.loadForwards();
   },
 
-  loadDnsZone() {
+  // Tab clicks double as a background re-check. Records change from
+  // elsewhere (the Sending tab, another session, a customer's DNS host), so
+  // a panel opened minutes ago is often stale. What is on screen stays put
+  // until the fresh payload lands.
+  refreshDomainTab(id) {
+    if (id === 'dns') this.loadDnsZone(true);
+    else if (id === 'forwarding') this.loadForwards();
+    else if (id === 'sending') this.recheckMailgun();
+  },
+
+  // Unsaved DNS work a reload would throw away.
+  dnsHasStaged() {
+    const s = this.state;
+    return !!(s.dnsDirty || s.dnsEdit || (s.dnsDel || []).length
+      || (s.dnsRecs || []).some(r => r.isNew || r.edited || r.deleted));
+  },
+
+  // quiet: keep the current rows up (no notice, no skeleton), stay silent on
+  // failure, and back off whenever edits are staged — checked again when the
+  // response lands, since the user may have started editing meanwhile.
+  loadDnsZone(quiet) {
     const dom = this._domain;
     if (!dom) return;
-    dom.dnsLoading = true; dom.noZone = false; dom.dnsErr = '';
-    this.setState({});
+    const blocked = () => dom.dnsLoading || dom.saving || this.dnsHasStaged();
+    if (quiet && blocked()) return;
+    if (!quiet) { dom.dnsLoading = true; dom.noZone = false; dom.dnsErr = ''; this.setState({}); }
     this.api('/dns/' + dom.domainId).then(z => {
       if (this._domain !== dom) return;
+      if (quiet && blocked()) return;
       dom.dnsLoading = false;
       if (z && z.code === 'no_zone') { dom.noZone = true; this.setState({ dnsRecs: [], dnsDel: [], dnsDirty: false }); return; }
-      if (!z || !Array.isArray(z.records)) { dom.dnsErr = (z && z.message) || 'Could not load DNS records.'; this.setState({}); return; }
-      dom.dns = z;
+      if (!z || !Array.isArray(z.records)) { if (!quiet) { dom.dnsErr = (z && z.message) || 'Could not load DNS records.'; this.setState({}); } return; }
+      dom.dns = z; dom.noZone = false; dom.dnsErr = '';
       this.setState({ dnsRecs: z.records.map(r => this.dnsRowFromApi(r)), dnsDel: [], dnsDirty: false, dnsEdit: 0 });
-    }).catch(() => { if (this._domain === dom) { dom.dnsLoading = false; dom.dnsErr = 'Could not load DNS records.'; this.setState({}); } });
+    }).catch(() => { if (this._domain === dom && !quiet) { dom.dnsLoading = false; dom.dnsErr = 'Could not load DNS records.'; this.setState({}); } });
   },
 
   // Structured sub-values ride on `subs` (the legacy editor's per-value model:
@@ -641,6 +663,23 @@ Object.assign(Component.prototype, {
     this.loadMailgunUsage(dom.mgUsagePeriod);
   },
 
+  // Sending tab re-check. A plain reload only re-reads Mailgun's last verdict,
+  // so records added since would keep reading Pending; while anything is
+  // pending, ask Mailgun to look again first. The verify response skips the
+  // record-name cleanup GET …/mailgun does, so the panel reloads from there.
+  recheckMailgun() {
+    const dom = this._domain;
+    const mg = dom && dom.mailgun;
+    if (!mg) { this.loadMailgun(); return; }
+    if (dom.mgChecking) return;
+    const recs = (mg.sending_dns_records || []).concat(mg.receiving_dns_records || []);
+    const pending = (mg.domain && mg.domain.state !== 'active') || recs.some(r => r.valid !== 'valid');
+    if (!pending) { this.loadMailgun(); return; }
+    dom.mgChecking = true;
+    const done = () => { if (this._domain !== dom) return; dom.mgChecking = false; this.loadMailgun(); };
+    this.api('/domain/' + dom.domainId + '/mailgun/verify', { method: 'POST', body: {} }).then(done, done);
+  },
+
   loadMailgunUsage(period) {
     const dom = this._domain;
     if (!dom || !dom.info) return;
@@ -786,9 +825,7 @@ Object.assign(Component.prototype, {
     const lazyTabs = [['dns', 'DNS'], ['registrar', 'Registrar'], ['forwarding', 'Email forwarding'], ['sending', 'Sending']].map(([id, label]) => ({ label,
       fg: s.domTab === id ? 'var(--brand-ink)' : 'var(--ink-dim)',
       line: s.domTab === id ? 'var(--brand)' : 'transparent',
-      go: () => { this.setState({ domTab: id });
-        if (id === 'forwarding') this.loadForwards();
-        else if (id === 'sending') this.loadMailgun(); } }));
+      go: () => { this.setState({ domTab: id }); this.refreshDomainTab(id); } }));
     const owner = (provider && provider.contacts && (provider.contacts.owner || provider.contacts.admin)) || {};
     const ct = {
       Name: owner.name || [owner.firstName, owner.lastName].filter(Boolean).join(' ') || '—',

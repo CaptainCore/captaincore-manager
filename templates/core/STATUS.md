@@ -15,6 +15,38 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## DNS and Sending tabs re-check on click (2026-10-08)
+
+Austin: the DNS and Sending panels went stale while records were being edited
+elsewhere, and clicking the tab did not reload them. DNS only ever loaded on
+`openDomain()`; Sending re-ran `loadMailgun()`, but that only re-reads
+Mailgun's last verdict, so records added since kept reading Pending.
+
+Every domain tab click now goes through `refreshDomainTab(id)`:
+
+- **DNS** calls `loadDnsZone(true)`. Quiet mode skips the "Loading DNS
+  records…" notice and skeleton (the current rows stay up), stays silent on a
+  failed fetch, and backs off when `dnsHasStaged()` (dirty flag, open editor,
+  queued deletes, new/edited/struck rows) or a save/full load is in flight.
+  The check runs again when the response lands, in case editing began mid-fetch.
+- **Sending** calls `recheckMailgun()`. When the panel already holds Mailgun
+  data and the domain is not `active` or any sending/receiving record is not
+  `valid`, it POSTs `/mailgun/verify` first, then reloads through GET
+  `…/mailgun` (verify's response lacks the record-name cleanup). Otherwise,
+  including the first visit, it is the plain `loadMailgun()` as before.
+  `dom.mgChecking` keeps repeat clicks from stacking verifies.
+- **Email forwarding** is unchanged (`loadForwards()` already reloaded).
+
+`/domain/{id}` itself is not re-read on a tab click, since it calls the
+registrar, so a Mailgun zone set up from another session still needs the
+domain reopened.
+
+Verified with Playwright against mocked `/dns` and Mailgun routes: a delayed
+DNS reload kept the old rows visible with no notice and then swapped in the
+changed record; Sending verified once while Pending (then showed Verified)
+and not again once valid; a staged Delete survived a Sending → DNS round trip
+with zero zone fetches.
+
 ## Home activity and Running now rows open the site (2026-09-22)
 
 Customer request: from Home, clicking a "Provisioned new site …" row in
