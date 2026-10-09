@@ -181,6 +181,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore core-update-runs', 'CaptainCore\CoreUpdateRunsCLI' );
 	WP_CLI::add_command( 'captaincore orphan-rows', 'CaptainCore\OrphanRowsCLI' );
 	WP_CLI::add_command( 'captaincore malware-findings', 'CaptainCore\MalwareFindingsCLI' );
+	WP_CLI::add_command( 'captaincore restart-php', 'CaptainCore\RestartPhpCLI' );
 }
 
 /* -------------------------------------------------------------------------

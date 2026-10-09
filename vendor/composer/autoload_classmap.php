@@ -201,6 +201,7 @@ return array(
     'CaptainCore\\Remote\\Rocketdotnet' => $baseDir . '/app/Remote/Rocketdotnet.php',
     'CaptainCore\\Remote\\Spaceship' => $baseDir . '/app/Remote/Spaceship.php',
     'CaptainCore\\Report' => $baseDir . '/app/Report.php',
+    'CaptainCore\\RestartPhpCLI' => $baseDir . '/app/RestartPhpCLI.php',
     'CaptainCore\\ResticCacheCLI' => $baseDir . '/app/ResticCacheCLI.php',
     'CaptainCore\\Router' => $baseDir . '/app/Router.php',
     'CaptainCore\\Run' => $baseDir . '/app/Run.php',

@@ -327,6 +327,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Remote\\Rocketdotnet' => __DIR__ . '/../..' . '/app/Remote/Rocketdotnet.php',
         'CaptainCore\\Remote\\Spaceship' => __DIR__ . '/../..' . '/app/Remote/Spaceship.php',
         'CaptainCore\\Report' => __DIR__ . '/../..' . '/app/Report.php',
+        'CaptainCore\\RestartPhpCLI' => __DIR__ . '/../..' . '/app/RestartPhpCLI.php',
         'CaptainCore\\ResticCacheCLI' => __DIR__ . '/../..' . '/app/ResticCacheCLI.php',
         'CaptainCore\\Router' => __DIR__ . '/../..' . '/app/Router.php',
         'CaptainCore\\Run' => __DIR__ . '/../..' . '/app/Run.php',
