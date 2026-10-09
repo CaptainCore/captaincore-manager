@@ -12792,6 +12792,26 @@ function captaincore_site_audit_write_error( $what ) {
 }
 
 /**
+ * The date a report is presented under, from an admin's `report_date` param
+ * (YYYY-MM-DD, optionally with HH:MM:SS). It is stored as created_at, which
+ * names the published file and heads the report, so an audit imported after
+ * the work keeps the day it was done. Null when absent, WP_Error when invalid.
+ */
+function captaincore_site_audit_report_date( $value ) {
+	if ( $value === null || $value === '' ) {
+		return null;
+	}
+	$value = trim( (string) $value );
+	foreach ( [ 'Y-m-d H:i:s', 'Y-m-d' ] as $format ) {
+		$date = DateTime::createFromFormat( '!' . $format, $value );
+		if ( $date && $date->format( $format ) === $value ) {
+			return $date->format( 'Y-m-d H:i:s' );
+		}
+	}
+	return new WP_Error( 'invalid_report_date', 'report_date must be YYYY-MM-DD or YYYY-MM-DD HH:MM:SS.', [ 'status' => 400 ] );
+}
+
+/**
  * REST endpoint: Create a new security audit.
  */
 function captaincore_site_audits_create_func( WP_REST_Request $request ) {
@@ -12802,6 +12822,11 @@ function captaincore_site_audits_create_func( WP_REST_Request $request ) {
 	$site_id = intval( $params['site_id'] ?? 0 );
 	if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$report_date = current_user_can( 'manage_options' ) ? captaincore_site_audit_report_date( $params['report_date'] ?? null ) : null;
+	if ( is_wp_error( $report_date ) ) {
+		return $report_date;
 	}
 
 	$data = [
@@ -12825,7 +12850,7 @@ function captaincore_site_audits_create_func( WP_REST_Request $request ) {
 		'sections'          => wp_json_encode( $params['sections'] ?? null ),
 		'report_title'      => sanitize_text_field( $params['report_title'] ?? '' ),
 		'section_order'     => wp_json_encode( $params['section_order'] ?? null ),
-		'created_at'        => $time_now,
+		'created_at'        => $report_date ?? $time_now,
 		'updated_at'        => $time_now,
 	];
 
@@ -12875,6 +12900,16 @@ function captaincore_site_audits_update_func( WP_REST_Request $request ) {
 	}
 
 	$data = [ 'updated_at' => $time_now ];
+
+	if ( current_user_can( 'manage_options' ) ) {
+		$report_date = captaincore_site_audit_report_date( $params['report_date'] ?? null );
+		if ( is_wp_error( $report_date ) ) {
+			return $report_date;
+		}
+		if ( $report_date ) {
+			$data['created_at'] = $report_date;
+		}
+	}
 
 	foreach ( $allowed as $field ) {
 		if ( isset( $params[ $field ] ) ) {
