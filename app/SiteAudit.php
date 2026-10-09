@@ -314,6 +314,18 @@ class SiteAudit {
         return $map[ $type ] ?? ucwords( str_replace( '_', ' ', $type ) );
     }
 
+    /**
+     * Title and description for the built-in timeline. Only security reports
+     * reconstruct an attacker's activity; other report types get a neutral one.
+     */
+    private function timeline_heading( $audit ) {
+        $type = str_replace( '-', '_', $audit->report_type ?: 'security_audit' );
+        if ( in_array( $type, [ 'security_audit', 'malware_incident' ], true ) ) {
+            return [ 'Attack timeline', 'Reconstructed attacker activity based on logs, file timestamps and user events.' ];
+        }
+        return [ 'Timeline', 'Key events in order, from the logs and the work done.' ];
+    }
+
     private static function icon( $name, $class = '' ) {
         $paths = [
             'check'   => '<path d="M5 12l5 5 9-10"/>',
@@ -405,9 +417,10 @@ class SiteAudit {
         }
 
         if ( ! empty( $audit->timeline_events ) ) {
+            [ $timeline_title, $timeline_description ] = $this->timeline_heading( $audit );
             $sections['timeline'] = [
-                'title'  => 'Attack timeline',
-                'render' => fn( $num, $id ) => $this->render_section( $num, $id, 'Attack timeline', 'Reconstructed attacker activity based on logs, file timestamps and user events.', '<div class="card">' . $this->render_timeline( (array) $audit->timeline_events, true ) . '</div>' ),
+                'title'  => $timeline_title,
+                'render' => fn( $num, $id ) => $this->render_section( $num, $id, $timeline_title, $timeline_description, '<div class="card">' . $this->render_timeline( (array) $audit->timeline_events, true ) . '</div>' ),
             ];
         }
 
