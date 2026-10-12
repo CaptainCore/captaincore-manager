@@ -977,7 +977,7 @@ Object.assign(Component.prototype, {
       saveDns: () => this.saveDnsReal(),
       discardDns: () => this.loadDnsZone(),
       zoneReplace: () => this.setState(st => ({
-        dnsRecs: this.parseZone(st.zoneText).map((r, i) => ({ ...r, uid: 'z' + Date.now() + i })),
+        dnsRecs: this.parseZone(st.zoneText, d.name).map((r, i) => ({ ...r, uid: 'z' + Date.now() + i })),
         dnsDel: [...(st.dnsDel || []), ...st.dnsRecs.filter(x => x.recId).map(x => x.recId)],
         dnsDirty: true, zoneOpen: false, zoneText: '' })),
       exportZone: () => this.exportZoneReal(d.name),

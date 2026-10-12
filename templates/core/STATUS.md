@@ -15,6 +15,48 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Import zone takes real provider exports (2026-10-12)
+
+Austin: pasting a Cloudflare zone export into Import zone blanked the page with
+`renderVals(): typeBg is not defined`. 8f967570 moved the record colours to
+`DNS_TYPE_BG` (domains.js) but left one `typeBg[...]` in the dialog's preview,
+so any paste that parsed a record threw. The preview now reads
+`this.DNS_TYPE_BG`.
+
+Past the crash, `parseZone` would have staged a broken zone from that export,
+so it was rewritten (app.js) and now takes the domain name
+(`parseZone(text, d.name)`, all three callers):
+
+- **Owners** become names relative to the zone. `example.com.` is `@`,
+  `www.example.com.` is `www`, a bare name already ending in the zone is
+  taken as absolute (Cloudflare drops the dot on its SOA), a blank owner
+  repeats the previous line's, and `$ORIGIN` / `$TTL` apply. Before, every
+  FQDN owner was kept whole, so Save would have created
+  `www.example.com.example.com`.
+- **Comments**: `;` outside quotes ends the line, so Cloudflare's
+  `; cf_tags=cf-proxied:…` no longer lands in the value. `( … )`
+  continuations fold into one record.
+- **TXT/SPF** keep their quoted strings as written (one space between
+  strings), so a 2-string DKIM saves as `"…" "…"`. Constellix already stores
+  long DKIM that way, and `dnsNormalizeValue` leaves quoted values alone.
+- **Targets** (CNAME, ANAME, MX server, SRV host): `@` and single labels
+  resolve against `$ORIGIN`, and dotted names gain the final dot.
+- **TTL 1** reads as the default. Cloudflare exports its "Auto" TTL as 1.
+- Rows carry `subs`, so the save path does not re-split a value on commas
+  (a DMARC `rua=` list).
+- SOA, NS, CAA and other types the editor cannot manage, and owners outside
+  the zone, are skipped and counted. The dialog says `28 records parsed ·
+  skipped 1 SOA, 2 NS`, and a paste for another domain reads `Nothing to import
+  · skipped … 28 outside <domain>` instead of the "preview here" hint
+  (`zoneEmptyText`).
+
+Verified in Chrome (Playwright) on one of Austin's own zones with a
+Cloudflare export rewritten to that domain: 28 rows previewed and staged
+through Replace zone with no page error. Save was not pressed. The staged
+rows were then run through `dnsGroupRecs` + `saveDnsReal`'s body builder in
+node: 23 POSTs, the 5 MX folded into one apex record, the DKIM kept its
+chunks.
+
 ## DNS and Sending tabs re-check on click (2026-10-08)
 
 Austin: the DNS and Sending panels went stale while records were being edited

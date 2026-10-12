@@ -1360,21 +1360,94 @@ class Component extends DCLogic {
     };
   }
 
-  parseZone(text) {
+  // BIND zone text → staged editor rows, built for real provider exports
+  // (Cloudflare's included). Owners become names relative to `zone`, a blank
+  // owner repeats the previous line's, $ORIGIN/$TTL apply, ";" comments
+  // outside quotes and ( … ) continuations fold away. TXT keeps its quoted
+  // strings verbatim so a multi-string DKIM survives (dnsNormalizeValue leaves
+  // quoted values alone), and rows carry `subs` so the save path never
+  // re-splits a value on commas. Types the editor can't manage (SOA, NS, CAA…)
+  // and owners outside the zone are skipped and tallied on `recs.skipped`.
+  parseZone(text, zone) {
     const types = ['A', 'AAAA', 'ANAME', 'CNAME', 'MX', 'TXT', 'SPF', 'SRV', 'HTTP'];
-    const recs = [];
-    (text || '').split('\n').forEach(line => {
-      const l = line.trim();
-      if (!l || l.startsWith(';') || l.startsWith('$')) return;
-      const toks = l.split(/\s+/);
-      let idx = -1;
-      for (let i = 1; i < toks.length; i++) { const u = toks[i].toUpperCase(); if (u === 'IN') continue; if (types.includes(u)) { idx = i; break; } }
-      if (idx < 0) return;
-      const value = toks.slice(idx + 1).join(' ').replace(/^"|"$/g, '');
-      if (!value) return;
-      const ttlTok = toks.slice(1, idx).find(t => /^\d+$/.test(t));
-      recs.push({ type: toks[idx].toUpperCase(), name: toks[0].replace(/\.$/, '') || '@', value, ttl: ttlTok || '3600' });
+    const apex = String(zone || '').trim().toLowerCase().replace(/\.$/, '');
+    let origin = apex, defTtl = '3600', owner = '@';
+    const recs = [], skipped = [], lines = [];
+    let buf = null, depth = 0;
+    (text || '').split('\n').forEach(raw => {
+      let out = '', q = false;
+      for (let i = 0; i < raw.length; i++) {
+        const c = raw[i];
+        if (q && c === '\\') { out += c + (raw[i + 1] || ''); i++; continue; }
+        if (c === '"') q = !q;
+        else if (!q && c === ';') break;
+        else if (!q && (c === '(' || c === ')')) { depth = Math.max(0, depth + (c === '(' ? 1 : -1)); out += ' '; continue; }
+        out += c;
+      }
+      if (buf) buf.text += ' ' + out; else buf = { text: out, inherit: /^[ \t]/.test(raw) };
+      if (!depth) { lines.push(buf); buf = null; }
     });
+    if (buf) lines.push(buf);
+    // Owner → fully qualified, no final dot. A bare name already ending in the
+    // zone counts as absolute: exports often drop that dot (Cloudflare's SOA).
+    const abs = n => { n = n.toLowerCase();
+      if (n === '@') return origin;
+      if (n.endsWith('.')) return n.slice(0, -1);
+      if (apex && (n === apex || n.endsWith('.' + apex))) return n;
+      return origin ? n + '.' + origin : n; };
+    const rel = n => { const f = abs(n);
+      if (!apex) return f || '@';
+      return f === apex ? '@' : f.endsWith('.' + apex) ? f.slice(0, -apex.length - 1) : null; };
+    // Hostname targets: @ and single labels resolve against $ORIGIN; a dotted
+    // bare name is already a hostname (the editor's convention, see
+    // dnsNormalizeValue) and only gains the final dot.
+    const host = n => n === '@' ? origin + '.' : n.includes('.') ? n.replace(/\.?$/, '.') : n + '.' + origin + '.';
+    lines.forEach(({ text: l, inherit }) => {
+      const toks = [...l.matchAll(/\S+/g)];
+      if (!toks.length) return;
+      const first = toks[0][0], arg = toks[1] ? toks[1][0] : '';
+      if (first.startsWith('$')) {
+        if (/^\$ORIGIN$/i.test(first) && arg) origin = abs(arg);
+        if (/^\$TTL$/i.test(first) && /^\d+$/.test(arg)) defTtl = arg;
+        return;
+      }
+      let i = 0, ttl = '';
+      if (!inherit) { owner = first; i = 1; }
+      for (; i < toks.length; i++) {
+        const t = toks[i][0];
+        if (/^\d+$/.test(t)) ttl = t;
+        else if (!/^(IN|CH|HS|CS)$/i.test(t)) break;
+      }
+      if (i >= toks.length) return;
+      const type = toks[i][0].toUpperCase();
+      const raw = l.slice(toks[i].index + toks[i][0].length).trim();
+      const name = rel(owner);
+      if (!types.includes(type)) { skipped.push(type); return; }
+      if (name === null) { skipped.push('outside ' + apex); return; }
+      if (!raw) return;
+      const parts = raw.split(/\s+/);
+      let subs = null, value = raw;
+      if (type === 'MX') {
+        const [p, h] = parts.length > 1 ? parts : ['10', parts[0]];
+        subs = [{ priority: p, server: host(h) }];
+        value = p + ' ' + subs[0].server;
+      } else if (type === 'SRV') {
+        subs = [{ priority: parts[0] || '0', weight: parts[1] || '0', port: parts[2] || '0', host: parts[3] ? host(parts[3]) : '' }];
+        value = [subs[0].priority, subs[0].weight, subs[0].port, subs[0].host].join(' ');
+      } else if (type === 'CNAME') {
+        value = host(parts[0]);
+      } else if (type === 'ANAME') {
+        value = host(parts[0]); subs = [{ value }];
+      } else if (type === 'TXT' || type === 'SPF') {
+        // One space between strings; whitespace inside the quotes is data.
+        value = (raw.match(/"(?:\\.|[^"\\])*"|\S+/g) || []).join(' '); subs = [{ value }];
+      } else if (type !== 'HTTP') {
+        subs = [{ value: raw }];
+      }
+      // Cloudflare exports its "Auto" TTL as 1; that is not one second.
+      recs.push({ type, name, value, subs, ttl: ttl && ttl !== '1' ? ttl : defTtl });
+    });
+    recs.skipped = skipped;
     return recs;
   }
 
@@ -2015,7 +2088,9 @@ class Component extends DCLogic {
       fg: s.domTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.domTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ domTab: id }) }));
-    const zoneRecs = s.zoneOpen ? this.parseZone(s.zoneText) : [];
+    const zoneRecs = s.zoneOpen ? this.parseZone(s.zoneText, d.name) : [];
+    const zoneSkip = Object.entries((zoneRecs.skipped || []).reduce((m, t) => ({ ...m, [t]: (m[t] || 0) + 1 }), {}));
+    const zoneSkipText = zoneSkip.length ? 'skipped ' + zoneSkip.map(([t, n]) => n + ' ' + t).join(', ') : '';
     const ct = s.contact || { Name: 'Sarah Whitfield', Organization: 'Bloom & Branch LLC', Email: 'sarah@bloomandbranch.com', Phone: '+1 (717) 555-0164', Address: '412 Larkspur Lane', 'City / State': 'Lancaster, PA 17601', Country: 'United States' };
     const mkTog = (key, label) => ({ label,
       bg: s.reg[key] ? 'var(--brand)' : 'var(--rule)',
@@ -2049,10 +2124,12 @@ class Component extends DCLogic {
       zoneOpen: s.zoneOpen,
       zoneText: s.zoneText, onZoneText: e => this.setState({ zoneText: e.target.value }),
       hasZoneRecs: zoneRecs.length > 0, zoneEmpty: zoneRecs.length === 0,
-      zoneCount: zoneRecs.length + ' records parsed',
-      zonePreview: zoneRecs.map(r => ({ ...r, bg: typeBg[r.type] || 'var(--panel-2)' })),
-      zoneAppend: () => this.setState(st => ({ dnsRecs: [...(st.dnsRecs || []), ...this.parseZone(st.zoneText).map((r, i) => ({ ...r, uid: Date.now() + i }))], dnsDirty: true, zoneOpen: false, zoneText: '' })),
-      zoneReplace: () => this.setState(st => ({ dnsRecs: this.parseZone(st.zoneText).map((r, i) => ({ ...r, uid: Date.now() + i })), dnsDirty: true, zoneOpen: false, zoneText: '' })),
+      zoneCount: zoneRecs.length + ' record' + (zoneRecs.length === 1 ? '' : 's') + ' parsed' + (zoneSkipText ? ' · ' + zoneSkipText : ''),
+      // A zone for another domain parses to nothing; say so instead of the hint.
+      zoneEmptyText: zoneSkipText ? 'Nothing to import · ' + zoneSkipText : 'Parsed records will preview here as you paste.',
+      zonePreview: zoneRecs.map(r => ({ ...r, bg: this.DNS_TYPE_BG[r.type] || 'var(--panel-2)' })),
+      zoneAppend: () => this.setState(st => ({ dnsRecs: [...(st.dnsRecs || []), ...this.parseZone(st.zoneText, d.name).map((r, i) => ({ ...r, uid: Date.now() + i }))], dnsDirty: true, zoneOpen: false, zoneText: '' })),
+      zoneReplace: () => this.setState(st => ({ dnsRecs: this.parseZone(st.zoneText, d.name).map((r, i) => ({ ...r, uid: Date.now() + i })), dnsDirty: true, zoneOpen: false, zoneText: '' })),
       openNsvDlg: () => this.setState({ nsvOpen: true, nsvText: (this.state.nsCustom || ['ns11.constellix.com', 'ns21.constellix.com', 'ns31.constellix.com']).join('\n') }),
       closeNsv: () => this.setState({ nsvOpen: false }),
       nsvOpen: s.nsvOpen,
