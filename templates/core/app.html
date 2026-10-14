@@ -2599,6 +2599,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
           </div>
           <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">{{ accMeta }}</div>
+          <sc-if value="{{ accFound }}" hint-placeholder-val="{{ true }}">
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
             <sc-for list="{{ accTabs }}" as="t" hint-placeholder-count="5">
               <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 var(--fs-14) var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
@@ -2855,6 +2856,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
               </sc-for>
             </div>
+          </sc-if>
           </sc-if>
         </div>
       </sc-if>

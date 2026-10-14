@@ -25,6 +25,9 @@ class Account {
             return;
         }
         $account = ( new Accounts )->get( $this->account_id );
+        if ( empty( $account ) ) {
+            return;
+        }
         $account->defaults = empty( $account->defaults ) ? (object) [] : json_decode( $account->defaults );
         $account->plan     = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $account->metrics  = empty( $account->metrics ) ? (object) [] : json_decode( $account->metrics );
@@ -125,10 +128,13 @@ class Account {
         if ( $this->account_id == "" ) {
             return [];
         }
+        $account = $this->account();
+        if ( empty( $account ) ) {
+            return [];
+        }
         $user    = new User;
         $level   = $user->account_level( $this->account_id );
         $perms   = User::tier_permissions( $level );
-        $account = $this->account();
         $record  = [
             "account"         => $account,
             "level"           => $level,
@@ -176,7 +182,11 @@ class Account {
 
     public function account() {
         $account               = Accounts::get( $this->account_id );
-        $defaults              = json_decode( $account->defaults );
+        if ( empty( $account ) ) {
+            return null;
+        }
+        $defaults              = empty( $account->defaults ) ? (object) [] : json_decode( $account->defaults );
+        $defaults              = is_object( $defaults ) ? $defaults : (object) [];
         $plan                  = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $plan->name            = empty( $plan->name ) ? "" : $plan->name;
         // Stored "required" addons are copies of the generated maintenance addon
@@ -206,7 +216,7 @@ class Account {
             ];
             array_unshift($plan->addons, $maintenance_sites_addons );
         }
-        if ( ! is_array( $defaults->users ) ) {
+        if ( ! isset( $defaults->users ) || ! is_array( $defaults->users ) ) {
             $defaults->users = [];
         }
         return [

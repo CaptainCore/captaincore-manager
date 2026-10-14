@@ -500,7 +500,7 @@ class Component extends DCLogic {
       accRenameKey: () => {}, accRenameCancel: () => {}, accRenameSave: () => {},
       accMeta: acc.plan + ' · ' + acc.users + ' users · ' + acc.sites + ' sites · ' + acc.domains + ' domain' + (acc.domains > 1 ? 's' : ''),
       accBack: () => this.setState({ route: 'accounts' }),
-      accTabs: tabs,
+      accTabs: tabs, accFound: true,
       accTabUsers: s.accTab === 'users', accTabSites: s.accTab === 'sites', accTabDomains: s.accTab === 'domains',
       accTabPlan: s.accTab === 'plan', accTabActivity: s.accTab === 'activity',
       accTabDefaults: s.accTab === 'defaults', accDefRows: [], openAccDefaults: () => {},

@@ -1923,7 +1923,7 @@ class User {
             $account_portals = ( new AccountPortals )->where( [ 'domain' => CAPTAINCORE_CUSTOM_DOMAIN ] );
             foreach( $account_portals as $account_portal ) {
                 $account = ( new Account( $account_portal->account_id, true ) )->fetch();
-                if ( $account["owner"] ) {
+                if ( ! empty( $account["owner"] ) ) {
                     $role = "owner";
                 }
 

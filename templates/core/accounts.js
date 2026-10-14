@@ -279,7 +279,15 @@ Object.assign(Component.prototype, {
     this.api('/accounts/' + id).then(res => {
       if (this._account !== acc) return;
       acc.loading = false;
-      if (!res || res.code) { acc.err = (res && res.message) || 'Could not load account.'; this.setState({}); return; }
+      // A WP_Error body carries data.status. 404 is a deleted account still
+      // linked from somewhere; a 5xx message is WordPress's critical-error
+      // HTML, which must not land in the header as text.
+      if (!res || res.code) {
+        const status = (res && res.data && res.data.status) || 0;
+        acc.err = status === 404 ? 'This account no longer exists.'
+          : (status < 500 && res && res.message) ? String(res.message).replace(/<[^>]*>/g, '') : 'Could not load account.';
+        this.setState({}); return;
+      }
       acc.data = res;
       this.setState({ accInvites: (res.invites || []).map(iv => ({
         uid: iv.invite_id, e: iv.email, token: iv.token,
@@ -393,9 +401,12 @@ Object.assign(Component.prototype, {
       accRenameKey: e => { if (e.key === 'Enter') { e.preventDefault(); doRename(); } },
       accRenameCancel: () => this.setState({ accRename: false }),
       accRenameSave: doRename,
-      accMeta: [plan.name, (metrics.users || 0) + ' users', (metrics.sites || 0) + ' sites',
-        (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
-        + (acc.err ? ' · ' + acc.err : ''),
+      // A failed load has no counts to show, and no tabs or Delete to offer.
+      accMeta: acc.err && !acc.data ? acc.err
+        : [plan.name, (metrics.users || 0) + ' users', (metrics.sites || 0) + ' sites',
+          (metrics.domains || 0) + ' domain' + (metrics.domains === 1 ? '' : 's')].filter(Boolean).join(' · ')
+          + (acc.err ? ' · ' + acc.err : ''),
+      accFound: !(acc.err && !acc.data),
       accTabs: tabs,
       accTabPlan: s.accTab === 'plan' && canPlan,
       accTabDefaults: s.accTab === 'defaults' && canDefaults,
@@ -435,7 +446,7 @@ Object.assign(Component.prototype, {
       accShowTrusted: false, accShowCancel: false,
       // v1 parity (deleteAccount): admin-only; the route also kicks off the
       // CLI's background "account delete" cleanup.
-      accShowDelete: (window.CC_BOOT || {}).dcRole === 'operator',
+      accShowDelete: (window.CC_BOOT || {}).dcRole === 'operator' && !!acc.data,
       accDelete: async () => {
         if (!(await this.uiConfirm('Delete account "' + (this.decodeHtml(a.name) || '') + '"? This cannot be undone.'))) return;
         this.api('/accounts/' + acc.accountId, { method: 'DELETE' }).then(() => {

@@ -2190,6 +2190,11 @@ function captaincore_accounts_get_func( WP_REST_Request $request ) {
 	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
+	// A deleted account can still be linked from a site's billing account or
+	// an old URL, and every step below assumes the row exists.
+	if ( empty( CaptainCore\Accounts::get( $account_id ) ) ) {
+		return new WP_Error( 'not_found', 'Account not found.', [ 'status' => 404 ] );
+	}
 	$account = new CaptainCore\Account( $account_id );
 	$account->calculate_usage();
 	$account->calculate_totals();
