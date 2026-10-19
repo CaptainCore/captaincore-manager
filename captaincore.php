@@ -1749,6 +1749,12 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Stored $stored spam signals for site $site_id environment $environment_id" ];
 	}
 
+	// The fleet spam list for Breakwater. The CLI fetches it once per sweep and pushes it to every
+	// site running Breakwater whose copy is older. Hashes only; see CaptainCore\SpamSignals::export().
+	if ( $command === 'spam-reputation' ) {
+		$response = CaptainCore\SpamSignals::export();
+	}
+
 	// Add capture
 	if ( $command === 'new-capture' ) {
 

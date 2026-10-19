@@ -17,7 +17,14 @@ class SpamSignals extends DB {
 
 	static $primary_key = 'spam_signal_id';
 
-	const KINDS    = [ 'ip', 'email', 'message' ];
+	/** mband: one of a message's eight MinHash bands, which also match reworded copies. */
+	const KINDS    = [ 'ip', 'email', 'message', 'mband' ];
+
+	/**
+	 * The fleet list sent to sites: how many distinct sites must have seen a hash before it is
+	 * listed. One or two sites is ordinary (people ask several businesses the same question).
+	 */
+	const LIST_MIN_SITES = [ 'ip' => 4, 'email' => 3, 'message' => 4, 'mband' => 4 ];
 	const VERDICTS = [ 'spam', 'ham' ];
 
 	/**
@@ -75,7 +82,7 @@ class SpamSignals extends DB {
 	public static function reputation( $kind, $min_sites = 3, $days = 90, $limit = 0 ) {
 		global $wpdb;
 		$table   = $wpdb->base_prefix . 'captaincore_spam_signals';
-		$verdict = 'message' === $kind ? '' : "AND verdict = 'spam'";
+		$verdict = in_array( $kind, [ 'message', 'mband' ], true ) ? '' : "AND verdict = 'spam'";
 		$sql     = $wpdb->prepare(
 			"SELECT hash, COUNT(DISTINCT site_id) AS sites, SUM(events) AS events, MAX(last_seen) AS last_seen
 			FROM $table WHERE kind = %s $verdict AND last_seen > %s
@@ -87,6 +94,26 @@ class SpamSignals extends DB {
 			$sql .= $wpdb->prepare( ' LIMIT %d', $limit );
 		}
 		return $wpdb->get_results( $sql );
+	}
+
+	/**
+	 * The list a site's Breakwater scores against: for each kind, the first 16 hex characters of
+	 * every listed hash and the number of sites it was seen on. Built at most hourly.
+	 */
+	public static function export() {
+		$cached = get_transient( 'captaincore_spam_reputation' );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		$list = [ 'generated' => gmdate( 'c' ) ];
+		foreach ( self::LIST_MIN_SITES as $kind => $min ) {
+			$list[ $kind ] = [];
+			foreach ( self::reputation( $kind, $min ) as $row ) {
+				$list[ $kind ][ substr( $row->hash, 0, 16 ) ] = (int) $row->sites;
+			}
+		}
+		set_transient( 'captaincore_spam_reputation', $list, HOUR_IN_SECONDS );
+		return $list;
 	}
 
 	/** Totals by kind and verdict, and how many sites are reporting. */
