@@ -226,6 +226,8 @@ return array(
     'CaptainCore\\SiteLabelCLI' => $baseDir . '/app/SiteLabelCLI.php',
     'CaptainCore\\Sites' => $baseDir . '/app/Sites.php',
     'CaptainCore\\Snapshots' => $baseDir . '/app/Snapshots.php',
+    'CaptainCore\\SpamSignals' => $baseDir . '/app/SpamSignals.php',
+    'CaptainCore\\SpamSignalsCLI' => $baseDir . '/app/SpamSignalsCLI.php',
     'CaptainCore\\TopPluginsCLI' => $baseDir . '/app/TopPluginsCLI.php',
     'CaptainCore\\TrustedLogins' => $baseDir . '/app/TrustedLogins.php',
     'CaptainCore\\UpdateQueueCLI' => $baseDir . '/app/UpdateQueueCLI.php',

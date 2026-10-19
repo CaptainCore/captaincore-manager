@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 60;
+    const REQUIRED_VERSION = 61;
 
     private static function _table() {
         global $wpdb;
@@ -1407,6 +1407,34 @@ class DB {
         KEY action (action),
         KEY outcome (outcome),
         KEY created_at (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Fleet spam reputation for Anchor Hosting Protect (app/SpamSignals.php). One row per
+        // environment per hashed signal: a spam sender's IP or email, or a message fingerprint
+        // with the verdict the site reached. Only hashes arrive; reputation is the number of
+        // distinct sites a hash appears on. events is approximate (daily windows overlap ~2h).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_spam_signals` (
+            spam_signal_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            kind varchar(10) NOT NULL,
+            hash char(64) NOT NULL,
+            verdict varchar(10) NOT NULL,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            source varchar(20) DEFAULT NULL,
+            labeller varchar(40) DEFAULT NULL,
+            events int(11) DEFAULT 0,
+            reports int(11) DEFAULT 0,
+            first_seen datetime DEFAULT NULL,
+            last_seen datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime DEFAULT NULL,
+        PRIMARY KEY  (spam_signal_id),
+        UNIQUE KEY signal_env (kind,hash,verdict,environment_id),
+        KEY hash (hash),
+        KEY site_id (site_id),
+        KEY last_seen (last_seen)
         ) $charset_collate;";
 
         dbDelta($sql);

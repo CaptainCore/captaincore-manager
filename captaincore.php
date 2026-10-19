@@ -178,6 +178,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore site-label', 'CaptainCore\SiteLabelCLI' );
 	WP_CLI::add_command( 'captaincore network', 'CaptainCore\NetworkCLI' );
 	WP_CLI::add_command( 'captaincore session-alerts', 'CaptainCore\SessionAlertsCLI' );
+	WP_CLI::add_command( 'captaincore spam-signals', 'CaptainCore\SpamSignalsCLI' );
 	WP_CLI::add_command( 'captaincore core-update-runs', 'CaptainCore\CoreUpdateRunsCLI' );
 	WP_CLI::add_command( 'captaincore orphan-rows', 'CaptainCore\OrphanRowsCLI' );
 	WP_CLI::add_command( 'captaincore malware-findings', 'CaptainCore\MalwareFindingsCLI' );
@@ -1729,6 +1730,23 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			"anomalies"     => $detection['count'],
 			"max_severity"  => $detection['max_severity'],
 		];
+	}
+
+	// Store a spam signal: hashed IPs and emails of spam senders, and message fingerprints with
+	// each verdict, reported by the CLI's fetch-site-data collector for Anchor Hosting Protect's
+	// fleet reputation. Only hashes arrive; see CaptainCore\SpamSignals.
+	if ( $command === 'spam-signal' and ! empty( $post->data ) ) {
+
+		$signal = is_string( $post->data ) ? json_decode( $post->data ) : $post->data;
+		if ( empty( $signal ) || ! is_object( $signal ) || ! isset( $signal->items ) || ! is_array( $signal->items ) ) {
+			return new WP_Error( 'spam_signal_invalid', 'Invalid spam-signal payload', [ 'status' => 400 ] );
+		}
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'spam_signal_environment', 'Unknown environment', [ 'status' => 400 ] );
+		}
+
+		$stored   = CaptainCore\SpamSignals::record( (int) $site_id, (int) $environment_id, $signal->items );
+		$response = [ "response" => "Stored $stored spam signals for site $site_id environment $environment_id" ];
 	}
 
 	// Add capture
