@@ -69,7 +69,8 @@ class SpamSignals extends DB {
 	/**
 	 * Hashes seen on at least $min_sites distinct sites since $days ago. IPs and emails count
 	 * spam verdicts only; a message counts whatever each site decided, since the same pitch
-	 * reaching many sites is the signal on its own.
+	 * reaching many sites is the signal on its own. A hash any site owner marked "Not spam"
+	 * (labeller feedback) is left out: one correction outweighs every automated verdict.
 	 */
 	public static function reputation( $kind, $min_sites = 3, $days = 90, $limit = 0 ) {
 		global $wpdb;
@@ -78,8 +79,9 @@ class SpamSignals extends DB {
 		$sql     = $wpdb->prepare(
 			"SELECT hash, COUNT(DISTINCT site_id) AS sites, SUM(events) AS events, MAX(last_seen) AS last_seen
 			FROM $table WHERE kind = %s $verdict AND last_seen > %s
+			AND hash NOT IN ( SELECT hash FROM $table WHERE kind = %s AND verdict = 'ham' AND labeller = 'feedback' )
 			GROUP BY hash HAVING sites >= %d ORDER BY sites DESC, last_seen DESC",
-			$kind, gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ), $min_sites
+			$kind, gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ), $kind, $min_sites
 		);
 		if ( $limit > 0 ) {
 			$sql .= $wpdb->prepare( ' LIMIT %d', $limit );
