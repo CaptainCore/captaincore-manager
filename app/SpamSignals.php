@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Fleet spam reputation for Anchor Hosting Protect. Each managed site reports, with its daily
+ * Fleet spam reputation for Breakwater. Each managed site reports, with its daily
  * sync, hashes of what it judged in the last 26 hours: the IP and email of spam senders, and a
  * fingerprint of every message with its verdict. A hash seen on several different sites is a
  * campaign; one or two sites is ordinary (people ask a few businesses the same question).

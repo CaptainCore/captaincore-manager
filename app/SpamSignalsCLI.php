@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SpamSignalsCLI {
 
 	/**
-	 * Fleet spam reputation collected from managed sites for Anchor Hosting Protect.
+	 * Fleet spam reputation collected from managed sites for Breakwater.
 	 *
 	 * Shows how many sites are reporting, the signals stored by kind and verdict, and the
 	 * hashes seen on the most sites. Hashes are shortened for display; nothing here is
