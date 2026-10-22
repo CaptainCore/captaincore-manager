@@ -1512,7 +1512,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 
-		// Merge incoming details with existing to preserve server-side flags (e.g., default_role_alerted, checksum_alerted)
+		// Merge incoming details with existing to preserve server-side keys (audit_summary, screenshot_base, network)
 		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
 		if ( isset( $post->data->details ) ) {
 			$incoming_details = json_decode( $post->data->details );
@@ -1555,7 +1555,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment_name    = strtolower( $current_environment->environment );
 
-		// Merge incoming details with existing to preserve server-side flags (e.g., default_role_alerted, checksum_alerted)
+		// Merge incoming details with existing to preserve server-side keys (audit_summary, screenshot_base, network)
 		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
 		if ( isset( $post->data->details ) ) {
 			$incoming_details = json_decode( $post->data->details );
@@ -1619,31 +1619,26 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		if ( $is_production && $checksum_status !== null ) {
 			$core_version = (string) ( $env_after->core ?? '' );
 			$checksum     = [];
-			if ( $checksum_status === 'fail' ) {
-				foreach ( (array) ( $env_details->core_checksum_details->modified ?? [] ) as $file ) {
-					$checksum[] = (object) [
-						'filename'              => (string) $file,
-						'signature_id'          => 'core-checksum-modified',
-						'signature_name'        => 'WordPress core file modified',
-						'signature_description' => "Does not match the wordpress.org checksum for WordPress {$core_version}.",
-						'severity'              => 'high',
-						'content_hash'          => hash( 'sha256', $file . '|' . $core_version ),
-					];
-				}
-				foreach ( (array) ( $env_details->core_checksum_details->extra ?? [] ) as $file ) {
-					$checksum[] = (object) [
-						'filename'              => (string) $file,
-						'signature_id'          => 'core-checksum-extra',
-						'signature_name'        => 'File in a core directory that WordPress does not ship',
-						'signature_description' => "Not part of WordPress {$core_version}.",
-						'severity'              => 'medium',
-						'content_hash'          => hash( 'sha256', $file . '|' . $core_version ),
-					];
-				}
+			$modified     = array_values( array_map( 'strval', (array) ( $env_details->core_checksum_details->modified ?? [] ) ) );
+			$extra        = array_values( array_map( 'strval', (array) ( $env_details->core_checksum_details->extra ?? [] ) ) );
+			if ( $checksum_status === 'fail' && ( $modified || $extra ) ) {
+				// One row per environment, the way the old email went out once per site. The hash
+				// covers the version and both file lists, so a benign verdict sticks until either changes.
+				sort( $modified );
+				sort( $extra );
+				$listing    = ( $modified ? 'Modified: ' . implode( ', ', $modified ) : '' ) . ( $modified && $extra ? "\n" : '' ) . ( $extra ? 'Not part of WordPress: ' . implode( ', ', $extra ) : '' );
+				$checksum[] = (object) [
+					'filename'              => 'wp-core',
+					'signature_id'          => 'core-checksum-failed',
+					'signature_name'        => 'WordPress core checksum failed',
+					'signature_description' => count( $modified ) . ' modified and ' . count( $extra ) . " unexpected file(s) against the wordpress.org checksums for WordPress {$core_version}.\n{$listing}",
+					'matched_text'          => $listing,
+					'severity'              => $modified ? 'high' : 'medium',
+					'content_hash'          => hash( 'sha256', $core_version . '|' . implode( ',', $modified ) . '|' . implode( ',', $extra ) ),
+				];
 			}
 			$synced = CaptainCore\MalwareFindings::sync_state( (int) $site_id, $signal_env_id, $signal_env, 'core-checksum', $checksum );
-			$opened = array_filter( $synced['new'], function ( $f ) { return $f->signature_id === 'core-checksum-modified'; } );
-			if ( $opened && $emails_on ) {
+			if ( $synced['new'] && $modified && $emails_on ) {
 				CaptainCore\Mailer::send_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->core_checksum_details );
 			}
 		}
