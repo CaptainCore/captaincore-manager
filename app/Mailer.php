@@ -1909,6 +1909,10 @@ class Mailer {
         };
 
         $failure = esc_html( $recovery->http_code ?: '000' );
+        if ( empty( $recovery->error ) && in_array( (string) $recovery->http_code, [ '200', '301' ], true ) ) {
+            // The monitor fails a 200 whose page never reaches its closing </html>.
+            $failure .= " &middot; <span style='font-weight: 400;'>page cut off before &lt;/html&gt;</span>";
+        }
         if ( ! empty( $recovery->error ) ) {
             $failure .= " &middot; <span style='font-weight: 400;'>" . esc_html( wp_trim_words( $recovery->error, 14 ) ) . "</span>";
         }
@@ -1923,7 +1927,10 @@ class Mailer {
             $workers     = esc_html( MonitorRecoveries::describe_workers( $recovery->busy_workers, $recovery->max_workers ) );
             $probe_rows  = $row( 'PHP workers', $recovery->saturated ? "<span style='color: #BF3B2E;'>{$workers}</span>" : $workers );
             $probe_rows .= $row( 'PHP-FPM processes', esc_html( $probe->fpm_processes ?? '?' ) );
-            $probe_rows .= $row( 'Longest running worker', esc_html( isset( $probe->fpm_oldest_seconds ) ? human_time_diff( 0, (int) $probe->fpm_oldest_seconds ) : '?' ) );
+            // human_time_diff() reads a $to of 0 as "now", so an idle pool (0
+            // seconds) printed the time since 1970. Measure back from now instead.
+            $oldest      = isset( $probe->fpm_oldest_seconds ) ? (int) $probe->fpm_oldest_seconds : null;
+            $probe_rows .= $row( 'Longest running worker', $oldest === null ? '?' : ( $oldest > 0 ? esc_html( human_time_diff( time() - $oldest, time() ) ) : 'None running' ) );
             $probe_rows .= $row( 'Load average', esc_html( ( $probe->load_1 ?? '?' ) . ' / ' . ( $probe->cpus ?? '?' ) . ' CPUs' ) );
             $probe_rows .= $row( 'PHP-FPM running since', esc_html( $probe->fpm_master_started ?? '?' ), true );
         } else {

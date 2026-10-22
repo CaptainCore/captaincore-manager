@@ -1295,7 +1295,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		} elseif ( $current_site->provider !== 'kinsta' ) {
 			$reason = 'Automatic PHP restart is only available on Kinsta (provider: ' . ( $current_site->provider ?: 'none' ) . ').';
 		} elseif ( ! $restartable_failure ) {
-			$reason = 'The failure (' . ( $code ?: '000' ) . ') is not one a PHP restart fixes.';
+			$reason = in_array( $code, [ '200', '301' ], true )
+				? 'The site answered ' . $code . ' but the page was cut off before </html>, which a PHP restart does not fix.'
+				: 'The failure (' . ( $code ?: '000' ) . ') is not one a PHP restart fixes.';
 		} elseif ( $ssh_ok && ! $saturated ) {
 			$reason = $max !== null && $busy !== null
 				? 'The PHP pool was not saturated (' . CaptainCore\MonitorRecoveries::describe_workers( $busy, $max ) . ').'
