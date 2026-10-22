@@ -8521,6 +8521,16 @@ function captaincore_cli_connect_func( WP_REST_Request $request ) {
  *
  * @return bool True if the user is logged in and is an admin, false otherwise.
  */
+/**
+ * Who wrote to a security signal: the agent named in the request (agent=grok-bot,
+ * agent=claude) or the default role, plus the authenticated user's login.
+ */
+function captaincore_signal_author( WP_REST_Request $request, $default = 'user' ) {
+	$agent = sanitize_key( (string) $request->get_param( 'agent' ) );
+	$user  = wp_get_current_user();
+	return substr( ( $agent !== '' ? $agent : $default ) . ':' . ( $user->user_login ?? '' ), 0, 60 );
+}
+
 function captaincore_admin_permission_check() {
     if ( ! is_user_logged_in() ) {
         return false;
@@ -8617,7 +8627,6 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/malware-findings/verdicts', [
 		'methods'             => 'POST',
 		'callback'            => function ( WP_REST_Request $request ) {
-			$user  = wp_get_current_user();
 			$items = $request->get_param( 'verdicts' );
 			if ( ! is_array( $items ) || ! $items ) {
 				return new WP_Error( 'bad_request', 'verdicts must be a non-empty list of {id, verdict, reason}.', [ 'status' => 400 ] );
@@ -8625,7 +8634,7 @@ function captaincore_register_rest_endpoints() {
 			if ( count( $items ) > 500 ) {
 				return new WP_Error( 'bad_request', 'At most 500 verdicts per request.', [ 'status' => 400 ] );
 			}
-			return CaptainCore\MalwareFindings::review( $items, 'review:' . ( $user->user_login ?? '' ), ! empty( $request->get_param( 'digest' ) ) );
+			return CaptainCore\MalwareFindings::review( $items, captaincore_signal_author( $request, 'review' ), ! empty( $request->get_param( 'digest' ) ) );
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );
@@ -8636,7 +8645,6 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/malware-findings/resolve', [
 		'methods'             => 'POST',
 		'callback'            => function ( WP_REST_Request $request ) {
-			$user       = wp_get_current_user();
 			$ids        = $request->get_param( 'ids' );
 			$resolution = trim( (string) $request->get_param( 'resolution' ) );
 			if ( ! is_array( $ids ) || ! $ids || count( $ids ) > 500 ) {
@@ -8645,7 +8653,7 @@ function captaincore_register_rest_endpoints() {
 			if ( strlen( $resolution ) < 25 ) {
 				return new WP_Error( 'bad_request', 'resolution must say what was cleaned up (at least 25 characters).', [ 'status' => 400 ] );
 			}
-			return CaptainCore\MalwareFindings::resolve_findings( $ids, $resolution, 'review:' . ( $user->user_login ?? '' ) );
+			return CaptainCore\MalwareFindings::resolve_findings( $ids, $resolution, captaincore_signal_author( $request, 'review' ) );
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );
@@ -8654,8 +8662,108 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/malware-findings/(?P<id>[\d]+)/verdict', [
 		'methods'             => 'POST',
 		'callback'            => function ( WP_REST_Request $request ) {
-			$user = wp_get_current_user();
-			return CaptainCore\MalwareFindings::set_verdict( (int) $request['id'], $request->get_param( 'verdict' ), $request->get_param( 'reason' ), 'review:' . ( $user->user_login ?? '' ) );
+			return CaptainCore\MalwareFindings::set_verdict( (int) $request['id'], $request->get_param( 'verdict' ), $request->get_param( 'reason' ), captaincore_signal_author( $request, 'review' ) );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+
+	// Security signals for agents and the Signals screen. The attention list is what
+	// needs someone now; acknowledging takes a finding off it until its verdict changes
+	// or it reopens. Every write leaves a note on the finding's follow-up trail.
+	register_rest_route( 'captaincore/v1', '/malware-findings/attention', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$limit = min( 500, max( 1, (int) ( $request->get_param( 'limit' ) ?: 200 ) ) );
+			$rows  = CaptainCore\MalwareFindings::attention( $limit, ! empty( $request->get_param( 'include_acknowledged' ) ) );
+			$notes = [];
+			foreach ( CaptainCore\MalwareFindingNotes::for_findings( array_map( function ( $r ) { return $r->malware_finding_id; }, $rows ) ) as $n ) {
+				$notes[ $n->malware_finding_id ][] = $n;
+			}
+			foreach ( $rows as $r ) {
+				$r->notes = $notes[ $r->malware_finding_id ] ?? [];
+			}
+			return [ 'count' => count( $rows ), 'items' => $rows ];
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/acknowledge', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$ids  = $request->get_param( 'ids' );
+			$note = trim( (string) $request->get_param( 'note' ) );
+			if ( ! is_array( $ids ) || ! $ids || count( $ids ) > 500 ) {
+				return new WP_Error( 'bad_request', 'ids must be a list of 1 to 500 finding ids.', [ 'status' => 400 ] );
+			}
+			if ( strlen( $note ) < 10 ) {
+				return new WP_Error( 'bad_request', 'note must say what was done or reported (at least 10 characters).', [ 'status' => 400 ] );
+			}
+			return CaptainCore\MalwareFindings::acknowledge( $ids, $note, captaincore_signal_author( $request, 'user' ) );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/search', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$result                    = CaptainCore\MalwareFindings::search( [
+				'view'     => (string) ( $request->get_param( 'view' ) ?: 'attention' ),
+				'verdict'  => (string) $request->get_param( 'verdict' ),
+				'source'   => (string) $request->get_param( 'source' ),
+				'site_id'  => (int) $request->get_param( 'site_id' ),
+				'search'   => (string) $request->get_param( 'search' ),
+				'page'     => (int) $request->get_param( 'page' ),
+				'per_page' => (int) $request->get_param( 'per_page' ),
+			] );
+			$result['emails_enabled'] = CaptainCore\MalwareFindings::security_emails_enabled();
+			return $result;
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/(?P<id>[\d]+)', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$rows = CaptainCore\MalwareFindings::rows( [ (int) $request['id'] ] );
+			if ( ! $rows ) {
+				return new WP_Error( 'not_found', 'No such finding.', [ 'status' => 404 ] );
+			}
+			$row           = $rows[0];
+			$row->home_url = CaptainCore\MalwareFindings::home_url( (int) $row->site_id, $row->environment );
+			$row->notes    = CaptainCore\MalwareFindingNotes::for_findings( [ (int) $row->malware_finding_id ] );
+			return $row;
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/(?P<id>[\d]+)/notes', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$body = trim( (string) $request->get_param( 'body' ) );
+			if ( $body === '' ) {
+				return new WP_Error( 'bad_request', 'body is required.', [ 'status' => 400 ] );
+			}
+			if ( ! CaptainCore\MalwareFindings::rows( [ (int) $request['id'] ] ) ) {
+				return new WP_Error( 'not_found', 'No such finding.', [ 'status' => 404 ] );
+			}
+			CaptainCore\MalwareFindingNotes::add( (int) $request['id'], 'note', $body, captaincore_signal_author( $request, 'user' ) );
+			return CaptainCore\MalwareFindingNotes::for_findings( [ (int) $request['id'] ] );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/malware-findings/settings', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			update_site_option( 'captaincore_security_alert_emails', rest_sanitize_boolean( $request->get_param( 'emails_enabled' ) ) ? 1 : 0 );
+			return [ 'emails_enabled' => CaptainCore\MalwareFindings::security_emails_enabled() ];
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );
