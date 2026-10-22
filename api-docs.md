@@ -3484,7 +3484,7 @@ curl -u user:pass https://{your-site}/wp-json/captaincore/v1/subscriptions
 GET /upcoming_subscriptions
 ```
 
-The current calendar month and the 11 after it, for the accounts you bill (every account for an administrator). Each renewal is priced like the invoice the renewal cron will cut: plan (or per-site count), managed WordPress sites, addons and usage overages, plus charges and credits on the first renewal only. Later renewals assume today's usage. An account without a billing user is listed in `skipped` and left out of the totals.
+The next 12 calendar months, for the accounts you bill (every account for an administrator). Each renewal is priced like the invoice the renewal cron will cut: plan (or per-site count), managed WordPress sites, addons and usage overages, plus charges and credits on the first renewal only. Later renewals assume today's usage. The window starts with next month from the 2nd of a month on (with this month only on the 1st, the day renewals run); anything due before it opens counts in the first month under its real date. An account without a billing user is listed in `skipped` and left out of the totals.
 
 ```bash
 curl -u user:pass https://{your-site}/wp-json/captaincore/v1/upcoming_subscriptions

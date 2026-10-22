@@ -32,12 +32,17 @@ class RenewalForecast {
 
 	/**
 	 * @param array $accounts Rows from Accounts::with_renewals() or Accounts::renewals().
-	 * @param int   $months   Calendar months to cover, starting with the current one.
+	 * @param int   $months   Calendar months to cover. The window starts with the
+	 *                        current month only on the 1st, the day renewals run;
+	 *                        from the 2nd on it starts with next month.
 	 */
 	public static function build( $accounts, $months = 12 ) {
 		$months      = max( 1, min( 36, (int) $months ) );
 		$now         = time();
 		$start       = strtotime( gmdate( 'Y-m-01 00:00:00', $now ) );
+		if ( gmdate( 'j', $now ) !== '1' ) {
+			$start = strtotime( '+1 month', $start );
+		}
 		$end         = strtotime( "+{$months} month", $start );
 		$sites       = self::sites_by_account( array_column( (array) $accounts, 'account_id' ) );
 		$pricing     = Configurations::get()->usage_pricing ?? (object) [];
@@ -93,22 +98,22 @@ class RenewalForecast {
 				$amount -= $carry;
 				$carry   = $amount < 0 ? abs( $amount ) : 0;
 				$amount  = round( max( 0, $amount ), 2 );
-				if ( $when >= $start ) {
-					$key = gmdate( 'M Y', $when );
-					if ( isset( $buckets[ $key ] ) ) {
-						$buckets[ $key ]['revenue'] += $amount;
-						$buckets[ $key ]['transactions']++;
-						$buckets[ $key ]['renewals'][] = [
-							'account_id' => $account_id,
-							'name'       => $row->name,
-							'interval'   => (string) $interval,
-							'date'       => gmdate( 'Y-m-d', $when ),
-							'total'      => $amount,
-							'one_time'   => $first && abs( $estimate['one_time'] ) > 0,
-							'auto_pay'   => $auto_pay,
-							'overdue'    => $overdue,
-						];
-					}
+				// Anything due before the window opens (overdue, or later this
+				// month) still bills, so it counts in the first month.
+				$key = gmdate( 'M Y', max( $when, $start ) );
+				if ( isset( $buckets[ $key ] ) ) {
+					$buckets[ $key ]['revenue'] += $amount;
+					$buckets[ $key ]['transactions']++;
+					$buckets[ $key ]['renewals'][] = [
+						'account_id' => $account_id,
+						'name'       => $row->name,
+						'interval'   => (string) $interval,
+						'date'       => gmdate( 'Y-m-d', $when ),
+						'total'      => $amount,
+						'one_time'   => $first && abs( $estimate['one_time'] ) > 0,
+						'auto_pay'   => $auto_pay,
+						'overdue'    => $overdue,
+					];
 				}
 				$first = false;
 				$ts    = strtotime( "+{$interval} month", $ts );

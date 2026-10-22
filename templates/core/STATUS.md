@@ -35,8 +35,10 @@ per-site count (Freighter tenants excluded), the $2 managed WordPress sites,
 addons, usage overages, then charges and credits on the first renewal only
 (`process_renewals()` clears them), with a negative first invoice carried as a
 credit. The old builder priced only plan + addons. It also walks every
-interval the way the cron advances `next_renewal` instead of only 1/3/6/12, and
-starts with the current month. The response keeps `revenue` / `transactions` /
+interval the way the cron advances `next_renewal` instead of only 1/3/6/12. The
+window is the next 12 months: from the 2nd of a month on it starts with next
+month (this month's renewals ran on the 1st), and anything due before it opens
+(overdue, or later this month) counts in the first month under its real date. The response keeps `revenue` / `transactions` /
 `renewals` for the legacy chart and adds `months`, `subscriptions` (with
 `lines`), `skipped` and `total`. One site query instead of a full account load
 per account: 832 accounts price in 0.24s locally, where `/subscriptions` takes
