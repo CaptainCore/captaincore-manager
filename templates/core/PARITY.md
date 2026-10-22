@@ -103,8 +103,8 @@ network tab. Every row above should get one real execution in Phase 3d.
 
 ## GAP-POST-1.0 — real, but `?ui=legacy` covers it
 
-**Operator analytics / queues:** `/subscriptions`, `/subscriptions/{id}`,
-`/upcoming_subscriptions` (revenue, renewals — STATUS.md:414) · `dialog_month_renewals` ·
+**Operator analytics / queues:** ~~`/subscriptions`, `/upcoming_subscriptions`, `dialog_month_renewals`~~
+**CLOSED 2026-10-22** — Billing → Renewals (see STATUS.md). Still legacy: `/subscriptions/{id}` ·
 `/billing/ach/pending` + `/billing/ach/admin-verify` (admin micro-deposit verification) ·
 `/component-queue` (unaudited-hash queue) · `/web-risk-logs` · `/security-patches` (patches
 table) · `/running` + `/listen-processes` (fleet process monitor, STATUS.md:786-790) ·

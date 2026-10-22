@@ -67,7 +67,7 @@ class Component extends DCLogic {
     fwds: null, fwdAlias: '', fwdDest: '', reg: { auto: true, lock: true, priv: true },
     ddOpen: '', ddQ: '', ddCat: '',
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
-    invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
+    invEmail: '', invLevel: 'Full access', billTab: 'invoices', renMonth: '', renSearch: '', renOpen: 0, renHoverIdx: -1, paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
     secTab: 'vulns', sigView: 'attention', sigSource: '', sigSearch: '', sigPage: 1, sigOpen: 0, sigDraft: '', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
     audits: null, audSite: '', audTypes: { Core: true, Plugins: true }, 
@@ -559,7 +559,9 @@ class Component extends DCLogic {
   }
 
   computeBilling(s) {
-    const tabs = [['invoices', 'Invoices'], ['methods', 'Payment methods'], ['address', 'Billing address']].map(([id, label]) => ({ label,
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
+    const tabs = [['invoices', 'Invoices'], ['methods', 'Payment methods'], ['address', 'Billing address'],
+      ...(isOp ? [['renewals', 'Renewals']] : [])].map(([id, label]) => ({ label,
       fg: s.billTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.billTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ billTab: id }) }));
@@ -602,7 +604,12 @@ class Component extends DCLogic {
       addrL1: 'Sarah Whitfield · Bloom & Branch LLC', addrL2: '412 Larkspur Lane',
       addrL3: 'Lancaster, PA 17601 · United States', addrL4: 'sarah@bloomandbranch.com',
       billAddrOpen: false, openBillAddr: () => {}, closeBillAddr: () => {}, billAddrFields: [], saveBillAddr: () => {},
-      ...(this._hydrated ? this.realBillingVals(s) : {})
+      billTabRen: isOp && s.billTab === 'renewals', renLoading: true, renErr: false, renErrText: '', renReady: false, renTiles: [], renSkipShow: false, renSkipText: '',
+      renBars: [], renLeave: () => {}, renTipShow: false, renTipLeft: 0, renTipTop: 0, renTipMonth: '', renTipValue: '',
+      renMonthTitle: '', renMonthSub: '', renMonthRows: [], renMonthEmpty: false, renSearch: '', onRenSearch: () => {},
+      renSubCount: '', renSubRows: [], renRefresh: () => {},
+      ...(this._hydrated ? this.realBillingVals(s) : {}),
+      ...(this._hydrated && isOp ? this.realRenewalVals(s) : {})
     };
   }
 
@@ -3211,6 +3218,7 @@ class Component extends DCLogic {
         { label: 'Go to Security → Coverage', sub: 'Fleet audit coverage', kind: 'command', icon: this.ICONS.security, act: 'security' },
         { label: 'Go to Security → Core', sub: 'Core probe results', kind: 'command', icon: this.ICONS.security, act: 'security-core' },
         { label: 'Go to Security → Signals', sub: 'Security signals needing attention', kind: 'command', icon: this.ICONS.security, act: 'security-signals' },
+        { label: 'Go to Billing → Renewals', sub: 'Upcoming renewals and the 12-month forecast', kind: 'command', icon: this.ICONS.billing, act: 'billing-renewals' },
         { label: 'Bulk tools on filtered sites…', sub: 'sync · deploy defaults · https · backup', kind: 'command', icon: this.ICONS.sites, act: 'sites' }
       ] : [])
     ];
@@ -3239,6 +3247,7 @@ class Component extends DCLogic {
     else if (r.act === 'account') this.openAccount(r.aid);
     else if (r.act === 'security-core') this.setState({ route: 'security', secTab: 'core', paletteOpen: false });
     else if (r.act === 'security-signals') this.setState({ route: 'security', secTab: 'signals', paletteOpen: false });
+    else if (r.act === 'billing-renewals') this.setState({ route: 'billing', billTab: 'renewals', paletteOpen: false });
     else this.setState({ route: r.act, paletteOpen: false });
   }
 

@@ -564,6 +564,124 @@ Object.assign(Component.prototype, {
           .then(() => { this.setState({ billAddrOpen: false }); this.loadBilling(true); }).catch(() => {});
       }
     };
-  }
+  },
+
+  // ── Renewals (administrators) ────────────────────────────────
+  // v1's Billing → Subscriptions (Listing + By the Month), as one tab.
+  // GET /upcoming_subscriptions → { months:[{key,month,revenue,transactions}],
+  //   renewals:{key:[{account_id,name,interval,date,total,one_time,auto_pay,overdue}]},
+  //   subscriptions:[{account_id,name,plan,billing_mode,interval,next_renewal,
+  //   auto_pay,billable,total,recurring,one_time,lines[]}], skipped[], total }.
+  // Priced server-side by RenewalForecast, which follows the invoice code:
+  // charges and credits ride only the first renewal, later ones assume
+  // today's usage holds.
+  REN_INTERVAL: { 1: 'Monthly', 3: 'Quarterly', 6: 'Every 6 months', 12: 'Yearly' },
+
+  loadRenewals(force) {
+    if (this._renLoading || (this._ren && !force)) return;
+    this._renLoading = true;
+    this.api('/upcoming_subscriptions').then(res => {
+      this._renLoading = false;
+      this._ren = (res && Array.isArray(res.months)) ? res : { error: (res && res.message) || 'Could not load renewals.' };
+      this.setState({});
+    }).catch(() => { this._renLoading = false; this._ren = { error: 'Could not load renewals.' }; this.setState({}); });
+  },
+
+  realRenewalVals(s) {
+    if (s.billTab !== 'renewals') return { billTabRen: false };
+    if (!this._ren) setTimeout(() => this.loadRenewals(), 0);
+    const r = this._ren;
+    const ready = !!(r && !r.error);
+    const money = n => '$' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const short = n => { n = Number(n) || 0; return n >= 10000 ? '$' + Math.round(n / 1000) + 'k' : n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : '$' + Math.round(n); };
+    const months = ready ? r.months : [];
+    const selKey = (s.renMonth && months.some(m => m.key === s.renMonth)) ? s.renMonth : (months[0] && months[0].key);
+    const max = months.reduce((m, x) => Math.max(m, x.revenue), 0);
+    const renBars = months.map((m, idx) => {
+      const sel = m.key === selKey;
+      return {
+        h: m.revenue && max ? Math.max(3, Math.round(100 * m.revenue / max)) : 1,
+        label: m.key.slice(0, 3), year: idx === 0 || m.key.slice(0, 3) === 'Jan' ? m.key.slice(4) : '',
+        value: sel ? short(m.revenue) : '',
+        bg: !m.revenue ? 'var(--panel-2)' : sel ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)',
+        lfg: sel ? 'var(--ink)' : 'var(--ink-dim)',
+        go: () => this.setState({ renMonth: m.key }),
+        enter: (e) => this.setState(this.barAnchor(e, 'renHover', idx))
+      };
+    });
+    const hi = s.renHoverIdx;
+    const hovered = (hi != null && hi >= 0 && hi < months.length) ? months[hi] : null;
+
+    // Tiles: what lands in the next 30 days, the rest of this month, and the window.
+    const now = Date.now(), in30 = now + 30 * 864e5;
+    let next30 = 0, next30n = 0;
+    months.forEach(m => ((r.renewals || {})[m.key] || []).forEach(x => {
+      const t = Date.parse(x.date + 'T12:00:00Z');
+      if (t <= in30) { next30 += Number(x.total) || 0; next30n++; }
+    }));
+    const subs = ready ? r.subscriptions : [];
+    const manual = subs.filter(x => x.billable && !x.auto_pay).length;
+    const tagsFor = x => [
+      x.overdue ? { t: 'Overdue', bg: 'var(--bad-soft)', fg: 'var(--bad)' } : null,
+      x.one_time ? { t: 'Charges / credits', bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' } : null,
+      x.auto_pay === false ? { t: 'Manual pay', bg: 'var(--warn-soft)', fg: 'var(--ink)' } : null
+    ].filter(Boolean);
+    const intervalLabel = i => this.REN_INTERVAL[i] || ('Every ' + i + ' months');
+    const fmtDate = d => { const t = new Date(String(d).slice(0, 10) + 'T12:00:00Z');
+      return isNaN(t) ? String(d) : t.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); };
+
+    const selMonth = months.find(m => m.key === selKey);
+    const renMonthRows = ((ready && selKey && r.renewals[selKey]) || []).map(x => ({
+      date: fmtDate(x.date), name: this.decodeHtml(x.name), interval: intervalLabel(x.interval), amount: money(x.total),
+      tags: tagsFor(x), open: () => this.openAccount(String(x.account_id))
+    }));
+
+    const q = (s.renSearch || '').trim().toLowerCase();
+    const list = subs.filter(x => !q || this.decodeHtml(x.name).toLowerCase().includes(q) || this.decodeHtml(x.plan).toLowerCase().includes(q));
+    const renSubRows = list.map(x => {
+      const open = s.renOpen === x.account_id;
+      return {
+        name: this.decodeHtml(x.name), plan: [this.decodeHtml(x.plan), x.billing_mode === 'per_site' ? 'per site' : ''].filter(Boolean).join(' · ') || '—',
+        interval: intervalLabel(x.interval), next: fmtDate(x.next_renewal), amount: money(x.total),
+        recurring: Math.abs(x.one_time) > 0 ? 'then ' + money(x.recurring) : '',
+        tags: [ ...tagsFor({ one_time: Math.abs(x.one_time) > 0, auto_pay: x.billable ? x.auto_pay : null }),
+          ...(!x.billable ? [{ t: 'No billing user', bg: 'var(--bad-soft)', fg: 'var(--bad)' }] : []) ],
+        open, chev: open ? '▾' : '▸',
+        toggle: () => this.setState({ renOpen: open ? 0 : x.account_id }),
+        openAccount: () => this.openAccount(String(x.account_id)),
+        lines: (x.lines || []).map(l => ({ type: l.type + (l.one_time ? ' · once' : ''), name: this.decodeHtml(l.name), qty: String(l.quantity),
+          price: money(l.price), total: money(l.total), fg: l.total < 0 ? 'var(--ok)' : 'var(--ink)' }))
+      };
+    });
+
+    const skipped = ready ? (r.skipped || []) : [];
+    return {
+      billTabRen: true,
+      renLoading: !r || !!this._renLoading,
+      renErr: !!(r && r.error), renErrText: (r && r.error) || '',
+      renReady: ready,
+      renTiles: [
+        { k: 'Next 30 days', v: money(next30), sub: next30n + ' renewal' + (next30n === 1 ? '' : 's') },
+        { k: 'Next 12 months', v: money(ready ? r.total : 0), sub: months.reduce((n, m) => n + m.transactions, 0).toLocaleString() + ' renewals' },
+        { k: 'Subscriptions', v: subs.length.toLocaleString(), sub: manual + ' on manual pay' }
+      ],
+      renSkipShow: skipped.length > 0,
+      renSkipText: skipped.length + ' account' + (skipped.length === 1 ? ' has' : 's have') + ' no billing user, so ' + (skipped.length === 1 ? 'its renewal' : 'their renewals') +
+        ' will not invoice and ' + (skipped.length === 1 ? 'is' : 'are') + ' left out of these totals: ' + skipped.slice(0, 6).map(x => this.decodeHtml(x.name)).join(', ') + (skipped.length > 6 ? ', …' : '') + '.',
+      renBars,
+      renLeave: () => this.setState({ renHoverIdx: -1 }),
+      renTipShow: !!hovered, renTipLeft: hovered ? (s.renHoverX || 0) : 0, renTipTop: hovered ? (s.renHoverY || 0) : 0,
+      renTipMonth: hovered ? hovered.key : '',
+      renTipValue: hovered ? money(hovered.revenue) + ' · ' + hovered.transactions + ' renewal' + (hovered.transactions === 1 ? '' : 's') : '',
+      renMonthTitle: selMonth ? selMonth.key : '',
+      renMonthSub: selMonth ? selMonth.transactions + ' renewal' + (selMonth.transactions === 1 ? '' : 's') + ' · ' + money(selMonth.revenue) : '',
+      renMonthRows, renMonthEmpty: ready && !renMonthRows.length,
+      renSearch: s.renSearch || '',
+      onRenSearch: e => this.setState({ renSearch: e.target.value }),
+      renSubCount: list.length === subs.length ? subs.length.toLocaleString() + ' subscriptions' : list.length + ' of ' + subs.length + ' subscriptions',
+      renSubRows,
+      renRefresh: () => this.loadRenewals(true)
+    };
+  },
 
 });

@@ -15,6 +15,33 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Billing → Renewals (2026-10-22)
+
+v1's admin Billing → Subscriptions (Listing + By the Month) is now one
+**Renewals** tab on Billing, administrators only (`/account/billing/renewals`,
+⌘K "Go to Billing → Renewals"; billing.js `realRenewalVals`). Tiles give the
+next 30 days, the next 12 months and the subscription count with how many pay
+manually. A bar per month (current month first, hover for the amount and
+count, click to select) drives the list of that month's renewals below it,
+each tagged Overdue, Charges / credits or Manual pay and linked to its
+account. The full subscription list underneath searches by account or plan,
+and a row expands to its invoice lines. Accounts with no billing user are
+named in a warning and left out of the totals, because their renewal makes no
+invoice.
+
+It reads `GET /upcoming_subscriptions`, now built by `RenewalForecast`. That
+class prices each renewal the way `Account::generate_order()` does: plan or
+per-site count (Freighter tenants excluded), the $2 managed WordPress sites,
+addons, usage overages, then charges and credits on the first renewal only
+(`process_renewals()` clears them), with a negative first invoice carried as a
+credit. The old builder priced only plan + addons. It also walks every
+interval the way the cron advances `next_renewal` instead of only 1/3/6/12, and
+starts with the current month. The response keeps `revenue` / `transactions` /
+`renewals` for the legacy chart and adds `months`, `subscriptions` (with
+`lines`), `skipped` and `total`. One site query instead of a full account load
+per account: 832 accounts price in 0.24s locally, where `/subscriptions` takes
+10s, and every account's total matches `/subscriptions` to the cent.
+
 ## Security → Signals (2026-10-22)
 
 The Security Alert emails (malware, injection, core checksum, role settings,

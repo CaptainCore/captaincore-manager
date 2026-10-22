@@ -2944,6 +2944,122 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
             </div>
           </sc-if>
+
+          <sc-if value="{{ billTabRen }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ renLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Pricing every renewal…</div>
+            </sc-if>
+            <sc-if value="{{ renErr }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:30px;text-align:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ renErrText }}</div>
+            </sc-if>
+            <sc-if value="{{ renReady }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;align-items:stretch;margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <sc-for list="{{ renTiles }}" as="t" hint-placeholder-count="3">
+                  <div style="flex:1 1 160px;padding:13px 16px;border-right:1px solid var(--rule)">
+                    <div style="font:500 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div>
+                    <div style="font:600 20px var(--sans);margin-top:2px">{{ t.v }}</div>
+                    <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);margin-top:1px">{{ t.sub }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ renSkipShow }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:12px;border:1px solid var(--rule);border-radius:10px;background:var(--warn-soft);padding:10px 14px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ renSkipText }}</div>
+              </sc-if>
+
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:16px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Renewals by month</h2>
+                  <span style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Charges and credits on the first renewal only · later renewals assume today's usage</span>
+                </div>
+                <div onMouseLeave="{{ renLeave }}" style="position:relative;display:flex;align-items:flex-end;gap:2px;height:170px;margin-top:22px">
+                  <sc-for list="{{ renBars }}" as="b" hint-placeholder-count="12">
+                    <div onClick="{{ b.go }}" onMouseEnter="{{ b.enter }}" style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer">
+                      <span style="font:600 var(--fs-115) var(--mono);color:var(--ink);margin-bottom:4px;min-height:1em">{{ b.value }}</span>
+                      <div style="width:100%;max-width:56px;height:{{ b.h }}%;background:{{ b.bg }};border-radius:4px 4px 0 0;transition:filter .1s" style-hover="filter:brightness(.9)"></div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ renTipShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:{{ renTipTop }}px;left:{{ renTipLeft }}px;transform:translate(-50%,-100%);background:var(--ink);color:var(--paper);border-radius:8px;padding:7px 11px;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap;z-index:5">
+                      <div style="font:600 var(--fs-12) var(--sans)">{{ renTipMonth }}</div>
+                      <div style="font:400 var(--fs-115) var(--mono);opacity:.85;margin-top:2px">{{ renTipValue }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;gap:2px;border-top:1px solid var(--rule);padding-top:6px">
+                  <sc-for list="{{ renBars }}" as="b" hint-placeholder-count="12">
+                    <div onClick="{{ b.go }}" style="flex:1;text-align:center;cursor:pointer;font:500 var(--fs-115) var(--sans);color:{{ b.lfg }}">{{ b.label }}<div style="font:400 10px var(--mono);color:var(--ink-dim);min-height:1.2em">{{ b.year }}</div></div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:baseline;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ renMonthTitle }}</h2>
+                  <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ renMonthSub }}</span>
+                </div>
+                <sc-if value="{{ renMonthEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">No renewals this month.</div>
+                </sc-if>
+                <div style="max-height:420px;overflow:auto">
+                  <sc-for list="{{ renMonthRows }}" as="m" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                      <span style="flex:none;width:96px;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ m.date }}</span>
+                      <span onClick="{{ m.open }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="text-decoration:underline">{{ m.name }}</span>
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ m.interval }}</span>
+                      <sc-for list="{{ m.tags }}" as="t" hint-placeholder-count="0">
+                        <span style="font:500 var(--fs-115) var(--sans);background:{{ t.bg }};color:{{ t.fg }};border-radius:99px;padding:2px 9px">{{ t.t }}</span>
+                      </sc-for>
+                      <div style="flex:1"></div>
+                      <span style="font:600 var(--fs-13) var(--mono)">{{ m.amount }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ renSubCount }}</h2>
+                  <div style="flex:1"></div>
+                  <input value="{{ renSearch }}" onInput="{{ onRenSearch }}" placeholder="Search accounts or plans" style="width:240px;max-width:100%;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none;box-sizing:border-box">
+                  <span onClick="{{ renRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Refresh</span>
+                </div>
+                <sc-for list="{{ renSubRows }}" as="x" hint-placeholder-count="5">
+                  <div style="border-bottom:1px solid var(--rule)">
+                    <div onClick="{{ x.toggle }}" style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;flex-wrap:wrap" style-hover="background:var(--panel)">
+                      <span style="flex:none;width:10px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ x.chev }}</span>
+                      <span style="font:500 var(--fs-13) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.name }}</span>
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ x.plan }}</span>
+                      <sc-for list="{{ x.tags }}" as="t" hint-placeholder-count="0">
+                        <span style="font:500 var(--fs-115) var(--sans);background:{{ t.bg }};color:{{ t.fg }};border-radius:99px;padding:2px 9px">{{ t.t }}</span>
+                      </sc-for>
+                      <div style="flex:1"></div>
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ x.interval }}</span>
+                      <span style="width:100px;font:400 var(--fs-12) var(--mono);color:var(--ink-dim);text-align:right">{{ x.next }}</span>
+                      <span style="width:96px;font:600 var(--fs-13) var(--mono);text-align:right">{{ x.amount }}</span>
+                    </div>
+                    <sc-if value="{{ x.open }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding:4px 16px 12px 38px">
+                        <sc-for list="{{ x.lines }}" as="l" hint-placeholder-count="2">
+                          <div style="display:flex;gap:10px;padding:4px 0;font:400 var(--fs-125) var(--sans);border-bottom:1px dashed var(--rule)">
+                            <span style="width:96px;flex:none;color:var(--ink-dim)">{{ l.type }}</span>
+                            <span style="flex:1;min-width:0">{{ l.name }}</span>
+                            <span style="width:40px;text-align:right;font-family:var(--mono);color:var(--ink-dim)">{{ l.qty }}</span>
+                            <span style="width:84px;text-align:right;font-family:var(--mono);color:var(--ink-dim)">{{ l.price }}</span>
+                            <span style="width:90px;text-align:right;font-family:var(--mono);color:{{ l.fg }}">{{ l.total }}</span>
+                          </div>
+                        </sc-for>
+                        <div style="display:flex;gap:14px;align-items:center;margin-top:8px">
+                          <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ x.recurring }}</span>
+                          <div style="flex:1"></div>
+                          <span onClick="{{ x.openAccount }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Open account →</span>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
         </div>
       </sc-if>
 

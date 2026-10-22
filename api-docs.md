@@ -3484,7 +3484,7 @@ curl -u user:pass https://{your-site}/wp-json/captaincore/v1/subscriptions
 GET /upcoming_subscriptions
 ```
 
-Next 12 calendar months of `revenue`, `transactions`, `renewals` for accounts you bill. Intervals honored: `1`, `3`, `6`, `12`.
+The current calendar month and the 11 after it, for the accounts you bill (every account for an administrator). Each renewal is priced like the invoice the renewal cron will cut: plan (or per-site count), managed WordPress sites, addons and usage overages, plus charges and credits on the first renewal only. Later renewals assume today's usage. An account without a billing user is listed in `skipped` and left out of the totals.
 
 ```bash
 curl -u user:pass https://{your-site}/wp-json/captaincore/v1/upcoming_subscriptions
@@ -3492,13 +3492,22 @@ curl -u user:pass https://{your-site}/wp-json/captaincore/v1/upcoming_subscripti
 
 ```json
 {
-  "revenue": {"Sep 2026": 99},
-  "transactions": {"Sep 2026": 1},
+  "months": [{"key": "Oct 2026", "month": "2026-10", "revenue": 99, "transactions": 1}],
+  "revenue": {"Oct 2026": 99},
+  "transactions": {"Oct 2026": 1},
   "renewals": {
-    "Sep 2026": [
-      {"account_id": 12, "name": "Example Co", "interval": "12", "total": 99}
+    "Oct 2026": [
+      {"account_id": 12, "name": "Example Co", "interval": "12", "date": "2026-10-28", "total": 99, "one_time": false, "auto_pay": true, "overdue": false}
     ]
-  }
+  },
+  "subscriptions": [
+    {"account_id": 12, "name": "Example Co", "plan": "Basic", "billing_mode": "standard", "interval": "12", "next_renewal": "2026-10-28 00:00:00",
+     "auto_pay": true, "billable": true, "total": 99, "recurring": 99, "one_time": 0,
+     "lines": [{"type": "Plan", "name": "Basic", "quantity": 1, "price": 99, "total": 99, "one_time": false}]}
+  ],
+  "skipped": [],
+  "total": 99,
+  "generated_at": "2026-10-22 19:40:00"
 }
 ```
 

@@ -38,6 +38,7 @@ Object.assign(Component.prototype, {
     else if (s.route === 'domain' && s.domainId) { path += '/' + s.domainId; }
     else if (s.route === 'account' && s.accountId) { path += '/' + s.accountId; }
     else if (s.route === 'invoice' && s.invoiceId) { path += '/' + s.invoiceId; }
+    else if (s.route === 'billing' && s.billTab === 'renewals') { path += '/renewals'; }
     else if (s.route === 'security' && s.secTab && s.secTab !== 'vulns') { path += '/' + s.secTab; }
     return path;
   },
@@ -61,6 +62,8 @@ Object.assign(Component.prototype, {
       this.openDomain(parts[1]);
     } else if (head === 'accounts' && parts[1]) {
       this.openAccount(parts[1]);
+    } else if (head === 'billing' && parts[1] === 'renewals') {
+      this.setState({ route: 'billing', billTab: 'renewals' });
     } else if (head === 'billing' && parts[1]) {
       this.openInvoice(parts[1]);
     } else if (head === 'security') {

@@ -202,6 +202,7 @@ return array(
     'CaptainCore\\Remote\\Missive' => $baseDir . '/app/Remote/Missive.php',
     'CaptainCore\\Remote\\Rocketdotnet' => $baseDir . '/app/Remote/Rocketdotnet.php',
     'CaptainCore\\Remote\\Spaceship' => $baseDir . '/app/Remote/Spaceship.php',
+    'CaptainCore\\RenewalForecast' => $baseDir . '/app/RenewalForecast.php',
     'CaptainCore\\Report' => $baseDir . '/app/Report.php',
     'CaptainCore\\RestartPhpCLI' => $baseDir . '/app/RestartPhpCLI.php',
     'CaptainCore\\ResticCacheCLI' => $baseDir . '/app/ResticCacheCLI.php',
