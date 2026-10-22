@@ -1254,6 +1254,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
+	// Uptime state after every `monitor run`: the records still failing (monitor.json) and the
+	// names the run checked. Keeps CaptainCore\MonitorIncidents current for agents; the
+	// monitor emails above are unchanged.
+	if ( $command === 'monitor-state' && ! empty( $post->data ) ) {
+		$synced   = CaptainCore\MonitorIncidents::sync( $post->data->down ?? [], $post->data->checked ?? [] );
+		$response = [ 'response' => 'Monitor state stored' ] + $synced;
+	}
+
 	// Uptime monitor auto-recovery, step 1 of 2 (CLI: `captaincore monitor recover`).
 	// The CLI posts its PHP-FPM probe for a site that failed two monitor runs in a
 	// row. The restart decision is made here, from the probe and the failure, so
@@ -8749,6 +8757,37 @@ function captaincore_register_rest_endpoints() {
 			}
 			CaptainCore\MalwareFindingNotes::add( (int) $request['id'], 'note', $body, captaincore_signal_author( $request, 'user' ) );
 			return CaptainCore\MalwareFindingNotes::for_findings( [ (int) $request['id'] ] );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	// Uptime outages for agents: open incidents from the CLI's monitor, with the latest
+	// auto-recovery attempt, and an acknowledgement so each outage is looked at once.
+	register_rest_route( 'captaincore/v1', '/monitor/incidents', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$status = (string) ( $request->get_param( 'status' ) ?: 'open' );
+			$limit  = min( 500, max( 1, (int) ( $request->get_param( 'limit' ) ?: 200 ) ) );
+			$rows   = CaptainCore\MonitorIncidents::listing( $status, empty( $request->get_param( 'unacknowledged' ) ), $limit );
+			return [ 'count' => count( $rows ), 'items' => $rows ];
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/monitor/incidents/acknowledge', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$ids  = $request->get_param( 'ids' );
+			$note = trim( (string) $request->get_param( 'note' ) );
+			if ( ! is_array( $ids ) || ! $ids || count( $ids ) > 500 ) {
+				return new WP_Error( 'bad_request', 'ids must be a list of 1 to 500 incident ids.', [ 'status' => 400 ] );
+			}
+			if ( strlen( $note ) < 10 ) {
+				return new WP_Error( 'bad_request', 'note must say what was found or done (at least 10 characters).', [ 'status' => 400 ] );
+			}
+			return CaptainCore\MonitorIncidents::acknowledge( $ids, $note, captaincore_signal_author( $request, 'user' ) );
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );

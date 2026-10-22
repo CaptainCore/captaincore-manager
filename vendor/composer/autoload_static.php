@@ -286,6 +286,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\MalwareFindingNotes' => __DIR__ . '/../..' . '/app/MalwareFindingNotes.php',
         'CaptainCore\\MalwareFindings' => __DIR__ . '/../..' . '/app/MalwareFindings.php',
         'CaptainCore\\MalwareFindingsCLI' => __DIR__ . '/../..' . '/app/MalwareFindingsCLI.php',
+        'CaptainCore\\MonitorIncidents' => __DIR__ . '/../..' . '/app/MonitorIncidents.php',
         'CaptainCore\\MonitorRecoveries' => __DIR__ . '/../..' . '/app/MonitorRecoveries.php',
         'CaptainCore\\MuManifestCLI' => __DIR__ . '/../..' . '/app/MuManifestCLI.php',
         'CaptainCore\\Network' => __DIR__ . '/../..' . '/app/Network.php',

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 62;
+    const REQUIRED_VERSION = 63;
 
     private static function _table() {
         global $wpdb;
@@ -1317,6 +1317,37 @@ class DB {
         KEY status (status),
         KEY verdict (verdict),
         KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Uptime outages as the CLI's monitor sees them (app/MonitorIncidents.php): one row per
+        // outage of a monitored URL, opened when `monitor run` reports it down, resolved when a
+        // later run checks it and it answers. Agents read and acknowledge the open ones.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_monitor_incidents` (
+            monitor_incident_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED DEFAULT 0,
+            environment_id bigint(20) UNSIGNED DEFAULT 0,
+            environment varchar(40) DEFAULT '',
+            name varchar(190) NOT NULL,
+            url varchar(255) DEFAULT '',
+            http_code varchar(10) DEFAULT '',
+            html_valid varchar(10) DEFAULT '',
+            error text,
+            status varchar(20) DEFAULT 'open',
+            check_count int(11) DEFAULT 0,
+            notify_count int(11) DEFAULT 0,
+            started_at datetime DEFAULT NULL,
+            last_failed_at datetime DEFAULT NULL,
+            resolved_at datetime DEFAULT NULL,
+            acknowledged_at datetime DEFAULT NULL,
+            acknowledged_by varchar(60) DEFAULT '',
+            note text,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (monitor_incident_id),
+        KEY name_status (name,status),
+        KEY site_id (site_id),
+        KEY status (status)
         ) $charset_collate;";
 
         dbDelta($sql);

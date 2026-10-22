@@ -160,6 +160,7 @@ return array(
     'CaptainCore\\MalwareFindingNotes' => $baseDir . '/app/MalwareFindingNotes.php',
     'CaptainCore\\MalwareFindings' => $baseDir . '/app/MalwareFindings.php',
     'CaptainCore\\MalwareFindingsCLI' => $baseDir . '/app/MalwareFindingsCLI.php',
+    'CaptainCore\\MonitorIncidents' => $baseDir . '/app/MonitorIncidents.php',
     'CaptainCore\\MonitorRecoveries' => $baseDir . '/app/MonitorRecoveries.php',
     'CaptainCore\\MuManifestCLI' => $baseDir . '/app/MuManifestCLI.php',
     'CaptainCore\\Network' => $baseDir . '/app/Network.php',
