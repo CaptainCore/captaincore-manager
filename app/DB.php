@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 61;
+    const REQUIRED_VERSION = 62;
 
     private static function _table() {
         global $wpdb;
@@ -1307,6 +1307,9 @@ class DB {
             resolved_at datetime DEFAULT NULL,
             resolved_by varchar(60) DEFAULT '',
             resolution text,
+            priority tinyint(1) DEFAULT 0,
+            acknowledged_at datetime DEFAULT NULL,
+            acknowledged_by varchar(60) DEFAULT '',
             created_at datetime NOT NULL,
         PRIMARY KEY  (malware_finding_id),
         KEY site_id (site_id),
@@ -1314,6 +1317,21 @@ class DB {
         KEY status (status),
         KEY verdict (verdict),
         KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // The follow-up trail on a finding (app/MalwareFindingNotes.php): verdicts, acknowledgements,
+        // resolutions, reopenings and free-form notes from reviewers, agents and people.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_malware_finding_notes` (
+            malware_finding_note_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            malware_finding_id bigint(20) UNSIGNED NOT NULL,
+            kind varchar(20) DEFAULT 'note',
+            author varchar(60) DEFAULT '',
+            body text,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (malware_finding_note_id),
+        KEY malware_finding_id (malware_finding_id)
         ) $charset_collate;";
 
         dbDelta($sql);
@@ -1456,6 +1474,11 @@ class DB {
                 }
             }
             $wpdb->query( "UPDATE {$wpdb->base_prefix}captaincore_account_user SET level = 'full' WHERE level IS NULL OR level = ''" );
+        }
+
+        // v62: findings that used to email on sight become priority rows for the attention list.
+        if ( $version < 62 ) {
+            $wpdb->query( "UPDATE {$wpdb->base_prefix}captaincore_malware_findings SET priority = 1 WHERE emailed_at IS NOT NULL" );
         }
 
         update_site_option( 'captaincore_db_version', $required_version );

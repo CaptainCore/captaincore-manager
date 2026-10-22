@@ -58,7 +58,7 @@ class SessionAnomalyDetector {
 			$roles = implode( ', ', (array) ( $u['base_roles'] ?? $u['roles'] ?? [] ) );
 			$roles = $roles !== '' ? $roles : 'none';
 			$a[]   = self::mk( 'injected_caps', 'critical',
-				"User #{$uid} (role: {$roles}) holds individually-granted takeover cap(s) [{$caps}] — likely injected-capability backdoor" );
+				"User #{$uid} (role: {$roles}) holds individually-granted takeover cap(s) [{$caps}] — likely injected-capability backdoor", "db:user/#{$uid}" );
 		}
 
 		// First snapshot: establish baseline, only absolute rules apply.
@@ -72,7 +72,7 @@ class SessionAnomalyDetector {
 		foreach ( array_diff( array_keys( $new_acc ), array_keys( $prev_acc ) ) as $login ) {
 			$is_admin = ! empty( $new_acc[ $login ]['is_admin'] );
 			$a[]      = self::mk( 'new_admin_capable_account', 'high',
-				'New ' . ( $is_admin ? 'administrator' : 'admin-capable' ) . " account appeared: {$login}" );
+				'New ' . ( $is_admin ? 'administrator' : 'admin-capable' ) . " account appeared: {$login}", "db:user/{$login}" );
 		}
 
 		// Rule 3 — a role gained a takeover cap (the shop_manager-gains-install_plugins case).
@@ -84,7 +84,7 @@ class SessionAnomalyDetector {
 			$added = array_diff( $newc, $prevc );
 			if ( $added ) {
 				$a[] = self::mk( 'role_cap_escalation', 'high',
-					"Role '{$role}' gained takeover cap(s): " . implode( ', ', $added ) );
+					"Role '{$role}' gained takeover cap(s): " . implode( ', ', $added ), "db:role/{$role}" );
 			}
 		}
 		// A brand-new admin-capable role appearing (other than the built-in administrator).
@@ -92,7 +92,7 @@ class SessionAnomalyDetector {
 			if ( $role === 'administrator' ) {
 				continue;
 			}
-			$a[] = self::mk( 'new_admin_capable_role', 'high', "New admin-capable role created: '{$role}'" );
+			$a[] = self::mk( 'new_admin_capable_role', 'high', "New admin-capable role created: '{$role}'", "db:role/{$role}" );
 		}
 
 		// Rules 4 & 5 — IP / session spikes per tier.
@@ -100,18 +100,18 @@ class SessionAnomalyDetector {
 			$ip_n = (int) ( $new[ $tier ]['unique_ips'] ?? 0 );
 			$ip_p = (int) ( $prev[ $tier ]['unique_ips'] ?? 0 );
 			if ( $ip_n >= $ip_p + self::IP_SPIKE_ABS && $ip_n >= max( 1, $ip_p ) * self::IP_SPIKE_MULT ) {
-				$a[] = self::mk( 'admin_ip_spike', 'medium', "{$tier} unique login IPs spiked {$ip_p} → {$ip_n}" );
+				$a[] = self::mk( 'admin_ip_spike', 'medium', "{$tier} unique login IPs spiked {$ip_p} → {$ip_n}", "sessions/{$tier}" );
 			}
 			$s_n = (int) ( $new[ $tier ]['active_sessions'] ?? 0 );
 			$s_p = (int) ( $prev[ $tier ]['active_sessions'] ?? 0 );
 			if ( $s_n >= $s_p + self::SESSION_SPIKE_ABS && $s_n >= max( 1, $s_p ) * self::SESSION_SPIKE_MULT ) {
-				$a[] = self::mk( 'admin_session_spike', 'medium', "{$tier} active sessions spiked {$s_p} → {$s_n}" );
+				$a[] = self::mk( 'admin_session_spike', 'medium', "{$tier} active sessions spiked {$s_p} → {$s_n}", "sessions/{$tier}" );
 			}
 		}
 
 		// Rule 6 — new super admin (multisite).
 		foreach ( array_diff( (array) ( $new['super_admins'] ?? [] ), (array) ( $prev['super_admins'] ?? [] ) ) as $sa ) {
-			$a[] = self::mk( 'new_super_admin', 'high', "New super admin granted: {$sa}" );
+			$a[] = self::mk( 'new_super_admin', 'high', "New super admin granted: {$sa}", "db:user/{$sa}" );
 		}
 
 		return self::finalize( $a );
@@ -127,8 +127,33 @@ class SessionAnomalyDetector {
 		return [ 'anomalies' => array_values( $anomalies ), 'count' => count( $anomalies ), 'max_severity' => $max ];
 	}
 
-	private static function mk( $type, $severity, $detail ) {
-		return [ 'type' => $type, 'severity' => $severity, 'detail' => $detail ];
+	/**
+	 * $subject names what changed (db:user/<login>, db:role/<role>, sessions/<tier>),
+	 * the path the anomaly is stored under as a security signal.
+	 */
+	private static function mk( $type, $severity, $detail, $subject = '' ) {
+		return [ 'type' => $type, 'severity' => $severity, 'detail' => $detail, 'subject' => $subject ];
+	}
+
+	/**
+	 * Detected anomalies as security-signal findings (MalwareFindings::record, source "session").
+	 * The hash is the detail itself, so a benign verdict sticks while the change reads the same.
+	 */
+	public static function to_findings( $anomalies ) {
+		$out = [];
+		foreach ( (array) $anomalies as $x ) {
+			$x     = (array) $x;
+			$out[] = (object) [
+				'filename'              => ( $x['subject'] ?? '' ) !== '' ? $x['subject'] : 'sessions/' . $x['type'],
+				'signature_id'          => 'session-' . str_replace( '_', '-', $x['type'] ),
+				'signature_name'        => 'Session anomaly: ' . str_replace( '_', ' ', $x['type'] ),
+				'signature_description' => $x['detail'],
+				'matched_text'          => $x['detail'],
+				'severity'              => $x['severity'],
+				'content_hash'          => hash( 'sha256', $x['detail'] ),
+			];
+		}
+		return $out;
 	}
 
 	private static function arr( $x ) {

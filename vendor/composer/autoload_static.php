@@ -283,6 +283,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Keys' => __DIR__ . '/../..' . '/app/Keys.php',
         'CaptainCore\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
         'CaptainCore\\MailgunCLI' => __DIR__ . '/../..' . '/app/MailgunCLI.php',
+        'CaptainCore\\MalwareFindingNotes' => __DIR__ . '/../..' . '/app/MalwareFindingNotes.php',
         'CaptainCore\\MalwareFindings' => __DIR__ . '/../..' . '/app/MalwareFindings.php',
         'CaptainCore\\MalwareFindingsCLI' => __DIR__ . '/../..' . '/app/MalwareFindingsCLI.php',
         'CaptainCore\\MonitorRecoveries' => __DIR__ . '/../..' . '/app/MonitorRecoveries.php',

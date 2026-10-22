@@ -1384,9 +1384,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "monitor_recovery_id" => $recovery_id, "outcome" => $recovery->outcome, "operation_status" => $recovery->operation_status ];
 	}
 
-	// Record malware findings and email only the ones not already open.
-	// A finding reported every night by the same scanner updates its row
-	// (last_seen, seen_count) instead of sending the same email again.
+	// Record malware findings as security signals. A finding reported every
+	// night by the same scanner updates its row (last_seen, seen_count). New
+	// tier-1 rows are priority (on the attention list before review) and are
+	// emailed only when security alert emails are turned on.
 	if ( $command === 'malware-alert' ) {
 		$site_name       = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
 		$alert_env       = $post->data->environment ?? 'Production';
@@ -1398,15 +1399,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$post->data->source ?? 'wordfence',
 			$post->data->findings ?? []
 		);
-		// Tier 1 emails now; tier 2 waits for the daily review (MalwareFindings::should_email).
+		// Tier 1 is priority now; tier 2 waits for the daily review (MalwareFindings::is_priority).
 		$alert_source = $post->data->source ?? 'wordfence';
 		$tier1        = [];
 		foreach ( $recorded['new'] as $f ) {
-			if ( CaptainCore\MalwareFindings::should_email( $alert_source, $f->signature_id ?? '', $f->severity ?? '' ) ) {
+			if ( CaptainCore\MalwareFindings::is_priority( $alert_source, $f->signature_id ?? '', $f->severity ?? '' ) ) {
 				$tier1[] = $f;
 			}
 		}
-		if ( ! empty( $tier1 ) ) {
+		if ( ! empty( $tier1 ) && CaptainCore\MalwareFindings::security_emails_enabled() ) {
 			\CaptainCore\Mailer::send_malware_alert(
 				$site_name,
 				$alert_env,
@@ -1416,25 +1417,45 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			);
 			CaptainCore\MalwareFindings::mark_emailed( array_map( function ( $f ) { return $f->malware_finding_id ?? 0; }, $tier1 ) );
 		}
+		$emailed  = CaptainCore\MalwareFindings::security_emails_enabled() ? count( $tier1 ) : 0;
 		$response = [
-			"response" => ! empty( $tier1 ) ? "Malware alert sent" : "Malware findings recorded, no alert sent",
+			"response" => $emailed ? "Malware alert sent" : "Malware findings recorded, no alert sent",
 			"new"      => count( $recorded['new'] ),
-			"emailed"  => count( $tier1 ),
+			"priority" => count( $tier1 ),
+			"emailed"  => $emailed,
 			"known"    => $recorded['known'],
 			"reopened" => $recorded['reopened'],
 		];
 	}
 
-	// Send capture injection alert notification email
+	// Record new scripts and stylesheets a capture found on a page as security signals
+	// (source "capture"). The asset URL is the path, so a benign verdict sticks for it.
 	if ( $command === 'capture-alert' ) {
-		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
-		\CaptainCore\Mailer::send_capture_alert(
-			$site_name,
-			$post->data->environment ?? 'Production',
-			$post->data->home_url ?? '',
-			$post->data->findings ?? []
-		);
-		$response = [ "response" => "Capture alert sent" ];
+		$site_name   = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
+		$capture_env = $post->data->environment ?? 'Production';
+		$capture_env_id = (int) ( ! empty( $site_id ) ? ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $capture_env ) : 0 );
+		$signals     = [];
+		foreach ( (array) ( $post->data->findings ?? [] ) as $f ) {
+			$f     = (object) $f;
+			$asset = (string) ( ! empty( $f->src ) ? $f->src : ( $f->label ?? '' ) );
+			if ( $asset === '' ) {
+				continue;
+			}
+			$signals[] = (object) [
+				'filename'              => $asset,
+				'signature_id'          => 'capture-new-asset',
+				'signature_name'        => ! empty( $f->sig_name ) ? $f->sig_name : 'New script or stylesheet on a page',
+				'signature_description' => 'Appeared on ' . ( $f->page ?? '/' ) . ' since the previous capture.',
+				'matched_text'          => (string) ( $f->label ?? '' ),
+				'severity'              => (string) ( $f->severity ?? 'warning' ),
+				'content_hash'          => hash( 'sha256', $asset ),
+			];
+		}
+		$recorded = CaptainCore\MalwareFindings::record( (int) $site_id, $capture_env_id, $capture_env, 'capture', $signals );
+		if ( ! empty( $recorded['new'] ) && CaptainCore\MalwareFindings::security_emails_enabled() ) {
+			\CaptainCore\Mailer::send_capture_alert( $site_name, $capture_env, $post->data->home_url ?? '', $post->data->findings ?? [] );
+		}
+		$response = [ "response" => "Capture findings recorded", "new" => count( $recorded['new'] ), "known" => $recorded['known'] ];
 	}
 
 	// Load Token Key
@@ -1583,21 +1604,48 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
 
-		// Alert admin on checksum failure (only once per failure, tracked via checksum_alerted flag)
+		// Core checksum, default role and registration checks report a state on every sync, so
+		// they are synced as security signals: a failing check opens (or keeps open) its row, a
+		// passing one resolves it. Emails go out only when security alert emails are turned on.
 		$env_after       = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$env_details     = isset( $env_after->details ) ? json_decode( $env_after->details ) : (object) [];
 		$checksum_status = isset( $env_details->core_checksum_details->status ) ? $env_details->core_checksum_details->status : null;
+		$is_production   = $current_environment->environment === 'Production';
+		$signal_env      = $current_environment->environment;
+		$signal_env_id   = (int) $post->data->environment_id;
+		$home_url        = $post->data->home_url ?? '';
+		$emails_on       = CaptainCore\MalwareFindings::security_emails_enabled();
 
-		$has_modified_files = ! empty( $env_details->core_checksum_details->modified );
-		$is_production      = $current_environment->environment === 'Production';
-		if ( $checksum_status === 'fail' && $has_modified_files && $is_production && empty( $env_details->checksum_alerted ) ) {
-			$home_url = $post->data->home_url ?? '';
-			CaptainCore\Mailer::send_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->core_checksum_details );
-			$env_details->checksum_alerted = true;
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		} elseif ( $checksum_status !== 'fail' && ! empty( $env_details->checksum_alerted ) ) {
-			unset( $env_details->checksum_alerted );
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		if ( $is_production && $checksum_status !== null ) {
+			$core_version = (string) ( $env_after->core ?? '' );
+			$checksum     = [];
+			if ( $checksum_status === 'fail' ) {
+				foreach ( (array) ( $env_details->core_checksum_details->modified ?? [] ) as $file ) {
+					$checksum[] = (object) [
+						'filename'              => (string) $file,
+						'signature_id'          => 'core-checksum-modified',
+						'signature_name'        => 'WordPress core file modified',
+						'signature_description' => "Does not match the wordpress.org checksum for WordPress {$core_version}.",
+						'severity'              => 'high',
+						'content_hash'          => hash( 'sha256', $file . '|' . $core_version ),
+					];
+				}
+				foreach ( (array) ( $env_details->core_checksum_details->extra ?? [] ) as $file ) {
+					$checksum[] = (object) [
+						'filename'              => (string) $file,
+						'signature_id'          => 'core-checksum-extra',
+						'signature_name'        => 'File in a core directory that WordPress does not ship',
+						'signature_description' => "Not part of WordPress {$core_version}.",
+						'severity'              => 'medium',
+						'content_hash'          => hash( 'sha256', $file . '|' . $core_version ),
+					];
+				}
+			}
+			$synced = CaptainCore\MalwareFindings::sync_state( (int) $site_id, $signal_env_id, $signal_env, 'core-checksum', $checksum );
+			$opened = array_filter( $synced['new'], function ( $f ) { return $f->signature_id === 'core-checksum-modified'; } );
+			if ( $opened && $emails_on ) {
+				CaptainCore\Mailer::send_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->core_checksum_details );
+			}
 		}
 
 		// Plugin checksum data is persisted above via the jsonDetailKeys merge.
@@ -1609,28 +1657,44 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		//
 		// CaptainCore\Mailer::send_plugin_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->plugin_checksum_details );
 
-		// Alert admin if default_role is set to administrator (only once, tracked via default_role_alerted flag)
-		$default_role   = isset( $env_details->default_role ) ? $env_details->default_role : null;
-		if ( $default_role === 'administrator' && $is_production && empty( $env_details->default_role_alerted ) ) {
-			$home_url = $post->data->home_url ?? '';
-			CaptainCore\Mailer::send_default_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
-			$env_details->default_role_alerted = true;
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		} elseif ( $default_role !== 'administrator' && ! empty( $env_details->default_role_alerted ) ) {
-			unset( $env_details->default_role_alerted );
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		}
-
-		// Alert admin if registration is open and default role is not subscriber (only once, tracked via registration_role_alerted flag)
+		// Risky role settings: default role administrator, or open registration with a role
+		// above subscriber (critical when that role is administrator, since anyone can sign up).
+		$default_role = isset( $env_details->default_role ) ? $env_details->default_role : null;
 		$registration = isset( $env_details->registration ) ? $env_details->registration : '0';
-		if ( $registration === '1' && $default_role !== 'subscriber' && $is_production && empty( $env_details->registration_role_alerted ) ) {
-			$home_url = $post->data->home_url ?? '';
-			CaptainCore\Mailer::send_registration_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
-			$env_details->registration_role_alerted = true;
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		} elseif ( ( $registration !== '1' || $default_role === 'subscriber' ) && ! empty( $env_details->registration_role_alerted ) ) {
-			unset( $env_details->registration_role_alerted );
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		if ( $is_production && $default_role !== null ) {
+			$config = [];
+			if ( $default_role === 'administrator' ) {
+				$config[] = (object) [
+					'filename'              => 'db:option/default_role',
+					'signature_id'          => 'config-default-role-administrator',
+					'signature_name'        => 'Default role is Administrator',
+					'signature_description' => 'New users are created as administrators.',
+					'matched_text'          => "default_role={$default_role}, users_can_register={$registration}",
+					'severity'              => $registration === '1' ? 'critical' : 'high',
+					'content_hash'          => hash( 'sha256', "{$default_role}|{$registration}" ),
+				];
+			}
+			if ( $registration === '1' && $default_role !== 'subscriber' && $default_role !== 'administrator' ) {
+				$config[] = (object) [
+					'filename'              => 'db:option/users_can_register',
+					'signature_id'          => 'config-open-registration-elevated',
+					'signature_name'        => 'Open registration with an elevated role',
+					'signature_description' => "Anyone can register, and new accounts get the {$default_role} role.",
+					'matched_text'          => "default_role={$default_role}, users_can_register={$registration}",
+					'severity'              => 'high',
+					'content_hash'          => hash( 'sha256', "{$default_role}|{$registration}" ),
+				];
+			}
+			$synced = CaptainCore\MalwareFindings::sync_state( (int) $site_id, $signal_env_id, $signal_env, 'config', $config );
+			if ( $emails_on ) {
+				foreach ( $synced['new'] as $f ) {
+					if ( $f->signature_id === 'config-default-role-administrator' ) {
+						CaptainCore\Mailer::send_default_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
+					} else {
+						CaptainCore\Mailer::send_registration_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
+					}
+				}
+			}
 		}
 
 		unset( $details->connection_errors );
@@ -1709,11 +1773,19 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			"created_at"          => current_time( 'mysql' ),
 		] );
 
-		// Surface fired anomalies on the activity timeline (one entry per snapshot that fired).
-		// Email is intentionally NOT sent here — high/critical alerts are delivered as an hourly
-		// digest by `wp captaincore session-alerts` (system cron), which reads unalerted rows via
-		// the alerted_at column. This keeps SMTP off the ingest request path and batches alerts.
+		// Surface fired anomalies on the activity timeline (one entry per snapshot that fired)
+		// and record each one as a security signal (source "session") for review. Email is
+		// not sent here; `wp captaincore session-alerts` sends a digest only when security
+		// alert emails are turned on.
 		if ( $detection['count'] > 0 ) {
+			$session_env = ( new CaptainCore\Environments )->get( $target_environment_id );
+			CaptainCore\MalwareFindings::record(
+				(int) $site_id,
+				(int) $target_environment_id,
+				$session_env->environment ?? 'Production',
+				'session',
+				CaptainCore\SessionAnomalyDetector::to_findings( $detection['anomalies'] )
+			);
 			$lines = array_map( function ( $x ) { return "[{$x['severity']}] {$x['detail']}"; }, $detection['anomalies'] );
 			CaptainCore\ActivityLog::log(
 				'session_anomaly',
@@ -14322,6 +14394,14 @@ function captaincore_malware_alert_func( WP_REST_Request $request ) {
 			'filename'              => sanitize_text_field( $f['filename'] ?? '' ),
 			'signature_name'        => sanitize_text_field( $f['signature_name'] ?? 'Malware' ),
 			'signature_description' => sanitize_text_field( $f['signature_description'] ?? '' ),
+		];
+	}
+
+	if ( ! CaptainCore\MalwareFindings::security_emails_enabled() ) {
+		return [
+			'success' => true,
+			'message' => "Security alert emails are off; nothing sent for {$site_name}. Record findings through the CLI's malware-alert ingest instead.",
+			'domain'  => $domain,
 		];
 	}
 

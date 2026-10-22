@@ -40,6 +40,10 @@ class SessionAlertsCLI {
 		global $wpdb;
 
 		$dry   = isset( $assoc_args['dry-run'] );
+		if ( ! $dry && ! MalwareFindings::security_emails_enabled() ) {
+			\WP_CLI::success( 'Security alert emails are off. Session anomalies are recorded as security signals (source session); see the attention list.' );
+			return;
+		}
 		$to    = $assoc_args['to'] ?? get_option( 'admin_email' );
 		$ranks = [ 'high' => 3, 'critical' => 4 ];
 		$min   = $assoc_args['severity'] ?? 'high';
