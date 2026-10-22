@@ -636,6 +636,159 @@ Object.assign(Component.prototype, {
         this.api('/site-audits/request', { method: 'POST', body: { site_id: Number(f.id), environment: 'Production', report_type: 'security_audit' } })
           .then(reload).catch(() => {}); }
     };
+  },
+
+  // ── Signals: the security-signal review queue ───────────────────────────
+  // GET /malware-findings/search {items,total,counts,emails_enabled}, filtered by
+  // view (attention|unreviewed|open|resolved|all), source and search. A row's
+  // follow-up trail loads on expand from GET /malware-findings/{id}. Writes:
+  // POST /malware-findings/{id}/verdict, /acknowledge, /resolve, /{id}/notes,
+  // /settings {emails_enabled}. Agents use the same routes; see the
+  // security-signal docs in the dev-captaincore skill.
+  SIG_VIEWS: [['attention', 'Needs attention'], ['unreviewed', 'Unreviewed'], ['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']],
+  SIG_VERDICT_STYLE: { compromise: ['var(--bad-soft)', 'var(--bad)'], residue: ['var(--warn-soft)', 'var(--ink)'], actionable: ['var(--warn-soft)', 'var(--ink)'],
+    'needs-human': ['var(--brand-soft)', 'var(--brand-ink)'], benign: ['var(--ok-soft)', 'var(--ok)'], '': ['var(--panel-2)', 'var(--ink-dim)'] },
+  SIG_SOURCE_LABEL: { capture: 'Injection', 'core-checksum': 'Core checksum', config: 'Role settings', session: 'Sessions', 'db-scan': 'Database', native: 'Files', 'native-full': 'Files (full)',
+    provenance: 'Root files', 'provenance-scan': 'Root files (rules)', 'hidden-plugin': 'Hidden plugin', media: 'Media', wordfence: 'Wordfence' },
+
+  sigQuery(s) {
+    const q = { view: s.sigView || 'attention', source: s.sigSource || '', search: s.sigSearch || '', page: s.sigPage || 1 };
+    return q;
+  },
+
+  loadSignals(force) {
+    const q = this.sigQuery(this.state);
+    const key = JSON.stringify(q);
+    if (!force && (this._sigKey === key || this._sigLoadingKey === key)) return;
+    this._sigLoadingKey = key;
+    const qs = '?view=' + encodeURIComponent(q.view) + '&source=' + encodeURIComponent(q.source) + '&search=' + encodeURIComponent(q.search) + '&page=' + q.page + '&per_page=50';
+    this.api('/malware-findings/search' + qs).then(res => {
+      if (this._sigLoadingKey !== key) return;
+      this._sigLoadingKey = '';
+      this._sigKey = key;
+      this._sig = (res && Array.isArray(res.items)) ? res : { items: [], total: 0, counts: {}, emails_enabled: false };
+      this.setState({});
+    }).catch(() => { this._sigLoadingKey = ''; this._sigKey = key; this._sig = { items: [], total: 0, counts: {}, error: true }; this.setState({}); });
+  },
+
+  loadSignalNotes(id) {
+    this._sigNotes = this._sigNotes || {};
+    this.api('/malware-findings/' + id).then(row => {
+      this._sigNotes[id] = (row && Array.isArray(row.notes)) ? row.notes : [];
+      this.setState({});
+    }).catch(() => {});
+  },
+
+  // Run one write, toast the outcome, then refresh the list and the open row's trail.
+  sigWrite(path, body, label, id) {
+    const tid = this.toast(label + '…', { kind: 'loading' });
+    return this.api(path, { method: 'POST', body }).then(res => {
+      if (res && res.code) throw new Error(res.message || 'refused');
+      const err = res && Array.isArray(res.results) && res.results.find(r => r.error);
+      if (err) throw new Error(err.error);
+      this.updateToast(tid, label + ' ✓', { kind: 'success' });
+      this.setState({ sigDraft: '' });
+      if (id) this.loadSignalNotes(id);
+      this.loadSignals(true);
+    }).catch(e => this.updateToast(tid, (e && e.message && e.message !== 'refused') ? e.message : 'Could not save', { kind: 'error' }));
+  },
+
+  sigVerdict(f, verdict) {
+    const reason = (this.state.sigDraft || '').trim();
+    if (reason.length < 25) { this.toast('Write the reason for "' + verdict + '" in the note box first (25+ characters).', { kind: 'info' }); return; }
+    this.sigWrite('/malware-findings/' + f.malware_finding_id + '/verdict', { verdict, reason }, 'Verdict ' + verdict, f.malware_finding_id);
+  },
+  sigAck(f) {
+    const note = (this.state.sigDraft || '').trim() || 'Picked up in the Signals screen.';
+    this.sigWrite('/malware-findings/acknowledge', { ids: [f.malware_finding_id], note }, 'Marked picked up', f.malware_finding_id);
+  },
+  sigResolve(f) {
+    const resolution = (this.state.sigDraft || '').trim();
+    if (resolution.length < 25) { this.toast('Say what was cleaned up in the note box first (25+ characters).', { kind: 'info' }); return; }
+    this.sigWrite('/malware-findings/resolve', { ids: [f.malware_finding_id], resolution }, 'Resolved', f.malware_finding_id);
+  },
+  sigNote(f) {
+    const body = (this.state.sigDraft || '').trim();
+    if (!body) return;
+    this.sigWrite('/malware-findings/' + f.malware_finding_id + '/notes', { body }, 'Note added', f.malware_finding_id);
+  },
+  sigToggleEmails() {
+    const next = !(this._sig && this._sig.emails_enabled);
+    const go = () => this.api('/malware-findings/settings', { method: 'POST', body: { emails_enabled: next } })
+      .then(res => { if (this._sig) this._sig.emails_enabled = !!(res && res.emails_enabled); this.setState({}); this.toast('Security alert emails ' + (next ? 'on' : 'off'), { kind: 'success' }); })
+      .catch(() => this.toast('Could not change the setting', { kind: 'error' }));
+    if (!next) return go();
+    this.uiConfirm('Turn security alert emails back on? Malware, injection, checksum, role and session alerts will email the admin address again, alongside the attention list.', { label: 'Turn on' })
+      .then(ok => { if (ok) go(); });
+  },
+
+  realSignalVals(s) {
+    const active = s.route === 'security' && s.secTab === 'signals';
+    if (active) setTimeout(() => this.loadSignals(), 0);
+    const data = this._sig;
+    const q = this.sigQuery(s);
+    const loading = !data || this._sigKey !== JSON.stringify(q);
+    const counts = (data && data.counts) || {};
+    const sigViews = this.SIG_VIEWS.map(([id, label]) => ({ label, n: counts[id] != null ? Number(counts[id]).toLocaleString() : '',
+      fg: q.view === id ? 'var(--ink)' : 'var(--ink-dim)', bg: q.view === id ? 'var(--panel-2)' : 'transparent',
+      go: () => this.setState({ sigView: id, sigPage: 1, sigOpen: 0 }) }));
+    const chip = (id, label) => ({ label, fg: q.source === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: q.source === id ? 'var(--brand-soft)' : 'var(--paper)',
+      bd: q.source === id ? 'var(--brand)' : 'var(--rule)', go: () => this.setState({ sigSource: id, sigPage: 1, sigOpen: 0 }) });
+    const sigSources = [chip('', 'All sources'), ...((counts.sources || []).map(src => chip(src, this.SIG_SOURCE_LABEL[src] || src)))];
+    const notesMap = this._sigNotes || {};
+    const who = a => String(a || '').replace(/^(review|user):/, '').replace(/:/, ' · ') || 'system';
+    const sigRows = ((data && data.items) || []).map(f => {
+      const id = Number(f.malware_finding_id);
+      const sev = String(f.severity || 'low').toLowerCase();
+      const [sevBg, sevFg] = this.SEV_STYLE[sev] || this.SEV_STYLE.low;
+      const v = f.verdict || '';
+      const [vBg, vFg] = this.SIG_VERDICT_STYLE[v] || this.SIG_VERDICT_STYLE[''];
+      const open = s.sigOpen === id;
+      const notes = (notesMap[id] || []).map(n => ({ who: who(n.author), kind: n.kind, when: (n.created_at || '').slice(0, 16), text: n.body }));
+      const meta = ['First seen ' + (f.first_seen || '').slice(0, 10), 'last seen ' + (f.last_seen || '').slice(0, 16), 'seen ' + f.seen_count + '×',
+        Number(f.reopened_count) ? 'reopened ' + f.reopened_count + '×' : '', Number(f.priority) ? 'priority' : '', '#' + id].filter(Boolean).join(' · ');
+      return {
+        sev: sev.charAt(0).toUpperCase() + sev.slice(1), sevBg, sevFg,
+        site: f.site_name || ('site ' + f.site_id), env: f.environment || '', path: f.path, source: this.SIG_SOURCE_LABEL[f.source] || f.source,
+        verdict: v ? (v === 'needs-human' ? 'Needs human' : v.charAt(0).toUpperCase() + v.slice(1)) : (Number(f.priority) ? 'Priority' : 'Unreviewed'),
+        vBg: !v && Number(f.priority) ? 'var(--bad-soft)' : vBg, vFg: !v && Number(f.priority) ? 'var(--bad)' : vFg,
+        ackShow: !!f.acknowledged_at && f.status === 'open', ackTitle: 'Picked up by ' + who(f.acknowledged_by) + ' · ' + (f.acknowledged_at || '').slice(0, 16),
+        ago: this.relTime(String(f.last_seen || '').replace(' ', 'T') + 'Z'), lastSeen: f.last_seen,
+        open,
+        toggle: () => { const next = open ? 0 : id; this.setState({ sigOpen: next, sigDraft: '' }); if (next) this.loadSignalNotes(id); },
+        sigName: f.signature_name || f.signature_id, sigId: f.signature_id, desc: f.description || '',
+        match: f.matched_text || '', matchShow: !!f.matched_text,
+        reason: f.verdict_reason || '', reasonShow: !!f.verdict_reason, reviewer: who(f.reviewed_by),
+        resolution: f.resolution || '', resShow: f.status === 'resolved' && !!f.resolution, resBy: who(f.resolved_by),
+        meta, notes, notesEmpty: !notes.length, notesEmptyText: notesMap[id] ? 'No follow-up yet.' : 'Loading…',
+        addNote: () => this.sigNote(f),
+        verdictBtns: [['benign', 'Benign', 'var(--ok)'], ['actionable', 'Actionable', 'var(--ink)'], ['residue', 'Residue', 'var(--ink)'], ['compromise', 'Compromise', 'var(--bad)'], ['needs-human', 'Needs human', 'var(--brand-ink)']]
+          .filter(([k]) => k !== v).map(([k, label, fg]) => ({ label, fg, go: () => this.sigVerdict(f, k) })),
+        openSite: () => this.openSite(String(f.site_id)),
+        canAck: f.status === 'open' && !f.acknowledged_at, ack: () => this.sigAck(f),
+        canResolve: f.status === 'open' && v !== 'benign', resolve: () => this.sigResolve(f)
+      };
+    });
+    const total = (data && data.total) || 0, page = q.page, pages = Math.max(1, Math.ceil(total / 50));
+    const emptyText = data && data.error ? 'Could not load signals.' : ({ attention: 'Nothing needs attention. Every open signal is reviewed and picked up.',
+      unreviewed: 'No signals waiting for a review.', open: 'No open signals.', resolved: 'No resolved signals match.', all: 'No signals match.' })[q.view] || 'No signals match.';
+    const emailsOn = !!(data && data.emails_enabled);
+    return {
+      secTabSig: s.secTab === 'signals', sigViews, sigSources, sigRows,
+      sigSkelRows: loading && !sigRows.length ? Array.from({ length: 4 }, () => ({})) : [],
+      sigEmpty: !loading && !sigRows.length, sigEmptyText: emptyText,
+      sigSearchDraft: s.sigSearchDraft != null ? s.sigSearchDraft : (s.sigSearch || ''),
+      onSigSearch: e => { const val = e.target.value; this.setState({ sigSearchDraft: val }); clearTimeout(this._sigSearchT);
+        this._sigSearchT = setTimeout(() => this.setState({ sigSearch: val.trim(), sigPage: 1, sigOpen: 0 }), 350); },
+      sigDraft: s.sigDraft || '', onSigDraft: e => this.setState({ sigDraft: e.target.value }),
+      sigEmailsLabel: 'Security emails: ' + (emailsOn ? 'on' : 'off'),
+      sigEmailsTitle: emailsOn ? 'Alerts also email the admin address. Click to turn off.' : 'Signals are collected silently; agents work the attention list. Click to turn emails back on.',
+      sigToggleEmails: () => this.sigToggleEmails(),
+      sigPagerShow: total > 50, sigPagerText: total.toLocaleString() + ' signals · page ' + page + ' of ' + pages,
+      sigPrevFg: page > 1 ? 'var(--brand-ink)' : 'var(--rule)', sigNextFg: page < pages ? 'var(--brand-ink)' : 'var(--rule)',
+      sigPrev: () => { if (page > 1) this.setState({ sigPage: page - 1, sigOpen: 0 }); },
+      sigNext: () => { if (page < pages) this.setState({ sigPage: page + 1, sigOpen: 0 }); }
+    };
   }
 
 });

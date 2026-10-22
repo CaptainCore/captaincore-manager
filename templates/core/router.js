@@ -65,7 +65,7 @@ Object.assign(Component.prototype, {
       this.openInvoice(parts[1]);
     } else if (head === 'security') {
       const tab = parts[1] || 'vulns';
-      const ok = { vulns: 1, checksums: 1, coverage: 1, core: 1 };
+      const ok = { vulns: 1, signals: 1, checksums: 1, coverage: 1, core: 1 };
       this.setState({ route: 'security', secTab: ok[tab] ? tab : 'vulns' });
     } else {
       const route = this.SEG_ROUTE[head] || 'home';

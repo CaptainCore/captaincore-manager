@@ -69,7 +69,7 @@ class Component extends DCLogic {
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
     invEmail: '', invLevel: 'Full access', billTab: 'invoices', paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
-    secTab: 'vulns', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
+    secTab: 'vulns', sigView: 'attention', sigSource: '', sigSearch: '', sigPage: 1, sigOpen: 0, sigDraft: '', threatOpen: '', threatStatus: {}, tNotes: null, noteDraft: '', ckOpen: '', coreGroupOpen: '', coreRunId: '',
     audits: null, audSite: '', audTypes: { Core: true, Plugins: true }, 
     repMode: 'Site', repTarget: '', repRange: 'Last month', repInt: 'Monthly',
     repEmail: '', schedules: null, repSendMsg: '', repPreviewOpen: false, repPreviewHtml: '', repPreviewLoading: false,
@@ -661,7 +661,7 @@ class Component extends DCLogic {
   ];
 
   computeSecurity(s) {
-    const tabs = [['vulns', 'Vulnerabilities'], ['checksums', 'Checksums'], ['coverage', 'Coverage'], ['core', 'Core']].map(([id, label]) => ({ label,
+    const tabs = [['vulns', 'Vulnerabilities'], ['signals', 'Signals'], ['checksums', 'Checksums'], ['coverage', 'Coverage'], ['core', 'Core']].map(([id, label]) => ({ label,
       fg: s.secTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.secTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ secTab: id }) }));
@@ -733,7 +733,11 @@ class Component extends DCLogic {
       secLoading: false, secEmpty: false, secEmptyText: '', ckEmptyCore: false, ckEmptyPlug: false,
       covShowActions: true, covNote: '',
       ...(this._hydrated ? this.realSecurityVals(s) : {}),
-      ...(window.CC_BOOT ? this.realCoreRunVals(s) : {})
+      secTabSig: s.secTab === 'signals', sigViews: [], sigSources: [], sigRows: [], sigSkelRows: [], sigEmpty: false, sigEmptyText: '',
+      sigSearchDraft: '', onSigSearch: () => {}, sigDraft: '', onSigDraft: () => {}, sigEmailsLabel: '', sigEmailsTitle: '', sigToggleEmails: () => {},
+      sigPagerShow: false, sigPagerText: '', sigPrevFg: '', sigNextFg: '', sigPrev: () => {}, sigNext: () => {},
+      ...(window.CC_BOOT ? this.realCoreRunVals(s) : {}),
+      ...(window.CC_BOOT ? this.realSignalVals(s) : {})
     };
   }
 
@@ -3206,6 +3210,7 @@ class Component extends DCLogic {
       ...(role === 'operator' ? [
         { label: 'Go to Security → Coverage', sub: 'Fleet audit coverage', kind: 'command', icon: this.ICONS.security, act: 'security' },
         { label: 'Go to Security → Core', sub: 'Core probe results', kind: 'command', icon: this.ICONS.security, act: 'security-core' },
+        { label: 'Go to Security → Signals', sub: 'Security signals needing attention', kind: 'command', icon: this.ICONS.security, act: 'security-signals' },
         { label: 'Bulk tools on filtered sites…', sub: 'sync · deploy defaults · https · backup', kind: 'command', icon: this.ICONS.sites, act: 'sites' }
       ] : [])
     ];
@@ -3233,6 +3238,7 @@ class Component extends DCLogic {
     else if (r.act === 'domain') this.openDomain(r.did);
     else if (r.act === 'account') this.openAccount(r.aid);
     else if (r.act === 'security-core') this.setState({ route: 'security', secTab: 'core', paletteOpen: false });
+    else if (r.act === 'security-signals') this.setState({ route: 'security', secTab: 'signals', paletteOpen: false });
     else this.setState({ route: r.act, paletteOpen: false });
   }
 
@@ -3256,7 +3262,7 @@ class Component extends DCLogic {
     const launcher = (isOp ? [
       { label: 'Sites', desc: 'Fleet list, filters, bulk tools', meta: this._hydrated ? String(this.FLEET.length) : (booted ? '…' : '128'), icon: this.ICONS.sites, act: 'sites', acc: 'sites' },
       { label: 'Domains & DNS', desc: 'Zones, registrar, email', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '94'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
-      { label: 'Security', desc: 'Vulnerabilities, checksums, coverage, core', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
+      { label: 'Security', desc: 'Vulnerabilities, signals, checksums, coverage, core', meta: this._homeThreats ? this._homeThreats.total_threats + ' open' : (booted ? '…' : '2 open'), icon: this.ICONS.security, act: 'security', acc: 'security' },
       { label: 'Billing', desc: 'Invoices, plans, subscriptions', meta: booted ? '' : '$12.4k/mo', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
       { label: 'Activity', desc: 'Fleet-wide event log', meta: this._activity ? String(this._activity.filter(a => a.t && !/\dd$/.test(a.t)).length) + ' today' : (booted ? '…' : '14 today'), icon: this.ICONS.activity, act: 'activity', acc: 'terminal' }
     ] : [

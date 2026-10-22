@@ -15,6 +15,26 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Security → Signals (2026-10-22)
+
+The Security Alert emails (malware, injection, core checksum, role settings,
+session anomalies) are now collected silently into the findings table
+(`malware_findings`, DB v62) and reviewed in a new **Signals** tab
+(`/account/security/signals`, security.js `realSignalVals`). Views: Needs
+attention (open compromise / actionable / residue / needs-human rows plus
+unreviewed priority rows that nobody has picked up), Unreviewed, Open,
+Resolved, All, each with a count; source chips (Injection, Core checksum, Role
+settings, Sessions, Database, Files, Root files…) and a debounced search over
+site, path, signature and verdict reason. A row expands to the signature, the
+matched text, the verdict and its reviewer, the resolution, and the follow-up
+trail (`malware_finding_notes`: every verdict, acknowledgement, resolution,
+reopening and note, with who wrote it; agents pass `agent=grok-bot` or
+`agent=claude` so the trail says which). The note box doubles as the reason
+for a verdict (25+ characters), the note for Mark picked up, and the cleanup
+note for Resolve after cleanup. The header pill turns security emails back on
+(`captaincore_security_alert_emails` site option, off by default) behind a
+confirm. Checked in light and dark against local rows; Add note round-trips.
+
 ## Import zone takes real provider exports (2026-10-12)
 
 Austin: pasting a Cloudflare zone export into Import zone blanked the page with
