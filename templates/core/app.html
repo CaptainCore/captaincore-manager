@@ -4065,6 +4065,24 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </div>
           <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)">
+              <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Claude connector</h2>
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">work on your sites from Claude chat, Cowork and Claude Code</span>
+            </div>
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);line-height:1.5">In Claude, open Customize → Connectors → Add custom connector and paste this URL. Click Connect, sign in here and choose Allow. Each connection appears under Application passwords, where Revoke disconnects it.</span>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font:500 var(--fs-13) var(--mono);background:var(--panel-2);border-radius:7px;padding:6px 12px;word-break:break-all;user-select:all;min-width:0">{{ mcpUrl }}</span>
+                <span onClick="{{ copyMcpUrl }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px;flex:none" style-hover="border-color:var(--brand)">{{ mcpUrlMark }}</span>
+              </div>
+              <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Claude Code, in a terminal:</span>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font:500 var(--fs-12) var(--mono);background:var(--panel-2);border-radius:7px;padding:6px 12px;word-break:break-all;user-select:all;min-width:0">{{ mcpCmd }}</span>
+                <span onClick="{{ copyMcpCmd }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px;flex:none" style-hover="border-color:var(--brand)">{{ mcpCmdMark }}</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
               <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">API documentation</h2>
               <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Markdown reference for use with coding agents</span>

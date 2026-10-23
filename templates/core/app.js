@@ -952,6 +952,7 @@ class Component extends DCLogic {
         kill: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.id !== se.id) })) })),
       killOthers: () => this.setState(st => ({ sessions: (st.sessions || this.SESS_INIT).filter(x => x.current) })),
       profPw: '', onProfPw: () => {}, profMsg: '', profHasMsg: false, tfaSecret: '', tfaHasSecret: false,
+      ...(this.mcpVals ? this.mcpVals(s) : {}),
       apiDocsView: () => {}, apiDocsDownload: () => {}, adOpen: false, adLoading: false, adReady: false,
       legacyUiBg: 'var(--rule)', legacyUiJust: 'flex-start', toggleLegacyUi: () => {},
       adClose: () => {}, adScrollRef: () => {}, adBodyRef: () => {}, adTocRows: [],

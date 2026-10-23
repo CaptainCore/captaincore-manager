@@ -66,6 +66,8 @@ require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/Parsedown.php';
 require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-manager-updater.php';
 
+CaptainCore\McpAuth::boot();
+
 /**
  * Run any pending database migrations automatically. DB::upgrade() self-gates
  * on the captaincore_db_version site option, so a current schema costs one
@@ -9879,6 +9881,34 @@ function captaincore_register_rest_endpoints() {
 				return ( new CaptainCore\User )->create_application_password();
 			},
 			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	// Claude connector: the MCP endpoint and its OAuth token + client
+	// registration (app/Mcp.php, app/McpAuth.php). Each authenticates itself:
+	// the endpoint takes a connector bearer token, the OAuth routes are public.
+	register_rest_route(
+		'captaincore/v1', '/mcp', [
+			'methods'             => [ 'GET', 'POST', 'DELETE' ],
+			'callback'            => [ 'CaptainCore\Mcp', 'handle' ],
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/oauth/token', [
+			'methods'             => 'POST',
+			'callback'            => [ 'CaptainCore\McpAuth', 'token' ],
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/oauth/register', [
+			'methods'             => 'POST',
+			'callback'            => [ 'CaptainCore\McpAuth', 'register' ],
+			'permission_callback' => '__return_true',
 			'show_in_index'       => false,
 		]
 	);

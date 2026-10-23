@@ -1930,7 +1930,7 @@ class User {
      *
      * @return true|\WP_Error True when allowed, WP_Error otherwise.
      */
-    private function can_create_application_password() {
+    public function can_create_application_password() {
         $user_id = get_current_user_id();
         if ( ! $user_id ) {
             return new \WP_Error( 'rest_forbidden', 'Not signed in.', [ 'status' => 401 ] );

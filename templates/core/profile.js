@@ -199,9 +199,30 @@ Object.assign(Component.prototype, {
     });
   },
 
+  // Claude connector card: the MCP endpoint URL (app/Mcp.php) and the matching
+  // Claude Code command. Neither holds a secret — Claude signs in through
+  // /oauth/authorize — so both are plain copy rows. The server name in the
+  // command is the brand slug, so white-label portals don't say CaptainCore.
+  mcpVals(s) {
+    const boot = window.CC_BOOT || {};
+    const url = (boot.restRoot || '/wp-json/') + 'captaincore/v1/mcp';
+    const slug = String(boot.name || 'captaincore').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'captaincore';
+    const cmd = 'claude mcp add --transport http ' + slug + ' ' + url;
+    const copy = (text, key) => { try { navigator.clipboard.writeText(text); } catch (e) {}
+      this.setState({ copied: key }); clearTimeout(this._ct); this._ct = setTimeout(() => this.setState({ copied: '' }), 1400); };
+    return {
+      mcpUrl: url, mcpCmd: cmd,
+      mcpUrlMark: s.copied === 'mcpurl' ? 'Copied ✓' : 'Copy',
+      mcpCmdMark: s.copied === 'mcpcmd' ? 'Copied ✓' : 'Copy',
+      copyMcpUrl: () => copy(url, 'mcpurl'),
+      copyMcpCmd: () => copy(cmd, 'mcpcmd')
+    };
+  },
+
   apiDocsVals(s) {
     const legacyOn = this.legacyUiOn(s);
     return {
+      ...this.mcpVals(s),
       legacyUiBg: legacyOn ? 'var(--brand)' : 'var(--rule)',
       legacyUiJust: legacyOn ? 'flex-end' : 'flex-start',
       toggleLegacyUi: () => this.setLegacyUi(),

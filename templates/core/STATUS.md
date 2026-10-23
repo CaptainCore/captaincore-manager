@@ -15,6 +15,53 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Claude connector (2026-10-23)
+
+A remote MCP server so Claude chat, Cowork, Desktop, mobile and Claude Code
+can work on a user's sites: `POST /wp-json/captaincore/v1/mcp` (`app/Mcp.php`).
+Stateless Streamable HTTP (plain JSON replies, GET answers 405, no session
+id). Two tools: `list_sites` (the caller's active sites with each
+environment's URL and WordPress version, `search`, first 200) and
+`run_command` (site by id, name or URL, `production|staging`, any WP-CLI or
+bash; dispatched as `run <site>-<env> --code=<b64>` through
+`Run::execute`, the same path `/run/code` uses for API callers). Scope is the
+signed-in user's, via `Sites` / `verify()`, so an agency login sees its
+roster and a customer their own sites. Each command is an ActivityLog row
+(`ran`, context `command` + `via: claude`) before it runs.
+
+Sign-in is `app/McpAuth.php`, a minimal OAuth 2.1 server because the hosted
+Claude apps only take OAuth (request-header API keys are a Team/Enterprise
+Owner beta). Discovery at `/.well-known/oauth-protected-resource[/…]` and
+`/.well-known/oauth-authorization-server`, served on `parse_request` (before
+WordPress's trailing-slash 301). `/oauth/authorize` validates the request,
+stashes it in a 15-minute transient, sends a signed-out user through
+`/account/login?redirect_to=/oauth/authorize?request=<id>` (`/oauth/` is
+added to `captaincore_login_redirect_paths`), and shows the approve page
+(`templates/core-authorize.php`, nonce + frame-ancestors none, admin and
+loopback warnings). Codes are single use, 2 minutes, hashed in a transient;
+`/captaincore/v1/oauth/token` checks client, redirect and S256 PKCE and mints
+a WordPress application password named "Claude connector" / "Claude Code
+connector" with `app_id` `McpAuth::APP_ID`; the access token is
+`ccmcp_` + base64url(`<user_id>:<password>`). No token table, no expiry, no
+refresh (a refresh grant gets `invalid_grant`, so Claude signs in again).
+Revoking the password on Profile disconnects. `restrict()` refuses those
+passwords everywhere except the connector (Basic on any REST route, XML-RPC),
+and the connector refuses ordinary app passwords. `/oauth/register` is
+stateless DCR; CIMD is advertised. Redirects are allowlisted to
+`https://claude.ai/api/mcp/auth_callback` plus `http://localhost|127.0.0.1:<any
+port>/callback` (filter `captaincore_mcp_redirect_uris`).
+
+Profile gets a **Claude connector** card (profile.js `mcpVals`): the endpoint
+URL and `claude mcp add --transport http <brand-slug> <url>`, each with Copy.
+
+Verified locally with curl as a customer (2 sites listed, a foreign site
+refused, a bad verifier / code replay / foreign redirect rejected, the
+password refused on `wp/v2/users/me`, revoke returns 401 `invalid_token`) and
+as an administrator through a loopback redirect, where `run_command` ran
+`wp option get home` on austinginder.com through the local CLI server.
+claude.ai cannot reach anchor.localhost, so the hosted-app round trip is the
+post-deploy check.
+
 ## Billing → Renewals (2026-10-22)
 
 v1's admin Billing → Subscriptions (Listing + By the Month) is now one
