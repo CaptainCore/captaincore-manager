@@ -145,7 +145,7 @@ try {
 }
 @font-face {
   font-family: 'JetBrains Mono'; font-style: normal; font-weight: 100 800; font-display: swap;
-  src: url('<?php echo $plugin_url; ?>public/fonts/jetbrains-mono.woff2') format('woff2');
+  src: url('<?php echo $plugin_url; ?>public/fonts/jetbrains-mono.woff2?v=2') format('woff2');
 }
 </style>
 <script>window.CC_BOOT = <?php echo wp_json_encode( $cc_boot ); ?>;</script>
