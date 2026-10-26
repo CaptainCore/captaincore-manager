@@ -5866,6 +5866,14 @@ function captaincore_site_magiclogin_func( $request ) {
 	$users          = json_decode( $environment->users );
 	$target_url     = $environment->home_url;
 
+	// WordPress in a subdirectory serves wp-admin from the site address
+	// (siteurl), not the home address. Follow it only on the same host, so the
+	// signed token still goes nowhere the home address would not send it.
+	$site_url = json_decode( $environment->details ?? '' )->site_url ?? '';
+	if ( preg_match( '#^https?://#i', $site_url ) && strcasecmp( (string) wp_parse_url( $site_url, PHP_URL_HOST ), (string) wp_parse_url( $target_url, PHP_URL_HOST ) ) === 0 ) {
+		$target_url = untrailingslashit( $site_url );
+	}
+
 	// A multisite subsite (?blog=<id>) or a WP Freighter tenant (?tenant=<id>)
 	// signs in on its own URL with its own administrators, both read from the
 	// environment details sync-data stored. The URL never comes from the
