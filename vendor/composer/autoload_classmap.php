@@ -155,6 +155,7 @@ return array(
     'CaptainCore\\Invites' => $baseDir . '/app/Invites.php',
     'CaptainCore\\JobTokens' => $baseDir . '/app/JobTokens.php',
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
+    'CaptainCore\\Licenses' => $baseDir . '/app/Licenses.php',
     'CaptainCore\\Mailer' => $baseDir . '/app/Mailer.php',
     'CaptainCore\\MailgunCLI' => $baseDir . '/app/MailgunCLI.php',
     'CaptainCore\\MalwareFindingNotes' => $baseDir . '/app/MalwareFindingNotes.php',

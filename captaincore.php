@@ -1704,6 +1704,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			}
 		}
 
+		// Premium plugin licenses, as the site stored them (see the licenses probe in
+		// fetch-site-data). A failing license is a state, synced like the checks above.
+		$licenses = isset( $env_details->licenses ) && is_array( $env_details->licenses ) ? $env_details->licenses : null;
+		if ( $is_production && $licenses !== null ) {
+			CaptainCore\MalwareFindings::sync_state( (int) $site_id, $signal_env_id, $signal_env, 'license', CaptainCore\Licenses::to_findings( $licenses ) );
+		}
+
+		// A new site address breaks licenses tied to the old one (a development site going
+		// live, a migration). The change is an event: one row per environment that stays
+		// open until someone re-checks the licenses and resolves it.
+		$previous_home = (string) ( $current_environment->home_url ?? '' );
+		if ( $is_production && $previous_home !== '' && $home_url !== '' && CaptainCore\Licenses::address( $previous_home ) !== CaptainCore\Licenses::address( $home_url ) ) {
+			CaptainCore\MalwareFindings::record( (int) $site_id, $signal_env_id, $signal_env, 'domain-change', [ CaptainCore\Licenses::domain_change_finding( $previous_home, $home_url, $licenses ?? [] ) ] );
+		}
+
 		unset( $details->connection_errors );
 
 		if ( $current_environment->environment == "Production" ) {
