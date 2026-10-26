@@ -1116,6 +1116,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
                     <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
                   </sc-if>
+                  <sc-if value="{{ canSwap }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ swapEnv }}" title="Production gets staging; staging gets production as it was right before the push" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M7 20V4 M3 8l4-4 4 4 M17 4v16 M13 16l4 4 4-4"></path></svg>Swap staging ⇄ production</span>
+                  </sc-if>
                   <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
                 </section>
@@ -5088,7 +5091,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <span onClick="{{ closeDep }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:14px 18px">
-          <span style="font:400 var(--fs-13)/1.55 var(--sans)">Deploy <strong>{{ depFrom }}</strong> → <strong>{{ depTo }}</strong>?</span>
+          <span style="font:400 var(--fs-13)/1.55 var(--sans)">{{ depVerb }} <strong>{{ depFrom }}</strong> {{ depArrow }} <strong>{{ depTo }}</strong>?</span>
           <div style="margin-top:10px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">{{ depWarn }}</div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">

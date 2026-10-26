@@ -1832,6 +1832,10 @@ class Component extends DCLogic {
       stgRows.forEach(a => this.stgProgress(a));
       const stgIds = new Set(stgRows.map(a => String((a.action || {}).site_id)));
       Object.keys(this._stgJobs || {}).forEach(id => { if (!stgIds.has(id)) this.stgProgressGone(id); });
+      const swapRows = list.filter(a => (a.action || {}).command === 'swap-environments');
+      swapRows.forEach(a => this.swapProgress(a));
+      const swapIds = new Set(swapRows.map(a => String((a.action || {}).site_id)));
+      Object.keys(this._swapJobs || {}).forEach(id => { if (!swapIds.has(id)) this.swapProgressGone(id); });
       const chain = list.filter(a => a.status === 'waiting').reduce((p, a) => p.then(() =>
         this.api('/provider-actions/' + a.provider_action_id + '/run').then(active => {
           const act = a.action || {};
@@ -1855,6 +1859,14 @@ class Component extends DCLogic {
             if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
             // Legacy parity (syncSiteEnvironment): pull the new environment's
             // stats/inventory right away so the Staging tab isn't empty.
+            this.syncDeployedEnv(act.site_id, 'Staging', act.name);
+          }
+          // Both environments changed, so both get a fresh sync.
+          if (!still && act.command === 'swap-environments') {
+            this.toast(`Swapped staging and production on ${act.name}`, { kind: 'success' });
+            this.swapProgressDone(act.site_id);
+            if (this._detail && String(this._detail.siteId) === String(act.site_id) && this.reloadSiteDetail) this.reloadSiteDetail();
+            this.syncDeployedEnv(act.site_id, 'Production', act.name);
             this.syncDeployedEnv(act.site_id, 'Staging', act.name);
           }
           // A push resumed after a reload finishes here instead of in the
@@ -1969,6 +1981,67 @@ class Component extends DCLogic {
     if (!job) return;
     job.stream.push("The staging build left the queue (finished in another session or marked failed by the server). Check the site's environments.");
     this.finishJob(job, 'done');
+  }
+
+  // Swap progress (the swap-environments chain): step 1 is the push of
+  // staging over production, step 2 the restore of production's pre-push
+  // backup into staging. Keyed by site id on this._swapJobs like _stgJobs.
+  swapProgress(a) {
+    const act = a.action || {};
+    const id = String(act.site_id || '');
+    if (!id) return;
+    this._swapJobs = this._swapJobs || {};
+    this._jobObjs = this._jobObjs || {};
+    let job = this._jobObjs[this._swapJobs[id]];
+    if (!job) {
+      const jobId = this.startJob({ label: 'deploy', target: 'staging ⇄ production on ' + (act.name || 'site'), command: 'push', siteId: act.site_id });
+      job = this._jobObjs[jobId];
+      this._swapJobs[id] = jobId;
+      job.stream.push('Resumed tracking — the swap is already underway.');
+    }
+    job._paId = a.provider_action_id;
+    this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 6) + 2) }));
+    const key = (a.status || '') + '|' + (act.step || '') + '|' + (a.provider_key || '') + '|' + (act.backup_attempts || '');
+    if (job._paKey === key) return;
+    job._paKey = key;
+    const push = String(act.step) === '1';
+    if (a.status === 'started') job.stream.push(push
+      ? 'Kinsta is backing up production and pushing staging over it (operation ' + a.provider_key + ')…'
+      : 'Kinsta is restoring the pre-push copy of production into staging (operation ' + a.provider_key + ')…');
+    if (a.status === 'waiting') job.stream.push(push
+      ? (act.backup_attempts ? 'Waiting for Kinsta to list the pre-push backup of production…' : '✓ Staging is live on production — restoring the old production into staging…')
+      : '✓ Restore complete — wrapping up…');
+  }
+
+  swapProgressDone(siteId) {
+    const id = String(siteId || '');
+    const job = this._jobObjs && this._jobObjs[(this._swapJobs || {})[id]];
+    delete (this._swapJobs || {})[id];
+    if (!job) return;
+    job.stream.push('✓ Staging and production swapped. Both environments are syncing as their own jobs.');
+    this.finishJob(job, 'done');
+  }
+
+  // Gone without this browser running the last step: finished in another
+  // session, or failed. A failed row carries the reason, so look it up.
+  swapProgressGone(siteId) {
+    const id = String(siteId || '');
+    const job = this._jobObjs && this._jobObjs[(this._swapJobs || {})[id]];
+    delete (this._swapJobs || {})[id];
+    if (!job) return;
+    if (!job._paId) { job.stream.push('The swap left the queue. Check both environments.'); this.finishJob(job, 'done'); return; }
+    this.api('/provider-actions/' + job._paId).then(row => {
+      if (row && row.status === 'failed') {
+        job.stream.push('Error: ' + ((row.action || {}).error || 'The swap failed at Kinsta.'));
+        this.finishJob(job, 'error');
+        return;
+      }
+      job.stream.push('The swap left the queue (finished in another session). Check both environments.');
+      this.finishJob(job, 'done');
+    }).catch(() => {
+      job.stream.push('The swap left the queue (finished elsewhere or marked failed by the server). Check both environments.');
+      this.finishJob(job, 'done');
+    });
   }
 
   // The action left the queue without this browser running its final step —
@@ -2441,6 +2514,10 @@ class Component extends DCLogic {
       dMetaPost: ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
+      // Swap rides Kinsta's pre-push backup of production, so it needs a
+      // Kinsta-linked site with both environments.
+      canSwap: real && real.envs ? (real.site || {}).provider === 'kinsta' && !!(real.site || {}).provider_site_id
+        && real.envs.some(e => e.environment === 'Staging') && real.envs.some(e => e.environment === 'Production') : true,
       setEnvProd: () => this.setEnv('Production'), setEnvStag: () => this.setEnv('Staging'),
       backToSites: () => this.setState({ route: 'sites' }),
       dSync: () => real ? this.realSync(real, s) : this.runJob('sync-data', site.name),
@@ -2449,9 +2526,11 @@ class Component extends DCLogic {
       // Deploys are destructive (they overwrite the target environment) — the
       // buttons open the confirm dialog; depGo runs the actual push. Three
       // directions: 'up' (staging → production), 'down' (production → staging),
-      // 'other' (current env → an env on another site, picked in the pto dialog).
+      // 'other' (current env → an env on another site, picked in the pto dialog),
+      // plus 'swap' (staging and production trade places).
       pushEnv: () => this.setState({ deployConfirm: 'up' }),
       pullEnv: () => this.setState({ deployConfirm: 'down' }),
+      swapEnv: () => this.setState({ deployConfirm: 'swap' }),
       ...this.computeDeployConfirm(real, s, site),
       ...this.computePushToOther(real, s, site),
       dTabs: tabs,

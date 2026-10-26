@@ -15,6 +15,34 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Swap staging and production (2026-10-26)
+
+Deploy card → **Swap staging ⇄ production** (`canSwap`: Kinsta-linked site
+with both environments). `POST /providers/{p}/swap-environments {site_id}` →
+`Kinsta::swap_environments` pushes staging over live (the same
+`PUT sites/{id}/environments` as deploy-to-production) and records a
+`swap-environments` provider action with `started_at`. Kinsta backs up the
+target of every push first: a backup of `type: systemgen`, `note:
+pushToEnvTarget` (MyKinsta → Backups → System-generated, kept 30 days), listed
+by `GET sites/environments/{live}/backups` about 20 seconds after the push
+starts. When the push finishes, `ProviderAction::run()` step 1 takes the
+oldest such backup with `created_at` (milliseconds) at or after `started_at`
+minus 30 seconds and `POST`s it to `sites/environments/{staging}/backups/restore`.
+Kinsta rewrites the URLs for the target environment, as with the pull. Step 2
+completes the chain and writes the activity row. If the backup is not listed
+yet, the action goes back to `waiting` (10 tries, then failed with the reason
+on `action.error`). An `add_option` lock stops the two browser pollers from
+starting the restore twice. The dock job is `swapProgress`/`swapProgressDone`/
+`swapProgressGone` in app.js; `swapProgressGone` reads the new owner-scoped
+`GET /provider-actions/{id}` to show a failure's reason. Both environments
+sync when it finishes.
+
+Verified live on a test site twice (marker option + file on each side): by
+hand with the raw API calls, then end to end through `swap_environments` and
+`check()`/`run()`. Push about 4.5 min, restore about 6.5 min. Both markers
+traded places, staging kept its own home/siteurl, no lock left behind. The
+card and dialog were checked in Playwright with the swap route mocked.
+
 ## Claude connector (2026-10-23)
 
 A remote MCP server so Claude chat, Cowork, Desktop, mobile and Claude Code

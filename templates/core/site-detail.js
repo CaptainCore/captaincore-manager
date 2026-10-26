@@ -407,6 +407,25 @@ Object.assign(Component.prototype, {
       { siteId: real.siteId, environment: target.environment, name });
   },
 
+  // Swap is a two-operation Kinsta chain (push, then restore the pre-push
+  // backup into staging); pollProviderActions drives the second step and
+  // streams progress into this job (swapProgress).
+  realSwap(real) {
+    const site = real.site || {};
+    const jobId = this.startJob({
+      label: 'deploy', target: 'staging ⇄ production on ' + (site.name || ''),
+      command: 'push', siteId: real.siteId
+    });
+    const job = this._jobObjs[jobId];
+    this.api('/providers/' + site.provider + '/swap-environments', { method: 'POST', body: { site_id: real.siteId } }).then(res => {
+      if (!res || res.code) { job.stream.push('Error: ' + ((res && res.message) || 'Could not start the swap.')); this.finishJob(job, 'error'); return; }
+      job.stream.push('Kinsta accepted the push (operation ' + res + ').');
+      job.stream.push('The push and the restore each take several minutes. Progress shows here, and both environments sync once the swap is done.');
+      (this._swapJobs = this._swapJobs || {})[String(real.siteId)] = job.id;
+      if (this.pollProviderActions) this.pollProviderActions();
+    }).catch(err => { job.stream.push('Error: ' + (err && err.message || err)); this.finishJob(job, 'error'); });
+  },
+
   // Targets for "Push to another site" — the provider endpoint returns every
   // environment (same Kinsta account, permission-filtered) except the source.
   loadPushTargets(real, s) {
@@ -422,10 +441,11 @@ Object.assign(Component.prototype, {
   computeDeployConfirm(real, s, site) {
     const dir = s.deployConfirm;
     const t = s.ptoSel || {};
-    const from = dir === 'up' ? 'staging on ' + site.name
+    const swap = dir === 'swap';
+    const from = swap ? 'staging' : dir === 'up' ? 'staging on ' + site.name
       : dir === 'down' ? 'production on ' + site.name
       : (s.env || '').toLowerCase() + ' on ' + site.name;
-    const to = dir === 'up' ? 'production on ' + site.name
+    const to = dir === 'up' || swap ? 'production on ' + site.name
       : dir === 'down' ? 'staging on ' + site.name
       : (t.environment || '').toLowerCase() + ' on ' + (t.name || '');
     const label = from + ' → ' + to;
@@ -433,14 +453,17 @@ Object.assign(Component.prototype, {
     const newStaging = dir === 'down' && !!(real && real.envs) && !real.envs.some(e => e.environment === 'Staging');
     return {
       depOpen: !!dir,
-      depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : 'Push to another site',
+      depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : swap ? 'Swap staging and production' : 'Push to another site',
       depFrom: from, depTo: to,
-      depWarn: newStaging
+      depVerb: swap ? 'Swap' : 'Deploy', depArrow: swap ? '⇄' : '→',
+      depWarn: swap
+        ? 'Production gets a copy of staging. Kinsta backs up production right before the push, and that backup is then restored into staging. Each step takes several minutes.'
+        : newStaging
         ? 'This site has no staging environment yet. The host creates one from a copy of ' + from + ', which can take several minutes.'
         : 'This overwrites ' + to + ' with a copy of ' + from + '. Anything on the target that isn’t in the copy will be lost.',
-      depBtn: dir === 'up' ? 'Push to production' : newStaging ? 'Create staging' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
+      depBtn: dir === 'up' ? 'Push to production' : swap ? 'Swap environments' : newStaging ? 'Create staging' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
       // Red whenever a production environment is about to be overwritten.
-      depBtnBg: (dir === 'up' || (dir === 'other' && t.environment === 'Production')) ? 'var(--bad)' : 'var(--brand)',
+      depBtnBg: (dir === 'up' || swap || (dir === 'other' && t.environment === 'Production')) ? 'var(--bad)' : 'var(--brand)',
       closeDep: () => this.setState({ deployConfirm: '', ptoSel: null }),
       depGo: () => {
         if (!dir) return;
@@ -451,6 +474,11 @@ Object.assign(Component.prototype, {
           const env = real.envs && real.envs.find(e => e.environment === s.env);
           if (env) this.realPushTo(real, env.environment_id, t.environment_id, label,
             { siteId: t.site_id, environment: t.environment, name: t.name });
+          return;
+        }
+        if (swap) {
+          if (real) this.realSwap(real);
+          else this.runJob('deploy', 'staging ⇄ production on ' + site.name);
           return;
         }
         if (real) this.realPush(real, dir);

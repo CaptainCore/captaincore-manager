@@ -24,7 +24,7 @@ class ProviderAction {
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
             $status          = '';
             $operation_error = '';
-            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" || $action->command == "push_environment" ) {
+            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "swap-environments" || $action->command == "new-site" || $action->command == "push_environment" ) {
                 if ( $action->command == "new-site" && ! empty( $action->intial_response->message ) && $action->intial_response->message == "Too many requests, please try again later." && empty( $provider_action->provider_key )) {
                     $response = $class_name::create_site_request( $action );
                     if ( ! empty( $response->operation_id ) ) {
@@ -124,6 +124,15 @@ class ProviderAction {
             }
         }
         return $actions;
+    }
+
+    public function get() {
+        $action = ( new ProviderActions )->get( $this->provider_action_id );
+        if ( empty( $action ) || (int) $action->user_id !== (int) get_current_user_id() ) {
+            return new \WP_Error( 'not_found', 'Provider action not found.', [ 'status' => 404 ] );
+        }
+        $action->action = json_decode( $action->action );
+        return $action;
     }
 
     public function all() {
@@ -242,6 +251,87 @@ class ProviderAction {
             $site      = ! empty( $current_action->source_site_id ) ? ( new Sites )->get( $current_action->source_site_id ) : null;
             $site_name = $site->name ?? '';
             ActivityLog::log( 'deployed', 'environment', $current_action->source_site_id ?? null, $site_name, $current_action->message ?? "Pushed environment for {$site_name}", [], $site->customer_id ?? null );
+            return self::active();
+        }
+
+        if ( $current_action->command == "swap-environments" ) {
+            // The push landed: restore production's pre-push backup into staging.
+            if ( $current_action->step == 1 ) {
+                // Two pollers (the site tab and the app-wide one) can run the
+                // same waiting action at once; only one may start the restore.
+                $lock = "captaincore_provider_action_lock_{$this->provider_action_id}";
+                if ( (int) get_option( $lock ) > 0 && time() - (int) get_option( $lock ) > 120 ) {
+                    delete_option( $lock );
+                }
+                if ( ! add_option( $lock, time(), '', false ) ) {
+                    return self::active();
+                }
+                $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$current_action->environment_production_id}/backups" );
+                $backup   = null;
+                foreach( $response->environment->backups ?? [] as $candidate ) {
+                    // created_at is in milliseconds. The oldest pushToEnvTarget
+                    // backup since the push started is the one this push made.
+                    if ( $candidate->type != "systemgen" || ( $candidate->note ?? '' ) != "pushToEnvTarget" ) {
+                        continue;
+                    }
+                    if ( $candidate->created_at < ( $current_action->started_at - 30 ) * 1000 ) {
+                        continue;
+                    }
+                    if ( empty( $backup ) || $candidate->created_at < $backup->created_at ) {
+                        $backup = $candidate;
+                    }
+                }
+                if ( empty( $backup ) ) {
+                    delete_option( $lock );
+                    $current_action->backup_attempts = empty( $current_action->backup_attempts ) ? 1 : $current_action->backup_attempts + 1;
+                    $failed = $current_action->backup_attempts >= 10;
+                    if ( $failed ) {
+                        $current_action->error = "Production now runs the staging copy, but Kinsta's pre-push backup of production never appeared, so staging was left as it was. Restore it from MyKinsta → Backups → System-generated.";
+                        error_log( "CaptainCore swap-environments: no pushToEnvTarget backup for site #{$current_action->site_id}" );
+                    }
+                    ( new ProviderActions )->update( [
+                        'action'     => json_encode( $current_action ),
+                        'updated_at' => $time_now,
+                        'status'     => $failed ? "failed" : "waiting",
+                    ], [ "provider_action_id" => $this->provider_action_id ] );
+                    return self::active();
+                }
+                $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$current_action->environment_staging_id}/backups/restore", [
+                    "backup_id"        => $backup->id,
+                    "notified_user_id" => $class_name::credentials( "user_id", $provider_action->provider_id ),
+                ] );
+                if ( empty( $response->operation_id ) ) {
+                    $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the restore.';
+                    $current_action->error = "Production now runs the staging copy, but restoring production's pre-push backup into staging failed: $message";
+                    ( new ProviderActions )->update( [
+                        'action'     => json_encode( $current_action ),
+                        'updated_at' => $time_now,
+                        'status'     => "failed",
+                    ], [ "provider_action_id" => $this->provider_action_id ] );
+                    delete_option( $lock );
+                    return self::active();
+                }
+                $current_action->step      = 2;
+                $current_action->backup_id = $backup->id;
+                ( new ProviderActions )->update( [
+                    'provider_key' => $response->operation_id,
+                    'action'       => json_encode( $current_action ),
+                    'updated_at'   => $time_now,
+                    'status'       => "started",
+                ], [ "provider_action_id" => $this->provider_action_id ] );
+                delete_option( $lock );
+                return self::active();
+            }
+
+            $current_action->step = 3;
+            ( new ProviderActions )->update( [
+                'action'     => json_encode( $current_action ),
+                'updated_at' => $time_now,
+                'status'     => "done",
+            ], [ "provider_action_id" => $this->provider_action_id ] );
+            $site      = ! empty( $current_action->site_id ) ? ( new Sites )->get( $current_action->site_id ) : null;
+            $site_name = $site->name ?? '';
+            ActivityLog::log( 'deployed', 'environment', $current_action->site_id ?? null, $site_name, "Swapped staging and production for {$site_name}", [], $site->customer_id ?? null );
             return self::active();
         }
 

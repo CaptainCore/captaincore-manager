@@ -66,6 +66,15 @@ class Provider {
         return $class_name::deploy_to_production( $site_id );
     }
 
+    public function swap_environments( $site_id ) {
+        $provider   = self::get();
+        $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+        if ( ! method_exists( $class_name, 'swap_environments' ) ) {
+            return new \WP_Error( 'not_supported', 'This host does not support swapping environments.', [ 'status' => 400 ] );
+        }
+        return $class_name::swap_environments( $site_id );
+    }
+
     public function update_token( $token = "" ) {
         $provider   = self::get();
         $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );

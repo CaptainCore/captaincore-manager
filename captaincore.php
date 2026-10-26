@@ -4369,6 +4369,16 @@ function captaincore_provider_deploy_to_production_func( $request ) {
 	return ( new CaptainCore\Provider( $provider ) )->deploy_to_production( $site_id );
 }
 
+function captaincore_provider_swap_environments_func( $request ) {
+	$site_id = $request['site_id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = $request->get_param( "provider" );
+	CaptainCore\ProcessLog::insert( "Swap staging and production", $site_id );
+	return ( new CaptainCore\Provider( $provider ) )->swap_environments( $site_id );
+}
+
 function captaincore_provider_actions_check_func( $request ) {
 	if ( ! ( new CaptainCore\User )->has_known_role() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
@@ -4381,6 +4391,15 @@ function captaincore_provider_actions_run_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction( $request['id'] ) )->run();
+}
+
+// One action of the caller's own, finished or not, so the UI can show why a
+// chain that left the active list failed.
+function captaincore_provider_action_func( $request ) {
+	if ( ! ( new CaptainCore\User )->has_known_role() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\ProviderAction( $request['id'] ) )->get();
 }
 
 function captaincore_provider_actions_func( $request ) {
@@ -9771,6 +9790,15 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/swap-environments', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_swap_environments_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/provider-actions/check', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_provider_actions_check_func',
@@ -9783,6 +9811,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/provider-actions/(?P<id>[\d]+)/run', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_provider_actions_run_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/provider-actions/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_action_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]

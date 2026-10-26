@@ -733,6 +733,64 @@ class Kinsta {
 
     }
 
+    // Swap staging and production: push staging over production, then restore
+    // into staging the backup Kinsta takes of production before every push
+    // (type systemgen, note pushToEnvTarget). ProviderAction::run() starts the
+    // restore once the push lands.
+    public static function swap_environments( $site_id ) {
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site->provider_site_id ) ) {
+            return new \WP_Error( 'not_linked', 'This site is not linked to a Kinsta site.', [ 'status' => 400 ] );
+        }
+        self::use_provider( $site->provider_id );
+        $environments = self::environments( $site->provider_site_id );
+
+        $environment_production_id = "";
+        $environment_staging_id    = "";
+        foreach( $environments as $environment ) {
+            if ( $environment->name == "live" ) {
+                $environment_production_id = $environment->id;
+            }
+            if ( $environment->name == "staging" ) {
+                $environment_staging_id = $environment->id;
+            }
+        }
+        if ( empty( $environment_production_id ) || empty( $environment_staging_id ) ) {
+            return new \WP_Error( 'no_staging', 'A swap needs both a production and a staging environment at Kinsta.', [ 'status' => 400 ] );
+        }
+
+        $started_at = time();
+        $data       = [
+            "source_env_id"          => $environment_staging_id,
+            "target_env_id"          => $environment_production_id,
+            "push_db"                => true,
+            "push_files"             => true,
+            "run_search_and_replace" => true
+        ];
+        $response = \CaptainCore\Remote\Kinsta::put( "sites/{$site->provider_site_id}/environments", $data );
+
+        if ( empty( $response->operation_id ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the push.';
+            return new \WP_Error( 'kinsta_push_failed', "Kinsta could not push staging to production: $message", [ 'status' => 502 ] );
+        }
+
+        $action = (object) [
+            "command"                   => "swap-environments",
+            "step"                      => 1,
+            "message"                   => "Swapping staging and production for $site->name",
+            "name"                      => $site->name,
+            "site_id"                   => $site_id,
+            "kinsta_site_id"            => $site->provider_site_id,
+            "environment_production_id" => $environment_production_id,
+            "environment_staging_id"    => $environment_staging_id,
+            "started_at"                => $started_at,
+            "provider_id"               => $site->provider_id,
+        ];
+
+        self::add_action( $response->operation_id, $action );
+        return $response->operation_id;
+    }
+
     public static function provider_sync() {
         $data = [
             'timeout' => 45,
