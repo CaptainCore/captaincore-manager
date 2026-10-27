@@ -8770,6 +8770,7 @@ function captaincore_register_rest_endpoints() {
 				'page'     => (int) $request->get_param( 'page' ),
 				'per_page' => (int) $request->get_param( 'per_page' ),
 			] );
+			$result['counts']['watch'] = CaptainCore\AdminWatches::watching_count();
 			$result['emails_enabled'] = CaptainCore\MalwareFindings::security_emails_enabled();
 			return $result;
 		},

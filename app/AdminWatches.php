@@ -286,6 +286,15 @@ class AdminWatches extends DB {
 	}
 
 	/**
+	 * How many accounts are on watch now, for the Signals screen.
+	 */
+	public static function watching_count() {
+		global $wpdb;
+		self::expire();
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table_name() . " WHERE status = 'watching'" );
+	}
+
+	/**
 	 * Watches past their seven days end as expired.
 	 */
 	public static function expire() {

@@ -119,6 +119,25 @@ month (this month's renewals ran on the 1st), and anything due before it opens
 per account: 832 accounts price in 0.24s locally, where `/subscriptions` takes
 10s, and every account's total matches `/subscriptions` to the cent.
 
+## Signals → On watch (2026-10-27)
+
+A new administrator, new super admin or injected-capability account goes on a
+seven day watch (`admin_watches`, DB v64, app/AdminWatches.php), whatever its
+signal's verdict. The **On watch** view on the Signals tab lists
+`GET /admin-watches` (watching only, count in the pill from the search
+response's `counts.watch`). A row shows days left, the site, `db:user/<login>`,
+the trigger and whether a review is due (a snapshot newer than the last
+review). Expanding it loads `GET /admin-watches/{id}`: a one-line summary (IPs,
+new IPs, IPs shared with other admins, new application passwords, posts
+touched, other signals since), one monospace line per snapshot from the day
+before the account appeared, the latest review note, and the original
+signal's trail. The template's verdict label is now `r.btnLabel` (Verdict: on
+signals, Watch: here); Clear watch and Flag post the note box (10+ characters)
+to `/admin-watches/{id}/review`, and Flag puts an actionable critical
+`session-admin-watch-flag` signal on Needs attention. Add note writes to the
+original signal's trail. Checked in light and dark with a seeded watch; the
+Flag round trip was run in the browser and the test rows removed.
+
 ## Security → Signals (2026-10-22)
 
 The Security Alert emails (malware, injection, core checksum, role settings,

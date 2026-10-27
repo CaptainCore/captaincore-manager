@@ -3541,7 +3541,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                         </div>
                       </div>
                       <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;align-items:center">
-                        <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-right:2px">Verdict:</span>
+                        <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-right:2px">{{ r.btnLabel }}</span>
                         <sc-for list="{{ r.verdictBtns }}" as="b" hint-placeholder-count="5">
                           <span onClick="{{ b.go }}" style="font:500 var(--fs-12) var(--sans);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:3px 9px;background:var(--paper);color:{{ b.fg }}" style-hover="border-color:var(--brand)">{{ b.label }}</span>
                         </sc-for>

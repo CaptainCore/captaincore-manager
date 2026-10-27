@@ -644,8 +644,12 @@ Object.assign(Component.prototype, {
   // follow-up trail loads on expand from GET /malware-findings/{id}. Writes:
   // POST /malware-findings/{id}/verdict, /acknowledge, /resolve, /{id}/notes,
   // /settings {emails_enabled}. Agents use the same routes; see the
-  // security-signal docs in the dev-captaincore skill.
-  SIG_VIEWS: [['attention', 'Needs attention'], ['unreviewed', 'Unreviewed'], ['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']],
+  // security-signal docs in the dev-captaincore skill. The On watch view lists
+  // GET /admin-watches instead (accounts watched for seven days after a new-admin
+  // signal); a row's dossier loads on expand from GET /admin-watches/{id}, and
+  // Clear / Flag post /admin-watches/{id}/review.
+  SIG_VIEWS: [['attention', 'Needs attention'], ['watch', 'On watch'], ['unreviewed', 'Unreviewed'], ['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']],
+  WATCH_TRIGGER_LABEL: { new_admin_capable_account: 'New admin', new_super_admin: 'New super admin', injected_caps: 'Injected caps' },
   SIG_VERDICT_STYLE: { compromise: ['var(--bad-soft)', 'var(--bad)'], residue: ['var(--warn-soft)', 'var(--ink)'], actionable: ['var(--warn-soft)', 'var(--ink)'],
     'needs-human': ['var(--brand-soft)', 'var(--brand-ink)'], benign: ['var(--ok-soft)', 'var(--ok)'], '': ['var(--panel-2)', 'var(--ink-dim)'] },
   SIG_SOURCE_LABEL: { capture: 'Injection', 'core-checksum': 'Core checksum', config: 'Role settings', session: 'Sessions', 'db-scan': 'Database', native: 'Files', 'native-full': 'Files (full)',
@@ -662,6 +666,19 @@ Object.assign(Component.prototype, {
     const key = JSON.stringify(q);
     if (!force && (this._sigKey === key || this._sigLoadingKey === key)) return;
     this._sigLoadingKey = key;
+    if (q.view === 'watch') {
+      // Counts and the email setting come from the last search; keep them.
+      const prev = this._sig || {};
+      this.api('/admin-watches?status=watching').then(res => {
+        if (this._sigLoadingKey !== key) return;
+        this._sigLoadingKey = '';
+        this._sigKey = key;
+        const watches = (res && Array.isArray(res.items)) ? res.items : [];
+        this._sig = { items: [], watches, total: 0, counts: Object.assign({}, prev.counts, { watch: watches.length }), emails_enabled: !!prev.emails_enabled };
+        this.setState({});
+      }).catch(() => { this._sigLoadingKey = ''; this._sigKey = key; this._sig = { items: [], watches: [], total: 0, counts: (this._sig || {}).counts || {}, error: true }; this.setState({}); });
+      return;
+    }
     const qs = '?view=' + encodeURIComponent(q.view) + '&source=' + encodeURIComponent(q.source) + '&search=' + encodeURIComponent(q.search) + '&page=' + q.page + '&per_page=50';
     this.api('/malware-findings/search' + qs).then(res => {
       if (this._sigLoadingKey !== key) return;
@@ -678,6 +695,79 @@ Object.assign(Component.prototype, {
       this._sigNotes[id] = (row && Array.isArray(row.notes)) ? row.notes : [];
       this.setState({});
     }).catch(() => {});
+  },
+
+  loadWatchDossier(id) {
+    this._watchDossier = this._watchDossier || {};
+    this.api('/admin-watches/' + id).then(d => {
+      this._watchDossier[id] = (d && d.watch) ? d : { error: true };
+      this.setState({});
+    }).catch(() => { this._watchDossier[id] = { error: true }; this.setState({}); });
+  },
+
+  watchReview(w, outcome) {
+    const note = (this.state.sigDraft || '').trim();
+    if (note.length < 10) { this.toast('Say what you found in the note box first (10+ characters).', { kind: 'info' }); return; }
+    const tid = this.toast((outcome === 'flag' ? 'Flagging' : 'Clearing') + '…', { kind: 'loading' });
+    this.api('/admin-watches/' + w.admin_watch_id + '/review', { method: 'POST', body: { outcome, note } }).then(res => {
+      if (res && res.code) throw new Error(res.message || 'refused');
+      this.updateToast(tid, (outcome === 'flag' ? 'Flagged; it is on the attention list' : 'Watch cleared') + ' ✓', { kind: 'success' });
+      this.setState({ sigDraft: '', sigOpen: 0 });
+      this.loadSignals(true);
+    }).catch(e => this.updateToast(tid, (e && e.message && e.message !== 'refused') ? e.message : 'Could not save', { kind: 'error' }));
+  },
+
+  // One Signals row for a watched account, in the same shape as a signal row.
+  watchRow(w, s, who) {
+    const id = Number(w.admin_watch_id);
+    const open = s.sigOpen === 'w' + id;
+    const d = (this._watchDossier || {})[id];
+    const sum = (d && d.summary) || {};
+    const flagged = w.status === 'flagged';
+    const days = Number(w.days_left);
+    const ips = Object.keys(sum.ips || {});
+    const posts = sum.recent_posts || [];
+    const apps = sum.new_app_passwords || [];
+    const other = (d && d.other_signals) || [];
+    const desc = !d ? 'Loading the dossier…' : d.error ? 'Could not load the dossier.' : [
+      'Present in ' + sum.days_present + ' of ' + sum.snapshots + ' snapshots.',
+      ips.length ? 'Login IPs: ' + ips.join(', ') + '.' : 'No sessions seen.',
+      (sum.new_ips || []).length ? 'New since the first day: ' + sum.new_ips.join(', ') + '.' : '',
+      (sum.ips_shared_with_other_admins || []).length ? 'Shared with other admins: ' + sum.ips_shared_with_other_admins.join(', ') + '.' : (ips.length ? 'No IP shared with another admin.' : ''),
+      apps.length ? 'New application passwords: ' + apps.map(a => '"' + a.name + '" (' + String(a.created).slice(0, 16) + ')').join(', ') + '.' : '',
+      posts.length ? 'Posts touched: ' + posts.length + ', latest ' + posts[0].type + ' ' + posts[0].status + ' "' + posts[0].title + '".' : '',
+      other.length ? 'Other signals on this environment since: ' + other.length + ' (' + [...new Set(other.map(o => o.source))].join(', ') + ').' : ''
+    ].filter(Boolean).join(' ');
+    const dayLines = ((d && d.days) || []).map(x => String(x.collected_at).slice(0, 16) + '  ' + (x.present
+      ? (x.is_admin ? 'admin' : 'admin-capable') + '  roles=' + (x.roles || []).join(',') + '  sessions=' + (x.sessions || []).length
+        + '  ips=' + ([...new Set((x.sessions || []).map(z => z.ip).filter(Boolean))].join(',') || '-')
+        + (x.app_passwords ? '  app_passwords=' + x.app_passwords.length : '') + (x.recent_posts ? '  posts=' + (x.recent_posts.count || 0) : '')
+      : 'not present')).join('\n');
+    const notes = ((d && d.trail) || []).map(n => ({ who: who(n.author), kind: n.kind, when: (n.created_at || '').slice(0, 16), text: n.body }));
+    const tv = w.trigger_verdict || '';
+    const meta = ['Opened ' + String(w.opened_at).slice(0, 16), 'ends ' + String(w.expires_at).slice(0, 10), w.review_count + ' review' + (w.review_count == 1 ? '' : 's'),
+      'signal ' + (tv ? tv : 'unreviewed'), w.malware_finding_id > 0 ? 'signal #' + w.malware_finding_id : '', 'watch #' + id].filter(Boolean).join(' · ');
+    return {
+      sev: flagged ? 'Flagged' : days + 'd left', sevBg: flagged ? 'var(--bad-soft)' : 'var(--brand-soft)', sevFg: flagged ? 'var(--bad)' : 'var(--brand-ink)',
+      site: w.site_name || ('site ' + w.site_id), env: w.environment || '', path: 'db:user/' + (w.login || '#' + w.user_id),
+      source: this.WATCH_TRIGGER_LABEL[w.trigger_type] || w.trigger_type,
+      verdict: w.due ? 'Review due' : (w.last_reviewed_at ? 'Reviewed' : 'Waiting for a snapshot'),
+      vBg: w.due ? 'var(--warn-soft)' : 'var(--ok-soft)', vFg: w.due ? 'var(--ink)' : 'var(--ok)',
+      ackShow: false, ackTitle: '',
+      ago: this.relTime(String(w.last_reviewed_at || w.opened_at).replace(' ', 'T') + 'Z'), lastSeen: w.last_reviewed_at ? 'Last reviewed ' + w.last_reviewed_at : 'Opened ' + w.opened_at,
+      open,
+      toggle: () => { this.setState({ sigOpen: open ? 0 : 'w' + id, sigDraft: '' }); if (!open) this.loadWatchDossier(id); },
+      sigName: w.trigger_detail || 'Account on watch', sigId: 'admin watch', desc,
+      match: dayLines, matchShow: !!dayLines,
+      reason: w.note || '', reasonShow: !!w.note, reviewer: who(w.last_reviewed_by) + ' (latest review)',
+      resolution: '', resShow: false, resBy: '',
+      meta, notes, notesEmpty: !notes.length, notesEmptyText: d ? 'No follow-up yet.' : 'Loading…',
+      addNote: () => { if (w.malware_finding_id > 0 && (this.state.sigDraft || '').trim()) this.sigWrite('/malware-findings/' + w.malware_finding_id + '/notes', { body: this.state.sigDraft.trim() }, 'Note added').then(() => this.loadWatchDossier(id)); },
+      btnLabel: 'Watch:',
+      verdictBtns: [['clear', 'Clear watch', 'var(--ok)'], ['flag', 'Flag', 'var(--bad)']].map(([k, label, fg]) => ({ label, fg, go: () => this.watchReview(w, k) })),
+      openSite: () => this.openSite(String(w.site_id)),
+      canAck: false, ack: () => {}, canResolve: false, resolve: () => {}
+    };
   },
 
   // Run one write, toast the outcome, then refresh the list and the open row's trail.
@@ -735,10 +825,15 @@ Object.assign(Component.prototype, {
       go: () => this.setState({ sigView: id, sigPage: 1, sigOpen: 0 }) }));
     const chip = (id, label) => ({ label, fg: q.source === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: q.source === id ? 'var(--brand-soft)' : 'var(--paper)',
       bd: q.source === id ? 'var(--brand)' : 'var(--rule)', go: () => this.setState({ sigSource: id, sigPage: 1, sigOpen: 0 }) });
-    const sigSources = [chip('', 'All sources'), ...((counts.sources || []).map(src => chip(src, this.SIG_SOURCE_LABEL[src] || src)))];
+    const watchView = q.view === 'watch';
+    const sigSources = watchView ? [] : [chip('', 'All sources'), ...((counts.sources || []).map(src => chip(src, this.SIG_SOURCE_LABEL[src] || src)))];
     const notesMap = this._sigNotes || {};
     const who = a => String(a || '').replace(/^(review|user):/, '').replace(/:/, ' · ') || 'system';
-    const sigRows = ((data && data.items) || []).map(f => {
+    const needle = (q.search || '').toLowerCase();
+    const watchRows = watchView ? ((data && data.watches) || [])
+      .filter(w => !needle || [w.site_name, w.login, w.trigger_detail, w.note].some(x => String(x || '').toLowerCase().includes(needle)))
+      .map(w => this.watchRow(w, s, who)) : [];
+    const sigRows = watchView ? watchRows : ((data && data.items) || []).map(f => {
       const id = Number(f.malware_finding_id);
       const sev = String(f.severity || 'low').toLowerCase();
       const [sevBg, sevFg] = this.SEV_STYLE[sev] || this.SEV_STYLE.low;
@@ -763,6 +858,7 @@ Object.assign(Component.prototype, {
         resolution: f.resolution || '', resShow: f.status === 'resolved' && !!f.resolution, resBy: who(f.resolved_by),
         meta, notes, notesEmpty: !notes.length, notesEmptyText: notesMap[id] ? 'No follow-up yet.' : 'Loading…',
         addNote: () => this.sigNote(f),
+        btnLabel: 'Verdict:',
         verdictBtns: [['benign', 'Benign', 'var(--ok)'], ['actionable', 'Actionable', 'var(--ink)'], ['residue', 'Residue', 'var(--ink)'], ['compromise', 'Compromise', 'var(--bad)'], ['needs-human', 'Needs human', 'var(--brand-ink)']]
           .filter(([k]) => k !== v).map(([k, label, fg]) => ({ label, fg, go: () => this.sigVerdict(f, k) })),
         openSite: () => this.openSite(String(f.site_id)),
@@ -772,6 +868,7 @@ Object.assign(Component.prototype, {
     });
     const total = (data && data.total) || 0, page = q.page, pages = Math.max(1, Math.ceil(total / 50));
     const emptyText = data && data.error ? 'Could not load signals.' : ({ attention: 'Nothing needs attention. Every open signal is reviewed and picked up.',
+      watch: 'No accounts on watch. A new administrator goes on watch for seven days.',
       unreviewed: 'No signals waiting for a review.', open: 'No open signals.', resolved: 'No resolved signals match.', all: 'No signals match.' })[q.view] || 'No signals match.';
     const emailsOn = !!(data && data.emails_enabled);
     return {
