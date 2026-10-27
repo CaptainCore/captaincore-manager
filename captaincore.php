@@ -1808,6 +1808,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				'session',
 				CaptainCore\SessionAnomalyDetector::to_findings( $detection['anomalies'] )
 			);
+			// New admins, super admins and injected caps go on a seven day watch (app/AdminWatches.php).
+			CaptainCore\AdminWatches::open_from_anomalies( (int) $site_id, (int) $target_environment_id, $session_env->environment ?? 'Production', $detection['anomalies'], $signal );
 			$lines = array_map( function ( $x ) { return "[{$x['severity']}] {$x['detail']}"; }, $detection['anomalies'] );
 			CaptainCore\ActivityLog::log(
 				'session_anomaly',
@@ -8834,6 +8836,41 @@ function captaincore_register_rest_endpoints() {
 				return new WP_Error( 'bad_request', 'note must say what was found or done (at least 10 characters).', [ 'status' => 400 ] );
 			}
 			return CaptainCore\MonitorIncidents::acknowledge( $ids, $note, captaincore_signal_author( $request, 'user' ) );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/admin-watches', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$status = (string) ( $request->get_param( 'status' ) ?: 'watching' );
+			$limit  = min( 500, max( 1, (int) ( $request->get_param( 'limit' ) ?: 200 ) ) );
+			$rows   = CaptainCore\AdminWatches::listing( $status, rest_sanitize_boolean( $request->get_param( 'due' ) ), $limit );
+			return [ 'count' => count( $rows ), 'items' => $rows ];
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/admin-watches/(?P<id>[\d]+)', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$dossier = CaptainCore\AdminWatches::dossier( (int) $request['id'] );
+			return $dossier ?: new WP_Error( 'not_found', 'No such watch.', [ 'status' => 404 ] );
+		},
+		'permission_callback' => function () {
+			return current_user_can( 'manage_options' );
+		},
+	] );
+	register_rest_route( 'captaincore/v1', '/admin-watches/(?P<id>[\d]+)/review', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$note = trim( (string) $request->get_param( 'note' ) );
+			if ( strlen( $note ) < 10 ) {
+				return new WP_Error( 'bad_request', 'note must say what was found (at least 10 characters).', [ 'status' => 400 ] );
+			}
+			return CaptainCore\AdminWatches::review( (int) $request['id'], (string) $request->get_param( 'outcome' ), $note, captaincore_signal_author( $request, 'user' ) );
 		},
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );

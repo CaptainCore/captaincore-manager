@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 63;
+    const REQUIRED_VERSION = 64;
 
     private static function _table() {
         global $wpdb;
@@ -1348,6 +1348,36 @@ class DB {
         KEY name_status (name,status),
         KEY site_id (site_id),
         KEY status (status)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Accounts on watch after an account-takeover signal (app/AdminWatches.php): one row per
+        // watch, open seven days from the signal, reviewed daily against the session snapshots.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_admin_watches` (
+            admin_watch_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED DEFAULT 0,
+            environment_id bigint(20) UNSIGNED DEFAULT 0,
+            environment varchar(40) DEFAULT '',
+            login varchar(190) DEFAULT '',
+            user_id bigint(20) UNSIGNED DEFAULT 0,
+            trigger_type varchar(60) DEFAULT '',
+            trigger_detail text,
+            malware_finding_id bigint(20) UNSIGNED DEFAULT 0,
+            flag_finding_id bigint(20) UNSIGNED DEFAULT 0,
+            status varchar(20) DEFAULT 'watching',
+            opened_at datetime DEFAULT NULL,
+            expires_at datetime DEFAULT NULL,
+            ended_at datetime DEFAULT NULL,
+            last_reviewed_at datetime DEFAULT NULL,
+            last_reviewed_by varchar(60) DEFAULT '',
+            review_count int(11) DEFAULT 0,
+            note text,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (admin_watch_id),
+        KEY environment_status (environment_id,status),
+        KEY status (status),
+        KEY expires_at (expires_at)
         ) $charset_collate;";
 
         dbDelta($sql);

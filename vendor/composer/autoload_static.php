@@ -259,6 +259,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Accounts' => __DIR__ . '/../..' . '/app/Accounts.php',
         'CaptainCore\\ActivityLog' => __DIR__ . '/../..' . '/app/ActivityLog.php',
         'CaptainCore\\ActivityLogs' => __DIR__ . '/../..' . '/app/ActivityLogs.php',
+        'CaptainCore\\AdminWatches' => __DIR__ . '/../..' . '/app/AdminWatches.php',
         'CaptainCore\\AiRelay' => __DIR__ . '/../..' . '/app/AiRelay.php',
         'CaptainCore\\AiRelayMessages' => __DIR__ . '/../..' . '/app/AiRelayMessages.php',
         'CaptainCore\\AiRelayProjects' => __DIR__ . '/../..' . '/app/AiRelayProjects.php',

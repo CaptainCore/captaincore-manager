@@ -133,6 +133,7 @@ return array(
     'CaptainCore\\Accounts' => $baseDir . '/app/Accounts.php',
     'CaptainCore\\ActivityLog' => $baseDir . '/app/ActivityLog.php',
     'CaptainCore\\ActivityLogs' => $baseDir . '/app/ActivityLogs.php',
+    'CaptainCore\\AdminWatches' => $baseDir . '/app/AdminWatches.php',
     'CaptainCore\\AiRelay' => $baseDir . '/app/AiRelay.php',
     'CaptainCore\\AiRelayMessages' => $baseDir . '/app/AiRelayMessages.php',
     'CaptainCore\\AiRelayProjects' => $baseDir . '/app/AiRelayProjects.php',
