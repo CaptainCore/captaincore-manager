@@ -320,8 +320,14 @@ Object.assign(Component.prototype, {
     return subs.map(x => x.value).join(', ');
   },
 
+  // 0 is a valid MX priority, so only a blank or non-numeric value falls back to 10.
+  mxPriority(v) {
+    const n = parseInt(v, 10);
+    return Number.isNaN(n) ? 10 : n;
+  },
+
   dnsSubsForApi(type, subs) {
-    if (type === 'MX') return subs.map(x => ({ server: x.server, priority: parseInt(x.priority, 10) || 10 }));
+    if (type === 'MX') return subs.map(x => ({ server: x.server, priority: this.mxPriority(x.priority) }));
     if (type === 'SRV') return subs.map(x => ({ priority: parseInt(x.priority, 10) || 0, weight: parseInt(x.weight, 10) || 0, port: parseInt(x.port, 10) || 0, host: x.host || '' }));
     return subs.map(x => ({ value: x.value }));
   },
@@ -330,7 +336,7 @@ Object.assign(Component.prototype, {
     const t = String(type).toUpperCase();
     const parts = String(valueStr).split(',').map(s => s.trim()).filter(Boolean);
     if (t === 'MX') return parts.map(s => { const m = s.split(/\s+/);
-      return m.length > 1 ? { server: m[1], priority: parseInt(m[0], 10) || 10 } : { server: m[0], priority: 10 }; });
+      return m.length > 1 ? { server: m[1], priority: this.mxPriority(m[0]) } : { server: m[0], priority: 10 }; });
     if (t === 'SRV') return parts.map(s => { const m = s.split(/\s+/);
       return { priority: parseInt(m[0], 10) || 0, weight: parseInt(m[1], 10) || 0, port: parseInt(m[2], 10) || 0, host: m[3] || '' }; });
     if (t === 'HTTP') return String(valueStr).trim();
