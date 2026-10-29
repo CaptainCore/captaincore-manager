@@ -2622,7 +2622,8 @@ class Component extends DCLogic {
         ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: this.decodeHtml(a.name), accId: String(a.account_id),
             isCust: !!(real.site && String(real.site.customer_id) === String(a.account_id)),
             isBill: !!(real.site && String(real.site.account_id) === String(a.account_id)) })),
-           ...(s.shared || [])]
+           // Pending invites sent this session, only on the site they were sent from.
+           ...(s.shared || []).filter(sh => sh.siteId === real.siteId)]
         : (s.shared || this.SHARED_INIT)).map(sh => ({ ...sh,
         // Real rows wear their role chips (a row can be both contacts); sample
         // and pending-invite rows keep the old single level chip.

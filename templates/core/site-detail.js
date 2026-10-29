@@ -654,7 +654,7 @@ Object.assign(Component.prototype, {
     this.api('/sites/' + real.siteId + '/invite', { method: 'POST', body: { email, level: this.state.shareLevel || 'full' } }).then(res => {
       if (res && res.code) { this.setState({ shareSending: false, shareErr: res.message || 'Error sending invite.' }); return; }
       this.setState(st => ({ shareSending: false, shareDlgOpen: false, shareDraft: '',
-        shared: [...(st.shared || []), { uid: Date.now(), name: email, pending: true }] }));
+        shared: [...(st.shared || []), { uid: Date.now(), name: email, pending: true, siteId: real.siteId }] }));
       this.toast((res && res.message) || 'Invitation sent', { kind: 'success' });
     }).catch(err => this.setState({ shareSending: false,
       // api() throws 'auth' on 401/403 before the body is readable — name the
