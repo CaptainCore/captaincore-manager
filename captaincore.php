@@ -8043,40 +8043,16 @@ function captaincore_mailgun_deploy( WP_REST_Request $request ) {
     $domain_id = $request->get_param( 'id' );
     $from_name = $request->get_param( 'from_name' );
 	$environment_name = $request->get_param( 'environment' );
-	if ( empty( $from_name ) ) {
-        return new WP_Error( 'from_name_required', 'The "Send From Name" cannot be empty.', [ 'status' => 400 ] );
-    }
 
 	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
 	if ( ! $verify ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-    // The domain check above says nothing about the site this deploys onto, so
-    // the site is verified separately - the script it runs reconfigures mail
-    // delivery on that install.
-    $site_id = intval( $site_id );
-    if ( ! captaincore_verify_permissions( $site_id ) ) {
-        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    $site_slug = captaincore_mailgun_target_slug( $site_id, $environment_name );
+    if ( is_wp_error( $site_slug ) ) {
+        return $site_slug;
     }
-
-    $site = \CaptainCore\Sites::get( $site_id );
-    if ( ! $site->site ) {
-        return new WP_Error( 'site_not_found', 'Site not found', [ 'status' => 404 ] );
-    }
-
-	$site_slug = $site->site;
-
-	// Resolve the environment against the site rather than appending the
-	// request string, which reaches the CLI command as-is.
-	if ( $environment_name && strtolower( $environment_name ) != "production" ) {
-		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment_name );
-		if ( empty( $environment_id ) ) {
-			return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
-		}
-		$environment_row = ( new CaptainCore\Environments )->get( $environment_id );
-		$site_slug       = "{$site_slug}-" . strtolower( $environment_row->environment );
-	}
 
     // Ensure SMTP password exists, fetch credentials, and run the deploy-mailgun script.
     $result = CaptainCore\Providers\Mailgun::deploy( $domain_id, $site_slug, $from_name );
@@ -8086,6 +8062,110 @@ function captaincore_mailgun_deploy( WP_REST_Request $request ) {
     }
 
     return new WP_REST_Response( [ 'success' => true, 'output' => $result ], 200 );
+}
+
+/**
+ * Resolve the CLI slug for a site + environment a Mailgun deploy runs against.
+ *
+ * The domain check a caller makes says nothing about the site, so the site is
+ * verified separately - the scripts reconfigure mail delivery on that install.
+ * The environment is resolved against the site rather than appending the
+ * request string, which would reach the CLI command as-is.
+ *
+ * @return string|WP_Error
+ */
+function captaincore_mailgun_target_slug( $site_id, $environment_name = '' ) {
+    $site_id = intval( $site_id );
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = \CaptainCore\Sites::get( $site_id );
+    if ( empty( $site->site ) ) {
+        return new WP_Error( 'site_not_found', 'Site not found', [ 'status' => 404 ] );
+    }
+
+    $site_slug = $site->site;
+    if ( $environment_name && strtolower( $environment_name ) != "production" ) {
+        $environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment_name );
+        if ( empty( $environment_id ) ) {
+            return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+        }
+        $environment_row = ( new CaptainCore\Environments )->get( $environment_id );
+        $site_slug       = "{$site_slug}-" . strtolower( $environment_row->environment );
+    }
+
+    return $site_slug;
+}
+
+/**
+ * Rotates a domain's Mailgun SMTP password and pushes only the new password to sites.
+ *
+ * Body: targets = [ { site_id, environment } ], rotate (default true). With
+ * rotate=false the stored password is pushed again without minting a new one,
+ * which is the retry after a deploy that failed. Every target is checked
+ * before Mailgun is touched, since the old password stops working the moment
+ * it rotates.
+ */
+function captaincore_mailgun_rotate( WP_REST_Request $request ) {
+    $domain_id = $request->get_param( 'id' );
+    $targets   = $request->get_param( 'targets' );
+    $rotate    = $request->get_param( 'rotate' );
+    $rotate    = $rotate === null ? true : rest_sanitize_boolean( $rotate );
+
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain  = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    $slugs = [];
+    foreach ( is_array( $targets ) ? $targets : [] as $target ) {
+        $slug = captaincore_mailgun_target_slug( $target['site_id'] ?? 0, $target['environment'] ?? '' );
+        if ( is_wp_error( $slug ) ) {
+            return $slug;
+        }
+        $slugs[ $slug ] = $slug;
+    }
+    if ( ! $rotate && empty( $slugs ) ) {
+        return new WP_Error( 'targets_required', 'Pick at least one site to deploy the password to.', [ 'status' => 400 ] );
+    }
+
+    if ( $rotate ) {
+        $rotated = CaptainCore\Providers\Mailgun::rotate_smtp_password( $domain_id );
+        if ( ! empty( $rotated->error ) ) {
+            return new WP_Error( 'mailgun_rotate_failed', $rotated->message, [ 'status' => 400 ] );
+        }
+    }
+
+    $results = [];
+    foreach ( $slugs as $slug ) {
+        $result    = CaptainCore\Providers\Mailgun::deploy_password( $domain_id, $slug );
+        $results[] = [
+            'site'    => $slug,
+            'success' => empty( $result->error ),
+            'updated' => $result->updated ?? 0,
+            'message' => $result->message ?? '',
+            'output'  => $result->output ?? '',
+        ];
+    }
+
+    $deployed     = array_column( array_filter( $results, fn( $r ) => $r['success'] ), 'site' );
+    $account_ids  = array_column( ( new CaptainCore\AccountDomain() )->where( [ "domain_id" => $domain_id ] ), "account_id" );
+    $description  = ( $rotate ? "Rotated the Mailgun SMTP password for {$details->mailgun_zone}" : "Redeployed the Mailgun SMTP password for {$details->mailgun_zone}" );
+    $description .= $deployed ? " and deployed it to " . implode( ', ', $deployed ) : " without deploying it to a site";
+    CaptainCore\ActivityLog::log( $rotate ? 'rotated' : 'deployed', 'domain', $domain_id, $domain->name, $description, [], $account_ids[0] ?? null );
+
+    return new WP_REST_Response( [
+        'success' => count( $deployed ) === count( $results ),
+        'rotated' => $rotate,
+        'zone'    => $details->mailgun_zone,
+        'results' => $results,
+    ], 200 );
 }
 
 function captaincore_domain_mailgun_events_func( $request ) {
@@ -9420,6 +9500,12 @@ function captaincore_register_rest_endpoints() {
     register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/deploy', [
         'methods'  => 'POST',
         'callback' => 'captaincore_mailgun_deploy',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/rotate', [
+        'methods'  => 'POST',
+        'callback' => 'captaincore_mailgun_rotate',
         'permission_callback' => 'captaincore_permission_check',
     ] );
 

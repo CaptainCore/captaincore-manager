@@ -287,7 +287,7 @@ class Mailgun {
      *
      * @param int    $domain_id  CaptainCore domain ID (must have mailgun_zone configured).
      * @param string $site_slug  Final remote site slug (caller applies any environment suffix).
-     * @param string $from_name  "Send From" display name passed to the deploy script.
+     * @param string $from_name  "Send From" display name; empty keeps the site's current one.
      * @return string|object Run::CLI output string, or { error: true, message: <string> } on failure.
      */
     public static function deploy( $domain_id, $site_slug, $from_name ) {
@@ -335,13 +335,64 @@ class Mailgun {
             '--script=deploy-mailgun',
             '--',
             '--key=' . $license,
-            '--name=' . $from_name,
             '--domain=' . $details->mailgun_zone,
             '--password=' . $details->mailgun_smtp_password,
             '--gravitysmtp_zip=' . $download_url,
         ];
+        // Without a name the script keeps the site's current from name.
+        if ( trim( (string) $from_name ) !== '' ) {
+            $args[] = '--name=' . trim( $from_name );
+        }
 
         return \CaptainCore\Run::CLI( $args );
+    }
+
+    /**
+     * Push only the stored SMTP password to a site, leaving the rest of its mail setup alone.
+     *
+     * Runs the deploy-mailgun-password script, which rewrites the password wherever the
+     * site logs in as postmaster@<zone> (Gravity SMTP generic connector on every blog,
+     * the Mailgun plugin, the GRAVITYSMTP_GENERIC_PASSWORD constant).
+     *
+     * @param int    $domain_id CaptainCore domain ID (must have a stored SMTP password).
+     * @param string $site_slug Final remote site slug (caller applies any environment suffix).
+     * @return object { error: bool, updated: int, output: string, message?: string }.
+     */
+    public static function deploy_password( $domain_id, $site_slug ) {
+        $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+        if ( ! $domain ) {
+            return (object) [ 'error' => true, 'message' => 'Domain not found in CaptainCore.' ];
+        }
+
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+        if ( empty( $details->mailgun_zone ) || empty( $details->mailgun_smtp_password ) ) {
+            return (object) [ 'error' => true, 'message' => 'No stored Mailgun SMTP password for this domain.' ];
+        }
+
+        $output = \CaptainCore\Run::CLI( [
+            'ssh',
+            $site_slug,
+            '--script=deploy-mailgun-password',
+            '--',
+            '--domain=' . $details->mailgun_zone,
+            '--password=' . $details->mailgun_smtp_password,
+        ] );
+        $output = is_string( $output ) ? trim( $output ) : '';
+
+        // The script always ends with result:<count>; no line means it never ran.
+        if ( ! preg_match( '/^result:(\d+)$/m', $output, $matches ) ) {
+            return (object) [ 'error' => true, 'updated' => 0, 'output' => $output, 'message' => "Could not run the password deploy on {$site_slug}." ];
+        }
+        $updated = (int) $matches[1];
+        if ( preg_match( '/^error:(.+)$/m', $output, $error ) ) {
+            return (object) [ 'error' => true, 'updated' => $updated, 'output' => $output, 'message' => "{$site_slug}: " . trim( $error[1] ) ];
+        }
+        if ( $updated === 0 ) {
+            return (object) [ 'error' => true, 'updated' => 0, 'output' => $output, 'message' => "{$site_slug} has no mail config logging in as postmaster@{$details->mailgun_zone}." ];
+        }
+
+        return (object) [ 'error' => false, 'updated' => $updated, 'output' => $output ];
     }
 
 }

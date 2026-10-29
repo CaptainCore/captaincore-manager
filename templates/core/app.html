@@ -2399,6 +2399,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div style="flex:1"></div>
               <sc-if value="{{ mgActive }}" hint-placeholder-val="{{ true }}">
                 <button onClick="{{ mgOpenSupp }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Suppressions</button>
+                <button onClick="{{ mgOpenRotate }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Rotate password…</button>
                 <button onClick="{{ mgOpenDeploy }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Deploy to…</button>
               </sc-if>
             </div>
@@ -6575,13 +6576,76 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <span style="font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim)">Configures Gravity SMTP on <span style="font:500 var(--fs-13) var(--sans);color:var(--ink)">{{ mgDepTargetLabel }}</span> with the <span style="font:400 var(--fs-12) var(--mono)">{{ mgHost }}</span> sending credentials.</span>
             <div style="display:flex;align-items:center;gap:12px">
               <span style="width:120px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim);flex:none">Send from name</span>
-              <input value="{{ mgDepFrom }}" onInput="{{ onMgDepFrom }}" placeholder="e.g. Acme Co" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none">
+              <input value="{{ mgDepFrom }}" onInput="{{ onMgDepFrom }}" placeholder="Keep the site's current name" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none">
             </div>
           </div>
           <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
             <span onClick="{{ mgDepBack }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Back</span>
             <div style="flex:1"></div>
             <button onClick="{{ mgDepSubmit }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ mgDepSubmitLabel }}</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Mailgun rotate dialog ══ -->
+  <sc-if value="{{ mgRotOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMgRotate }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:100%;max-height:80vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">Rotate SMTP password</span>
+          <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">postmaster@{{ mgHost }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeMgRotate }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ mgRotPicking }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;overflow-y:auto;padding:14px 18px 16px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim)">Sets a new password at Mailgun, then updates only the password on the sites you pick. Their Gravity SMTP settings and from name stay as they are. The old password stops working right away, so pick every site that sends through this zone.</span>
+            <sc-if value="{{ mgRotNone }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:4px 2px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No connected sites found for this domain.</div>
+            </sc-if>
+            <sc-if value="{{ mgRotHasRows }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden;max-height:300px;overflow-y:auto">
+                <sc-for list="{{ mgRotRows }}" as="rr" hint-placeholder-count="3">
+                  <div onClick="{{ rr.toggle }}" style="display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                    <span style="width:15px;height:15px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ rr.checkBg }};color:white;font:600 9px var(--sans);flex:none">{{ rr.check }}</span>
+                    <span style="font:500 var(--fs-13) var(--sans)">{{ rr.name }}</span>
+                    <span style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ rr.env }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+            <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ mgRotCount }} selected</span>
+            <div style="flex:1"></div>
+            <button onClick="{{ mgRotSubmit }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ mgRotSubmitLabel }}</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mgRotDone }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;overflow-y:auto;padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px">
+            <sc-if value="{{ mgRotNoResults }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim)">Password rotated. No site was updated, so anything still using the old password will fail to send until it gets the new one.</span>
+            </sc-if>
+            <sc-if value="{{ mgRotHasResults }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ mgRotResults }}" as="rs" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule)">
+                    <span style="font:500 var(--fs-125) var(--mono);white-space:nowrap">{{ rs.site }}</span>
+                    <div style="flex:1"></div>
+                    <span style="font:400 var(--fs-125) var(--sans);color:{{ rs.fg }};text-align:right">{{ rs.status }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+            <span onClick="{{ closeMgRotate }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Close</span>
+            <div style="flex:1"></div>
+            <sc-if value="{{ mgRotCanRetry }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ mgRotRetry }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ mgRotRetryLabel }}</button>
+            </sc-if>
           </div>
         </sc-if>
       </div>

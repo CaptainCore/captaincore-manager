@@ -1543,7 +1543,7 @@ class Component extends DCLogic {
       pmOpen: false, plfUid: 0, esId: 0,
       // Reports / accounts / domains
       repPreviewOpen: false, schedEditOpen: false, transferOpen: false, accRename: false,
-      mgSuppOpen: false, mgDeployOpen: false,
+      mgSuppOpen: false, mgDeployOpen: false, mgRotOpen: false,
       ctxMenu: null
     };
   }
@@ -2263,7 +2263,7 @@ class Component extends DCLogic {
       mgHost: 'mg.' + d.name,
       mgRecs, mgEvents: this.MG_EVENTS,
       mgSupp: '2 bounces · 0 unsubscribes · 0 complaints',
-      mgSuppOpen: false, mgDeployOpen: false, mgOpenSupp: () => {},
+      mgSuppOpen: false, mgDeployOpen: false, mgRotOpen: false, mgOpenSupp: () => {}, mgOpenRotate: () => {},
       mgOpenDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},

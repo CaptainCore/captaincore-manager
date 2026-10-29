@@ -736,13 +736,13 @@ Object.assign(Component.prototype, {
   },
 
   // Deploy the zone's SMTP credentials to a connected site via Gravity SMTP.
-  // The v1 endpoint only reads site_id / environment / from_name.
+  // The v1 endpoint only reads site_id / environment / from_name; an empty
+  // from_name keeps the site's current one.
   deployMailgunReal() {
     const dom = this._domain;
     const site = this.state.mgDepTarget;
     const from = (this.state.mgDepFrom || '').trim();
     if (!dom || !site || this.state.mgDepBusy) return;
-    if (!from) { if (this.toast) this.toast('The send-from name cannot be empty.', { kind: 'error' }); return; }
     this.setState({ mgDepBusy: true });
     this.api('/domain/' + dom.domainId + '/mailgun/deploy', { method: 'POST',
       body: { site_id: site.id, environment: site.environment, from_name: from } }).then(res => {
@@ -752,6 +752,33 @@ Object.assign(Component.prototype, {
       if (this.toast) this.toast('Gravity SMTP deployed to ' + site.name + ' (' + site.environment + ').', { kind: 'success' });
     }).catch(() => { this.setState({ mgDepBusy: false });
       if (this.toast) this.toast('Mailgun deploy failed.', { kind: 'error' }); });
+  },
+
+  // Rotate the zone's SMTP password at Mailgun, then push only the new
+  // password to the picked sites (POST /domain/{id}/mailgun/rotate). The old
+  // password stops working at once, so the dialog stays open on the results
+  // and Retry resends the stored password (rotate:false) to the same sites.
+  async rotateMailgunReal(retry) {
+    const dom = this._domain;
+    const s = this.state;
+    if (!dom || s.mgRotBusy) return;
+    const sel = s.mgRotSel || {};
+    const targets = retry ? (s.mgRotTargets || [])
+      : ((dom.info && dom.info.connected_sites) || []).filter(cs => sel[cs.id + '|' + cs.environment])
+        .map(cs => ({ site_id: cs.id, environment: cs.environment }));
+    if (!retry && !targets.length && !(await this.uiConfirm('Rotate without deploying? The current password stops working right away and no site gets the new one.', { label: 'Rotate only', danger: true }))) return;
+    this.setState({ mgRotBusy: true, mgRotTargets: targets });
+    this.api('/domain/' + dom.domainId + '/mailgun/rotate', { method: 'POST',
+      body: { targets, rotate: !retry } }).then(res => {
+      if (this._domain !== dom) return;
+      if (!res || res.code) { this.setState({ mgRotBusy: false });
+        if (this.toast) this.toast((res && res.message) || 'Could not rotate the password.', { kind: 'error' }); return; }
+      this.setState({ mgRotBusy: false, mgRotResults: res.results || [], mgRotDone: true });
+      if (this.toast) this.toast(res.success
+        ? (retry ? 'Password redeployed.' : 'Password rotated' + (targets.length ? ' and deployed.' : '.'))
+        : 'Password ' + (retry ? 'redeploy' : 'rotated, but a deploy') + ' failed.', { kind: res.success ? 'success' : 'error' });
+    }).catch(() => { if (this._domain === dom) { this.setState({ mgRotBusy: false });
+      if (this.toast) this.toast('Could not rotate the password.', { kind: 'error' }); } });
   },
 
   // Sync a domain's full account list (v1's updateDomainAccount):
@@ -911,6 +938,15 @@ Object.assign(Component.prototype, {
     const depRows = (info.connected_sites || [])
       .filter(cs => !depQ || (cs.name + ' ' + cs.environment).toLowerCase().includes(depQ))
       .map(cs => ({ name: cs.name, env: cs.environment, pick: () => this.setState({ mgDepTarget: cs }) }));
+    const rotSel = s.mgRotSel || {};
+    const rotRows = (info.connected_sites || []).map(cs => {
+      const key = cs.id + '|' + cs.environment, on = !!rotSel[key];
+      return { name: cs.name, env: cs.environment, check: on ? '✓' : '', checkBg: on ? 'var(--brand)' : 'var(--paper)',
+        toggle: () => this.setState({ mgRotSel: Object.assign({}, rotSel, { [key]: !on }) }) };
+    });
+    const rotResults = (s.mgRotResults || []).map(r => ({ site: r.site,
+      status: r.success ? (r.updated + ' updated') : (r.message || 'Failed'),
+      fg: r.success ? 'var(--ok)' : 'var(--bad)' }));
     const mgEvents = (dom.mgEvents || []).map(ev => ({
       t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
       text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
@@ -1182,7 +1218,28 @@ Object.assign(Component.prototype, {
       mgDepFrom: s.mgDepFrom || '', onMgDepFrom: e => this.setState({ mgDepFrom: e.target.value }),
       mgDepBack: () => this.setState({ mgDepTarget: null }),
       mgDepSubmit: () => this.deployMailgunReal(),
-      mgDepSubmitLabel: s.mgDepBusy ? 'Deploying…' : 'Deploy'
+      mgDepSubmitLabel: s.mgDepBusy ? 'Deploying…' : 'Deploy',
+      // Rotate dialog: the domain's own production site starts picked.
+      mgOpenRotate: () => {
+        const bare = String(d.name || '').toLowerCase().replace(/^www\./, '');
+        const pre = {};
+        (info.connected_sites || []).forEach(cs => {
+          if (String(cs.environment).toLowerCase() === 'production' && String(cs.name || '').toLowerCase().replace(/^www\./, '') === bare) pre[cs.id + '|' + cs.environment] = true;
+        });
+        this.setState({ mgRotOpen: true, mgRotSel: pre, mgRotDone: false, mgRotResults: [], mgRotTargets: [] });
+      },
+      closeMgRotate: () => { if (!s.mgRotBusy) this.setState({ mgRotOpen: false }); },
+      mgRotOpen: !!s.mgRotOpen,
+      mgRotPicking: !s.mgRotDone, mgRotDone: !!s.mgRotDone,
+      mgRotRows: rotRows, mgRotHasRows: rotRows.length > 0, mgRotNone: rotRows.length === 0,
+      mgRotCount: Object.values(rotSel).filter(Boolean).length,
+      mgRotSubmit: () => this.rotateMailgunReal(false),
+      mgRotSubmitLabel: s.mgRotBusy ? 'Rotating…' : 'Rotate password',
+      mgRotResults: rotResults, mgRotHasResults: rotResults.length > 0,
+      mgRotNoResults: !!s.mgRotDone && rotResults.length === 0,
+      mgRotCanRetry: !!s.mgRotDone && (s.mgRotResults || []).some(r => !r.success),
+      mgRotRetry: () => this.rotateMailgunReal(true),
+      mgRotRetryLabel: s.mgRotBusy ? 'Deploying…' : 'Retry deploy'
     };
   }
 

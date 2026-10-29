@@ -22,7 +22,7 @@ class MailgunCLI {
 	 * : The Mailgun sending zone (e.g. mg.jackfaulknerorchestra.com).
 	 *
 	 * [--deploy]
-	 * : After rotating, deploy the new SMTP config to a site. Requires --site and --from-name.
+	 * : After rotating, deploy the new SMTP config to a site. Requires --site.
 	 *
 	 * [--site=<slug>]
 	 * : Site slug to deploy to (required with --deploy). No auto-resolution is performed.
@@ -31,7 +31,11 @@ class MailgunCLI {
 	 * : Environment to deploy to. Non-production values are appended as a slug suffix. Default production.
 	 *
 	 * [--from-name=<name>]
-	 * : "Send From" display name passed to the deploy script (required with --deploy).
+	 * : "Send From" display name for the deploy script. Omit to keep the site's current from name.
+	 *
+	 * [--password-only]
+	 * : With --deploy, push only the new password to the site's existing mail config instead of
+	 *   reinstalling and reconfiguring Gravity SMTP.
 	 *
 	 * [--show-password]
 	 * : Print the newly generated SMTP password to stdout.
@@ -41,6 +45,7 @@ class MailgunCLI {
 	 *     wp captaincore mailgun rotate mg.jackfaulknerorchestra.com
 	 *     wp captaincore mailgun rotate mg.jackfaulknerorchestra.com --deploy --site=jackfaulknerorchestra --from-name="Jack Faulkner Orchestra"
 	 *     wp captaincore mailgun rotate mg.example.com --deploy --site=example --environment=staging --from-name="Example"
+	 *     wp captaincore mailgun rotate mg.example.com --deploy --password-only --site=example
 	 *
 	 * @subcommand rotate
 	 * @when after_wp_load
@@ -103,16 +108,27 @@ class MailgunCLI {
 			\WP_CLI::error( "--site=<slug> is required when using --deploy." );
 			return;
 		}
-		if ( empty( $assoc_args['from-name'] ) ) {
-			\WP_CLI::error( "--from-name=<name> is required when using --deploy." );
-			return;
-		}
+		$password_only = isset( $assoc_args['password-only'] );
 
 		$environment = strtolower( $assoc_args['environment'] ?? 'production' );
 		$site_slug   = $this->resolve_site_slug( $assoc_args['site'], $environment );
 
+		if ( $password_only ) {
+			\WP_CLI::log( "Deploying the new password to {$site_slug} ..." );
+			$result = \CaptainCore\Providers\Mailgun::deploy_password( $domain_id, $site_slug );
+			if ( ! empty( $result->output ) ) {
+				\WP_CLI::log( $result->output );
+			}
+			if ( ! empty( $result->error ) ) {
+				\WP_CLI::error( $result->message );
+				return;
+			}
+			\WP_CLI::success( "Deployed the new password to {$site_slug}." );
+			return;
+		}
+
 		\WP_CLI::log( "Deploying Mailgun config to {$site_slug} ..." );
-		$output = \CaptainCore\Providers\Mailgun::deploy( $domain_id, $site_slug, $assoc_args['from-name'] );
+		$output = \CaptainCore\Providers\Mailgun::deploy( $domain_id, $site_slug, $assoc_args['from-name'] ?? '' );
 		if ( is_object( $output ) && ! empty( $output->error ) ) {
 			\WP_CLI::error( $output->message );
 			return;
