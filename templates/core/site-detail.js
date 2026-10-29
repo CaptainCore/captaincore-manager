@@ -637,7 +637,7 @@ Object.assign(Component.prototype, {
     const real = this._detail;
     if (!real) return;
     this._sharePreview = null;
-    this.setState({ shareDlgOpen: true, shareEmail: (this.state.shareDraft || '').trim(), shareErr: '', shareSending: false, shareLoading: true });
+    this.setState({ shareDlgOpen: true, shareEmail: (this.state.shareDraft || '').trim(), shareLevel: 'full', shareErr: '', shareSending: false, shareLoading: true });
     this.api('/sites/' + real.siteId + '/invite-preview').then(p => {
       if (!p || p.code) throw new Error((p && p.message) || 'preview failed');
       this._sharePreview = p;
@@ -651,7 +651,7 @@ Object.assign(Component.prototype, {
     const email = this.state.shareEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setState({ shareErr: 'Enter a valid email address.' }); return; }
     this.setState({ shareSending: true, shareErr: '' });
-    this.api('/sites/' + real.siteId + '/invite', { method: 'POST', body: { email } }).then(res => {
+    this.api('/sites/' + real.siteId + '/invite', { method: 'POST', body: { email, level: this.state.shareLevel || 'full' } }).then(res => {
       if (res && res.code) { this.setState({ shareSending: false, shareErr: res.message || 'Error sending invite.' }); return; }
       this.setState(st => ({ shareSending: false, shareDlgOpen: false, shareDraft: '',
         shared: [...(st.shared || []), { uid: Date.now(), name: email, pending: true }] }));
@@ -677,21 +677,33 @@ Object.assign(Component.prototype, {
         more: all.length > CAP ? '+' + (all.length - CAP) + ' more' : '',
         moreShow: all.length > CAP };
     };
-    const siteChips = chipsOf(p && p.sites_list);
-    const domChips = chipsOf(p && p.domains_list);
+    // The level decides what the invite reaches, so the preview lists only
+    // that: Sites only drops the domains, Domains only drops the sites.
+    const level = s.shareLevel || 'full';
+    const withSites = level !== 'domains-only', withDomains = level !== 'sites-only';
+    const levelWord = level === 'sites-only' ? 'sites-only ' : level === 'domains-only' ? 'domains-only ' : '';
+    const siteChips = chipsOf(withSites && p && p.sites_list);
+    const domChips = chipsOf(withDomains && p && p.domains_list);
     let acctLead = '', acctSites = '', acctSitesList = '', acctDomains = '', simpleLine = '';
     if (p && p.has_account_access) {
-      acctLead = 'Inviting ' + email + ' will grant them access to the account ' + (p.account_name || '') + '. This includes:';
+      acctLead = 'Inviting ' + email + ' will grant them ' + levelWord + 'access to the account ' + (p.account_name || '') + '. This includes:';
       const n = p.total_sites || 0;
-      acctSites = n + ' Website' + (n === 1 ? '' : 's');
-      acctSitesList = (p.sites_list || []).map(x => x.name).join(', ');
-      if (p.total_domains > 0) acctDomains = p.total_domains + ' Domain' + (p.total_domains === 1 ? '' : 's');
+      if (withSites) acctSites = n + ' Website' + (n === 1 ? '' : 's');
+      acctSitesList = withSites ? (p.sites_list || []).map(x => x.name).join(', ') : '';
+      if (withDomains && p.total_domains > 0) acctDomains = p.total_domains + ' Domain' + (p.total_domains === 1 ? '' : 's');
+    } else if (p && !withSites) {
+      simpleLine = 'Inviting ' + email + ' will grant them access to ' + (p.total_domains || 0) + ' domain' + (p.total_domains === 1 ? '' : 's') + ' and no sites.';
     } else if (p) {
-      simpleLine = 'Inviting ' + email + ' will grant them access to ' + (p.site_name || siteName);
+      simpleLine = 'Inviting ' + email + ' will grant them ' + levelWord + 'access to ' + (p.site_name || siteName);
       if (p.total_sites > 1) simpleLine += ' along with ' + (p.total_sites - 1) + ' other site' + (p.total_sites - 1 === 1 ? '' : 's');
-      if (p.total_domains > 0) simpleLine += ' and ' + p.total_domains + ' domain' + (p.total_domains === 1 ? '' : 's');
+      if (withDomains && p.total_domains > 0) simpleLine += ' and ' + p.total_domains + ' domain' + (p.total_domains === 1 ? '' : 's');
       simpleLine += '.';
     }
+    const shareLevels = [['full', 'Full access'], ['sites-only', 'Sites only'], ['domains-only', 'Domains only']].map(([id, label]) => ({ label,
+      fg: level === id ? 'var(--ink)' : 'var(--ink-dim)',
+      bg: level === id ? 'var(--paper)' : 'transparent',
+      shadow: level === id ? '0 1px 2px rgb(0 0 0/.08)' : 'none',
+      go: () => this.setState({ shareLevel: id }) }));
     return {
       shareDlgOpen: s.shareDlgOpen,
       closeShareDlg: () => this.setState({ shareDlgOpen: false }),
@@ -699,10 +711,12 @@ Object.assign(Component.prototype, {
       shareEmail: s.shareEmail,
       onShareEmail: e => this.setState({ shareEmail: e.target.value, shareErr: '' }),
       shareKey: e => { if (e.key === 'Enter') this.sendSiteInvite(); },
+      shareLevels,
       shareLoadingB: s.shareLoading,
       sharePreviewShow: !!(p && valid && !s.shareLoading),
       shareIsAcct: !!(p && p.has_account_access), shareIsSimple: !!(p && !p.has_account_access),
-      shAcctLead: acctLead, shAcctSites: acctSites, shAcctSitesList: acctSitesList,
+      shAcctLead: acctLead, shAcctSitesList: acctSitesList,
+      shAcctSites: acctSites, shHasAcctSites: !!acctSites,
       shAcctDomains: acctDomains, shHasAcctDomains: !!acctDomains,
       // Named lists — the payload carries domains_list too, which v1 fetches
       // and then throws away (it only ever printed the domain COUNT).

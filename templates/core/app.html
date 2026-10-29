@@ -6903,6 +6903,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
           <span style="font:400 var(--fs-13) var(--sans);color:var(--ink)">{{ shareDlgTitle }}</span>
           <input value="{{ shareEmail }}" onInput="{{ onShareEmail }}" onKeyDown="{{ shareKey }}" placeholder="Email address" style="height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Access</span>
+            <div style="display:flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px">
+              <sc-for list="{{ shareLevels }}" as="lv" hint-placeholder-count="3">
+                <span onClick="{{ lv.go }}" style="font:500 var(--fs-125) var(--sans);color:{{ lv.fg }};background:{{ lv.bg }};box-shadow:{{ lv.shadow }};padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap">{{ lv.label }}</span>
+              </sc-for>
+            </div>
+          </div>
           <sc-if value="{{ shareLoadingB }}" hint-placeholder-val="{{ false }}">
             <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading share details…</span>
           </sc-if>
@@ -6910,15 +6918,17 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="border-left:3px solid var(--brand);background:var(--brand-soft);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
               <sc-if value="{{ shareIsAcct }}" hint-placeholder-val="{{ true }}">
                 <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ shAcctLead }}</span>
-                <span style="font:600 var(--fs-125) var(--sans);color:var(--brand-ink);margin-top:2px">{{ shAcctSites }}</span>
-                <div style="display:flex;flex-wrap:wrap;gap:4px">
-                  <sc-for list="{{ shSiteChips }}" as="sc" hint-placeholder-count="4">
-                    <span style="font:500 var(--fs-115) var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:2px 9px">{{ sc.name }}</span>
-                  </sc-for>
-                  <sc-if value="{{ shSiteMoreShow }}" hint-placeholder-val="{{ false }}">
-                    <span style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim);padding:2px 4px">{{ shSiteMore }}</span>
-                  </sc-if>
-                </div>
+                <sc-if value="{{ shHasAcctSites }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:600 var(--fs-125) var(--sans);color:var(--brand-ink);margin-top:2px">{{ shAcctSites }}</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px">
+                    <sc-for list="{{ shSiteChips }}" as="sc" hint-placeholder-count="4">
+                      <span style="font:500 var(--fs-115) var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:99px;padding:2px 9px">{{ sc.name }}</span>
+                    </sc-for>
+                    <sc-if value="{{ shSiteMoreShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:500 var(--fs-115) var(--sans);color:var(--ink-dim);padding:2px 4px">{{ shSiteMore }}</span>
+                    </sc-if>
+                  </div>
+                </sc-if>
                 <sc-if value="{{ shHasAcctDomains }}" hint-placeholder-val="{{ false }}">
                   <span style="font:600 var(--fs-125) var(--sans);color:var(--brand-ink);margin-top:6px">{{ shAcctDomains }}</span>
                 </sc-if>

@@ -7599,6 +7599,11 @@ function captaincore_site_invite_preview_func( $request ) {
 function captaincore_site_invite_func( $request ) {
     $site_id = $request['id'];
     $email   = $request->get_param('email');
+    // Same tiers the account invite offers; billing ownership is never granted by invite.
+    $level   = $request->get_param( 'level' );
+    if ( ! in_array( $level, [ 'full', 'sites-only', 'domains-only' ], true ) ) {
+        $level = 'full';
+    }
 
     if ( ! is_email( $email ) ) {
         return new WP_Error( 'invalid_email', 'Invalid email address.', [ 'status' => 400 ] );
@@ -7658,8 +7663,16 @@ function captaincore_site_invite_func( $request ) {
     // 3. Perform Invite — constructed pre-authorized: the sender was vetted
     // above but may not be a member of the customer account the invite lands
     // in, and the plain constructor would silently drop the account id.
+    // Someone already in the account keeps the level they have. invite()
+    // overwrites it, and the sender may not be a member of this account, so
+    // sharing must not be a way to change (or demote) an existing member.
+    $invitee = get_user_by( 'email', $email );
+    if ( $invitee && ( new CaptainCore\AccountUser )->where( [ "user_id" => $invitee->ID, "account_id" => $account_id ] ) ) {
+        return [ "message" => "Invitation sent successfully." ];
+    }
+
     $account_obj = new CaptainCore\Account( $account_id, true );
-    $account_obj->invite( $email );
+    $account_obj->invite( $email, $level );
 
     // 4. Return Generic Success Message (Privacy Protection)
     // We ignore the specific return from invite() to prevent user enumeration
