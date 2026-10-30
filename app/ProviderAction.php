@@ -503,17 +503,16 @@ class ProviderAction {
                 $account = ( new Account ( $current_action->account_id, true ) );
                 $account->calculate_totals();
     
-                $account_ids = ( new Site( $site_id ) )->shared_with_ids();
-                if ( $verify ) {
-                    foreach( $account_ids as $account_id ) {
-                        // Shared MyKinsta access if needed
-                        $account       = ( new Account( $account_id, true ) );
-                        $kinsta_emails = empty( $account->get()->defaults->kinsta_emails ) ? "" : $account->get()->defaults->kinsta_emails;
-                        if ( ! empty( $kinsta_emails ) ) {
-                            $kinsta_emails = array_map( 'trim', explode( ",", $kinsta_emails ) );
-                            \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite );
-                        }
+                // Shared MyKinsta access for every account's kinsta_emails
+                $kinsta_emails = [];
+                foreach( ( new Site( $site_id ) )->shared_with_ids() as $account_id ) {
+                    $defaults = ( new Account( $account_id, true ) )->get()->defaults ?? null;
+                    if ( ! empty( $defaults->kinsta_emails ) ) {
+                        $kinsta_emails = array_merge( $kinsta_emails, explode( ",", $defaults->kinsta_emails ) );
                     }
+                }
+                if ( ! empty( $kinsta_emails ) ) {
+                    \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite, $provider_action->provider_id );
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
                 ActivityLog::log( 'created', 'site', $site_id, $current_action->domain, "Provisioned new site {$current_action->domain}", [], $current_action->account_id );

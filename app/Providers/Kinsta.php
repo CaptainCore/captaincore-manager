@@ -969,124 +969,19 @@ class Kinsta {
 
     }
 
-    public static function company_users() {
-        $company_id = self::credentials("company_id");
-        $token      = self::credentials("token");
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [
-                    "idCompany" => $company_id
-                ],
-                "operationName" => "CompanyUsers",
-                "query"         => 'fragment CompanyCapabilities on Capability {
-                    idCompany
-                    idSite
-                    idRole
-                    type
-                    permissions {
-                      type
-                      key
-                      idCompany
-                      idSite
-                      __typename
-                    }
-                    __typename
-                  }
-                  
-                  fragment CompanyUsersItem on CompanyUser {
-                    id
-                    user {
-                      id
-                      email
-                      image
-                      fullName
-                      has2FA
-                      isKinstaStaff
-                      intercomConversationUrl(cacheControl: CACHED_OR_RENEW)
-                      intercomConversationUrl_liveKeys(cacheControl: CACHED_OR_RENEW)
-                      __typename
-                    }
-                    capabilities {
-                      ...CompanyCapabilities
-                      __typename
-                    }
-                    capabilities_liveKeys
-                    __typename
-                  }
-                  
-                  fragment PendingInvitationsFragment on Invitation {
-                    id
-                    email
-                    capabilities {
-                      ...CompanyCapabilities
-                      __typename
-                    }
-                    __typename
-                  }
-                  
-                  fragment CompanyUser on User {
-                    id
-                    email
-                    image
-                    fullName
-                    isKinstaStaff
-                    __typename
-                  }
-                  
-                  query CompanyUsers($idCompany: String!) {
-                    company(id: $idCompany) {
-                      id
-                      name
-                      sites {
-                        id
-                        displayName
-                        __typename
-                      }
-                      users {
-                        ...CompanyUsersItem
-                        __typename
-                      }
-                      pendingInvitations {
-                        ...PendingInvitationsFragment
-                        __typename
-                      }
-                      sites_liveKeys
-                      users_liveKeys
-                      pendingInvitations_liveKeys
-                      __typename
-                    }
-                    user {
-                      ...CompanyUser
-                      __typename
-                    }
-                    user_liveKeys
-                  }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
+    // Members of the Kinsta company behind one provider connection, each with
+    // their company and site capabilities.
+    public static function company_users( $provider_id = "" ) {
+        self::use_provider( $provider_id );
+        $company_id = self::credentials( "company_id", $provider_id );
+        if ( empty( $company_id ) ) {
             return false;
         }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
+        $response = \CaptainCore\Remote\Kinsta::get( "company/{$company_id}/users" );
+        if ( empty( $response->company->users ) ) {
             return false;
         }
-
-        if ( empty ( $response->data ) ) {
-            return false;
-        }
-        
-        return $response->data;
-
+        return $response->company->users;
     }
 
     /**
@@ -1244,74 +1139,34 @@ class Kinsta {
 		return new \WP_Error( 'kinsta_env_not_found', "Could not find matching Kinsta environment for {$cc_site->name} ({$cc_env->environment}).", [ 'status' => 404 ] );
 	}
 
-    public static function invite_emails( $emails = [], $idSite = "" ) {
-        $users      = self::company_users();
-        $token      = self::credentials("token");
-        $company_id = self::credentials("company_id");
-        $user_ids   = [];
-        $response   = [];
-        foreach ( $users->company->users as $user ) {
-            if ( in_array( $user->user->email, $emails ) ) {
-                $capabilities = [];
-                $user_ids[]   = $user->user->id;
-                foreach( $user->capabilities as $site ) {
-                    $capabilities[] = (object) [
-                        "idSite" => $site->idSite,
-                        "idRole" => $site->idRole
-                    ];
-                }
-
-                // Add new site to shared access
-                $capabilities[] = (object) [
-                    "idSite" => $idSite,
-                    "idRole" => "site-admin"
-                ];
-                $response[]   = "Found {$user->user->email} adding the following capabilities";
-                $response[]   = $capabilities;
+    // Gives existing company members site-admin on one site. Kinsta adds the
+    // capability to what each user already has (verified 2026-10-30), so only
+    // the new site is sent. Emails that are not company members are skipped;
+    // the API cannot invite by email.
+    public static function invite_emails( $emails = [], $site_id = "", $provider_id = "" ) {
+        $emails = array_filter( array_map( 'strtolower', array_map( 'trim', (array) $emails ) ) );
+        if ( empty( $emails ) || empty( $site_id ) ) {
+            return false;
+        }
+        $users = self::company_users( $provider_id );
+        if ( empty( $users ) ) {
+            return false;
+        }
+        $user_ids = [];
+        foreach ( $users as $user ) {
+            if ( in_array( strtolower( $user->user->email ?? "" ), $emails, true ) ) {
+                $user_ids[] = (string) $user->user->id;
             }
         }
-
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idCompany" => $company_id,
-                    "idUsers"   => $user_ids,
-                    "siteCapabilities" => $capabilities
-                ],
-                "operationName" => "EditSiteCapabilities",
-                "query"         => 'mutation EditSiteCapabilities($idCompany: String!, $idUsers: [String!]!, $siteCapabilities: [SiteCapability!]!) {
-                    idAction: editSiteCapabilities(
-                      idCompany: $idCompany
-                      idUsers: $idUsers
-                      siteCapabilities: $siteCapabilities
-                      runActionInBackground: true
-                    )
-                  }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
+        if ( empty( $user_ids ) ) {
             return false;
         }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
-            return false;
-        }
-
-        if ( empty ( $response->idAction ) ) {
-            return false;
-        }
-        
-        return $response->data->idAction;
+        $company_id = self::credentials( "company_id", $provider_id );
+        $response   = \CaptainCore\Remote\Kinsta::post( "company/{$company_id}/users/site-capabilities", [
+            "user_ids"          => $user_ids,
+            "site_capabilities" => [ [ "site_id" => (string) $site_id, "role" => "site-admin" ] ],
+        ] );
+        return $response->operation_id ?? false;
     }
 
     /**
