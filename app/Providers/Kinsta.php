@@ -1287,7 +1287,7 @@ class Kinsta {
      * also provisions, but caches per record-set for a day — this is the
      * "verify now" button, so it bypasses that cache.
      */
-    public static function verify_domain( $site_id, $environment, $domain_id ) {
+    public static function verify_domain( $site_id, $environment, $domain_id, $allowed_domain_ids = null ) {
         $env_id = self::resolve_env_id( $site_id, $environment );
         if ( is_wp_error( $env_id ) ) {
             return $env_id;
@@ -1313,8 +1313,60 @@ class Kinsta {
         if ( $domain_name === '' ) {
             return new \WP_Error( 'kinsta_domain_not_found', 'Domain not found on this environment.' );
         }
-        $provision = self::auto_provision_dns( $domain_name, $records, true );
+        $provision = self::auto_provision_dns( $domain_name, $records, true, $allowed_domain_ids );
         return [ 'active' => false, 'provision' => $provision, 'records' => $records ];
+    }
+
+    /**
+     * Find the Kinsta domain behind a hostname and provision its verification
+     * records, for the "renew your SSL certificate" email. Runs from the Missive
+     * webhook, which has no user, so the hosted zone must belong to one of the
+     * accounts on the site that holds the hostname. Returns a markdown note.
+     */
+    public static function provision_hostname_records( $hostname ) {
+        global $wpdb;
+        $hostname = strtolower( trim( (string) $hostname, " .\t\n\r" ) );
+        if ( $hostname === '' ) {
+            return "No domain found in the email.";
+        }
+        $bare     = preg_replace( '/^www\./', '', $hostname );
+        $apex     = ( new \CaptainCore\Domains )->get_domain( $bare );
+        $names    = array_unique( [ $hostname, $bare, "www.{$bare}", $apex ] );
+        $in       = implode( ',', array_fill( 0, count( $names ), '%s' ) );
+        $site_ids = $wpdb->get_col( $wpdb->prepare(
+            "SELECT DISTINCT s.site_id FROM {$wpdb->prefix}captaincore_sites s
+             LEFT JOIN {$wpdb->prefix}captaincore_environments e ON e.site_id = s.site_id
+             WHERE s.provider = 'kinsta' AND s.status = 'active' AND s.provider_site_id <> ''
+             AND ( s.name IN ($in) OR e.home_url IN ( %s, %s ) )",
+            array_merge( $names, [ "https://{$hostname}", "http://{$hostname}" ] )
+        ) );
+        foreach ( $site_ids as $site_id ) {
+            $env_id = self::resolve_env_id( $site_id, 'production' );
+            if ( is_wp_error( $env_id ) ) {
+                continue;
+            }
+            $list = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env_id}/domains" );
+            foreach ( ( $list->environment->site_domains ?? [] ) as $domain ) {
+                if ( strtolower( $domain->name ) !== $hostname ) {
+                    continue;
+                }
+                $account_ids = ( new \CaptainCore\Site( $site_id ) )->shared_with_ids();
+                $allowed     = empty( $account_ids ) ? [] : array_column( ( new \CaptainCore\AccountDomain )->fetch_domains( [ "account_id" => $account_ids ] ), 'domain_id' );
+                $result      = self::verify_domain( $site_id, 'production', $domain->id, $allowed );
+                if ( is_wp_error( $result ) ) {
+                    return "Kinsta lookup for `{$hostname}` failed: " . $result->get_error_message();
+                }
+                if ( ! empty( $result['active'] ) ) {
+                    return "`{$hostname}` has no pending verification records on Kinsta.";
+                }
+                if ( in_array( $result['provision'], [ 'provisioned', 'exists', 'cached' ], true ) ) {
+                    return "Verification records for `{$hostname}` are in its DNS zone ({$result['provision']}).";
+                }
+                $lines = array_map( function( $r ) { return "- " . strtoupper( $r->type ?? '' ) . " `" . ( $r->name ?? '' ) . "` → `" . ( $r->value ?? '' ) . "`"; }, $result['records'] );
+                return "DNS for `{$hostname}` is not hosted with us ({$result['provision']}). Add these records manually:\n" . implode( "\n", $lines );
+            }
+        }
+        return "No Kinsta site found for `{$hostname}`.";
     }
 
     /**
@@ -1375,7 +1427,9 @@ class Kinsta {
     /**
      * Auto-provision verification DNS records to Constellix zone if managed.
      */
-    private static function auto_provision_dns( $domain_name, $verification_records, $force = false ) {
+    // $allowed_domain_ids replaces the current user's domain scope for callers
+    // with no user (the Missive webhook); null keeps the user scope.
+    private static function auto_provision_dns( $domain_name, $verification_records, $force = false, $allowed_domain_ids = null ) {
         if ( ! defined( 'CONSTELLIX_API_KEY' ) || ! defined( 'CONSTELLIX_SECRET_KEY' ) ) {
             return 'no_creds';
         }
@@ -1400,7 +1454,10 @@ class Kinsta {
         // checked when it is added, so the check belongs here.
         $domain_rows = ( new \CaptainCore\Domains )->where( [ "name" => $apex_domain ] );
         $domain_row  = ! empty( $domain_rows ) ? $domain_rows[0] : null;
-        if ( empty( $domain_row->domain_id ) || ! ( new \CaptainCore\Domains )->verify( $domain_row->domain_id ) ) {
+        $owns_zone   = is_array( $allowed_domain_ids )
+            ? in_array( (int) ( $domain_row->domain_id ?? 0 ), array_map( 'intval', $allowed_domain_ids ), true )
+            : ! empty( $domain_row->domain_id ) && ( new \CaptainCore\Domains )->verify( $domain_row->domain_id );
+        if ( empty( $domain_row->domain_id ) || ! $owns_zone ) {
             return 'not_ours';
         }
 

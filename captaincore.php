@@ -986,10 +986,14 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 	$message_id = $missive->latest_message->id;
 	$message    = CaptainCore\Remote\Missive::get( "messages/$message_id")->messages->body;
 
-	preg_match('/TXT record for (.+) in MyKinsta/', $message, $matches );
-	$domain     = $matches[1];
+	// Kinsta used to name the domain in "TXT record for X in MyKinsta"; the
+	// current email asks for an _acme-challenge CNAME to X.kinstavalidation.app.
+	$text       = html_entity_decode( wp_strip_all_tags( $message ) );
+	$domain     = "";
+	if ( preg_match( '/TXT record for (\S+) in MyKinsta/', $text, $matches ) || preg_match( '/([a-z0-9.-]+)\.kinstavalidation\.app/i', $text, $matches ) ) {
+		$domain = $matches[1];
+	}
 	$response   = ( new CaptainCore\Domains )->add_verification_record( $domain );
-	$errors     = implode( ", ", $errors );
 
 	CaptainCore\Remote\Missive::post( "posts", [ "posts" => [ 
 		"conversation"  => $missive->conversation->id,
