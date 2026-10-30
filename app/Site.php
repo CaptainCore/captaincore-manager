@@ -280,7 +280,6 @@ class Site {
             "visits"           => "",
             "mailgun"          => "",
             "core"             => "",
-            "verify"           => $site->verify,
             "remote_key"       => empty( $site->remote_key ) ? "" : $site->remote_key,
             "backup_settings"  => (object) [
                 "mode"     => "direct",

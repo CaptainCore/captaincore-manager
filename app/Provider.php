@@ -75,12 +75,6 @@ class Provider {
         return $class_name::swap_environments( $site_id );
     }
 
-    public function update_token( $token = "" ) {
-        $provider   = self::get();
-        $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
-        return $class_name::update_token( $token, $this->provider_id );
-    }
-
     public function new_site( $site = [] ) {
         $provider   = self::get();
         $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );

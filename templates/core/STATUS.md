@@ -2091,6 +2091,15 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
   back false (~12s — the REST round-trip to Kinsta's API is that slow, same
   as v1) and the outdated prompt rendered with the CTA gated. Connect was NOT
   fired (would overwrite the stored provider token).
+  **Superseded 2026-10-30:** the MyKinsta token is gone. `Kinsta::verify()`
+  now checks the connection's API key (`GET company/{id}/users`), the
+  token input + Connect and `POST /providers/{id}/connect` were removed, and
+  a failed verify shows "Kinsta rejected this connection's API key". Every
+  Kinsta call is on the public API now (no `graphql-router.kinsta.com`):
+  shared MyKinsta access uses `POST company/{id}/users/site-capabilities`
+  (adds to a user's capabilities, verified live), and the Missive SSL
+  renewal bot uses `Kinsta::provision_hostname_records()`. Verified headless:
+  verify 200, no prompt, Create enabled.
 - **Create on Kinsta is REAL now** (`createKinstaSite` + `pollProviderActions`
   in app.js; the earlier design-sample runJob is gone — Austin hit that on
   prod: activity showed a fake job, DevTools showed no request). v1's

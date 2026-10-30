@@ -45,13 +45,6 @@ class ProviderAction {
                 // turn into a success.
                 $operation_error  = $status == "500" ? ( $response->data->message ?? '' ) : '';
             }
-            if ( empty( $status ) && ! empty( $provider_action->provider_action_id ) ) {
-                // Keyed off the row, not $action->provider_action_id: $action is
-                // the decoded action JSON seeded by the request body, and
-                // ProviderActions::get() inside action_check() is unscoped, so a
-                // caller-supplied id read another tenant's provisioning job.
-                $status = $class_name::action_check( $provider_action->provider_action_id );
-            }
             if ( $status == "200" ) {
                 ProviderActions::update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                 continue;
@@ -421,7 +414,6 @@ class ProviderAction {
             // the action JSON seeded by the new-site request body - letting the
             // caller name an idSite and have the steps below run against it.
             $result      = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data ?? null;
-            $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             $site_name   = $current_action->name;
             if ( empty( $result->idSite ) ) {
@@ -460,7 +452,6 @@ class ProviderAction {
                     "shared_with"      => $current_action->shared_with,
                     "account_id"       => $current_action->account_id,
                     "customer_id"      => empty( $current_action->customer_id ) || ! empty( $current_action->customer_created ) ? "" : $current_action->customer_id,
-                    "verify"           => $verify,
                     "provider"         => "kinsta",
                     "provider_id"      => $current_action->provider_id,
                     "provider_site_id" => $result->idSite,

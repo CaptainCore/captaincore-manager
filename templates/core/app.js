@@ -50,7 +50,7 @@ class Component extends DCLogic {
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
     nsProto: 'sftp', nsPort: '22', nsHome: '',
     nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
-    nsToken: '', nsVerify: 'ok', ddRect: null,
+    nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
     nsDomain: '', nsErrors: [], nsBusy: false,
     pmOpen: false, pmHours: 24, pmLoading: false, pmError: '', pmHover: -1,
@@ -1344,8 +1344,6 @@ class Component extends DCLogic {
             nsBillingId: st.nsBillingId === id ? '' : st.nsBillingId })) }; }),
       nsVerifyChecking: s.nsVerify === 'checking',
       nsVerifyOutdated: s.nsVerify === 'outdated',
-      nsToken: s.nsToken, onNsToken: e => this.setState({ nsToken: e.target.value }),
-      nsConnect: () => this.connectNsProvider(),
       nsCtaDim: s.nsPath === 'kinsta' && (s.nsVerify !== 'ok' || s.nsBusy) ? '.5' : '1',
       nsEnvChips: ['Production only', 'Production + Staging'].map(l => chip(l, s.nsEnvs, 'nsEnvs')),
       nsCta: { request: 'Request site', kinsta: s.nsBusy ? 'Creating…' : 'Create on Kinsta',
@@ -1688,11 +1686,11 @@ class Component extends DCLogic {
     };
   }
 
-  // v1 parity (showNewSiteKinsta): only administrators verify the Kinsta token
-  // on dialog open; customers never see the check or the refresh prompt.
+  // v1 parity (showNewSiteKinsta): only administrators check the Kinsta API key
+  // on dialog open; customers never see the check.
   verifyNsProvider(isOp, providerId) {
     if (!isOp || !this.api || !(window.CC_BOOT && window.CC_BOOT.nonce)) { this.setState({ nsVerify: 'ok' }); return; }
-    this.setState({ nsVerify: 'checking', nsToken: '' });
+    this.setState({ nsVerify: 'checking' });
     this.api('/providers/' + (providerId || this.state.nsProviderId || NS_KINSTA_PROVIDER) + '/verify')
       .then(ok => this.setState({ nsVerify: ok ? 'ok' : 'outdated' }))
       .catch(() => this.setState({ nsVerify: 'outdated' }));
@@ -1717,17 +1715,6 @@ class Component extends DCLogic {
       this._nsProvList = opts;
       this.setState({});
     }).catch(() => { this._nsProvLoading = false; this._nsProvList = [house]; });
-  }
-
-  connectNsProvider() {
-    const token = this.state.nsToken.trim();
-    if (!token || !this.api) return;
-    this.setState({ nsVerify: 'checking' });
-    this.api('/providers/' + NS_KINSTA_PROVIDER + '/connect', { method: 'POST', body: { token } })
-      .then(ok => { this.setState({ nsVerify: ok ? 'ok' : 'outdated' });
-        this.toast(ok ? 'Kinsta connection verified' : 'Token rejected — check it and try again', { kind: ok ? 'success' : 'error' }); })
-      .catch(() => { this.setState({ nsVerify: 'outdated' });
-        this.toast('Token rejected — check it and try again', { kind: 'error' }); });
   }
 
   // Real Kinsta site creation — v1's newKinstaSite payload verbatim:

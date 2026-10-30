@@ -5698,12 +5698,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Verifying Kinsta connection…</span>
             </sc-if>
             <sc-if value="{{ nsVerifyOutdated }}" hint-placeholder-val="{{ false }}">
-              <div style="background:var(--bad-soft);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
-                <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">Kinsta token outdated — paste a new API token to reconnect.</span>
-                <div style="display:flex;gap:8px">
-                  <input value="{{ nsToken }}" onInput="{{ onNsToken }}" type="password" placeholder="Kinsta API token" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none">
-                  <button onClick="{{ nsConnect }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-125) var(--sans);padding:0 14px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">Connect</button>
-                </div>
+              <div style="background:var(--bad-soft);border-radius:9px;padding:10px 12px">
+                <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">Kinsta rejected this connection's API key. Update it under Settings, Providers.</span>
               </div>
             </sc-if>
             <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Kinsta verifies the deployment and connects the site token automatically.</span>

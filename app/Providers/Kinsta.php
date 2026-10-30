@@ -257,65 +257,9 @@ class Kinsta {
         }
     }
 
-    public static function update_token( $token = "", $provider_id = "" ) {
-        if ( ! empty( $provider_id ) ) {
-            $provider = \CaptainCore\Providers::get( $provider_id );
-        } else {
-            $provider = ( new \CaptainCore\Provider( "kinsta" ) )->get();
-        }
-        $credentials = self::credentials( "", $provider_id );
-        foreach( $credentials as $credential ) {
-            if ( $credential->name == "token" ) {
-                $credential->value = $token;
-            }
-        }
-        ( new \CaptainCore\Providers )->update( [ "credentials" => json_encode( $credentials ) ], [ "provider_id" => $provider->provider_id ] );
-        return self::verify( $provider_id );
-    }
-
+    // Checks that the connection's API key can read its Kinsta company.
     public static function verify( $provider_id = "" ) {
-        $token = self::credentials( "token", $provider_id );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "lang" => "en"
-                ],
-                "operationName" => "KinstaBlog",
-                "query"         => 'query KinstaBlog($lang: String!) {
-                    kinstablog(lang: $lang) {
-                      link
-                      title
-                      authorName
-                      featuredImage
-                      date
-                      __typename
-                    }
-                  }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
-            return false;
-        }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
-            return false;
-        }
-
-        if ( empty ( $response->data->kinstablog ) ) {
-            return false;
-        }
-        
-        return true;
+        return ! empty( self::company_users( $provider_id ) );
     }
 
     // Builds and sends the Kinsta create request (plain add or clone). Shared
@@ -791,53 +735,6 @@ class Kinsta {
         return $response->operation_id;
     }
 
-    public static function provider_sync() {
-        $data = [
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => self::credentials("token")
-            ],
-            'body' => json_encode( [
-                "variables" => [
-                    "idCompany" => self::credentials("company_id")
-                ],
-                "query"         => 'query ExportSites($idCompany: String!) {
-                    company(id: $idCompany) {
-                      id
-                      name
-                      sites {
-                        id
-                        name
-                        path
-                        createdAt
-                        environment(name: "live") {
-                          id
-                                  primaryDomain {
-                                      name
-                                  }
-                        }
-                      }
-                    }
-                  }'
-            ] )
-        ];
-
-        $response     = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-        $response     = json_decode( $response['body'] );
-        $company_id   = self::credentials("company_id");
-        $sites        = ( new \CaptainCore\Sites )->where( [ "provider" => "kinsta" ] );
-        foreach( $sites as $site ) {
-            foreach( $response->data->company->sites as $kinsta_site ) {
-                $site_name = $kinsta_site->environment->primaryDomain->name;
-                $site_name = str_replace( "www.", "", $site_name );
-                if ( $site->name == $site_name ) {
-                    ( new  \CaptainCore\Sites )->update( [ "provider_site_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
-                }
-            }
-        }
-    }
-
     public static function actions() {
         $provider = ( new \CaptainCore\Provider( "kinsta" ) )->get();
         $details  = $provider->details;
@@ -866,107 +763,6 @@ class Kinsta {
 
         $provider_action_id = ( new \CaptainCore\ProviderActions )->insert( $provider_action );
         return;
-    }
-
-    public static function action_check( $provider_action_id = 0, $return_response = false ) {
-        $provider_action = ( new \CaptainCore\ProviderActions )->get( $provider_action_id );
-        if ( empty( $provider_action ) ) {
-            return "";
-        }
-        $action          = json_decode( $provider_action->action );
-        $token           = self::credentials("token");
-        $data            = [
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [
-                    "idAction" => (int) ( $provider_action->provider_key ?? 0 )
-                ],
-                "operationName" => "Action",
-                "query"         => 'query Action($idAction: Int!) {
-                    action(id: $idAction) {
-                        error
-                        isDone
-                        __typename
-                    }
-                action_liveKeys(id: $idAction)
-            }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
-            return 404;
-        }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
-            return 404;
-        }
-
-        if ( empty ( $response->data->action ) ) {
-            return 202;
-        }
-
-        if ( $return_response ) {
-            return $response;
-        }
-
-        if ( $response->data->action->isDone ) {
-            return 200;
-        }
-        
-        return 202;
-
-    }
-
-    public static function action_result( $provider_key = 0 ) {
-        $provider_key = (int) $provider_key;
-        $token = self::credentials("token");
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idAction" => $provider_key
-                ],
-                "operationName" => "Action",
-                "query"         => 'query Action($idAction: Int!) {
-                    action(id: $idAction) {
-                        error
-                        result
-                        __typename
-                    }
-                }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
-            return false;
-        }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
-            return false;
-        }
-
-        if ( empty ( $response->data->action ) ) {
-            return false;
-        }
-        
-        return $response->data->action->result;
-
     }
 
     // Members of the Kinsta company behind one provider connection, each with
