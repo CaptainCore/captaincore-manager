@@ -3176,6 +3176,12 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	if ( $cmd == 'deploy-defaults' ) {
 		$args = array_merge( [ 'site', 'deploy-defaults' ], $sites );
 		$run_in_background = true;
+		// Provider-side defaults the CLI cannot reach: MyKinsta access.
+		if ( ( new CaptainCore\User )->is_admin() ) {
+			foreach ( $post_ids ?: [ $post_id ] as $share_site_id ) {
+				CaptainCore\Providers\Kinsta::share_site_access( $share_site_id );
+			}
+		}
 	}
 	if ( $cmd == 'update' ) {
 		$args = [ 'site', 'sync', (string) $post_id ];
@@ -4802,6 +4808,7 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
     $environments = isset( $params['environments'] ) ? $params['environments'] : [];
     $extra_params = isset( $params['params'] ) ? $params['params'] : [];
     $targets      = [];
+    $site_ids     = [];
 
     if ( empty( $tool ) || empty( $environments ) ) {
         return new WP_Error( 'missing_data', 'Tool and at least one environment are required', [ 'status' => 400 ] );
@@ -4813,7 +4820,8 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
             $site_obj = CaptainCore\Sites::get( $env_obj->site_id );
             // Security: Check individual site permissions
             if ( captaincore_verify_permissions( $site_obj->site_id ) ) {
-                $targets[] = "{$site_obj->site}-" . strtolower( $env_obj->environment );
+                $targets[]  = "{$site_obj->site}-" . strtolower( $env_obj->environment );
+                $site_ids[] = (int) $site_obj->site_id;
             }
         }
     }
@@ -4838,6 +4846,12 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
             break;
         case 'deploy-defaults':
             $args = array_merge( [ 'site', 'deploy-defaults' ], $target_list );
+            // Provider-side defaults the CLI cannot reach: MyKinsta access.
+            if ( ( new CaptainCore\User )->is_admin() ) {
+                foreach ( array_unique( $site_ids ) as $share_site_id ) {
+                    CaptainCore\Providers\Kinsta::share_site_access( $share_site_id );
+                }
+            }
             break;
         case 'activate':
             $args = array_merge( [ 'activate' ], $target_list );

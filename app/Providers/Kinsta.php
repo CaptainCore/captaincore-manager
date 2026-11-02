@@ -965,6 +965,28 @@ class Kinsta {
         return $response->operation_id ?? false;
     }
 
+    // Shares MyKinsta access on one CaptainCore site with the kinsta_emails of
+    // every account it is shared with. Runs from the new-site chain and from
+    // deploy-defaults, so a site added and linked by hand gets the same access.
+    // Safe to repeat: Kinsta only adds the capability.
+    public static function share_site_access( $site_id ) {
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site ) || $site->provider !== 'kinsta' || empty( $site->provider_site_id ) ) {
+            return false;
+        }
+        $kinsta_emails = [];
+        foreach ( ( new \CaptainCore\Site( $site_id ) )->shared_with_ids() as $account_id ) {
+            $defaults = ( new \CaptainCore\Account( $account_id, true ) )->get()->defaults ?? null;
+            if ( ! empty( $defaults->kinsta_emails ) ) {
+                $kinsta_emails = array_merge( $kinsta_emails, explode( ",", $defaults->kinsta_emails ) );
+            }
+        }
+        if ( empty( $kinsta_emails ) ) {
+            return false;
+        }
+        return self::invite_emails( $kinsta_emails, $site->provider_site_id, $site->provider_id );
+    }
+
     /**
      * Private helper to get the Kinsta Environment ID.
      */
