@@ -299,7 +299,10 @@ class Kinsta {
             "is_subdomain_multisite" => false,
             "install_mode"           => "new",
             "admin_email"            => get_option( 'admin_email' ),
-            "admin_password"         => wp_generate_password( 24, true, true ),
+            // Letters and digits only. Kinsta's background install rejects a
+            // password with quotes or backslashes, and json_encode() sends any
+            // "/" as "\/", so a symbol set fails about one create in four.
+            "admin_password"         => wp_generate_password( 32, false ),
             "admin_user"             => $username,
             "is_multisite"           => false,
             "site_title"             => $site->name,
