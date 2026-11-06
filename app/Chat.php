@@ -1,0 +1,634 @@
+<?php
+
+namespace CaptainCore;
+
+// Exit if accessed directly.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * CaptainCore Chat: support conversations between customers and operators.
+ *
+ * The Manager is the system of record. The chat server (captaincore-chat, a
+ * separate Go service) only relays live events: every change here fires the
+ * `captaincore_chat_event` action, which the relay hooks to push frames.
+ *
+ * Rules (mirrors captaincore-chat's original store tests):
+ *   - Customers see only their own conversations. Anything else is the same
+ *     404 as a missing one. Guest threads (user_id 0, imported contacts
+ *     with no Manager user) are operator-only.
+ *   - Bodies are plain text, never HTML. Control characters and bidi
+ *     overrides are stripped; the UI escapes everything on render.
+ *   - Notes are internal. Internal rows never reach a customer.
+ *   - A customer comment starts the waiting clock (if not running) and
+ *     reopens a closed or snoozed thread. An operator comment stops it.
+ *     A close stops it too. Notes and events never move last_message_at.
+ *   - A conversation links only to a site and account the customer can use.
+ *
+ * Customer access follows the `captaincore_chat_mode` site option:
+ *   off      operators only (history, imports). Customers keep Intercom.
+ *   preview  plus customers with user meta captaincore_chat_preview = 1.
+ *   on       everyone.
+ */
+class Chat {
+
+	const MAX_BODY    = 10000;
+	const MAX_SUBJECT = 200;
+	const STATUSES    = [ 'open', 'snoozed', 'closed' ];
+	const MODES       = [ 'off', 'preview', 'on' ];
+	// Raster images display in the thread. Everything else (SVG included,
+	// it can carry script) is always a download.
+	const INLINE_TYPES = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
+
+	// ── access ──────────────────────────────────────────────────────────
+
+	public static function mode() {
+		$mode = get_site_option( 'captaincore_chat_mode', 'off' );
+		return in_array( $mode, self::MODES, true ) ? $mode : 'off';
+	}
+
+	public static function is_operator( $user_id ) {
+		return $user_id > 0 && ( new User( $user_id, true ) )->is_admin();
+	}
+
+	/** Whether this user gets CaptainCore Chat (instead of Intercom). */
+	public static function enabled_for( $user_id ) {
+		if ( $user_id <= 0 ) {
+			return false;
+		}
+		if ( self::is_operator( $user_id ) ) {
+			return true;
+		}
+		$mode = self::mode();
+		return $mode === 'on' || ( $mode === 'preview' && get_user_meta( $user_id, 'captaincore_chat_preview', true ) );
+	}
+
+	/** The conversation row if the user may see it, else null. */
+	public static function viewable( $user_id, $conversation_id ) {
+		$conversation = ChatConversations::get( (int) $conversation_id );
+		if ( ! $conversation ) {
+			return null;
+		}
+		if ( self::is_operator( $user_id ) ) {
+			return $conversation;
+		}
+		if ( ! self::enabled_for( $user_id ) ) {
+			return null;
+		}
+		return (int) $conversation->user_id === (int) $user_id && (int) $user_id > 0 ? $conversation : null;
+	}
+
+	private static function not_found() {
+		return new \WP_Error( 'not_found', 'Conversation not found.', [ 'status' => 404 ] );
+	}
+
+	// ── reads ───────────────────────────────────────────────────────────
+
+	/**
+	 * Inbox listing, newest activity first, with a preview and unread count
+	 * for the viewer.
+	 *
+	 * @param array $q status (open|snoozed|closed|waiting|''), customer (operators),
+	 *                 site (operators), before (unix last_message_at cursor), limit
+	 */
+	public static function conversations( $user_id, $q = [] ) {
+		global $wpdb;
+		$operator = self::is_operator( $user_id );
+		if ( ! $operator && ! self::enabled_for( $user_id ) ) {
+			return [];
+		}
+		$c     = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$m     = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$r     = $wpdb->base_prefix . 'captaincore_chat_reads';
+		$where = [ '1=1' ];
+		$args  = [ $operator ? 'customer' : 'operator', (int) $user_id ];
+
+		if ( ! $operator ) {
+			$where[] = 'c.user_id = %d';
+			$args[]  = (int) $user_id;
+		} else {
+			if ( ! empty( $q['customer'] ) ) {
+				$where[] = 'c.user_id = %d';
+				$args[]  = (int) $q['customer'];
+			}
+			if ( ! empty( $q['site'] ) ) {
+				$where[] = 'c.site_id = %d';
+				$args[]  = (int) $q['site'];
+			}
+		}
+		$status = (string) ( $q['status'] ?? '' );
+		if ( $status === 'waiting' ) {
+			$where[] = "c.status = 'open' AND c.waiting_since IS NOT NULL";
+		} elseif ( in_array( $status, self::STATUSES, true ) ) {
+			$where[] = 'c.status = %s';
+			$args[]  = $status;
+		}
+		if ( ! empty( $q['before'] ) ) {
+			$where[] = 'c.last_message_at < %s';
+			$args[]  = gmdate( 'Y-m-d H:i:s', (int) $q['before'] );
+		}
+		$limit  = max( 1, min( 100, (int) ( $q['limit'] ?? 50 ) ) );
+		$args[] = $limit;
+
+		$sql = "SELECT c.*,
+			(SELECT SUBSTRING(m.body, 1, 200) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
+				AND m.kind = 'comment' ORDER BY m.chat_message_id DESC LIMIT 1) AS preview,
+			(SELECT COUNT(*) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id AND m.kind = 'comment'
+				AND m.author_kind = %s AND m.chat_message_id > COALESCE((SELECT r.last_read_message_id FROM $r r
+				WHERE r.user_id = %d AND r.chat_conversation_id = c.chat_conversation_id), 0)) AS unread
+			FROM $c c WHERE " . implode( ' AND ', $where ) . '
+			ORDER BY c.last_message_at DESC, c.chat_conversation_id DESC LIMIT %d';
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
+		return array_map( function ( $row ) use ( $operator ) {
+			return self::present_conversation( $row, $operator );
+		}, $rows ?: [] );
+	}
+
+	/**
+	 * One conversation with its messages, oldest first.
+	 *
+	 * @param array $q before (message id cursor), limit
+	 */
+	public static function conversation( $user_id, $conversation_id, $q = [] ) {
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$operator = self::is_operator( $user_id );
+		$messages = self::messages( $conversation->chat_conversation_id, $operator, (int) ( $q['before'] ?? 0 ), (int) ( $q['limit'] ?? 200 ) );
+		$out      = [
+			'conversation' => self::present_conversation( $conversation, $operator ),
+			'messages'     => $messages,
+		];
+		if ( $operator ) {
+			// "Seen by <customer>" receipt.
+			$out['customer_last_read_message_id'] = self::last_read( (int) $conversation->user_id, (int) $conversation->chat_conversation_id );
+		}
+		return $out;
+	}
+
+	private static function messages( $conversation_id, $include_internal, $before = 0, $limit = 200 ) {
+		global $wpdb;
+		$m      = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$limit  = max( 1, min( 500, $limit ?: 200 ) );
+		$before = $before > 0 ? $before : PHP_INT_MAX;
+		$rows   = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $m WHERE chat_conversation_id = %d AND chat_message_id < %d" . ( $include_internal ? '' : ' AND internal = 0' ) .
+			' ORDER BY chat_message_id DESC LIMIT %d',
+			$conversation_id, $before, $limit
+		) );
+		$rows  = array_reverse( $rows ?: [] );
+		$files = self::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, $rows ) );
+		return array_map( function ( $row ) use ( $files ) {
+			return self::present_message( $row, $files[ (int) $row->chat_message_id ] ?? [] );
+		}, $rows );
+	}
+
+	private static function attachments_for( $message_ids ) {
+		global $wpdb;
+		if ( empty( $message_ids ) ) {
+			return [];
+		}
+		$a    = $wpdb->base_prefix . 'captaincore_chat_attachments';
+		$in   = implode( ',', array_map( 'intval', $message_ids ) );
+		$rows = $wpdb->get_results( "SELECT * FROM $a WHERE chat_message_id IN ($in) ORDER BY chat_attachment_id ASC" );
+		$out  = [];
+		foreach ( $rows ?: [] as $row ) {
+			$out[ (int) $row->chat_message_id ][] = [
+				'id'     => (int) $row->chat_attachment_id,
+				'name'   => $row->name,
+				'mime'   => $row->mime,
+				'size'   => (int) $row->size,
+				'inline' => in_array( $row->mime, self::INLINE_TYPES, true ),
+				'url'    => rest_url( 'captaincore/v1/chat/attachments/' . (int) $row->chat_attachment_id ),
+			];
+		}
+		return $out;
+	}
+
+	private static function last_read( $user_id, $conversation_id ) {
+		global $wpdb;
+		$r = $wpdb->base_prefix . 'captaincore_chat_reads';
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT last_read_message_id FROM $r WHERE user_id = %d AND chat_conversation_id = %d", $user_id, $conversation_id
+		) );
+	}
+
+	// ── writes ──────────────────────────────────────────────────────────
+
+	/**
+	 * A customer starts a conversation.
+	 *
+	 * @param array $input body, subject?, site_id?, account_id?
+	 */
+	public static function create( $user_id, $input ) {
+		if ( self::is_operator( $user_id ) ) {
+			return new \WP_Error( 'customers_only', "Operators can't start conversations yet.", [ 'status' => 403 ] );
+		}
+		if ( ! self::enabled_for( $user_id ) ) {
+			return new \WP_Error( 'chat_disabled', 'Chat is not available yet.', [ 'status' => 403 ] );
+		}
+		$body = self::clean_body( $input['body'] ?? '' );
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
+		$subject = trim( (string) ( $input['subject'] ?? '' ) );
+		$subject = self::clean_line( $subject !== '' ? $subject : self::first_line( $body, 80 ), self::MAX_SUBJECT );
+		if ( is_wp_error( $subject ) ) {
+			return $subject;
+		}
+
+		// Links come only from what the user can already reach.
+		$site_id = (int) ( $input['site_id'] ?? 0 );
+		if ( $site_id > 0 && ( get_current_user_id() !== (int) $user_id || ! ( new Sites )->verify( $site_id ) ) ) {
+			return new \WP_Error( 'site', "That site isn't on your account.", [ 'status' => 403 ] );
+		}
+		$accounts   = array_map( 'intval', ( new User( $user_id, true ) )->accounts() );
+		$account_id = (int) ( $input['account_id'] ?? 0 );
+		if ( $account_id > 0 && ! in_array( $account_id, $accounts, true ) ) {
+			return new \WP_Error( 'account', "That account isn't yours.", [ 'status' => 403 ] );
+		}
+		if ( $account_id === 0 && count( $accounts ) === 1 ) {
+			$account_id = $accounts[0];
+		}
+
+		$user = get_userdata( $user_id );
+		$now  = gmdate( 'Y-m-d H:i:s' );
+		$id   = ChatConversations::insert( [
+			'user_id'         => (int) $user_id,
+			'account_id'      => $account_id,
+			'site_id'         => $site_id,
+			'contact_name'    => $user ? $user->display_name : '',
+			'contact_email'   => $user ? $user->user_email : '',
+			'subject'         => $subject,
+			'status'          => 'open',
+			'last_message_at' => $now,
+			'source'          => 'chat',
+			'created_at'      => $now,
+			'updated_at'      => $now,
+		] );
+		if ( ! $id ) {
+			return new \WP_Error( 'storage', 'Could not save the conversation.', [ 'status' => 500 ] );
+		}
+		$message = self::append( $id, [
+			'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => (int) $user_id,
+			'author_name' => $user ? $user->display_name : '', 'body' => $body,
+		] );
+		$conversation = self::present_conversation( ChatConversations::get( $id ), false );
+		self::emit( 'conversation.created', $conversation, $message );
+		return [ 'conversation' => $conversation, 'messages' => [ $message ] ];
+	}
+
+	/**
+	 * Post a comment, or (operators) an internal note.
+	 */
+	public static function post_message( $user_id, $conversation_id, $input ) {
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$operator = self::is_operator( $user_id );
+		$kind     = (string) ( $input['kind'] ?? 'comment' );
+		if ( $kind === '' ) {
+			$kind = 'comment';
+		}
+		if ( ! in_array( $kind, [ 'comment', 'note' ], true ) ) {
+			return new \WP_Error( 'bad_kind', 'kind must be comment or note.', [ 'status' => 400 ] );
+		}
+		if ( $kind === 'note' && ! $operator ) {
+			return new \WP_Error( 'operators_only', 'Only operators can write internal notes.', [ 'status' => 403 ] );
+		}
+		$body = self::clean_body( $input['body'] ?? '' );
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
+		$user    = get_userdata( $user_id );
+		$message = self::append( (int) $conversation->chat_conversation_id, [
+			'kind'           => $kind,
+			'author_kind'    => $operator ? 'operator' : 'customer',
+			'author_user_id' => (int) $user_id,
+			'author_name'    => $user ? $user->display_name : '',
+			'body'           => $body,
+		] );
+		$updated = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
+		self::emit( 'message.created', $updated, $message );
+		self::emit( 'conversation.updated', $updated );
+		return [ 'message' => $message, 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ) ];
+	}
+
+	/**
+	 * Insert a message and apply its effect on the conversation. Returns the
+	 * presented message.
+	 */
+	private static function append( $conversation_id, $m ) {
+		global $wpdb;
+		$now      = gmdate( 'Y-m-d H:i:s' );
+		$kind     = $m['kind'];
+		$internal = $kind === 'note' ? 1 : ( $kind === 'comment' ? 0 : (int) ! empty( $m['internal'] ) );
+		$id       = ChatMessages::insert( [
+			'chat_conversation_id' => (int) $conversation_id,
+			'kind'                 => $kind,
+			'internal'             => $internal,
+			'author_kind'          => $m['author_kind'],
+			'author_user_id'       => (int) ( $m['author_user_id'] ?? 0 ),
+			'author_name'          => (string) ( $m['author_name'] ?? '' ),
+			'body'                 => (string) $m['body'],
+			'created_at'           => $now,
+		] );
+		$c = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		if ( $kind === 'comment' && $m['author_kind'] === 'customer' ) {
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE $c SET last_customer_at = %s, last_message_at = %s, waiting_since = COALESCE(waiting_since, %s),
+				status = 'open', snoozed_until = NULL, updated_at = %s WHERE chat_conversation_id = %d",
+				$now, $now, $now, $now, $conversation_id
+			) );
+		} elseif ( $kind === 'comment' && $m['author_kind'] === 'operator' ) {
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE $c SET last_operator_at = %s, last_message_at = %s, waiting_since = NULL, updated_at = %s WHERE chat_conversation_id = %d",
+				$now, $now, $now, $conversation_id
+			) );
+		} else {
+			$wpdb->query( $wpdb->prepare( "UPDATE $c SET updated_at = %s WHERE chat_conversation_id = %d", $now, $conversation_id ) );
+		}
+		return self::present_message( ChatMessages::get( $id ), [] );
+	}
+
+	/**
+	 * Change a conversation. Customers may only resolve (status closed) or
+	 * reopen (status open) their own. Operators may also snooze, link a site
+	 * or account, assign, and rename.
+	 *
+	 * @param array $patch status, snoozed_until (unix), site_id, account_id, assignee_user_id, subject. 0 clears an id.
+	 */
+	public static function update( $user_id, $conversation_id, $patch ) {
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$operator = self::is_operator( $user_id );
+		$allowed  = [ 'status', 'snoozed_until', 'site_id', 'account_id', 'assignee_user_id', 'subject' ];
+		$patch    = array_intersect_key( (array) $patch, array_flip( $allowed ) );
+		if ( ! $operator ) {
+			$status_ok = isset( $patch['status'] ) && in_array( $patch['status'], [ 'open', 'closed' ], true );
+			if ( ! $status_ok || count( $patch ) !== 1 ) {
+				return new \WP_Error( 'operators_only', 'You can resolve or reopen a conversation; operators handle the rest.', [ 'status' => 403 ] );
+			}
+		}
+
+		$user   = get_userdata( $user_id );
+		$name   = $user ? $user->display_name : 'Someone';
+		$now    = gmdate( 'Y-m-d H:i:s' );
+		$set    = [ 'updated_at' => $now ];
+		$events = [];
+
+		if ( isset( $patch['status'] ) && $patch['status'] !== $conversation->status ) {
+			switch ( $patch['status'] ) {
+				case 'open':
+					$set['status']        = 'open';
+					$set['snoozed_until'] = null;
+					$events[]             = [ "Reopened by $name", 0 ];
+					break;
+				case 'closed':
+					$set['status']        = 'closed';
+					$set['snoozed_until'] = null;
+					$set['waiting_since'] = null;
+					$events[]             = [ "Closed by $name", 0 ];
+					break;
+				case 'snoozed':
+					$until = (int) ( $patch['snoozed_until'] ?? 0 );
+					if ( $until <= time() || $until > time() + 366 * DAY_IN_SECONDS ) {
+						return new \WP_Error( 'invalid', 'snoozed_until must be in the next year.', [ 'status' => 400 ] );
+					}
+					$set['status']        = 'snoozed';
+					$set['snoozed_until'] = gmdate( 'Y-m-d H:i:s', $until );
+					$events[]             = [ 'Snoozed until ' . gmdate( 'Y-m-d H:i', $until ) . " UTC by $name", 1 ];
+					break;
+				default:
+					return new \WP_Error( 'invalid', 'status must be open, snoozed or closed.', [ 'status' => 400 ] );
+			}
+		}
+		if ( array_key_exists( 'site_id', $patch ) ) {
+			$set['site_id'] = max( 0, (int) $patch['site_id'] );
+			$events[]       = [ $set['site_id'] ? "Linked to site #{$set['site_id']} by $name" : "Site unlinked by $name", 1 ];
+		}
+		if ( array_key_exists( 'account_id', $patch ) ) {
+			$set['account_id'] = max( 0, (int) $patch['account_id'] );
+		}
+		if ( array_key_exists( 'assignee_user_id', $patch ) ) {
+			$set['assignee_user_id'] = max( 0, (int) $patch['assignee_user_id'] );
+			$events[]                = [ $set['assignee_user_id'] ? "Assigned to user #{$set['assignee_user_id']} by $name" : "Unassigned by $name", 1 ];
+		}
+		if ( array_key_exists( 'subject', $patch ) ) {
+			$subject = self::clean_line( (string) $patch['subject'], self::MAX_SUBJECT );
+			if ( is_wp_error( $subject ) ) {
+				return $subject;
+			}
+			$set['subject'] = $subject;
+		}
+
+		ChatConversations::update( $set, [ 'chat_conversation_id' => (int) $conversation->chat_conversation_id ] );
+		$created = [];
+		foreach ( $events as [ $body, $internal ] ) {
+			$created[] = self::append( (int) $conversation->chat_conversation_id, [
+				'kind' => 'event', 'internal' => $internal, 'author_kind' => $operator ? 'operator' : 'customer',
+				'author_user_id' => (int) $user_id, 'author_name' => $name, 'body' => $body,
+			] );
+		}
+		$fresh = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
+		foreach ( $created as $message ) {
+			self::emit( 'message.created', $fresh, $message );
+		}
+		self::emit( 'conversation.updated', $fresh );
+		return [
+			'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ),
+			'events'       => $operator ? $created : array_values( array_filter( $created, fn( $e ) => ! $e['internal'] ) ),
+		];
+	}
+
+	/** Move the user's read mark forward. It never moves back. */
+	public static function mark_read( $user_id, $conversation_id, $message_id ) {
+		global $wpdb;
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$m       = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$belongs = $wpdb->get_var( $wpdb->prepare(
+			"SELECT 1 FROM $m WHERE chat_message_id = %d AND chat_conversation_id = %d", $message_id, $conversation->chat_conversation_id
+		) );
+		if ( ! $belongs ) {
+			return new \WP_Error( 'not_found', 'Message not found in this conversation.', [ 'status' => 404 ] );
+		}
+		$r = $wpdb->base_prefix . 'captaincore_chat_reads';
+		$wpdb->query( $wpdb->prepare(
+			"INSERT INTO $r (user_id, chat_conversation_id, last_read_message_id, updated_at) VALUES (%d, %d, %d, %s)
+			ON DUPLICATE KEY UPDATE last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id)), updated_at = VALUES(updated_at)",
+			$user_id, $conversation->chat_conversation_id, $message_id, gmdate( 'Y-m-d H:i:s' )
+		) );
+		if ( ! self::is_operator( $user_id ) ) {
+			do_action( 'captaincore_chat_event', [ 'type' => 'read', 'conversation_id' => (int) $conversation->chat_conversation_id, 'message_id' => (int) $message_id ], 0, true );
+		}
+		return true;
+	}
+
+	/** Reopen snoozed conversations whose time has come. */
+	public static function wake_snoozed() {
+		global $wpdb;
+		$c   = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT chat_conversation_id FROM $c WHERE status = 'snoozed' AND snoozed_until <= %s", gmdate( 'Y-m-d H:i:s' ) ) );
+		foreach ( $ids as $id ) {
+			ChatConversations::update( [ 'status' => 'open', 'snoozed_until' => null, 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ], [ 'chat_conversation_id' => (int) $id ] );
+			$message = self::append( (int) $id, [ 'kind' => 'event', 'internal' => 1, 'author_kind' => 'system', 'body' => 'Snooze ended' ] );
+			$fresh   = self::present_conversation( ChatConversations::get( $id ), false ); // customer-safe: the relay sends it to both sides
+			self::emit( 'message.created', $fresh, $message );
+			self::emit( 'conversation.updated', $fresh );
+		}
+		return count( $ids );
+	}
+
+	/**
+	 * Fire a live event for the relay. Routing: operators get everything,
+	 * the owning customer gets it unless the message is internal.
+	 */
+	private static function emit( $type, $conversation, $message = null ) {
+		$event = [ 'type' => $type, 'conversation_id' => $conversation['id'], 'conversation' => $conversation ];
+		if ( $message ) {
+			$event['message'] = $message;
+		}
+		$internal = $message ? ! empty( $message['internal'] ) : false;
+		do_action( 'captaincore_chat_event', $event, (int) $conversation['customer_user_id'], $internal );
+	}
+
+	// ── files ───────────────────────────────────────────────────────────
+
+	public static function base_dir() {
+		if ( defined( 'CAPTAINCORE_CHAT_DIR' ) && CAPTAINCORE_CHAT_DIR ) {
+			return untrailingslashit( CAPTAINCORE_CHAT_DIR );
+		}
+		return dirname( untrailingslashit( ABSPATH ) ) . '/private/chat';
+	}
+
+	/**
+	 * Stream an attachment the user may see. Raster images display inline
+	 * (type checked from the bytes, not the name); everything else downloads.
+	 */
+	public static function send_attachment( $user_id, $attachment_id ) {
+		$attachment = ChatAttachments::get( (int) $attachment_id );
+		$message    = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
+		$visible    = $message && self::viewable( $user_id, (int) $attachment->chat_conversation_id )
+			&& ( ! (int) $message->internal || self::is_operator( $user_id ) );
+		$path       = $visible ? self::base_dir() . '/' . ltrim( $attachment->storage_path, '/' ) : '';
+		if ( ! $visible || strpos( $attachment->storage_path, '..' ) !== false || ! is_file( $path ) ) {
+			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
+		}
+		$sniffed = function_exists( 'finfo_open' ) ? (string) finfo_file( finfo_open( FILEINFO_MIME_TYPE ), $path ) : '';
+		$inline  = in_array( $sniffed, self::INLINE_TYPES, true );
+		while ( ob_get_level() ) {
+			ob_end_clean();
+		}
+		header( 'Content-Type: ' . ( $inline ? $sniffed : 'application/octet-stream' ) );
+		header( 'Content-Disposition: ' . ( $inline ? 'inline' : 'attachment' ) . '; filename="' . str_replace( [ '"', "\r", "\n" ], '', $attachment->name ) . '"' );
+		header( 'Content-Length: ' . filesize( $path ) );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( "Content-Security-Policy: default-src 'none'; sandbox" );
+		header( 'Cache-Control: private, max-age=86400' );
+		readfile( $path );
+		exit;
+	}
+
+	// ── presentation ────────────────────────────────────────────────────
+
+	private static function ts( $datetime ) {
+		return $datetime ? (int) strtotime( $datetime . ' UTC' ) : null;
+	}
+
+	public static function present_conversation( $row, $operator ) {
+		$out = [
+			'id'               => (int) $row->chat_conversation_id,
+			'customer_user_id' => (int) $row->user_id,
+			'customer_name'    => $row->contact_name,
+			'customer_email'   => $row->contact_email,
+			'account_id'       => (int) $row->account_id ?: null,
+			'site_id'          => (int) $row->site_id ?: null,
+			'subject'          => $row->subject,
+			'status'           => $row->status,
+			'snoozed_until'    => self::ts( $row->snoozed_until ),
+			'waiting_since'    => self::ts( $row->waiting_since ),
+			'last_customer_at' => self::ts( $row->last_customer_at ),
+			'last_operator_at' => self::ts( $row->last_operator_at ),
+			'last_message_at'  => self::ts( $row->last_message_at ),
+			'source'           => $row->source,
+			'created_at'       => self::ts( $row->created_at ),
+			'updated_at'       => self::ts( $row->updated_at ),
+		];
+		if ( isset( $row->preview ) ) {
+			$out['preview'] = (string) $row->preview;
+		}
+		if ( isset( $row->unread ) ) {
+			$out['unread'] = (int) $row->unread;
+		}
+		if ( $operator ) {
+			$out['assignee_user_id'] = (int) $row->assignee_user_id ?: null;
+			$out['guest']            = (int) $row->user_id === 0;
+		}
+		return $out;
+	}
+
+	public static function present_message( $row, $attachments ) {
+		return [
+			'id'              => (int) $row->chat_message_id,
+			'conversation_id' => (int) $row->chat_conversation_id,
+			'kind'            => $row->kind,
+			'internal'        => (bool) (int) $row->internal,
+			'author_kind'     => $row->author_kind,
+			'author_user_id'  => (int) $row->author_user_id ?: null,
+			'author_name'     => $row->author_name,
+			'body'            => $row->body,
+			'attachments'     => $attachments,
+			'created_at'      => self::ts( $row->created_at ),
+			'edited_at'       => self::ts( $row->edited_at ),
+		];
+	}
+
+	// ── text hygiene ────────────────────────────────────────────────────
+
+	/** Strip control characters and bidi overrides, keep newlines and tabs. */
+	public static function strip_controls( $text ) {
+		$text = str_replace( "\r\n", "\n", (string) $text );
+		return (string) preg_replace( '/[\x{0000}-\x{0008}\x{000B}-\x{001F}\x{007F}-\x{009F}\x{2028}\x{2029}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $text );
+	}
+
+	public static function clean_body( $body ) {
+		if ( ! is_string( $body ) || ! mb_check_encoding( $body, 'UTF-8' ) ) {
+			return new \WP_Error( 'bad_body', 'Message must be valid UTF-8 text.', [ 'status' => 400 ] );
+		}
+		$body = trim( self::strip_controls( $body ) );
+		if ( $body === '' ) {
+			return new \WP_Error( 'bad_body', 'Message is empty.', [ 'status' => 400 ] );
+		}
+		if ( mb_strlen( $body ) > self::MAX_BODY ) {
+			return new \WP_Error( 'bad_body', 'Message is too long (10,000 characters max).', [ 'status' => 400 ] );
+		}
+		return $body;
+	}
+
+	public static function clean_line( $text, $max ) {
+		if ( ! is_string( $text ) || ! mb_check_encoding( $text, 'UTF-8' ) ) {
+			return new \WP_Error( 'bad_text', 'Text must be valid UTF-8.', [ 'status' => 400 ] );
+		}
+		$text = trim( (string) preg_replace( '/\s+/u', ' ', self::strip_controls( $text ) ) );
+		if ( $text === '' ) {
+			return new \WP_Error( 'bad_text', 'Text is empty.', [ 'status' => 400 ] );
+		}
+		if ( mb_strlen( $text ) > $max ) {
+			return new \WP_Error( 'bad_text', 'Text is too long.', [ 'status' => 400 ] );
+		}
+		return $text;
+	}
+
+	public static function first_line( $text, $max ) {
+		$line = trim( strtok( (string) $text, "\n" ) ?: '' );
+		return mb_strlen( $line ) > $max ? rtrim( mb_substr( $line, 0, $max - 1 ) ) . '…' : $line;
+	}
+}

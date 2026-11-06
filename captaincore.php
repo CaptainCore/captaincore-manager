@@ -2701,6 +2701,49 @@ function captaincore_site_requests_create_func( WP_REST_Request $request ) {
 	return $user->fetch_requested_sites();
 }
 
+// ── CaptainCore Chat callbacks (rules in app/Chat.php) ──
+
+function captaincore_chat_conversations_func( WP_REST_Request $request ) {
+	CaptainCore\Chat::wake_snoozed();
+	return [ 'conversations' => CaptainCore\Chat::conversations( get_current_user_id(), [
+		'status'   => (string) $request->get_param( 'status' ),
+		'customer' => (int) $request->get_param( 'customer' ),
+		'site'     => (int) $request->get_param( 'site' ),
+		'before'   => (int) $request->get_param( 'before' ),
+		'limit'    => (int) $request->get_param( 'limit' ),
+	] ) ];
+}
+
+function captaincore_chat_create_func( WP_REST_Request $request ) {
+	$result = CaptainCore\Chat::create( get_current_user_id(), (array) $request->get_json_params() );
+	return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 201 );
+}
+
+function captaincore_chat_conversation_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::conversation( get_current_user_id(), (int) $request['id'], [
+		'before' => (int) $request->get_param( 'before' ),
+		'limit'  => (int) $request->get_param( 'limit' ),
+	] );
+}
+
+function captaincore_chat_update_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::update( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+}
+
+function captaincore_chat_message_func( WP_REST_Request $request ) {
+	$result = CaptainCore\Chat::post_message( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+	return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 201 );
+}
+
+function captaincore_chat_read_func( WP_REST_Request $request ) {
+	$result = CaptainCore\Chat::mark_read( get_current_user_id(), (int) $request['id'], (int) ( $request->get_json_params()['message_id'] ?? 0 ) );
+	return is_wp_error( $result ) ? $result : new WP_REST_Response( null, 204 );
+}
+
+function captaincore_chat_attachment_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::send_attachment( get_current_user_id(), (int) $request['id'] );
+}
+
 function captaincore_ai_relay_state_func( WP_REST_Request $request ) {
 	$user_id = get_current_user_id();
 	return [
@@ -10930,6 +10973,63 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site-requests', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_requests_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// CaptainCore Chat (app/Chat.php). Every route needs a signed-in user;
+	// Chat decides what each user may see (customers: their own threads,
+	// never internal rows; operators: everything).
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_chat_conversations_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_chat_create_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_chat_conversation_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'PATCH',
+				'callback'            => 'captaincore_chat_update_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/messages', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_chat_message_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/read', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_chat_read_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/attachments/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_chat_attachment_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);

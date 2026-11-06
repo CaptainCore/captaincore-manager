@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 64;
+    const REQUIRED_VERSION = 65;
 
     private static function _table() {
         global $wpdb;
@@ -1514,6 +1514,93 @@ class DB {
         KEY hash (hash),
         KEY site_id (site_id),
         KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v65: CaptainCore Chat. The Manager is the system of record; the
+        // chat server only relays live events. user_id 0 = a guest thread
+        // (imported contact with no Manager user), shown to operators only.
+        // waiting_since is set by the first unanswered customer comment and
+        // cleared by an operator comment or a close. last_message_at moves
+        // only for customer-visible comments. external_id holds the Intercom
+        // conversation or part id for imported rows (idempotent re-runs).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_conversations` (
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            account_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            site_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            contact_name varchar(255) NOT NULL DEFAULT '',
+            contact_email varchar(255) NOT NULL DEFAULT '',
+            subject varchar(255) NOT NULL DEFAULT '',
+            status varchar(10) NOT NULL DEFAULT 'open',
+            snoozed_until datetime DEFAULT NULL,
+            assignee_user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            waiting_since datetime DEFAULT NULL,
+            last_customer_at datetime DEFAULT NULL,
+            last_operator_at datetime DEFAULT NULL,
+            last_message_at datetime NOT NULL,
+            source varchar(20) NOT NULL DEFAULT 'chat',
+            external_id varchar(64) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (chat_conversation_id),
+        KEY user_id (user_id,last_message_at),
+        KEY account_id (account_id),
+        KEY site_id (site_id),
+        KEY status (status,last_message_at),
+        KEY contact_email (contact_email(100)),
+        KEY external_id (external_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Bodies are plain text, never HTML: the UI escapes on render.
+        // internal = 1 rows (every note, some events) never reach customers.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_messages` (
+            chat_message_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            kind varchar(10) NOT NULL DEFAULT 'comment',
+            internal tinyint(1) NOT NULL DEFAULT 0,
+            author_kind varchar(10) NOT NULL DEFAULT 'customer',
+            author_user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            author_name varchar(255) NOT NULL DEFAULT '',
+            body longtext NOT NULL,
+            external_id varchar(64) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            edited_at datetime DEFAULT NULL,
+        PRIMARY KEY  (chat_message_id),
+        KEY chat_conversation_id (chat_conversation_id,chat_message_id),
+        KEY external_id (external_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // Files live outside the web root (Chat::base_dir()), named by
+        // sha256 so the same screenshot sent twice is stored once.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_attachments` (
+            chat_attachment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            chat_message_id bigint(20) UNSIGNED NOT NULL,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            name varchar(255) NOT NULL DEFAULT '',
+            mime varchar(100) NOT NULL DEFAULT '',
+            size bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            sha256 char(64) NOT NULL DEFAULT '',
+            storage_path varchar(255) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (chat_attachment_id),
+        KEY chat_message_id (chat_message_id),
+        KEY chat_conversation_id (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_reads` (
+            user_id bigint(20) UNSIGNED NOT NULL,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            last_read_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (user_id,chat_conversation_id)
         ) $charset_collate;";
 
         dbDelta($sql);
