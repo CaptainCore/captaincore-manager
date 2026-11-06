@@ -475,8 +475,9 @@ class Component extends DCLogic {
       // help" card. Customers only: Intercom ships only on customer sessions
       // (core.php), where window.Intercom exists from page load (the loader
       // stub queues calls until the widget lands).
-      accChatShow: !isOp && !!window.Intercom,
-      accChatOpen: () => { try { window.Intercom('show'); } catch (e) {} },
+      // CaptainCore Chat replaces Intercom when it is enabled for the customer.
+      accChatShow: !isOp && (!!this._chat || !!window.Intercom),
+      accChatOpen: () => { if (this._chat) { this.setState({ chatWidgetOpen: true }); return; } try { window.Intercom('show'); } catch (e) {} },
       naOpen: s.naOpen, naName: s.naName, naMsg: s.naMsg, naHasMsg: !!s.naMsg,
       openNewAccount: () => this.setState({ naOpen: true, naName: '', naMsg: '' }),
       closeNa: () => this.setState({ naOpen: false }),
@@ -2848,6 +2849,7 @@ class Component extends DCLogic {
   };
   ICONS = {
     home: 'M3 10.5 12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z',
+    chat: 'M21 11.5a8.4 8.4 0 01-12.2 7.5L3 21l2-5.4A8.4 8.4 0 1121 11.5z',
     sites: 'M3 12l9 5 9-5M3 7l9 5 9-5-9-5-9 5z',
     domains: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.7 2.7 2.7 15.3 0 18-2.7-2.7-2.7-15.3 0-18z',
     accounts: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 00-3-3.87M15 3.13a4 4 0 010 7.75',
@@ -2907,6 +2909,7 @@ class Component extends DCLogic {
     // Real users (CC_BOOT injected) start with an empty job list — the design's
     // sample jobs only exist for the DC-editor preview.
     if (window.CC_BOOT) { this.setState({ jobs: [] }); this.initRouter();
+      if (this.chatInit) this.chatInit();
       // Resume any provisioning chain orphaned by a reload (v1 polls on load too).
       setTimeout(() => this.pollProviderActions(), 4000);
     }
@@ -3261,7 +3264,8 @@ class Component extends DCLogic {
 
   navItem(id, label, icon) {
     const active = this.state.route === id;
-    const count = this._hydrated ? (id === 'sites' ? this.FLEET.length : id === 'domains' ? this.DOMAINS.length : 0) : 0;
+    const count = id === 'chat' ? (this._chat && this._chat.counts ? this._chat.counts.waiting : 0)
+      : this._hydrated ? (id === 'sites' ? this.FLEET.length : id === 'domains' ? this.DOMAINS.length : 0) : 0;
     return { id, label, icon: this.ICONS[icon || id],
       fg: active ? 'var(--brand-ink)' : 'var(--ink-dim)',
       bg: active ? 'var(--brand-soft)' : 'transparent',
@@ -3331,7 +3335,8 @@ class Component extends DCLogic {
     const primary = isOp
       ? [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing')]
       : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
-    const operate = [this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
+    const chatNav = isOp && window.CC_BOOT && window.CC_BOOT.chat && window.CC_BOOT.chat.enabled ? [this.navItem('chat', 'Chat')] : [];
+    const operate = [...chatNav, this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
 
     // When booted (real app), never show design sample counts — '…' until
     // hydration lands, then real numbers. Samples remain for the DC editor.
@@ -3498,7 +3503,7 @@ class Component extends DCLogic {
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: isOp ? [this.navItem('users', 'Users', 'accounts'), this.navItem('settings', 'Settings')] : [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      screenTitle: ({ home: 'Home', chat: 'Chat', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
@@ -3540,7 +3545,7 @@ class Component extends DCLogic {
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
+      showStub: !['home', 'chat', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
@@ -3552,6 +3557,7 @@ class Component extends DCLogic {
       ...accountsVals, ...accountVals, ...billingVals,
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
       ...this.relayVals(s),
+      ...(this.chatVals ? this.chatVals(s) : {}),
       goProfile: this.go('profile'),
       // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
       // fresh mount" must compare against a slot the null call never clears

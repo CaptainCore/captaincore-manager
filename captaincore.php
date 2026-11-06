@@ -2713,13 +2713,19 @@ function captaincore_chat_token_func( WP_REST_Request $request ) {
 
 function captaincore_chat_conversations_func( WP_REST_Request $request ) {
 	CaptainCore\Chat::wake_snoozed();
-	return [ 'conversations' => CaptainCore\Chat::conversations( get_current_user_id(), [
+	$user_id = get_current_user_id();
+	$out     = [ 'conversations' => CaptainCore\Chat::conversations( $user_id, [
 		'status'   => (string) $request->get_param( 'status' ),
+		'q'        => (string) $request->get_param( 'q' ),
 		'customer' => (int) $request->get_param( 'customer' ),
 		'site'     => (int) $request->get_param( 'site' ),
 		'before'   => (int) $request->get_param( 'before' ),
 		'limit'    => (int) $request->get_param( 'limit' ),
 	] ) ];
+	if ( CaptainCore\Chat::is_operator( $user_id ) ) {
+		$out['counts'] = CaptainCore\Chat::counts();
+	}
+	return $out;
 }
 
 function captaincore_chat_create_func( WP_REST_Request $request ) {

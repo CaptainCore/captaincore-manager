@@ -89,8 +89,10 @@ class Chat {
 	 * Inbox listing, newest activity first, with a preview and unread count
 	 * for the viewer.
 	 *
-	 * @param array $q status (open|snoozed|closed|waiting|''), customer (operators),
-	 *                 site (operators), before (unix last_message_at cursor), limit
+	 * @param array $q status (open|snoozed|closed|waiting|''), q (search: name, email
+	 *                 and subject for operators, subject for customers), customer
+	 *                 (operators), site (operators), before (unix last_message_at
+	 *                 cursor), limit
 	 */
 	public static function conversations( $user_id, $q = [] ) {
 		global $wpdb;
@@ -102,7 +104,9 @@ class Chat {
 		$m     = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$r     = $wpdb->base_prefix . 'captaincore_chat_reads';
 		$where = [ '1=1' ];
-		$args  = [ $operator ? 'customer' : 'operator', (int) $user_id ];
+		// Unread: the other side's comments after both the viewer's read mark
+		// and the last reply from the viewer's side (replying means reading).
+		$args  = [ $operator ? 'customer' : 'operator', (int) $user_id, $operator ? 'operator' : 'customer' ];
 
 		if ( ! $operator ) {
 			$where[] = 'c.user_id = %d';
@@ -115,6 +119,17 @@ class Chat {
 			if ( ! empty( $q['site'] ) ) {
 				$where[] = 'c.site_id = %d';
 				$args[]  = (int) $q['site'];
+			}
+		}
+		$search = trim( (string) ( $q['q'] ?? '' ) );
+		if ( $search !== '' ) {
+			$like = '%' . $wpdb->esc_like( mb_substr( $search, 0, 100 ) ) . '%';
+			if ( $operator ) {
+				$where[] = '(c.contact_name LIKE %s OR c.contact_email LIKE %s OR c.subject LIKE %s)';
+				array_push( $args, $like, $like, $like );
+			} else {
+				$where[] = 'c.subject LIKE %s';
+				$args[]  = $like;
 			}
 		}
 		$status = (string) ( $q['status'] ?? '' );
@@ -135,14 +150,25 @@ class Chat {
 			(SELECT SUBSTRING(m.body, 1, 200) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
 				AND m.kind = 'comment' ORDER BY m.chat_message_id DESC LIMIT 1) AS preview,
 			(SELECT COUNT(*) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id AND m.kind = 'comment'
-				AND m.author_kind = %s AND m.chat_message_id > COALESCE((SELECT r.last_read_message_id FROM $r r
-				WHERE r.user_id = %d AND r.chat_conversation_id = c.chat_conversation_id), 0)) AS unread
+				AND m.author_kind = %s AND m.chat_message_id > GREATEST(
+					COALESCE((SELECT r.last_read_message_id FROM $r r WHERE r.user_id = %d AND r.chat_conversation_id = c.chat_conversation_id), 0),
+					COALESCE((SELECT MAX(m2.chat_message_id) FROM $m m2 WHERE m2.chat_conversation_id = c.chat_conversation_id
+						AND m2.kind = 'comment' AND m2.author_kind = %s), 0))) AS unread
 			FROM $c c WHERE " . implode( ' AND ', $where ) . '
 			ORDER BY c.last_message_at DESC, c.chat_conversation_id DESC LIMIT %d';
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
 		return array_map( function ( $row ) use ( $operator ) {
 			return self::present_conversation( $row, $operator );
 		}, $rows ?: [] );
+	}
+
+	/** Inbox filter counts for operators. */
+	public static function counts() {
+		global $wpdb;
+		$c   = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$row = $wpdb->get_row( "SELECT SUM(status = 'open' AND waiting_since IS NOT NULL) waiting, SUM(status = 'open') open,
+			SUM(status = 'snoozed') snoozed, SUM(status = 'closed') closed, COUNT(*) total FROM $c", ARRAY_A );
+		return array_map( 'intval', $row ?: [ 'waiting' => 0, 'open' => 0, 'snoozed' => 0, 'closed' => 0, 'total' => 0 ] );
 	}
 
 	/**
@@ -588,6 +614,9 @@ class Chat {
 			'attachments'     => $attachments,
 			'created_at'      => self::ts( $row->created_at ),
 			'edited_at'       => self::ts( $row->edited_at ),
+			// Came from an import (Intercom). Read marks on imported history
+			// are synthetic, so clients skip the "Seen" receipt for these.
+			'imported'        => (string) $row->external_id !== '',
 		];
 	}
 

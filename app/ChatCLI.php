@@ -25,6 +25,8 @@ class ChatCLI {
 	private $operators  = [];
 	private $contacts   = [];
 	private $admins     = [];
+	/** @var int[]|null Operator user ids, for imported read marks. */
+	private $operator_ids = null;
 	private $report;
 
 	/**
@@ -309,6 +311,29 @@ class ChatCLI {
 					$y['files']++;
 				}
 			}
+		}
+		$this->mark_history_read( $conversation_id, (int) ( $fields['user_id'] ?? $existing->user_id ?? 0 ) );
+	}
+
+	/**
+	 * Imported history arrives already read, for the customer and every
+	 * operator. INSERT IGNORE keeps any read mark made since, so a re-run
+	 * never resets real progress.
+	 */
+	private function mark_history_read( $conversation_id, $customer_id ) {
+		global $wpdb;
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$r    = $wpdb->base_prefix . 'captaincore_chat_reads';
+		$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d", $conversation_id ) );
+		if ( ! $last ) {
+			return;
+		}
+		if ( $this->operator_ids === null ) {
+			$this->operator_ids = array_values( array_filter( array_map( 'intval', get_users( [ 'role' => 'administrator', 'fields' => 'ID' ] ) ), [ Chat::class, 'is_operator' ] ) );
+		}
+		$now = gmdate( 'Y-m-d H:i:s' );
+		foreach ( array_unique( array_filter( array_merge( $this->operator_ids, [ $customer_id ] ) ) ) as $user_id ) {
+			$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO $r (user_id, chat_conversation_id, last_read_message_id, updated_at) VALUES (%d, %d, %d, %s)", $user_id, $conversation_id, $last, $now ) );
 		}
 	}
 

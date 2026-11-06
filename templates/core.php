@@ -99,7 +99,18 @@ if ( $user->role === 'administrator' && defined( 'MINN_ADMIN_VERSION' ) ) {
 // user_hash (HMAC of email with the server-side secret; the key itself must never
 // reach the client). Admins never load the widget.
 $intercom_embed_id = isset( $configurations->intercom_embed_id ) ? (string) $configurations->intercom_embed_id : '';
-$load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== ''
+// CaptainCore Chat replaces Intercom for anyone it is enabled for (operators
+// always; customers per the captaincore_chat_mode option). `live` says whether
+// the websocket relay is configured; without it the chat still works over
+// REST and refreshes on a timer.
+$chat_enabled         = CaptainCore\Chat::enabled_for( get_current_user_id() );
+$cc_boot['chat']      = [
+	'enabled'  => $chat_enabled,
+	'live'     => $chat_enabled && CaptainCore\ChatRelay::configured(),
+	'operator' => CaptainCore\Chat::is_operator( get_current_user_id() ),
+	'userId'   => get_current_user_id(),
+];
+$load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== '' && ! $chat_enabled
 	&& ! empty( $user->email ) && ! empty( $user->login ) && ! empty( $user->registered );
 
 // Switched-session escape (User Switching): surface the back-link in the shell —
@@ -114,7 +125,7 @@ if ( class_exists( 'user_switching' ) ) {
     }
 }
 
-$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'processes.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'network.js', 'site-requests.js', 'ai-relay.js', 'version-recovery.js', 'registry.js', 'tools.js', 'files.js', 'performance.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'processes.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'network.js', 'site-requests.js', 'ai-relay.js', 'chat.js', 'version-recovery.js', 'registry.js', 'tools.js', 'files.js', 'performance.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>

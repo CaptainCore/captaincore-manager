@@ -150,6 +150,86 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .cc-apidoc table{border-collapse:collapse;margin:8px 0;font-size:var(--fs-125)}
 .cc-apidoc th,.cc-apidoc td{border:1px solid var(--rule);padding:5px 9px;text-align:left}
 .cc-apidoc th{background:var(--panel-2)}
+/* ── CaptainCore Chat (chat.js): operator inbox + customer panel. From the
+   captaincore-chat mockup. Threads render as escaped HTML via a ref. ── */
+:root{--ccc-note:#fbf3e4;--ccc-note-rule:#ecd6a8;--ccc-canvas:#f6f6f7}
+:root[data-theme="dark"]{--ccc-note:#231d12;--ccc-note-rule:#4a3a1c;--ccc-canvas:#0b0b0d}
+.ccc-top{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--rule);background:var(--paper)}
+.ccc-body{flex:1;min-height:0;display:grid;grid-template-columns:340px minmax(0,1fr) 300px}
+.ccc-list{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0;background:var(--ccc-canvas)}
+.ccc-rows{flex:1;overflow-y:auto;padding:2px 8px 12px}
+.ccc-row{display:flex;gap:11px;padding:10px;border-radius:10px;cursor:pointer;position:relative}
+.ccc-row:hover{background:var(--paper)}
+.ccc-main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--paper)}
+.ccc-side{border-left:1px solid var(--rule);overflow-y:auto;background:var(--ccc-canvas)}
+.ccc-sec{padding:16px 18px;border-bottom:1px solid var(--rule)}
+.ccc-label{font:600 var(--fs-11) var(--sans);text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim);margin-bottom:10px}
+.ccc-trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ccc-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12.5px var(--sans);letter-spacing:.02em}
+.ccc-av-sm{width:26px;height:26px;font-size:10.5px}
+.ccc-thread{flex:1;overflow-y:auto;padding:18px 0 10px}
+.ccc-thread-in{max-width:860px;margin:0 auto;padding:0 28px}
+.ccc-day{display:flex;align-items:center;gap:12px;margin:18px 0 10px;font:600 var(--fs-115) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
+.ccc-day:before,.ccc-day:after{content:"";flex:1;height:1px;background:var(--rule)}
+.ccc-msg{display:flex;gap:12px;padding:6px 0}
+.ccc-msg.ccc-cont{padding-top:0}
+.ccc-msg.ccc-cont .ccc-av{visibility:hidden;height:0}
+.ccc-mbody{flex:1;min-width:0}
+.ccc-mh{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.ccc-mh b{font:600 var(--fs-14) var(--sans)}
+.ccc-t{font:400 var(--fs-115) var(--mono);color:var(--ink-dim)}
+.ccc-staff{font:600 10.5px var(--sans);border:1px solid var(--rule);border-radius:999px;padding:1px 7px;color:var(--ink-dim)}
+.ccc-mb{font:400 var(--fs-14)/1.6 var(--sans);color:var(--ink);overflow-wrap:anywhere}
+.ccc-mb a,.ccc-bb a{color:var(--brand-ink);text-decoration:underline}
+.ccc-note{margin:8px 0 8px 46px;padding:10px 14px;border:1px solid var(--ccc-note-rule);border-radius:10px;background:var(--ccc-note)}
+.ccc-nh{font:600 var(--fs-115) var(--sans);color:color-mix(in srgb,var(--warn) 80%,var(--ink));margin-bottom:4px}
+.ccc-note .ccc-mb{font-size:var(--fs-13)}
+.ccc-sys{margin:6px 0 6px 46px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccc-sys-int{font-style:italic}
+.ccc-seen{margin:2px 0 0 46px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)}
+.ccc-typing{display:flex;align-items:center;gap:4px;margin:10px 0 0 46px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccc-typing i{width:5px;height:5px;border-radius:50%;background:var(--ink-dim);animation:cccbl 1.2s infinite}
+.ccc-typing i:nth-child(2){animation-delay:.2s}.ccc-typing i:nth-child(3){animation-delay:.4s;margin-right:4px}
+@keyframes cccbl{0%,100%{opacity:.25}50%{opacity:1}}
+.ccc-imported{margin:0 0 6px;padding:9px 13px;border:1px solid var(--rule);border-radius:10px;background:var(--ccc-canvas);font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccc-empty{padding:30px 12px;text-align:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)}
+.ccc-files{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ccc-img img{display:block;max-width:min(360px,100%);max-height:260px;border-radius:10px;border:1px solid var(--rule)}
+.ccc-file{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);font:500 var(--fs-125) var(--sans);color:var(--ink);text-decoration:none}
+.ccc-file:hover{border-color:var(--brand)}
+.ccc-file em{font:400 var(--fs-115) var(--mono);color:var(--ink-dim);font-style:normal}
+.ccc-composer{flex:none;border-top:1px solid var(--rule);background:var(--paper);padding:10px 0 12px}
+.ccc-composer-in{max-width:860px;margin:0 auto;padding:0 28px}
+.ccc-cbox{display:flex;align-items:flex-end;gap:8px;border:1px solid var(--rule);border-radius:14px;padding:6px 6px 6px 14px}
+.ccc-cbox:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 30%,transparent)}
+.ccc-cbox textarea{flex:1;border:0;background:transparent;color:var(--ink);font:400 var(--fs-14)/1.5 var(--sans);resize:none;padding:6px 0;min-height:36px;max-height:180px;outline:none}
+.ccc-send{width:36px;height:36px;flex:none;border-radius:10px;border:0;background:var(--brand);color:#fff;display:grid;place-items:center;cursor:pointer}
+/* Customer: launcher + panel */
+.ccc-launcher{position:fixed;right:24px;bottom:24px;width:56px;height:56px;border-radius:50%;background:var(--brand);color:#fff;border:0;display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow);z-index:40}
+.ccc-lub{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;border-radius:10px;background:var(--bad);color:#fff;font:700 11px var(--sans);display:grid;place-items:center;padding:0 5px}
+.ccc-widget{position:fixed;right:24px;bottom:92px;width:392px;max-width:calc(100vw - 32px);height:min(640px,calc(100vh - 130px));background:var(--paper);border:1px solid var(--rule);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;z-index:41;animation:ccfade .2s ease}
+.ccc-w-head{flex:none;padding:12px 12px 12px 16px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:10px}
+.ccc-tool{width:32px;height:32px;flex:none;border-radius:8px;border:0;background:transparent;color:var(--ink-dim);display:grid;place-items:center;cursor:pointer;font:500 15px var(--sans)}
+.ccc-tool:hover{background:var(--panel-2);color:var(--ink)}
+.ccc-widget .ccc-thread{padding:12px 0 6px}
+.ccc-widget .ccc-thread-in{padding:0 14px}
+.ccc-widget .ccc-day{margin:12px 0 8px}
+.ccc-widget .ccc-sys{margin:8px 0;text-align:center;font-size:11.5px}
+.ccc-widget .ccc-typing{margin-left:34px}
+.ccc-bub{display:flex;gap:8px;margin:3px 0;align-items:flex-end}
+.ccc-bwrap{max-width:78%;display:flex;flex-direction:column;align-items:flex-start}
+.ccc-bb{padding:9px 13px;border-radius:16px;font:400 var(--fs-13)/1.5 var(--sans);background:var(--panel-2);color:var(--ink);overflow-wrap:anywhere;border-bottom-left-radius:5px}
+.ccc-me{justify-content:flex-end}
+.ccc-me .ccc-bwrap{align-items:flex-end}
+.ccc-me .ccc-bb{background:var(--brand);color:#fff;border-bottom-left-radius:16px;border-bottom-right-radius:5px}
+.ccc-me .ccc-bb a{color:#fff}
+.ccc-bmeta{font:400 11px var(--sans);color:var(--ink-dim);margin:2px 0 8px 34px}
+.ccc-bmeta.ccc-r{text-align:right;margin-left:0}
+.ccc-w-item{display:flex;gap:10px;padding:11px 12px;border-bottom:1px solid var(--rule);cursor:pointer;position:relative}
+.ccc-w-item:last-child{border-bottom:0}
+.ccc-w-item:hover{background:var(--ccc-canvas)}
+@media (max-width:1100px){.ccc-body{grid-template-columns:300px minmax(0,1fr)}.ccc-side{display:none}}
+@media (max-width:760px){.ccc-body{grid-template-columns:1fr}.ccc-list{display:none}}
 </style>
 </helmet>
 <div class="cc-shell" style="height:100vh;display:flex;flex-direction:column;background:var(--canvas);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -7016,6 +7096,210 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <div onClick="{{ m.run }}" style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;color:{{ m.fg }};font:500 var(--fs-14) var(--sans);cursor:pointer;white-space:nowrap" style-hover="background:var(--panel-2)">{{ m.label }}</div>
       </sc-for>
     </div>
+  </sc-if>
+
+  <!-- ══ CaptainCore Chat: operator inbox, full screen (chat.js) ══ -->
+  <sc-if value="{{ showChat }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:var(--paper);animation:ccfade .15s ease">
+      <div class="ccc-top">
+        <span onClick="{{ chatExit }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Dashboard</span>
+        <span style="width:1px;height:22px;background:var(--rule)"></span>
+        <span style="font:600 var(--fs-15) var(--sans)">Chat</span>
+        <div style="flex:1"></div>
+        <span style="display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);font:500 var(--fs-125) var(--sans);color:var(--ink)"><span style="width:8px;height:8px;border-radius:50%;background:{{ chatLiveFg }}"></span>{{ chatLiveLabel }}</span>
+      </div>
+      <div class="ccc-body">
+        <aside class="ccc-list">
+          <div style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink-dim)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+              <input value="{{ chatQ }}" onInput="{{ onChatQ }}" placeholder="Search name, email or subject" style="flex:1;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none">
+            </div>
+            <div style="display:flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:2px">
+              <sc-for list="{{ chatFilters }}" as="f" hint-placeholder-count="5">
+                <button onClick="{{ f.go }}" style="flex:1;border:0;background:{{ f.bg }};color:{{ f.fg }};font:500 var(--fs-12) var(--sans);padding:5px 2px;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px">{{ f.label }}<span style="font:600 10.5px var(--mono);opacity:.75">{{ f.count }}</span></button>
+              </sc-for>
+            </div>
+          </div>
+          <div class="ccc-rows">
+            <sc-if value="{{ chatListLoading }}" hint-placeholder-val="{{ false }}">
+              <div class="cc-skel" style="height:64px;margin:6px 4px;border-radius:10px"></div>
+              <div class="cc-skel" style="height:64px;margin:6px 4px;border-radius:10px"></div>
+            </sc-if>
+            <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.open }}" class="ccc-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
+                <span style="position:absolute;left:-8px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:{{ r.bar }}"></span>
+                <span class="ccc-av" style="background:{{ r.avBg }}">{{ r.initials }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:baseline;gap:6px">
+                    <b class="ccc-trunc" style="flex:1;min-width:0;font:{{ r.bold }} var(--fs-13) var(--sans)">{{ r.name }}</b>
+                    <span style="font:400 11px var(--mono);color:var(--ink-dim)">{{ r.ago }}</span>
+                  </div>
+                  <div class="ccc-trunc" style="font:500 var(--fs-12) var(--sans);color:var(--ink);margin-top:1px">{{ r.subject }}</div>
+                  <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px;padding-right:24px">{{ r.preview }}</div>
+                  <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+                    <sc-for list="{{ r.chips }}" as="ch" hint-placeholder-count="1">
+                      <span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:6px;font:500 var(--fs-115) var(--sans);background:{{ ch.bg }};color:{{ ch.fg }};white-space:nowrap">{{ ch.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <sc-if value="{{ r.hasUnread }}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;right:10px;bottom:12px;min-width:18px;height:18px;border-radius:9px;background:var(--brand);color:#fff;font:700 10.5px var(--sans);display:grid;place-items:center;padding:0 5px">{{ r.unread }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ chatEmpty }}" hint-placeholder-val="{{ false }}"><div class="ccc-empty">{{ chatEmptyText }}</div></sc-if>
+            <sc-if value="{{ chatMore }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ chatLoadMore }}" style="display:block;margin:8px auto;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);padding:6px 14px;border-radius:8px;cursor:pointer">Load more</button>
+            </sc-if>
+          </div>
+        </aside>
+        <main class="ccc-main">
+          <sc-if value="{{ chatNoConv }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:grid;place-items:center;color:var(--ink-dim);font:400 var(--fs-14) var(--sans)">Pick a conversation.</div>
+          </sc-if>
+          <sc-if value="{{ chatConvLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px 28px"><div class="cc-skel" style="width:280px;height:24px"></div><div class="cc-skel" style="width:60%;height:60px;margin-top:20px"></div></div>
+          </sc-if>
+          <sc-if value="{{ chatHasErr }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px 28px;color:var(--ink-dim);font:400 var(--fs-14) var(--sans)">{{ chatErr }}</div>
+          </sc-if>
+          <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <h2 class="ccc-trunc" style="margin:0;font:600 17px var(--sans);letter-spacing:-.01em">{{ chatSubject }}</h2>
+                  <span style="flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font:500 var(--fs-115) var(--sans);background:{{ chatStatusBg }};color:{{ chatStatusFg }}">{{ chatStatusLabel }}</span>
+                </div>
+                <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px">{{ chatSub }}</div>
+              </div>
+              <sc-for list="{{ chatActions }}" as="a" hint-placeholder-count="2">
+                <button onClick="{{ a.go }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:{{ a.fg }};font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap">{{ a.label }}</button>
+              </sc-for>
+            </div>
+            <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
+            <div class="ccc-composer">
+              <div class="ccc-composer-in">
+                <div style="display:flex;gap:4px;margin-bottom:8px">
+                  <sc-for list="{{ chatModes }}" as="m" hint-placeholder-count="2">
+                    <button onClick="{{ m.go }}" style="border:0;background:{{ m.bg }};color:{{ m.fg }};font:600 var(--fs-12) var(--sans);padding:5px 10px;border-radius:7px;cursor:pointer">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+                <div class="ccc-cbox" style="background:{{ chatBoxBg }};border-color:{{ chatBoxRule }}">
+                  <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
+                  <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+                </div>
+                <div style="margin-top:6px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ chatHint }}</div>
+              </div>
+            </div>
+          </sc-if>
+        </main>
+        <aside class="ccc-side">
+          <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
+            <div class="ccc-sec">
+              <div class="ccc-label">Customer</div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <span class="ccc-av" style="width:46px;height:46px;font-size:15px;background:{{ chatCustBg }}">{{ chatCustInitials }}</span>
+                <div style="min-width:0">
+                  <div class="ccc-trunc" style="font:600 var(--fs-15) var(--sans)">{{ chatCustName }}</div>
+                  <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ chatCustEmail }}</div>
+                  <div style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim);margin-top:2px">{{ chatCustMeta }}</div>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ chatHasSite }}" hint-placeholder-val="{{ false }}">
+              <div class="ccc-sec">
+                <div class="ccc-label">About</div>
+                <span onClick="{{ chatOpenSite }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ chatSiteLabel }} →</span>
+              </div>
+            </sc-if>
+            <div class="ccc-sec" style="border-bottom:0">
+              <div class="ccc-label">Other conversations</div>
+              <sc-for list="{{ chatHistory }}" as="h" hint-placeholder-count="3">
+                <div onClick="{{ h.go }}" style="padding:8px 10px;margin:0 -10px;border-radius:8px;cursor:pointer" style-hover="background:var(--paper)">
+                  <div class="ccc-trunc" style="font:500 var(--fs-125) var(--sans)">{{ h.subject }}</div>
+                  <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ h.meta }}</div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatNoHistory }}" hint-placeholder-val="{{ false }}"><div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">None.</div></sc-if>
+            </div>
+          </sc-if>
+        </aside>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ CaptainCore Chat: customer launcher + panel (chat.js; replaces Intercom) ══ -->
+  <sc-if value="{{ chatWidgetShow }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ chatToggleWidget }}" class="ccc-launcher" title="Chat with us">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-12.2 7.5L3 21l2-5.4A8.4 8.4 0 1121 11.5z"></path></svg>
+      <sc-if value="{{ chatLauncherHasUnread }}" hint-placeholder-val="{{ false }}"><span class="ccc-lub">{{ chatLauncherUnread }}</span></sc-if>
+    </button>
+  </sc-if>
+  <sc-if value="{{ chatWidgetOpen }}" hint-placeholder-val="{{ false }}">
+    <section class="ccc-widget">
+      <div class="ccc-w-head">
+        <sc-if value="{{ chatWBack }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ chatWGoHome }}" class="ccc-tool" title="All conversations">←</button>
+        </sc-if>
+        <div style="flex:1;min-width:0">
+          <div class="ccc-trunc" style="font:600 var(--fs-14) var(--sans)">{{ chatWTitle }}</div>
+          <div style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ chatWOnlineBg }}"></span>{{ chatWSub }}</div>
+        </div>
+        <sc-if value="{{ chatWCanResolve }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ chatWThread }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ chatWResolve }}" class="ccc-tool" title="Mark as resolved" style="width:auto;padding:0 8px;font-size:12.5px">Resolve</button>
+          </sc-if>
+        </sc-if>
+        <button onClick="{{ chatToggleWidget }}" class="ccc-tool" title="Close">✕</button>
+      </div>
+      <sc-if value="{{ chatWHome }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;overflow-y:auto;padding:18px 16px">
+          <div style="font:700 20px var(--sans);letter-spacing:-.01em">{{ chatWHello }}</div>
+          <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:4px">Ask about a site, billing or anything else. Your conversations stay here.</div>
+          <button onClick="{{ chatWNew }}" style="margin-top:14px;width:100%;height:40px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:600 var(--fs-13) var(--sans);cursor:pointer" style-hover="filter:brightness(1.06)">Send us a message</button>
+          <sc-if value="{{ chatWHasRows }}" hint-placeholder-val="{{ false }}">
+            <div class="ccc-label" style="margin:20px 0 8px">Your conversations</div>
+            <div style="border:1px solid var(--rule);border-radius:12px;overflow:hidden">
+              <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="3">
+                <div onClick="{{ r.open }}" class="ccc-w-item">
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:baseline;gap:6px">
+                      <b class="ccc-trunc" style="flex:1;min-width:0;font:{{ r.bold }} var(--fs-125) var(--sans)">{{ r.name }}</b>
+                      <span style="font:400 11px var(--mono);color:var(--ink-dim)">{{ r.ago }}</span>
+                    </div>
+                    <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px;padding-right:22px">{{ r.subject }}</div>
+                  </div>
+                  <sc-if value="{{ r.hasUnread }}" hint-placeholder-val="{{ false }}">
+                    <span style="position:absolute;right:12px;bottom:12px;min-width:18px;height:18px;border-radius:9px;background:var(--brand);color:#fff;font:700 10.5px var(--sans);display:grid;place-items:center;padding:0 5px">{{ r.unread }}</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ chatMore }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ chatLoadMore }}" style="display:block;margin:10px auto 0;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:5px 12px;border-radius:8px;cursor:pointer">Older conversations</button>
+            </sc-if>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ chatWThread }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ chatWNewHint }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;padding:22px 18px;font:400 var(--fs-13)/1.55 var(--sans);color:var(--ink-dim)">Tell us what's going on. If it's about a particular site, include its address.</div>
+        </sc-if>
+        <sc-if value="{{ chatConvLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;padding:16px"><div class="cc-skel" style="width:70%;height:40px"></div></div>
+        </sc-if>
+        <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
+          <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
+        </sc-if>
+        <div style="flex:none;padding:10px 12px 12px;border-top:1px solid var(--rule)">
+          <div class="ccc-cbox" style="border-radius:12px;background:var(--panel)">
+            <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
+            <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+          </div>
+        </div>
+      </sc-if>
+    </section>
   </sc-if>
 
   <!-- ══ Toasts ══ -->

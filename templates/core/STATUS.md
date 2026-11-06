@@ -15,6 +15,34 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## CaptainCore Chat (2026-11-06)
+
+Replaces the Intercom embed. Rules and storage live in `app/Chat.php` (REST `/chat/*`). Live delivery comes from the captaincore-chat relay (Go, separate repo), through `app/ChatRelay.php`. `chat.js` holds the UI:
+- **Operators:** Operate → Chat (badge = waiting count) opens a full-screen overlay at `/account/chat[/<id>]`. It has a list with Waiting/Open/Snoozed/Closed/All filters and server search (`q`), the thread, a Reply/Internal note composer, Close/Reopen, a Snooze menu (ctx menu), and a customer sidebar with their other conversations.
+- **Customers:** a launcher and a 392px panel in the corner, the home list and the bubble thread. The panel hides while the dock is open, like Intercom did. The Accounts help banner opens it.
+- **Boot:** `CC_BOOT.chat` = `{enabled, live, operator, userId}`. `core.php` skips Intercom whenever chat is enabled for the user. Customer access follows `captaincore_chat_mode` (off | preview + user meta `captaincore_chat_preview` | on).
+- **Live:** `GET /chat/token` returns a 10-minute token. `chat.js` refreshes it in place every 8 minutes, reconnects with backoff, refetches after a reconnect, and polls every 30s when `live` is false.
+
+Thread rendering: the thread is built as escaped HTML through a ref (`chatThreadRef`). Bodies are plain text and only http(s) links become markup. Attachments are `/chat/attachments/<id>?_wpnonce=`.
+
+Typing frames: an operator's carries `customer_user_id` (0 while writing a note, so the customer never sees it). A customer's goes to operators, and `chat.js` shows it only on that customer's own conversation.
+
+Gotchas:
+- `value="{{ }}"` only seeds a field, so `_chatClear` empties the composer through `chatInputRef`.
+- Composer and search fields carry inline `border:none` so the global focus ring skips them.
+- Imported messages have `imported: true`, and the "Seen" receipt skips them, because their read marks come from the importer.
+
+Local relay: `~/Cove/App/directives/anchor.localhost` proxies `/chat-relay/*` to 127.0.0.1:8490. `wp captaincore chat relay --relay-url=https://anchor.localhost/chat-relay --publish-url=http://127.0.0.1:8490` prints the relay's config.json.
+
+Production relay: `chat.anchor.host` on its own droplet. Set it up with `wp captaincore chat relay --relay-url=https://chat.anchor.host`.
+
+Verified in two Playwright browsers (operator and a preview customer):
+- Messages arrive live in both directions.
+- Typing reaches both sides.
+- A note never reaches the customer.
+- The "Seen" receipt appears.
+- Dark mode and imported threads with inline images render.
+
 ## Swap staging and production (2026-10-26)
 
 Deploy card → **Swap staging ⇄ production** (`canSwap`: Kinsta-linked site

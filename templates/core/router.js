@@ -19,11 +19,11 @@ Object.assign(Component.prototype, {
   },
 
   // state.route → the path segment(s) after the base.
-  ROUTE_SEG: { home: '', sites: 'sites', site: 'sites', relay: 'ai-relay', domains: 'domains', domain: 'domains',
+  ROUTE_SEG: { home: '', chat: 'chat', sites: 'sites', site: 'sites', relay: 'ai-relay', domains: 'domains', domain: 'domains',
     accounts: 'accounts', account: 'accounts', billing: 'billing', invoice: 'billing', security: 'security',
     audits: 'site-audits', activity: 'activity', reports: 'reports', archives: 'archives', settings: 'settings',
     profile: 'profile', users: 'users' },
-  SEG_ROUTE: { '': 'home', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
+  SEG_ROUTE: { '': 'home', chat: 'chat', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
     security: 'security', 'site-audits': 'audits', activity: 'activity', reports: 'reports', archives: 'archives',
     settings: 'settings', profile: 'profile', users: 'users' },
 
@@ -35,6 +35,7 @@ Object.assign(Component.prototype, {
     let path = base + seg;
     if (s.route === 'site' && s.siteId) { path += '/' + s.siteId; if (s.siteTab && s.siteTab !== 'overview') path += '/' + s.siteTab; }
     else if (s.route === 'relay' && s.relayId) { path += '/' + s.relayId; }
+    else if (s.route === 'chat' && s.chatId) { path += '/' + s.chatId; }
     else if (s.route === 'domain' && s.domainId) { path += '/' + s.domainId; }
     else if (s.route === 'account' && s.accountId) { path += '/' + s.accountId; }
     else if (s.route === 'invoice' && s.invoiceId) { path += '/' + s.invoiceId; }
@@ -56,6 +57,9 @@ Object.assign(Component.prototype, {
       // goSiteTab normalizes legacy leaf names ('addons'), syncs addonKind and
       // fires that leaf's lazy load — a plain setState would skip all three.
       if (parts[2]) this.goSiteTab(parts[2]);
+    } else if (head === 'chat') {
+      this.setState({ route: 'chat' });
+      if (this.chatOpen) this.chatOpen(parts[1] || 0);
     } else if (head === 'ai-relay' && parts[1]) {
       this.openRelay(parts[1]);
     } else if (head === 'domains' && parts[1]) {
