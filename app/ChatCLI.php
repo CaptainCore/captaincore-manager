@@ -30,18 +30,25 @@ class ChatCLI {
 	/**
 	 * Import Intercom history (from `wp intercom sync`) into CaptainCore Chat.
 	 *
+	 * Reads intercom-cli's SQLite database directly (--db), or a bundle made
+	 * by `export-intercom` (--bundle) for hosts without pdo_sqlite.
+	 *
 	 * Idempotent: conversations and messages are keyed on their Intercom IDs,
 	 * so re-running only adds what is new. Conversations the sync has not
 	 * captured in full yet (HTML + files) are skipped and reported.
 	 *
-	 * Contacts are matched to Manager users by email. A contact with no user
-	 * becomes a guest conversation (operators only) and is claimed by the next
-	 * run once a user with that email exists.
+	 * Contacts are matched to Manager users by email on the Manager running
+	 * the import. A contact with no user becomes a guest conversation
+	 * (operators only) and is claimed by a later run once a user with that
+	 * email exists.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--db=<path>]
 	 * : intercom-cli database. Default: <parent of ABSPATH>/private/intercom.db
+	 *
+	 * [--bundle=<path>]
+	 * : A JSONL bundle from `wp captaincore chat export-intercom` (instead of --db).
 	 *
 	 * [--files=<dir>]
 	 * : intercom-cli downloads. Default: <parent of ABSPATH>/private/intercom-files
@@ -59,61 +66,146 @@ class ChatCLI {
 	 *
 	 *     wp captaincore chat import-intercom --dry-run
 	 *     wp captaincore chat import-intercom
-	 *     wp captaincore chat import-intercom --db=/path/intercom.db --files=/path/intercom-files
+	 *     wp captaincore chat import-intercom --bundle=~/private/intercom-bundle.jsonl --files=~/private/intercom-files
 	 *
 	 * @subcommand import-intercom
 	 * @when after_wp_load
 	 */
 	public function import_intercom( $args, $assoc ) {
 		$private         = dirname( untrailingslashit( ABSPATH ) ) . '/private';
-		$db_path         = $assoc['db'] ?? $private . '/intercom.db';
 		$this->files_dir = untrailingslashit( $assoc['files'] ?? $private . '/intercom-files' );
 		$this->dry_run   = isset( $assoc['dry-run'] );
+		$this->report    = [ 'years' => [], 'skipped_parts' => [], 'guests' => [], 'pending' => 0, 'files_missing' => 0 ];
+		$only            = isset( $assoc['conversation'] ) ? (string) $assoc['conversation'] : null;
+		$limit           = (int) ( $assoc['limit'] ?? 0 );
+
+		if ( ! empty( $assoc['bundle'] ) ) {
+			$records = $this->records_from_bundle( (string) $assoc['bundle'] );
+			$total   = 0; // unknown up front; counted as we go
+		} else {
+			$this->open_sqlite( $assoc['db'] ?? $private . '/intercom.db' );
+			$total   = (int) $this->db->query( 'SELECT COUNT(*) FROM conversations' )->fetchColumn();
+			$records = $this->records_from_sqlite( $only );
+		}
+
+		$progress = $total ? \WP_CLI\Utils\make_progress_bar( ( $this->dry_run ? 'Mapping' : 'Importing' ) . " $total conversations", $only ? 1 : ( $limit ?: $total ) ) : null;
+		$done     = 0;
+		foreach ( $records as $record ) {
+			if ( $only !== null && (string) $record['conversation']['id'] !== $only ) {
+				continue;
+			}
+			$this->import_conversation( $record );
+			$progress && $progress->tick();
+			if ( $limit && ++$done >= $limit ) {
+				break;
+			}
+		}
+		$progress && $progress->finish();
+		$this->print_report();
+	}
+
+	/**
+	 * Write intercom-cli's database out as a portable JSONL bundle: a meta
+	 * line (contacts, admins), then one line per conversation with its parts
+	 * and downloaded files. Copy it with the files directory to a Manager
+	 * without pdo_sqlite and import with --bundle.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--db=<path>]
+	 * : intercom-cli database. Default: <parent of ABSPATH>/private/intercom.db
+	 *
+	 * [--out=<path>]
+	 * : Bundle path. Default: <parent of ABSPATH>/private/intercom-bundle.jsonl
+	 *
+	 * @subcommand export-intercom
+	 * @when after_wp_load
+	 */
+	public function export_intercom( $args, $assoc ) {
+		$private = dirname( untrailingslashit( ABSPATH ) ) . '/private';
+		$out     = $assoc['out'] ?? $private . '/intercom-bundle.jsonl';
+		$this->open_sqlite( $assoc['db'] ?? $private . '/intercom.db' );
+		$fh = fopen( $out, 'wb' );
+		if ( ! $fh ) {
+			\WP_CLI::error( "Cannot write $out" );
+		}
+		chmod( $out, 0600 );
+		fwrite( $fh, wp_json_encode( [ 'type' => 'meta', 'version' => 1, 'contacts' => $this->contacts, 'admins' => $this->admins ] ) . "\n" );
+		$n = 0;
+		$pending = 0;
+		foreach ( $this->records_from_sqlite( null ) as $record ) {
+			if ( (int) $record['conversation']['detail_version'] < 2 ) {
+				$pending++;
+			}
+			fwrite( $fh, wp_json_encode( [ 'type' => 'conversation' ] + $record ) . "\n" );
+			$n++;
+		}
+		fclose( $fh );
+		\WP_CLI::success( "Wrote $n conversations to $out" . ( $pending ? " ($pending not fully synced yet)" : '' ) . '. Copy it with the files directory.' );
+	}
+
+	private function open_sqlite( $db_path ) {
 		if ( ! class_exists( '\PDO' ) || ! in_array( 'sqlite', \PDO::getAvailableDrivers(), true ) ) {
-			\WP_CLI::error( 'pdo_sqlite is not available. Export the Intercom data another way.' );
+			\WP_CLI::error( 'pdo_sqlite is not available here. Run `wp captaincore chat export-intercom` where it is, then import with --bundle.' );
 		}
 		if ( ! is_file( $db_path ) ) {
 			\WP_CLI::error( "No Intercom database at $db_path" );
 		}
-		$this->db = new \PDO( 'sqlite:' . $db_path, null, null, [ \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION ] );
+		// The sync may be writing at the same time: wait for its lock instead of failing.
+		$this->db = new \PDO( 'sqlite:' . $db_path, null, null, [ \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION, \PDO::ATTR_TIMEOUT => 30 ] );
 		$cols     = $this->db->query( 'PRAGMA table_info(conversations)' )->fetchAll( \PDO::FETCH_COLUMN, 1 );
 		if ( ! in_array( 'detail_version', $cols, true ) ) {
 			\WP_CLI::error( 'This intercom.db predates HTML + attachment capture. Run `wp intercom sync --full` with the current intercom-cli first.' );
 		}
-
-		$this->report = [ 'years' => [], 'skipped_parts' => [], 'guests' => [], 'pending' => 0, 'files_missing' => 0 ];
-		foreach ( $this->db->query( 'SELECT * FROM contacts' ) as $c ) {
+		foreach ( $this->db->query( 'SELECT * FROM contacts', \PDO::FETCH_ASSOC ) as $c ) {
 			$this->contacts[ $c['id'] ] = $c;
 		}
-		foreach ( $this->db->query( 'SELECT * FROM admins' ) as $a ) {
+		foreach ( $this->db->query( 'SELECT * FROM admins', \PDO::FETCH_ASSOC ) as $a ) {
 			$this->admins[ $a['id'] ] = $a;
 		}
-
-		$sql    = 'SELECT * FROM conversations';
-		$params = [];
-		if ( ! empty( $assoc['conversation'] ) ) {
-			$sql     .= ' WHERE id = ?';
-			$params[] = (string) $assoc['conversation'];
-		}
-		$sql .= ' ORDER BY created_at ASC';
-		if ( ! empty( $assoc['limit'] ) ) {
-			$sql .= ' LIMIT ' . (int) $assoc['limit'];
-		}
-		$stmt = $this->db->prepare( $sql );
-		$stmt->execute( $params );
-		$rows = $stmt->fetchAll( \PDO::FETCH_ASSOC );
-
-		$progress = \WP_CLI\Utils\make_progress_bar( ( $this->dry_run ? 'Mapping' : 'Importing' ) . ' ' . count( $rows ) . ' conversations', count( $rows ) );
-		foreach ( $rows as $row ) {
-			$this->import_conversation( $row );
-			$progress->tick();
-		}
-		$progress->finish();
-		$this->print_report();
 	}
 
-	private function import_conversation( array $ic ) {
+	/** One record per conversation: the row, its parts, its downloaded files. */
+	private function records_from_sqlite( $only ) {
+		$sql = 'SELECT id, title, state, contact_ids, source_type, source_author_type, source_author_id, source_body,
+			snoozed_until, created_at, updated_at, detail_version FROM conversations';
+		$sql .= $only !== null ? ' WHERE id = ?' : '';
+		$stmt = $this->db->prepare( $sql . ' ORDER BY created_at ASC' );
+		$stmt->execute( $only !== null ? [ $only ] : [] );
+		$parts = $this->db->prepare( 'SELECT id, part_type, body, author_type, author_id, author_name, author_email, created_at
+			FROM conversation_parts WHERE conversation_id = ? ORDER BY created_at ASC, CAST(id AS INTEGER) ASC' );
+		$files = $this->db->prepare( "SELECT part_id, kind, position, name, content_type, sha256, local_path
+			FROM attachments WHERE conversation_id = ? AND status = 'ok' ORDER BY part_id, kind, position" );
+		while ( $row = $stmt->fetch( \PDO::FETCH_ASSOC ) ) {
+			$parts->execute( [ $row['id'] ] );
+			$files->execute( [ $row['id'] ] );
+			yield [ 'conversation' => $row, 'parts' => $parts->fetchAll( \PDO::FETCH_ASSOC ), 'attachments' => $files->fetchAll( \PDO::FETCH_ASSOC ) ];
+		}
+	}
+
+	private function records_from_bundle( $path ) {
+		$fh = is_file( $path ) ? fopen( $path, 'rb' ) : false;
+		if ( ! $fh ) {
+			\WP_CLI::error( "Cannot read bundle $path" );
+		}
+		$meta = json_decode( (string) fgets( $fh ), true );
+		if ( ( $meta['type'] ?? '' ) !== 'meta' || (int) ( $meta['version'] ?? 0 ) !== 1 ) {
+			\WP_CLI::error( 'Not a CaptainCore Chat Intercom bundle (version 1).' );
+		}
+		$this->contacts = (array) $meta['contacts'];
+		$this->admins   = (array) $meta['admins'];
+		while ( ( $line = fgets( $fh ) ) !== false ) {
+			$record = json_decode( $line, true );
+			if ( ( $record['type'] ?? '' ) === 'conversation' ) {
+				yield $record;
+			}
+		}
+		fclose( $fh );
+	}
+
+	private function import_conversation( array $record ) {
 		global $wpdb;
+		$ic   = $record['conversation'];
 		$year = $ic['created_at'] ? gmdate( 'Y', (int) $ic['created_at'] ) : '?';
 		$y    = &$this->report['years'][ $year ];
 		$y    = ( $y ?? [] ) + [ 'intercom' => 0, 'pending' => 0, 'new' => 0, 'updated' => 0, 'messages' => 0, 'notes' => 0, 'events' => 0, 'files' => 0, 'guest' => 0 ];
@@ -142,7 +234,7 @@ class ChatCLI {
 			$account_id = count( $accounts ) === 1 ? (int) $accounts[0] : 0;
 		}
 
-		$messages = $this->map_messages( $ic, $contact_id );
+		$messages = $this->map_messages( $record, $contact_id );
 		$times    = $this->conversation_times( $messages, $ic );
 		$subject  = Chat::clean_line( (string) $ic['title'], Chat::MAX_SUBJECT );
 		if ( is_wp_error( $subject ) ) {
@@ -225,11 +317,10 @@ class ChatCLI {
 	 * first. Bot chatter and bodiless bookkeeping parts are dropped (counted
 	 * in the report); a human part with only files keeps its files.
 	 */
-	private function map_messages( array $ic, $contact_id ) {
+	private function map_messages( array $record, $contact_id ) {
+		$ic    = $record['conversation'];
 		$files = [];
-		$stmt  = $this->db->prepare( "SELECT * FROM attachments WHERE conversation_id = ? AND status = 'ok' ORDER BY part_id, kind, position" );
-		$stmt->execute( [ $ic['id'] ] );
-		foreach ( $stmt->fetchAll( \PDO::FETCH_ASSOC ) as $a ) {
+		foreach ( $record['attachments'] as $a ) {
 			// The same screenshot often arrives as an attachment and inline.
 			$files[ $a['part_id'] ][ $a['sha256'] ] = $a;
 		}
@@ -245,9 +336,7 @@ class ChatCLI {
 			'author_email'=> null,
 			'created_at'  => $ic['created_at'],
 		];
-		$stmt = $this->db->prepare( 'SELECT * FROM conversation_parts WHERE conversation_id = ? ORDER BY created_at ASC, CAST(id AS INTEGER) ASC' );
-		$stmt->execute( [ $ic['id'] ] );
-		$parts = array_merge( [ $source ], $stmt->fetchAll( \PDO::FETCH_ASSOC ) );
+		$parts = array_merge( [ $source ], $record['parts'] );
 
 		foreach ( $parts as $p ) {
 			$type   = (string) $p['part_type'];
