@@ -517,4 +517,55 @@ class ChatCLI {
 		\WP_CLI::log( 'Messages: ' . (int) $wpdb->get_var( "SELECT COUNT(*) FROM $m" ) . ' · Attachments: ' . (int) $wpdb->get_var( "SELECT COUNT(*) FROM $a" )
 			. ' (' . size_format( (int) $wpdb->get_var( "SELECT COALESCE(SUM(size),0) FROM $a" ) ) . ') · Mode: ' . Chat::mode() );
 	}
+
+	/**
+	 * Point the Manager at a captaincore-chat relay and print the relay's config.json.
+	 *
+	 * Generates the signing keypair on first use. Only the public key appears
+	 * in the output.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--relay-url=<url>]
+	 * : The relay's public URL (browsers connect to <url>/v1/ws). Pass an empty value to clear.
+	 *
+	 * [--publish-url=<url>]
+	 * : Server-to-server URL for publish calls, when it differs from --relay-url. Pass an empty value to clear.
+	 *
+	 * [--mode=<mode>]
+	 * : Customer access: off, preview or on.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp captaincore chat relay --relay-url=https://chat.anchor.host > config.json
+	 *     wp captaincore chat relay --relay-url=https://anchor.localhost/chat-relay --publish-url=http://127.0.0.1:8490
+	 *
+	 * @when after_wp_load
+	 */
+	public function relay( $args, $assoc ) {
+		foreach ( [ 'relay-url' => 'captaincore_chat_relay_url', 'publish-url' => 'captaincore_chat_publish_url' ] as $flag => $option ) {
+			if ( ! array_key_exists( $flag, $assoc ) ) {
+				continue;
+			}
+			$value = trim( (string) $assoc[ $flag ] );
+			if ( $value !== '' && ! preg_match( '#^https?://#i', $value ) ) {
+				\WP_CLI::error( "--$flag must be an http(s) URL." );
+			}
+			$value === '' ? delete_site_option( $option ) : update_site_option( $option, untrailingslashit( $value ) );
+		}
+		if ( isset( $assoc['mode'] ) ) {
+			if ( ! in_array( $assoc['mode'], Chat::MODES, true ) ) {
+				\WP_CLI::error( '--mode must be off, preview or on.' );
+			}
+			update_site_option( 'captaincore_chat_mode', $assoc['mode'] );
+		}
+		if ( ChatRelay::relay_url() === '' ) {
+			\WP_CLI::error( 'No relay URL yet. Pass --relay-url=<relay public URL>.' );
+		}
+		if ( ChatRelay::public_key() === '' ) {
+			\WP_CLI::error( 'No signing key: PHP sodium is missing or CAPTAINCORE_CHAT_SECRET_KEY is malformed.' );
+		}
+		\WP_CLI::line( wp_json_encode( ChatRelay::relay_config(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
+		fwrite( STDERR, 'Publishing to ' . ChatRelay::publish_url() . '/internal/publish · customer mode: ' . Chat::mode() . "\n" );
+	}
 }

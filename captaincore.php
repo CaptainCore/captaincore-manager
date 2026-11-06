@@ -2704,6 +2704,13 @@ function captaincore_site_requests_create_func( WP_REST_Request $request ) {
 
 // ── CaptainCore Chat callbacks (rules in app/Chat.php) ──
 
+// Every stored change goes to the live relay (no-op until it is configured).
+add_action( 'captaincore_chat_event', [ 'CaptainCore\ChatRelay', 'publish' ], 10, 3 );
+
+function captaincore_chat_token_func( WP_REST_Request $request ) {
+	return CaptainCore\ChatRelay::token( get_current_user_id() );
+}
+
 function captaincore_chat_conversations_func( WP_REST_Request $request ) {
 	CaptainCore\Chat::wake_snoozed();
 	return [ 'conversations' => CaptainCore\Chat::conversations( get_current_user_id(), [
@@ -10981,6 +10988,15 @@ function captaincore_register_rest_endpoints() {
 	// CaptainCore Chat (app/Chat.php). Every route needs a signed-in user;
 	// Chat decides what each user may see (customers: their own threads,
 	// never internal rows; operators: everything).
+	register_rest_route(
+		'captaincore/v1', '/chat/token', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_chat_token_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/chat/conversations', [
 			[

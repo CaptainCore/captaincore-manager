@@ -143,6 +143,7 @@ return array(
     'CaptainCore\\ChatCLI' => $baseDir . '/app/ChatCLI.php',
     'CaptainCore\\ChatConversations' => $baseDir . '/app/ChatConversations.php',
     'CaptainCore\\ChatMessages' => $baseDir . '/app/ChatMessages.php',
+    'CaptainCore\\ChatRelay' => $baseDir . '/app/ChatRelay.php',
     'CaptainCore\\ComponentQueueCLI' => $baseDir . '/app/ComponentQueueCLI.php',
     'CaptainCore\\Configurations' => $baseDir . '/app/Configurations.php',
     'CaptainCore\\CoreUpdateResults' => $baseDir . '/app/CoreUpdateResults.php',
