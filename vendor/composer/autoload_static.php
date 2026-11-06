@@ -266,6 +266,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Captures' => __DIR__ . '/../..' . '/app/Captures.php',
         'CaptainCore\\Chat' => __DIR__ . '/../..' . '/app/Chat.php',
         'CaptainCore\\ChatAttachments' => __DIR__ . '/../..' . '/app/ChatAttachments.php',
+        'CaptainCore\\ChatCLI' => __DIR__ . '/../..' . '/app/ChatCLI.php',
         'CaptainCore\\ChatConversations' => __DIR__ . '/../..' . '/app/ChatConversations.php',
         'CaptainCore\\ChatMessages' => __DIR__ . '/../..' . '/app/ChatMessages.php',
         'CaptainCore\\ComponentQueueCLI' => __DIR__ . '/../..' . '/app/ComponentQueueCLI.php',
