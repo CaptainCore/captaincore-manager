@@ -145,6 +145,18 @@ function captaincore_schedule_update_queue_fallback() {
 }
 add_action( 'init', 'captaincore_schedule_update_queue_fallback' );
 
+// Daily: forget fleet spam signals no site has reported for 90 days, so the table
+// holds a rolling window instead of growing with every sync.
+function captaincore_schedule_spam_signals_prune() {
+	if ( ! wp_next_scheduled( 'captaincore_spam_signals_prune' ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'captaincore_spam_signals_prune' );
+	}
+}
+add_action( 'init', 'captaincore_schedule_spam_signals_prune' );
+add_action( 'captaincore_spam_signals_prune', function () {
+	CaptainCore\SpamSignals::prune();
+} );
+
 function captaincore_cron_run() {
 	CaptainCore\Accounts::auto_switch_plans();
     CaptainCore\Accounts::process_renewals();

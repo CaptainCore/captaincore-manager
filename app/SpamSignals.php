@@ -131,11 +131,20 @@ class SpamSignals extends DB {
 		];
 	}
 
-	/** Forget signals not seen for $days. */
+	/**
+	 * Forget signals not seen for $days, in batches so a large backlog never holds a long lock.
+	 * Runs daily (captaincore_spam_signals_prune), which keeps the table to a rolling window.
+	 */
 	public static function prune( $days = 90 ) {
 		global $wpdb;
-		$table = $wpdb->base_prefix . 'captaincore_spam_signals';
-		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM $table WHERE last_seen < %s", gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ) ) );
+		$table  = $wpdb->base_prefix . 'captaincore_spam_signals';
+		$before = gmdate( 'Y-m-d H:i:s', time() - max( 1, (int) $days ) * DAY_IN_SECONDS );
+		$total  = 0;
+		do {
+			$deleted = (int) $wpdb->query( $wpdb->prepare( "DELETE FROM $table WHERE last_seen < %s LIMIT 10000", $before ) );
+			$total  += $deleted;
+		} while ( 10000 === $deleted );
+		return $total;
 	}
 
 	private static function datetime( $value ) {
