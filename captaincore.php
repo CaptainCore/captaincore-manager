@@ -11072,6 +11072,22 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Conversations waiting on a person, for Grok Bot's triage routine
+	// (Chat::unattended). It answers with internal notes (agent=grok-bot).
+	register_rest_route(
+		'captaincore/v1', '/chat/unattended', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $r ) {
+				return [ 'conversations' => CaptainCore\Chat::unattended(
+					(int) ( $r->get_param( 'min_wait' ) ?: 600 ),
+					(int) ( $r->get_param( 'max_wait' ) ?: 172800 ),
+					(int) ( $r->get_param( 'limit' ) ?: 10 )
+				) ];
+			},
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	// What a chat customer can access (operator sidebar).
 	register_rest_route(
 		'captaincore/v1', '/chat/customers/(?P<id>[\d]+)/access', [

@@ -409,6 +409,9 @@ Object.assign(Component.prototype, {
     }
     delete c.typing[m.conversation_id];
     const row = c.list.find(x => x.id === m.conversation_id);
+    // Grok Bot's triage note marks the row; the customer's next message clears it.
+    if (row && cb.operator && m.via === 'bot' && m.kind === 'note') row.triaged = true;
+    if (row && cb.operator && m.kind === 'comment' && m.author_kind === 'customer') row.triaged = false;
     if (row && m.kind === 'comment') {
       if (row._lastSeen !== m.id) {
         row._lastSeen = m.id;
@@ -705,7 +708,7 @@ Object.assign(Component.prototype, {
         return;
       }
       if (m.kind === 'note') {
-        out += '<div class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
+        out += '<div class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
         prev = null;
         return;
       }
@@ -964,6 +967,7 @@ Object.assign(Component.prototype, {
       const name = isOp ? (x.customer_name || x.customer_email || 'Guest') : x.subject;
       const chips = [statusChip(x)];
       if (isOp && x.guest) chips.push({ label: 'Guest', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
+      if (isOp && x.triaged) chips.push({ label: 'Triaged by Grok Bot', bg: 'color-mix(in srgb,#7c5cff 12%,transparent)', fg: 'color-mix(in srgb,#7c5cff 80%,var(--ink))' });
       if (isOp && x.site_id) chips.push({ label: 'Site #' + x.site_id, bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       return {
         key: 'c' + x.id, name, subject: isOp ? x.subject : plain(x.preview), preview: isOp ? (rowTyping(x.id) || plain(x.preview)) : '', ago: this.chatAgo(x.last_message_at),

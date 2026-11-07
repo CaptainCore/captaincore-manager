@@ -41,6 +41,11 @@ class Chat {
 	// it can carry script) is always a download.
 	const INLINE_TYPES = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
 
+	// Automated helpers that write as themselves (`agent` on a message).
+	// For now they only leave internal notes: they read, triage and
+	// recommend; a person answers the customer.
+	const AGENTS = [ 'grok-bot' => 'Grok Bot' ];
+
 	// Emoji reactions on a message (Groddle's set). Keys are stored; the
 	// glyphs and labels live in chat.js.
 	const REACTIONS = [ 'like', 'heart', 'laugh', 'wow', 'sad', 'tada' ];
@@ -208,7 +213,9 @@ class Chat {
 				AND m.author_kind = %s AND m.chat_message_id > GREATEST(
 					COALESCE((SELECT r.last_read_message_id FROM $r r WHERE r.user_id = %d AND r.chat_conversation_id = c.chat_conversation_id), 0),
 					COALESCE((SELECT MAX(m2.chat_message_id) FROM $m m2 WHERE m2.chat_conversation_id = c.chat_conversation_id
-						AND m2.kind = 'comment' AND m2.author_kind = %s), 0))) AS unread
+						AND m2.kind = 'comment' AND m2.author_kind = %s), 0))) AS unread,
+			(SELECT COUNT(*) FROM $m b WHERE b.chat_conversation_id = c.chat_conversation_id AND b.via = 'bot' AND b.chat_message_id > COALESCE(
+				(SELECT MAX(x.chat_message_id) FROM $m x WHERE x.chat_conversation_id = c.chat_conversation_id AND x.kind = 'comment' AND x.author_kind = 'customer'), 0)) AS bot_notes
 			FROM $c c WHERE " . implode( ' AND ', $where ) . '
 			ORDER BY c.last_message_at DESC, c.chat_conversation_id DESC LIMIT %d';
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
@@ -392,6 +399,13 @@ class Chat {
 		if ( $kind === 'note' && ! $operator ) {
 			return new \WP_Error( 'operators_only', 'Only operators can write internal notes.', [ 'status' => 403 ] );
 		}
+		$agent = (string) ( $input['agent'] ?? '' );
+		if ( $agent !== '' && ( ! $operator || ! isset( self::AGENTS[ $agent ] ) ) ) {
+			return new \WP_Error( 'bad_agent', 'Unknown agent.', [ 'status' => 400 ] );
+		}
+		if ( $agent !== '' && $kind !== 'note' ) {
+			return new \WP_Error( 'agent_notes_only', self::AGENTS[ $agent ] . ' can only write internal notes for now.', [ 'status' => 403 ] );
+		}
 		$files = self::uploads( $files );
 		if ( is_wp_error( $files ) ) {
 			return $files;
@@ -405,8 +419,9 @@ class Chat {
 			'kind'           => $kind,
 			'author_kind'    => $operator ? 'operator' : 'customer',
 			'author_user_id' => (int) $user_id,
-			'author_name'    => $user ? $user->display_name : '',
+			'author_name'    => $agent !== '' ? self::AGENTS[ $agent ] : ( $user ? $user->display_name : '' ),
 			'body'           => $body,
+			'via'            => $agent !== '' ? 'bot' : '',
 		] );
 		$message = self::attach( (int) $conversation->chat_conversation_id, $message, $files );
 		$updated = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
@@ -676,6 +691,10 @@ class Chat {
 		if ( isset( $row->unread ) ) {
 			$out['unread'] = (int) $row->unread;
 		}
+		if ( $operator && isset( $row->bot_notes ) ) {
+			// Grok Bot left a triage note since the customer last wrote.
+			$out['triaged'] = (int) $row->bot_notes > 0;
+		}
 		if ( $operator ) {
 			$out['assignee_user_id'] = (int) $row->assignee_user_id ?: null;
 			$out['guest']            = (int) $row->user_id === 0;
@@ -858,6 +877,50 @@ class Chat {
 		$event     = [ 'type' => 'message.reacted', 'conversation_id' => $cid, 'message_id' => $mid, 'reactions' => $reactions ];
 		do_action( 'captaincore_chat_event', $event, (int) ChatConversations::get( $cid )->user_id, (bool) (int) $message->internal );
 		return [ 'message_id' => $mid, 'reactions' => $reactions ];
+	}
+
+	// ── agents ──────────────────────────────────────────────────────────
+
+	/**
+	 * Conversations still waiting on a person: open, the customer's last
+	 * message unanswered for at least $min_wait seconds (and at most
+	 * $max_wait, so old imported threads stay out), with no agent note
+	 * since that message. Each comes with what a triage needs: the thread
+	 * (internal notes included), the customer, what they can access and
+	 * the site they tagged. Oldest wait first.
+	 */
+	public static function unattended( $min_wait = 600, $max_wait = 172800, $limit = 10 ) {
+		global $wpdb;
+		$c    = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$now  = time();
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT c.* FROM $c c WHERE c.status = 'open' AND c.waiting_since IS NOT NULL AND c.waiting_since <= %s AND c.waiting_since >= %s
+			AND NOT EXISTS (SELECT 1 FROM $m b WHERE b.chat_conversation_id = c.chat_conversation_id AND b.via = 'bot' AND b.chat_message_id > COALESCE(
+				(SELECT MAX(x.chat_message_id) FROM $m x WHERE x.chat_conversation_id = c.chat_conversation_id AND x.kind = 'comment' AND x.author_kind = 'customer'), 0))
+			ORDER BY c.waiting_since ASC LIMIT %d",
+			gmdate( 'Y-m-d H:i:s', $now - max( 60, (int) $min_wait ) ), gmdate( 'Y-m-d H:i:s', $now - max( 3600, (int) $max_wait ) ), max( 1, min( 25, (int) $limit ) )
+		) );
+		$config = Configurations::get();
+		$base   = isset( $config->path ) ? trim( (string) $config->path, '/' ) : 'account';
+		return array_map( function ( $row ) use ( $now, $base ) {
+			$uid    = (int) $row->user_id;
+			$access = $uid > 0 ? self::customer_access( $uid ) : null;
+			$site   = null;
+			if ( (int) $row->site_id ) {
+				$s    = Sites::get( (int) $row->site_id );
+				$site = $s ? [ 'id' => (int) $row->site_id, 'name' => (string) $s->name, 'url' => (string) ( json_decode( (string) $s->details )->home_url ?? '' ) ] : null;
+			}
+			return [
+				'conversation'    => self::present_conversation( $row, true ),
+				'waiting_minutes' => (int) floor( ( $now - strtotime( $row->waiting_since . ' UTC' ) ) / 60 ),
+				'link'            => home_url( '/' . ( $base !== '' ? $base . '/' : '' ) . 'chat/' . (int) $row->chat_conversation_id ),
+				'customer'        => [ 'user_id' => $uid ?: null, 'name' => $row->contact_name, 'email' => $row->contact_email, 'guest' => $uid === 0 ],
+				'access'          => is_wp_error( $access ) ? null : $access,
+				'site'            => $site,
+				'messages'        => self::messages( (int) $row->chat_conversation_id, true, 0, 40 ),
+			];
+		}, $rows ?: [] );
 	}
 
 	// ── uploads ─────────────────────────────────────────────────────────
