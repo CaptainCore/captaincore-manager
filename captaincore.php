@@ -2772,7 +2772,7 @@ function captaincore_chat_read_func( WP_REST_Request $request ) {
 }
 
 function captaincore_chat_attachment_func( WP_REST_Request $request ) {
-	return CaptainCore\Chat::send_attachment( get_current_user_id(), (int) $request['id'] );
+	return CaptainCore\Chat::send_attachment( get_current_user_id(), (int) $request['id'], ! empty( $request['download'] ) );
 }
 
 function captaincore_ai_relay_state_func( WP_REST_Request $request ) {

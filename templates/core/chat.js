@@ -591,6 +591,14 @@ Object.assign(Component.prototype, {
     if (!el._cccBound) {
       el._cccBound = true;
       el.addEventListener('scroll', () => { c.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80; });
+      // Images open in the lightbox; modified clicks still open a new tab.
+      el.addEventListener('click', e => {
+        const a = e.target.closest && e.target.closest('a.ccc-img');
+        if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        const all = [...el.querySelectorAll('a.ccc-img')];
+        this.chatLightbox(all.map(x => ({ url: x.href, name: (x.querySelector('img') || {}).alt || 'image' })), all.indexOf(a));
+      });
     }
     const html = this.chatThreadHtml();
     if (el._cccHtml !== html) {
@@ -599,6 +607,65 @@ Object.assign(Component.prototype, {
       el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
     }
     if (c.scrollPin && c.conv) { el.scrollTop = el.scrollHeight; c.scrollPin = false; c.nearBottom = true; }
+  },
+
+  // Full-size image viewer over everything: the thread's images in order,
+  // arrows (or ← →) to step through, Download, Open in a new tab, Esc or a
+  // click outside to close. Plain DOM, so it works from every thread.
+  chatLightbox(items, index) {
+    if (!items.length) return;
+    if (this._chatLb) this._chatLb.close();
+    const back = document.activeElement;
+    const lb = document.createElement('div');
+    lb.className = 'ccc-lb';
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-modal', 'true');
+    lb.setAttribute('aria-label', 'Image viewer');
+    const icon = d => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"></path></svg>';
+    lb.innerHTML =
+      '<div class="ccc-lb-bar"><span class="ccc-lb-name"></span><span class="ccc-lb-count"></span>' +
+      '<a class="ccc-lb-btn" data-dl>' + icon('M12 4v11M7 10l5 5 5-5M5 20h14') + '<span>Download</span></a>' +
+      '<a class="ccc-lb-btn" data-open target="_blank" rel="noopener" title="Open in a new tab">' + icon('M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5') + '</a>' +
+      '<button class="ccc-lb-btn" data-close title="Close (Esc)">' + icon('M6 6l12 12M18 6L6 18') + '</button></div>' +
+      '<div class="ccc-lb-stage"><button class="ccc-lb-nav" data-prev title="Previous (←)">' + icon('M15 6l-6 6 6 6') + '</button>' +
+      '<img class="ccc-lb-img" alt=""><button class="ccc-lb-nav" data-next title="Next (→)">' + icon('M9 6l6 6-6 6') + '</button></div>';
+    const $ = q => lb.querySelector(q);
+    let i = Math.max(0, index);
+    const show = () => {
+      const it = items[i];
+      $('.ccc-lb-img').src = it.url;
+      $('.ccc-lb-img').alt = it.name;
+      $('.ccc-lb-name').textContent = it.name;
+      $('.ccc-lb-count').textContent = items.length > 1 ? (i + 1) + ' of ' + items.length : '';
+      $('[data-dl]').href = it.url + (it.url.indexOf('?') > -1 ? '&' : '?') + 'download=1';
+      $('[data-dl]').setAttribute('download', it.name);
+      $('[data-open]').href = it.url;
+      $('[data-prev]').style.visibility = i > 0 ? 'visible' : 'hidden';
+      $('[data-next]').style.visibility = i < items.length - 1 ? 'visible' : 'hidden';
+    };
+    const step = d => { const n = i + d; if (n >= 0 && n < items.length) { i = n; show(); } };
+    const key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'ArrowRight') step(1);
+    };
+    const close = () => {
+      document.removeEventListener('keydown', key, true);
+      lb.remove();
+      this._chatLb = null;
+      if (back && back.focus) back.focus();
+    };
+    lb.addEventListener('click', e => {
+      if (e.target.closest('[data-close]')) close();
+      else if (e.target.closest('[data-prev]')) step(-1);
+      else if (e.target.closest('[data-next]')) step(1);
+      else if (e.target === lb || e.target.classList.contains('ccc-lb-stage')) close();
+    });
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(lb);
+    this._chatLb = { close };
+    show();
+    $('[data-close]').focus();
   },
 
   chatInputRef(el) {

@@ -595,8 +595,9 @@ class Chat {
 	/**
 	 * Stream an attachment the user may see. Raster images display inline
 	 * (type checked from the bytes, not the name); everything else downloads.
+	 * $download asks for a download either way (the lightbox's button).
 	 */
-	public static function send_attachment( $user_id, $attachment_id ) {
+	public static function send_attachment( $user_id, $attachment_id, $download = false ) {
 		$attachment = ChatAttachments::get( (int) $attachment_id );
 		$message    = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
 		$visible    = $message && self::viewable( $user_id, (int) $attachment->chat_conversation_id )
@@ -611,7 +612,7 @@ class Chat {
 			ob_end_clean();
 		}
 		header( 'Content-Type: ' . ( $inline ? $sniffed : 'application/octet-stream' ) );
-		header( 'Content-Disposition: ' . ( $inline ? 'inline' : 'attachment' ) . '; filename="' . str_replace( [ '"', "\r", "\n" ], '', $attachment->name ) . '"' );
+		header( 'Content-Disposition: ' . ( $inline && ! $download ? 'inline' : 'attachment' ) . '; filename="' . str_replace( [ '"', "\r", "\n" ], '', $attachment->name ) . '"' );
 		header( 'Content-Length: ' . filesize( $path ) );
 		header( 'X-Content-Type-Options: nosniff' );
 		header( "Content-Security-Policy: default-src 'none'; sandbox" );

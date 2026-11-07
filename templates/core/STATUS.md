@@ -24,7 +24,7 @@ Replaces the Intercom embed. Rules and storage live in `app/Chat.php` (REST `/ch
 - **Boot:** `CC_BOOT.chat` = `{enabled, live, operator, userId}`. `core.php` skips Intercom whenever chat is enabled for the user. Customer access follows `captaincore_chat_mode` (off | preview + user meta `captaincore_chat_preview` | on).
 - **Live:** `GET /chat/token` returns a 10-minute token. `chat.js` refreshes it in place every 8 minutes, reconnects with backoff, refetches the list and open thread on every `ready` (the first connect too: anything published while it was still connecting would otherwise be missed), and polls every 30s when `live` is false.
 
-Thread rendering: the thread is built as escaped HTML through a ref (`chatThreadRef`). Bodies are plain text and only http(s) links become markup. Attachments are `/chat/attachments/<id>?_wpnonce=`.
+Thread rendering: the thread is built as escaped HTML through a ref (`chatThreadRef`). Bodies are plain text and only http(s) links become markup. Attachments are `/chat/attachments/<id>?_wpnonce=` (`&download=1` forces a download for images too). Clicking an image in any thread opens `chatLightbox`, a plain-DOM viewer over everything: the thread's images in order (← → or the arrows), Download, open in a new tab, Esc or a click outside to close. Cmd/Ctrl-click still opens a new tab.
 
 Typing frames: an operator's carries `customer_user_id` (0 while writing a note, so the customer never sees it). A customer's goes to operators, and `chat.js` shows it only on that customer's own conversation.
 
