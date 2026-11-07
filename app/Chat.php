@@ -41,6 +41,10 @@ class Chat {
 	// it can carry script) is always a download.
 	const INLINE_TYPES = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
 
+	// Files attached from the composer (drag and drop, paste, the paperclip).
+	const MAX_FILES     = 10;
+	const MAX_FILE_SIZE = 10485760;
+
 	// ── access ──────────────────────────────────────────────────────────
 
 	public static function mode() {
@@ -194,7 +198,7 @@ class Chat {
 		$args[] = $limit;
 
 		$sql = "SELECT c.*,
-			(SELECT SUBSTRING(m.body, 1, 200) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
+			(SELECT IF(m.body = '', '📎 Sent a file', SUBSTRING(m.body, 1, 200)) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
 				AND m.kind = 'comment' ORDER BY m.chat_message_id DESC LIMIT 1) AS preview,
 			(SELECT COUNT(*) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id AND m.kind = 'comment'
 				AND m.author_kind = %s AND m.chat_message_id > GREATEST(
@@ -294,20 +298,28 @@ class Chat {
 	 * A customer starts a conversation.
 	 *
 	 * @param array $input body, subject?, site_id?, account_id?
+	 * @param array $files uploads (Chat::uploads): with files the body may be empty
 	 */
-	public static function create( $user_id, $input ) {
+	public static function create( $user_id, $input, $files = [] ) {
 		if ( self::is_operator( $user_id ) ) {
 			return new \WP_Error( 'customers_only', "Operators can't start conversations yet.", [ 'status' => 403 ] );
 		}
 		if ( ! self::enabled_for( $user_id ) ) {
 			return new \WP_Error( 'chat_disabled', 'Chat is not available yet.', [ 'status' => 403 ] );
 		}
-		$body = self::clean_body( $input['body'] ?? '' );
+		$files = self::uploads( $files );
+		if ( is_wp_error( $files ) ) {
+			return $files;
+		}
+		$body = self::body_or_files( $input['body'] ?? '', $files );
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
 		$subject = trim( (string) ( $input['subject'] ?? '' ) );
-		$subject = self::clean_line( $subject !== '' ? $subject : self::first_line( $body, 80 ), self::MAX_SUBJECT );
+		if ( $subject === '' ) {
+			$subject = $body !== '' ? self::first_line( $body, 80 ) : ( count( $files ) === 1 ? 'Sent ' . sanitize_file_name( (string) $files[0]['name'] ) : 'Sent ' . count( $files ) . ' files' );
+		}
+		$subject = self::clean_line( $subject, self::MAX_SUBJECT );
 		if ( is_wp_error( $subject ) ) {
 			return $subject;
 		}
@@ -348,6 +360,7 @@ class Chat {
 			'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => (int) $user_id,
 			'author_name' => $user ? $user->display_name : '', 'body' => $body,
 		] );
+		$message      = self::attach( $id, $message, $files );
 		$conversation = self::present_conversation( ChatConversations::get( $id ), false );
 		self::emit( 'conversation.created', $conversation, $message );
 		ChatPush::customer_message( $conversation, $message );
@@ -357,7 +370,7 @@ class Chat {
 	/**
 	 * Post a comment, or (operators) an internal note.
 	 */
-	public static function post_message( $user_id, $conversation_id, $input ) {
+	public static function post_message( $user_id, $conversation_id, $input, $files = [] ) {
 		$conversation = self::viewable( $user_id, $conversation_id );
 		if ( ! $conversation ) {
 			return self::not_found();
@@ -373,7 +386,11 @@ class Chat {
 		if ( $kind === 'note' && ! $operator ) {
 			return new \WP_Error( 'operators_only', 'Only operators can write internal notes.', [ 'status' => 403 ] );
 		}
-		$body = self::clean_body( $input['body'] ?? '' );
+		$files = self::uploads( $files );
+		if ( is_wp_error( $files ) ) {
+			return $files;
+		}
+		$body = self::body_or_files( $input['body'] ?? '', $files );
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
@@ -385,6 +402,7 @@ class Chat {
 			'author_name'    => $user ? $user->display_name : '',
 			'body'           => $body,
 		] );
+		$message = self::attach( (int) $conversation->chat_conversation_id, $message, $files );
 		$updated = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
 		self::emit( 'message.created', $updated, $message );
 		if ( $operator && $kind === 'comment' ) {
@@ -680,6 +698,68 @@ class Chat {
 			'via'             => (string) ( $row->via ?? '' ),
 			'original'        => ( $row->via ?? '' ) === 'email' ? (string) $row->original : '',
 		];
+	}
+
+	// ── uploads ─────────────────────────────────────────────────────────
+
+	/**
+	 * The `files` field of a multipart request (one file or files[]) as a
+	 * list, or a WP_Error naming the file that can't be taken.
+	 */
+	public static function uploads( $raw ) {
+		if ( empty( $raw ) || ! isset( $raw['name'] ) ) {
+			return is_array( $raw ) && isset( $raw[0]['tmp_name'] ) ? $raw : [];
+		}
+		$list = [];
+		if ( is_array( $raw['name'] ) ) {
+			foreach ( array_keys( $raw['name'] ) as $i ) {
+				$list[] = [ 'name' => $raw['name'][ $i ], 'tmp_name' => $raw['tmp_name'][ $i ], 'size' => (int) $raw['size'][ $i ], 'error' => (int) $raw['error'][ $i ], 'type' => $raw['type'][ $i ] ?? '' ];
+			}
+		} else {
+			$list[] = $raw;
+		}
+		if ( count( $list ) > self::MAX_FILES ) {
+			return new \WP_Error( 'too_many_files', 'Up to ' . self::MAX_FILES . ' files per message.', [ 'status' => 400 ] );
+		}
+		foreach ( $list as $f ) {
+			$name  = sanitize_file_name( (string) ( $f['name'] ?? '' ) ) ?: 'A file';
+			$error = (int) ( $f['error'] ?? 0 );
+			if ( in_array( $error, [ UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ], true ) || (int) $f['size'] > self::MAX_FILE_SIZE ) {
+				return new \WP_Error( 'file_too_big', "$name is too big (" . size_format( self::max_upload() ) . ' max).', [ 'status' => 413 ] );
+			}
+			if ( $error !== UPLOAD_ERR_OK || ! is_uploaded_file( (string) $f['tmp_name'] ) && ! defined( 'CAPTAINCORE_CHAT_TESTING' ) ) {
+				return new \WP_Error( 'upload_failed', "$name didn't upload. Try again.", [ 'status' => 400 ] );
+			}
+			if ( (int) $f['size'] <= 0 ) {
+				return new \WP_Error( 'file_empty', "$name is empty.", [ 'status' => 400 ] );
+			}
+		}
+		return $list;
+	}
+
+	/** Largest file the composer may send: ours, or PHP's if lower. */
+	public static function max_upload() {
+		return (int) min( self::MAX_FILE_SIZE, wp_max_upload_size() ?: self::MAX_FILE_SIZE );
+	}
+
+	/** The message text; empty is fine when files carry the message. */
+	private static function body_or_files( $raw, $files ) {
+		if ( $files && is_string( $raw ) && trim( self::strip_controls( $raw ) ) === '' ) {
+			return '';
+		}
+		return self::clean_body( $raw );
+	}
+
+	/** Store a new message's files, and return it presented with them. */
+	private static function attach( $conversation_id, $message, $files ) {
+		if ( ! $files ) {
+			return $message;
+		}
+		foreach ( $files as $f ) {
+			ChatNotify::store_file( (int) $conversation_id, (int) $message['id'], $f );
+		}
+		$message['attachments'] = self::attachments_for( [ (int) $message['id'] ] )[ (int) $message['id'] ] ?? [];
+		return $message;
 	}
 
 	// ── text hygiene ────────────────────────────────────────────────────

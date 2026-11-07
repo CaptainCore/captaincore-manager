@@ -20,7 +20,8 @@ Object.assign(Component.prototype, {
     const c = this._chat = {
       list: [], counts: null, filter: cb.operator ? 'waiting' : (/\/support(\/|$)/.test(location.pathname) ? 'open' : 'all'), supFilter: 'open', q: '', more: false, loading: true, listSeq: 0,
       id: 0, conv: null, convLoading: false, convErr: '', typing: {}, online: false, history: {},
-      ws: null, wsState: 'off', everLive: false, retry: 0, lastTyped: 0, readSent: {}, nearBottom: true, scrollPin: false
+      ws: null, wsState: 'off', everLive: false, retry: 0, lastTyped: 0, readSent: {}, nearBottom: true, scrollPin: false,
+      files: [], drag: 0
     };
     this.chatLoadList();
     if (cb.operator) this.chatPushInit();
@@ -75,6 +76,7 @@ Object.assign(Component.prototype, {
     id = parseInt(id, 10) || 0;
     if (c.id === id && c.conv) return;
     c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false;
+    this.chatClearFiles();
     this._chatClear = true;
     this.setState({ chatId: id ? String(id) : '', chatBody: '', chatMode: 'reply' });
     if (id) this.chatLoadConv(id);
@@ -149,12 +151,20 @@ Object.assign(Component.prototype, {
     const s = this.state;
     const cb = this.chatBoot();
     const body = (s.chatBody || '').trim();
-    if (!c || !body || s.chatSending) return;
+    if (!c || (!body && !c.files.length) || s.chatSending) return;
     const note = cb.operator && s.chatMode === 'note';
     this.setState({ chatSending: true });
+    const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {});
+    let payload = fields;
+    if (c.files.length) {
+      // Attachments go as multipart; the text rides along as fields.
+      payload = new FormData();
+      Object.keys(fields).forEach(k => payload.append(k, String(fields[k])));
+      c.files.forEach(f => payload.append('files[]', f.file, f.name));
+    }
     const req = c.id
-      ? this.api('/chat/conversations/' + c.id + '/messages', { method: 'POST', body: { body, kind: note ? 'note' : 'comment' } })
-      : this.api('/chat/conversations', { method: 'POST', body: Object.assign({ body }, c.newSite ? { site_id: parseInt(c.newSite, 10) } : {}) });
+      ? this.api('/chat/conversations/' + c.id + '/messages', { method: 'POST', body: payload })
+      : this.api('/chat/conversations', { method: 'POST', body: payload });
     req.then(r => {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not send');
       if (r.messages) {
@@ -169,11 +179,88 @@ Object.assign(Component.prototype, {
       }
       c.scrollPin = true;
       this._chatClear = true;
+      this.chatClearFiles();
       this.setState({ chatSending: false, chatBody: '', chatId: String(c.id) });
       this.chatMarkRead();
     }).catch(e => {
       this.setState({ chatSending: false });
       this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not send the message', { kind: 'error' });
+    });
+  },
+
+  // ── attachments (composer) ───────────────────────────────────────────
+  // Files wait in c.files until the message is sent. They come from a drop
+  // on the thread, a paste into the composer, or the paperclip.
+
+  chatCanAttach() {
+    const c = this._chat;
+    if (!c || !(c.id || c.newDraft)) return false;
+    const s = this.state;
+    return this.chatBoot().operator ? s.route === 'chat' : (s.route === 'support' || (s.chatWidgetOpen && s.chatWView === 'thread'));
+  },
+
+  chatAddFiles(list) {
+    const c = this._chat;
+    const cb = this.chatBoot();
+    if (!c || !list || !list.length) return;
+    const maxFile = cb.maxFile || 10485760, maxFiles = cb.maxFiles || 10, maxPost = cb.maxPost || 0;
+    const mb = n => (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace(/\.0$/, '') + ' MB';
+    const skipped = [];
+    let total = c.files.reduce((n, f) => n + f.size, 0);
+    [...list].forEach(file => {
+      if (c.files.length >= maxFiles) { skipped.push(file.name + ' (' + maxFiles + ' files max)'); return; }
+      if (!file.size) { skipped.push(file.name + ' (empty)'); return; }
+      if (file.size > maxFile) { skipped.push(file.name + ' (over ' + mb(maxFile) + ')'); return; }
+      if (maxPost && total + file.size > maxPost - 65536) { skipped.push(file.name + ' (over ' + mb(maxPost) + ' in one message)'); return; }
+      total += file.size;
+      const isImg = /^image\/(png|jpe?g|gif|webp)$/.test(file.type);
+      // A pasted screenshot is always "image.png"; give it a useful name.
+      const name = file.name && file.name !== 'image.png' ? file.name : 'screenshot-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png';
+      c.files.push({ key: 'f' + Date.now() + Math.random().toString(36).slice(2, 6), file, name, size: file.size, isImg, url: isImg ? URL.createObjectURL(file) : '' });
+    });
+    if (skipped.length) this.toast('Not attached: ' + skipped.join(', '), { kind: 'error' });
+    this._chatFocus = true;
+    this.setState({});
+  },
+
+  chatRemoveFile(key) {
+    const c = this._chat;
+    const f = c.files.find(x => x.key === key);
+    if (f && f.url) URL.revokeObjectURL(f.url);
+    c.files = c.files.filter(x => x.key !== key);
+    this.setState({});
+  },
+
+  chatClearFiles() {
+    const c = this._chat;
+    if (!c || !c.files.length) return;
+    c.files.forEach(f => { if (f.url) URL.revokeObjectURL(f.url); });
+    c.files = [];
+  },
+
+  chatPickFiles() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.addEventListener('change', () => this.chatAddFiles(input.files));
+    input.click();
+  },
+
+  // ref for anything files can be dropped on (the thread pane, the panel).
+  // A counter keeps the overlay steady while the drag crosses children.
+  chatDropRef(el) {
+    if (!el || el._cccDrop) return;
+    el._cccDrop = true;
+    const c = this._chat;
+    const files = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+    el.addEventListener('dragenter', e => { if (!files(e)) return; e.preventDefault(); if (!this.chatCanAttach()) return; if (c.drag++ === 0) this.setState({}); });
+    el.addEventListener('dragover', e => { if (!files(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = this.chatCanAttach() ? 'copy' : 'none'; });
+    el.addEventListener('dragleave', e => { if (!files(e) || !c.drag) return; if (--c.drag === 0) this.setState({}); });
+    el.addEventListener('drop', e => {
+      if (!files(e)) return;
+      e.preventDefault();
+      c.drag = 0;
+      if (this.chatCanAttach()) this.chatAddFiles(e.dataTransfer.files); else this.setState({});
     });
   },
 
@@ -673,6 +760,14 @@ Object.assign(Component.prototype, {
     // value="{{ }}" only seeds the field (DC runtime), so clearing after a
     // send or a conversation switch happens here.
     if (this._chatClear) { this._chatClear = false; el.value = ''; }
+    // A pasted screenshot (or copied file) attaches instead of pasting text.
+    if (!el._cccPaste) {
+      el._cccPaste = true;
+      el.addEventListener('paste', e => {
+        const files = e.clipboardData && e.clipboardData.files;
+        if (files && files.length) { e.preventDefault(); this.chatAddFiles(files); }
+      });
+    }
     // Grow with the text, up to the CSS max-height.
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 180) + 'px';
@@ -687,7 +782,7 @@ Object.assign(Component.prototype, {
     const isOp = !!cb.operator;
     const off = {
       showChat: false, chatPushShow: false, chatPhoneView: 'list', chatAccessGroups: [], chatSideOpen: '0', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
-      chatHistory: [], chatHasHistory: false, chatNoHistory: false, supFilters: []
+      chatHistory: [], chatHasHistory: false, chatNoHistory: false, supFilters: [], chatPending: []
     };
     if (!c) return off;
     if (s.route !== 'chat') this._chatPrevRoute = s.route;
@@ -809,7 +904,17 @@ Object.assign(Component.prototype, {
       onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(); },
       chatKey: e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); } },
       chatSendGo: () => this.chatSend(),
-      chatSendOpacity: (s.chatBody || '').trim() && !s.chatSending ? 1 : 0.45,
+      chatSendOpacity: ((s.chatBody || '').trim() || c.files.length) && !s.chatSending ? 1 : 0.45,
+      chatDropRef: el => this.chatDropRef(el),
+      chatDragging: c.drag > 0 && this.chatCanAttach(),
+      chatAttachGo: () => this.chatPickFiles(),
+      chatHasFiles: c.files.length > 0,
+      chatPending: c.files.map(f => ({
+        key: f.key, name: f.name, size: f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : (f.size / 1048576).toFixed(1) + ' MB',
+        isImg: f.isImg, notImg: !f.isImg, url: f.url, remove: () => this.chatRemoveFile(f.key)
+      })),
+      chatUploading: !!s.chatSending && c.files.length > 0,
+      chatUploadLabel: 'Uploading ' + (c.files.length === 1 ? '1 file' : c.files.length + ' files') + '…',
       chatBoxBg: note ? 'var(--ccc-note)' : 'var(--panel)', chatBoxRule: note ? 'var(--ccc-note-rule)' : 'var(--rule)',
       chatPlaceholder: note ? 'Write an internal note. Only staff can see it.' : isOp ? 'Reply to ' + custFirst : c.id ? 'Write a reply…' : 'How can we help?',
       chatHint: note ? 'Internal notes are never shown to the customer.' : isOp ? 'Enter sends, Shift+Enter for a new line.' + (conv && conv.guest ? ' This contact has no Manager login, so they won’t see replies here.' : '') : '',

@@ -393,7 +393,7 @@ class ChatNotify {
 	}
 
 	/** Store one uploaded file the way the importer does (by sha256, outside the web root). */
-	private static function store_file( $conversation_id, $message_id, array $f ) {
+	public static function store_file( $conversation_id, $message_id, array $f ) {
 		$src  = (string) $f['tmp_name'];
 		$sha  = hash_file( 'sha256', $src );
 		$name = sanitize_file_name( (string) ( $f['name'] ?? '' ) ) ?: 'file';

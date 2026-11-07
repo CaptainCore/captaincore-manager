@@ -234,6 +234,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   .ccc-sidebtn{display:inline-flex !important}
   .ccc-side[data-open="1"]{display:block;position:fixed;right:0;top:56px;bottom:0;width:min(340px,92vw);z-index:5;box-shadow:-12px 0 32px rgba(0,0,0,.18)}
   .ccc-side[data-open="1"] .ccc-sideclose{display:grid}}
+/* Composer attachments: drop overlay, paperclip, pending files */
+.ccc-main,.ccs-main{position:relative}
+.ccc-drop{position:absolute;inset:8px;z-index:6;display:grid;place-items:center;border:2px dashed var(--brand);border-radius:14px;background:color-mix(in srgb,var(--paper) 86%,var(--brand));pointer-events:none;animation:ccfade .12s ease}
+.ccc-drop>div{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--brand-ink);text-align:center;padding:0 16px}
+.ccc-drop b{font:600 var(--fs-15) var(--sans)}
+.ccc-drop span{font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccc-clip{flex:none;align-self:flex-end;width:32px;height:36px;margin-left:-8px;border:0;border-radius:8px;background:transparent;color:var(--ink-dim);display:grid;place-items:center;cursor:pointer}
+.ccc-clip:hover{color:var(--brand-ink);background:var(--panel-2)}
+.ccc-pending{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.ccc-pf{display:flex;align-items:center;gap:9px;max-width:240px;height:48px;padding:0 4px 0 6px;border:1px solid var(--rule);border-radius:10px;background:var(--paper)}
+.ccc-pf img{flex:none;width:36px;height:36px;object-fit:cover;border-radius:6px;background:var(--panel-2)}
+.ccc-pf-ico{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:6px;background:var(--panel-2);font-size:16px}
+.ccc-pf-name{font:500 var(--fs-12) var(--sans);color:var(--ink)}
+.ccc-pf-size{font:400 11px var(--mono);color:var(--ink-dim)}
+.ccc-pf button{flex:none;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--ink-dim);cursor:pointer}
+.ccc-pf button:hover{background:var(--panel-2);color:var(--ink)}
+.ccc-pf-up{margin:-2px 0 8px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink)}
 /* Image lightbox (chatLightbox) */
 .ccc-img{cursor:zoom-in}
 .ccc-lb{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:rgba(10,10,12,.88);backdrop-filter:blur(3px);animation:ccfade .15s ease}
@@ -3860,7 +3877,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </sc-if>
             </div>
           </aside>
-          <main class="ccs-main">
+          <main class="ccs-main" ref="{{ chatDropRef }}">
+            <sc-if value="{{ chatDragging }}" hint-placeholder-val="{{ false }}"><div class="ccc-drop"><div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg><b>Drop files to attach</b><span>Images and documents, up to 10 per message</span></div></div></sc-if>
             <sc-if value="{{ supNone }}" hint-placeholder-val="{{ false }}">
               <div style="flex:1;display:grid;place-items:center;padding:24px">
                 <div style="max-width:360px;text-align:center">
@@ -3933,7 +3951,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-if value="{{ supComposer }}" hint-placeholder-val="{{ false }}">
               <div class="ccc-composer">
                 <div class="ccc-composer-in">
+  <sc-if value="{{ chatHasFiles }}" hint-placeholder-val="{{ false }}">
+                    <div class="ccc-pending">
+                      <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
+                        <div class="ccc-pf">
+                          <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
+                          <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                          <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
+                          <button onClick="{{ pf.remove }}" title="Remove">✕</button>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <sc-if value="{{ chatUploading }}" hint-placeholder-val="{{ false }}"><div class="ccc-pf-up">{{ chatUploadLabel }}</div></sc-if>
+                  </sc-if>
                   <div class="ccc-cbox" style="background:var(--panel)">
+                    <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
                     <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                     <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                   </div>
@@ -7427,7 +7459,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
           </div>
         </aside>
-        <main class="ccc-main">
+        <main class="ccc-main" ref="{{ chatDropRef }}">
+          <sc-if value="{{ chatDragging }}" hint-placeholder-val="{{ false }}"><div class="ccc-drop"><div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg><b>Drop files to attach</b><span>Images and documents, up to 10 per message</span></div></div></sc-if>
           <sc-if value="{{ chatNoConv }}" hint-placeholder-val="{{ false }}">
             <div style="flex:1;display:grid;place-items:center;color:var(--ink-dim);font:400 var(--fs-14) var(--sans)">Pick a conversation.</div>
           </sc-if>
@@ -7460,7 +7493,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <button onClick="{{ m.go }}" style="border:0;background:{{ m.bg }};color:{{ m.fg }};font:600 var(--fs-12) var(--sans);padding:5px 10px;border-radius:7px;cursor:pointer">{{ m.label }}</button>
                   </sc-for>
                 </div>
+<sc-if value="{{ chatHasFiles }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccc-pending">
+                    <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
+                      <div class="ccc-pf">
+                        <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
+                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                        <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
+                        <button onClick="{{ pf.remove }}" title="Remove">✕</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ chatUploading }}" hint-placeholder-val="{{ false }}"><div class="ccc-pf-up">{{ chatUploadLabel }}</div></sc-if>
+                </sc-if>
                 <div class="ccc-cbox" style="background:{{ chatBoxBg }};border-color:{{ chatBoxRule }}">
+                  <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
                   <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                   <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                 </div>
@@ -7538,7 +7585,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
     </button>
   </sc-if>
   <sc-if value="{{ chatWidgetOpen }}" hint-placeholder-val="{{ false }}">
-    <section class="ccc-widget">
+    <section class="ccc-widget" ref="{{ chatDropRef }}">
+      <sc-if value="{{ chatDragging }}" hint-placeholder-val="{{ false }}"><div class="ccc-drop"><div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg><b>Drop files to attach</b><span>Images and documents, up to 10 per message</span></div></div></sc-if>
       <div class="ccc-w-head">
         <sc-if value="{{ chatWBack }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ chatWGoHome }}" class="ccc-tool" title="All conversations">←</button>
@@ -7598,7 +7646,21 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
         </sc-if>
         <div style="flex:none;padding:10px 12px 12px;border-top:1px solid var(--rule)">
+          <sc-if value="{{ chatHasFiles }}" hint-placeholder-val="{{ false }}">
+            <div class="ccc-pending">
+              <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
+                <div class="ccc-pf">
+                  <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
+                  <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                  <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
+                  <button onClick="{{ pf.remove }}" title="Remove">✕</button>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ chatUploading }}" hint-placeholder-val="{{ false }}"><div class="ccc-pf-up">{{ chatUploadLabel }}</div></sc-if>
+          </sc-if>
           <div class="ccc-cbox" style="border-radius:12px;background:var(--panel)">
+            <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
             <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
             <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
           </div>

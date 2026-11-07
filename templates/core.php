@@ -109,6 +109,10 @@ $cc_boot['chat']      = [
 	'live'     => $chat_enabled && CaptainCore\ChatRelay::configured(),
 	'operator' => CaptainCore\Chat::is_operator( get_current_user_id() ),
 	'userId'   => get_current_user_id(),
+	// Per-file limit for composer attachments (this web server's PHP, not the CLI's).
+	'maxFile'  => $chat_enabled ? CaptainCore\Chat::max_upload() : 0,
+	'maxFiles' => CaptainCore\Chat::MAX_FILES,
+	'maxPost'  => (int) wp_convert_hr_to_bytes( (string) ini_get( 'post_max_size' ) ),
 ];
 // Operators can turn on notifications for this device (ChatPush). The
 // service worker lives under the app path (Router.php serves it).

@@ -18,10 +18,12 @@ Object.assign(Component.prototype, {
   // session, and must not bounce them to login).
   api(path, opts = {}) {
     const boot = window.CC_BOOT || {};
+    // FormData (file uploads) goes as multipart; the browser sets its boundary.
+    const form = typeof FormData !== 'undefined' && opts.body instanceof FormData;
     const send = () => fetch(boot.restRoot + 'captaincore/v1' + path, {
-      headers: Object.assign({ 'X-WP-Nonce': boot.nonce, 'Content-Type': 'application/json' }, opts.headers || {}),
+      headers: Object.assign({ 'X-WP-Nonce': boot.nonce }, form ? {} : { 'Content-Type': 'application/json' }, opts.headers || {}),
       method: opts.method || 'GET',
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+      body: form ? opts.body : opts.body ? JSON.stringify(opts.body) : undefined
     });
     // Some routes answer 200 with an empty body (a handler that ends in a
     // bare `return;`). Treat that as null instead of a JSON parse failure,

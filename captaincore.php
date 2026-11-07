@@ -2746,7 +2746,8 @@ function captaincore_chat_conversations_func( WP_REST_Request $request ) {
 }
 
 function captaincore_chat_create_func( WP_REST_Request $request ) {
-	$result = CaptainCore\Chat::create( get_current_user_id(), (array) $request->get_json_params() );
+	// JSON, or multipart when files ride along (the composer's attachments).
+	$result = CaptainCore\Chat::create( get_current_user_id(), (array) ( $request->get_json_params() ?: $request->get_body_params() ), $request->get_file_params()['files'] ?? [] );
 	return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 201 );
 }
 
@@ -2762,7 +2763,7 @@ function captaincore_chat_update_func( WP_REST_Request $request ) {
 }
 
 function captaincore_chat_message_func( WP_REST_Request $request ) {
-	$result = CaptainCore\Chat::post_message( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+	$result = CaptainCore\Chat::post_message( get_current_user_id(), (int) $request['id'], (array) ( $request->get_json_params() ?: $request->get_body_params() ), $request->get_file_params()['files'] ?? [] );
 	return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 201 );
 }
 
