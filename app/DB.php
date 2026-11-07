@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 66;
+    const REQUIRED_VERSION = 67;
 
     private static function _table() {
         global $wpdb;
@@ -1610,6 +1610,28 @@ class DB {
             last_read_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (user_id,chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v67: operators' phones and browsers for chat notifications
+        // (ChatPush, WebPush). One row per push endpoint; endpoint_hash
+        // keeps it unique. failures counts sends in a row that did not
+        // land; the push service's 404/410 deletes the row.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_push_subscriptions` (
+            push_subscription_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            endpoint text NOT NULL,
+            endpoint_hash char(64) NOT NULL,
+            p256dh varchar(255) NOT NULL,
+            auth varchar(64) NOT NULL,
+            user_agent varchar(255) NOT NULL DEFAULT '',
+            failures int(11) NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            last_success_at datetime DEFAULT NULL,
+        PRIMARY KEY  (push_subscription_id),
+        UNIQUE KEY endpoint_hash (endpoint_hash),
+        KEY user_id (user_id)
         ) $charset_collate;";
 
         dbDelta($sql);

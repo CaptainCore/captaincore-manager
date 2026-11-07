@@ -303,6 +303,7 @@ class Chat {
 		] );
 		$conversation = self::present_conversation( ChatConversations::get( $id ), false );
 		self::emit( 'conversation.created', $conversation, $message );
+		ChatPush::customer_message( $conversation, $message );
 		return [ 'conversation' => $conversation, 'messages' => [ $message ] ];
 	}
 
@@ -341,6 +342,8 @@ class Chat {
 		self::emit( 'message.created', $updated, $message );
 		if ( $operator && $kind === 'comment' ) {
 			ChatNotify::schedule( (int) $conversation->chat_conversation_id, ChatRelay::last_customer_delivery() );
+		} elseif ( ! $operator ) {
+			ChatPush::customer_message( $updated, $message );
 		}
 		self::emit( 'conversation.updated', $updated );
 		return [ 'message' => $message, 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ) ];

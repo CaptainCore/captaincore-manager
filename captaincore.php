@@ -11066,6 +11066,37 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Operators' phone notifications (ChatPush): this device's push
+	// subscription (POST adds, DELETE removes), GET lists devices and the
+	// VAPID public key, POST /test sends a test to the caller's devices.
+	register_rest_route(
+		'captaincore/v1', '/chat/push', [
+			[
+				'methods'             => 'GET',
+				'callback'            => function () { return CaptainCore\ChatPush::status( get_current_user_id() ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\ChatPush::subscribe( get_current_user_id(), (array) $r->get_json_params() ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\ChatPush::unsubscribe( get_current_user_id(), (string) $r->get_param( 'endpoint' ) ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/push/test', [
+			'methods'             => 'POST',
+			'callback'            => function () { return CaptainCore\ChatPush::test( get_current_user_id() ); },
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	// Mailgun route forward() for replies to chat emails. No login: the
 	// handler checks Mailgun's signature and the per-conversation address.
 	register_rest_route(

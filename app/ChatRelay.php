@@ -44,6 +44,13 @@ class ChatRelay {
 		return self::$last_customer;
 	}
 
+	/** Operators the relay says are watching the inbox, from the last publish ([] when unknown). */
+	private static $last_watching = [];
+
+	public static function last_watching() {
+		return self::$last_watching;
+	}
+
 	public static function relay_url() {
 		$url = defined( 'CAPTAINCORE_CHAT_RELAY_URL' ) ? CAPTAINCORE_CHAT_RELAY_URL : get_site_option( 'captaincore_chat_relay_url', '' );
 		return self::normalize_url( (string) $url );
@@ -186,6 +193,7 @@ class ChatRelay {
 	 */
 	public static function publish( $event, $customer_user_id, $internal ) {
 		self::$last_customer = null;
+		self::$last_watching = [];
 		$url = self::publish_url();
 		if ( $url === '' || ! self::configured() ) {
 			return;
@@ -215,6 +223,9 @@ class ChatRelay {
 			$out = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 			if ( is_array( $out ) && isset( $out['customer'] ) ) {
 				self::$last_customer = (int) $out['customer'];
+			}
+			if ( is_array( $out ) && isset( $out['watching'] ) && is_array( $out['watching'] ) ) {
+				self::$last_watching = array_map( 'intval', $out['watching'] );
 			}
 		}
 		if ( $code !== 200 && $code !== 409 && defined( 'WP_DEBUG' ) && WP_DEBUG ) {

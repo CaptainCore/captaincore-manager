@@ -373,6 +373,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\UpdateQueueCLI' => __DIR__ . '/../..' . '/app/UpdateQueueCLI.php',
         'CaptainCore\\User' => __DIR__ . '/../..' . '/app/User.php',
         'CaptainCore\\Users' => __DIR__ . '/../..' . '/app/Users.php',
+        'CaptainCore\\WebPush' => __DIR__ . '/../..' . '/app/WebPush.php',
         'CaptainCore\\WebRiskCheck' => __DIR__ . '/../..' . '/app/WebRiskCheck.php',
         'CaptainCore\\WebRiskLogs' => __DIR__ . '/../..' . '/app/WebRiskLogs.php',
         'Composer\\CaBundle\\CaBundle' => __DIR__ . '/..' . '/composer/ca-bundle/src/CaBundle.php',

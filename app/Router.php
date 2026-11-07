@@ -110,6 +110,22 @@ class Router {
             // bookmarks — it is simply the default now.
             $ui    = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
             $route = (string) get_query_var( 'captaincore_route' );
+
+            // Home-screen app pieces for operator notifications (ChatPush):
+            // the service worker must live under the app path so its scope
+            // covers the app, and the manifest names the installed app.
+            if ( $route === 'push-sw.js' ) {
+                header( 'Content-Type: application/javascript; charset=utf-8' );
+                header( 'Cache-Control: no-cache' );
+                readfile( plugin_dir_path( __DIR__ ) . 'templates/core/push-sw.js' );
+                exit;
+            }
+            if ( $route === 'app.webmanifest' ) {
+                header( 'Content-Type: application/manifest+json; charset=utf-8' );
+                header( 'Cache-Control: max-age=3600' );
+                echo wp_json_encode( self::manifest(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+                exit;
+            }
             $base  = strtok( $route, '/' );
             if ( $ui === 'legacy' || $ui === 'v1' ) {
                 $template_file = 'templates/core-legacy.php';
@@ -149,6 +165,27 @@ class Router {
     /**
      * Handle Checkout Express Logic (Ported from page template logic)
      */
+    /** The web app manifest: installs the app on a phone's home screen, opening the inbox. */
+    public static function manifest() {
+        $config = Configurations::get();
+        $path   = isset( $config->path ) ? trim( (string) $config->path, '/' ) : 'account';
+        $base   = '/' . ( $path !== '' ? $path . '/' : '' );
+        $name   = (string) ( $config->name ?? '' ) ?: get_bloginfo( 'name' );
+        $icon   = get_site_icon_url( 512 );
+        $icons  = $icon ? [ [ 'src' => $icon, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any' ] ] : [];
+        return [
+            'name'             => $name,
+            'short_name'       => mb_substr( $name, 0, 24 ),
+            'id'               => $base,
+            'start_url'        => $base . 'chat',
+            'scope'            => $base,
+            'display'          => 'standalone',
+            'background_color' => '#ffffff',
+            'theme_color'      => $config->colors->primary ?? '#123E8C',
+            'icons'            => $icons,
+        ];
+    }
+
     public function handle_checkout_express() {
         if ( get_query_var( 'pagename' ) === 'checkout-express' ) {
             $order_id = get_query_var( 'captaincore_callback' );

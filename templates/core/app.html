@@ -231,7 +231,24 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-w-item:last-child{border-bottom:0}
 .ccc-w-item:hover{background:var(--ccc-canvas)}
 @media (max-width:1100px){.ccc-body{grid-template-columns:300px minmax(0,1fr)}.ccc-side{display:none}}
-@media (max-width:760px){.ccc-body{grid-template-columns:1fr}.ccc-list{display:none}}
+.ccc-pushbtn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);font:500 var(--fs-125) var(--sans);cursor:pointer}
+.ccc-back{display:none;flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:17px;cursor:pointer}
+@media (max-width:760px){
+  .ccc-body{grid-template-columns:minmax(0,1fr)}
+  .ccc-list,.ccc-main{min-width:0}
+  .ccc-list input{min-width:0}
+  .ccc-body[data-view="thread"] .ccc-list{display:none}
+  .ccc-body[data-view="list"] .ccc-main{display:none}
+  .ccc-back{display:grid;place-items:center}
+  .ccc-pushlabel,.ccc-livepill{display:none !important}
+  .ccc-pushbtn{width:34px;height:34px;padding:0;justify-content:center}
+  .ccc-top{padding-left:14px;padding-right:14px}
+  .ccc-convhead{padding:10px 12px !important;gap:8px !important;flex-wrap:wrap}
+  .ccc-convhead h2{font-size:15.5px !important}
+  .ccc-composer-in{padding:0 12px}
+  .ccc-msg{padding-left:12px !important;padding-right:12px !important}
+  .ccc-cbox textarea,.ccc-list input{font-size:16px !important}
+}
 </style>
 </helmet>
 <div class="cc-shell" style="height:100vh;display:flex;flex-direction:column;background:var(--canvas);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -304,7 +321,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ showMinnAdmin }}" hint-placeholder-val="{{ false }}">
             <a href="{{ minnAdminUrl }}" target="_blank" rel="noopener" onClick="{{ stopProp }}" title="Minn Admin (opens in a new tab)" style="flex:none;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand-ink));color:#fff;display:grid;place-items:center;font:800 var(--fs-14) var(--sans);letter-spacing:-.5px;text-decoration:none;opacity:.85;transition:opacity .12s" style-hover="opacity:1">m</a>
           </sc-if>
-          <a href="{{ logoutUrl }}" onClick="{{ stopProp }}" title="Log out" style="flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
+          <a href="{{ logoutUrl }}" onClick="{{ logoutGo }}" title="Log out" style="flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>
           </a>
         </div>
@@ -7108,9 +7125,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
         <span style="width:1px;height:22px;background:var(--rule)"></span>
         <span style="font:600 var(--fs-15) var(--sans)">Chat</span>
         <div style="flex:1"></div>
-        <span style="display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);font:500 var(--fs-125) var(--sans);color:var(--ink)"><span style="width:8px;height:8px;border-radius:50%;background:{{ chatLiveFg }}"></span>{{ chatLiveLabel }}</span>
+        <sc-if value="{{ chatPushShow }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ chatPushGo }}" class="ccc-pushbtn" title="{{ chatPushLabel }}" style="color:{{ chatPushFg }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+            <span class="ccc-pushlabel">{{ chatPushLabel }}</span>
+          </button>
+        </sc-if>
+        <span class="ccc-livepill" style="display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);font:500 var(--fs-125) var(--sans);color:var(--ink)"><span style="width:8px;height:8px;border-radius:50%;background:{{ chatLiveFg }}"></span>{{ chatLiveLabel }}</span>
       </div>
-      <div class="ccc-body">
+      <div class="ccc-body" data-view="{{ chatPhoneView }}">
         <aside class="ccc-list">
           <div style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink-dim)">
@@ -7167,7 +7190,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div style="padding:22px 28px;color:var(--ink-dim);font:400 var(--fs-14) var(--sans)">{{ chatErr }}</div>
           </sc-if>
           <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
-            <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">
+            <div class="ccc-convhead" style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">
+              <button onClick="{{ chatBack }}" class="ccc-back" title="All conversations">←</button>
               <div style="flex:1;min-width:0">
                 <div style="display:flex;align-items:center;gap:8px">
                   <h2 class="ccc-trunc" style="margin:0;font:600 17px var(--sans);letter-spacing:-.01em">{{ chatSubject }}</h2>

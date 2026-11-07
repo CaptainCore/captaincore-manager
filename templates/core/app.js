@@ -3509,6 +3509,14 @@ class Component extends DCLogic {
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
       homeLink: (window.CC_BOOT && window.CC_BOOT.homeLink) || '/',
       logoutUrl: (window.CC_BOOT && window.CC_BOOT.logoutUrl) || '#',
+      // Logging out stops this device's chat notifications first (chat.js).
+      logoutGo: e => {
+        e.stopPropagation();
+        if (!this._chat || !this._chat.push || !this._chat.push.sub) return;
+        e.preventDefault();
+        const href = e.currentTarget.href;
+        this.chatPushOff().then(() => { location.href = href; });
+      },
       showSwitchBack: !!(window.CC_BOOT && window.CC_BOOT.switchBackUrl),
       switchBackUrl: (window.CC_BOOT && window.CC_BOOT.switchBackUrl) || '#',
       switchBackLabel: (window.CC_BOOT && window.CC_BOOT.switchBackLabel) || 'Switch back',

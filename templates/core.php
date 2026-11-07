@@ -110,6 +110,15 @@ $cc_boot['chat']      = [
 	'operator' => CaptainCore\Chat::is_operator( get_current_user_id() ),
 	'userId'   => get_current_user_id(),
 ];
+// Operators can turn on notifications for this device (ChatPush). The
+// service worker lives under the app path (Router.php serves it).
+$cc_app_base = '/' . ( isset( $configurations->path ) && trim( $configurations->path, '/' ) !== '' ? trim( $configurations->path, '/' ) . '/' : ( isset( $configurations->path ) ? '' : 'account/' ) );
+if ( $cc_boot['chat']['operator'] ) {
+	$cc_boot['chat']['push'] = [
+		'publicKey' => CaptainCore\WebPush::public_key(),
+		'sw'        => $cc_app_base . 'push-sw.js',
+	];
+}
 $load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== '' && ! $chat_enabled
 	&& ! empty( $user->email ) && ! empty( $user->login ) && ! empty( $user->registered );
 
@@ -132,6 +141,16 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo esc_html( $configurations->name ); ?></title>
+<?php
+// Installable as a home-screen app (operators' phone notifications: ChatPush).
+$cc_app_icon = get_site_icon_url( 180 );
+?>
+<link rel="manifest" href="<?php echo esc_url( $cc_app_base . 'app.webmanifest' ); ?>">
+<?php if ( $cc_app_icon ) : ?><link rel="apple-touch-icon" href="<?php echo esc_url( $cc_app_icon ); ?>"><?php endif; ?>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="<?php echo esc_attr( $configurations->name ); ?>">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>
 try {
 	var stored = localStorage.getItem('captaincore-theme');

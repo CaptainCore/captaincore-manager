@@ -285,6 +285,9 @@ class ChatNotify {
 		$message     = Chat::present_message( ChatMessages::get( (int) $message['id'] ), $attachments[ (int) $message['id'] ] ?? [] );
 		$fresh       = Chat::present_conversation( ChatConversations::get( $conversation_id ), false );
 		Chat::emit( 'message.created', $fresh, $message );
+		if ( $customer ) {
+			ChatPush::customer_message( $fresh, $message );
+		}
 		Chat::emit( 'conversation.updated', $fresh );
 		return [ 'message_id' => (int) $message['id'], 'as' => $customer ? 'customer' : 'note' ];
 	}

@@ -22,6 +22,8 @@ Object.assign(Component.prototype, {
       ws: null, wsState: 'off', everLive: false, retry: 0, lastTyped: 0, readSent: {}, nearBottom: true, scrollPin: false
     };
     this.chatLoadList();
+    if (cb.operator) this.chatPushInit();
+    if (cb.operator) this.chatFocusInit();
     if (cb.live) this.chatConnect();
     else this._chatPoll = setInterval(() => { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }, 30000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this.chatMarkRead(); });
@@ -46,7 +48,7 @@ Object.assign(Component.prototype, {
       c.loading = false;
       c.list = more ? c.list.concat(rows.filter(x => !c.list.some(y => y.id === x.id))) : rows;
       c.more = rows.length === 40;
-      if (r && r.counts) c.counts = r.counts;
+      if (r && r.counts) { c.counts = r.counts; this.chatAppBadge(r.counts.waiting); }
       this.setState({});
     }).catch(() => { if (seq === c.listSeq) { c.loading = false; this.setState({}); } });
   },
@@ -189,6 +191,8 @@ Object.assign(Component.prototype, {
           // Missed events while the socket was down: refetch what's on screen.
           if (c.everLive) { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }
           c.everLive = true;
+          c.focusSent = null;
+          this.chatFocusTick();
           // Tokens last 10 minutes; refresh in place every 8.
           clearInterval(c.refreshTimer);
           c.refreshTimer = setInterval(() => {
@@ -298,6 +302,143 @@ Object.assign(Component.prototype, {
     // Operators name the customer. A note in progress goes to operators only.
     if (cb.operator) frame.customer_user_id = this.state.chatMode === 'note' || !c.conv ? 0 : c.conv.conversation.customer_user_id;
     c.ws.send(JSON.stringify(frame));
+  },
+
+  // ── phone notifications (operators) ───────────────────────────────────
+  // Web push (ChatPush on the server, push-sw.js on the device). On an
+  // iPhone this only works from the home-screen app, so Safari gets a hint
+  // instead. A subscription is re-sent on every load, which also repairs
+  // one the server dropped.
+
+  chatPushInit() {
+    const c = this._chat;
+    const cfg = this.chatBoot().push;
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    c.push = { state: 'unsupported', ios, standalone, sub: null, reg: null };
+    if (!cfg || !cfg.publicKey || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      if (ios && !standalone) c.push.state = 'install';
+      return;
+    }
+    c.push.state = Notification.permission === 'denied' ? 'denied' : 'off';
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'cc-open' || !e.data.url) return;
+      try { history.pushState(null, '', new URL(e.data.url).pathname); this.applyUrl(); } catch (x) {}
+    });
+    navigator.serviceWorker.register(cfg.sw).then(reg => {
+      c.push.reg = reg;
+      return reg.pushManager.getSubscription();
+    }).then(sub => {
+      if (sub && this.chatPushKeyMatches(sub, cfg.publicKey)) {
+        c.push.sub = sub; c.push.state = 'on';
+        this.api('/chat/push', { method: 'POST', body: sub.toJSON() }).catch(() => {});
+      } else if (sub) {
+        sub.unsubscribe().catch(() => {}); // made with an older server key
+      }
+      this.setState({});
+    }).catch(() => {});
+  },
+
+  chatPushKeyMatches(sub, key) {
+    try {
+      const have = new Uint8Array(sub.options.applicationServerKey || []);
+      const want = this.chatB64ToBytes(key);
+      return have.length === 0 || (have.length === want.length && have.every((b, i) => b === want[i]));
+    } catch (x) { return true; }
+  },
+
+  chatB64ToBytes(b64) {
+    const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(s, ch => ch.charCodeAt(0));
+  },
+
+  // The bell in the inbox's top bar.
+  chatPushButton(e) {
+    const c = this._chat;
+    const p = c && c.push;
+    if (!p) return;
+    if (p.state === 'install') {
+      this.toast('To get notifications on this iPhone, tap Share, then Add to Home Screen, and open the app from there.', { kind: 'info' });
+      return;
+    }
+    if (p.state === 'denied') {
+      this.toast('Notifications are blocked for this site. Allow them in your browser or iOS Settings, then try again.', { kind: 'info' });
+      return;
+    }
+    if (p.state === 'on') {
+      this.openCtxMenu(e, [
+        { label: 'Send a test notification', act: () => this.api('/chat/push/test', { method: 'POST' }).then(r => this.toast(r && r.sent ? 'Test sent.' : 'No device took the test. Try turning notifications off and on.', { kind: r && r.sent ? 'success' : 'info' })).catch(() => this.toast('Could not send a test.', { kind: 'error' })) },
+        { label: 'Turn off on this device', act: () => this.chatPushOff() }
+      ]);
+      return;
+    }
+    this.chatPushOn();
+  },
+
+  chatPushOn() {
+    const c = this._chat;
+    const p = c.push;
+    const cfg = this.chatBoot().push;
+    if (!p.reg || p.state === 'busy') return;
+    p.state = 'busy'; this.setState({});
+    // requestPermission must run straight from the tap (iOS).
+    Notification.requestPermission().then(perm => {
+      if (perm !== 'granted') throw new Error(perm === 'denied' ? 'denied' : 'dismissed');
+      return p.reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.chatB64ToBytes(cfg.publicKey) });
+    }).then(sub => {
+      p.sub = sub;
+      return this.api('/chat/push', { method: 'POST', body: sub.toJSON() });
+    }).then(r => {
+      if (!r || r.code) throw new Error((r && r.message) || 'save');
+      p.state = 'on'; this.setState({});
+      return this.api('/chat/push/test', { method: 'POST' });
+    }).then(() => this.toast('Notifications are on for this device.', { kind: 'success' }))
+      .catch(err => {
+        p.state = err && err.message === 'denied' ? 'denied' : (p.sub ? 'on' : 'off');
+        this.setState({});
+        if (err && err.message !== 'dismissed') this.toast(err.message === 'denied' ? 'Notifications were blocked.' : 'Could not turn on notifications.', { kind: 'error' });
+      });
+  },
+
+  // Also called before logging out: an explicit log out stops this
+  // device's notifications; an expired session does not.
+  chatPushOff() {
+    const c = this._chat;
+    const p = c && c.push;
+    if (!p || !p.sub) return Promise.resolve();
+    const sub = p.sub;
+    p.sub = null; p.state = 'off'; this.setState({});
+    return Promise.all([
+      this.api('/chat/push', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {}),
+      sub.unsubscribe().catch(() => {})
+    ]).then(() => this.chatAppBadge(0));
+  },
+
+  chatAppBadge(n) {
+    if (!this.chatBoot().operator || !navigator.setAppBadge) return;
+    (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  },
+
+  // ── focus frames (operators) ──────────────────────────────────────────
+  // The relay reports operators who have the inbox on screen and in use
+  // (visible tab, input in the last 5 minutes), and their phones stay quiet.
+
+  chatFocusInit() {
+    const c = this._chat;
+    c.lastInput = Date.now();
+    const touch = () => { const idle = Date.now() - c.lastInput > 60000; c.lastInput = Date.now(); if (idle) this.chatFocusTick(); };
+    ['pointerdown', 'keydown', 'wheel', 'touchstart', 'mousemove'].forEach(ev => window.addEventListener(ev, touch, { passive: true }));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) c.lastInput = Date.now(); this.chatFocusTick(); });
+    setInterval(() => this.chatFocusTick(), 30000);
+  },
+
+  chatFocusTick() {
+    const c = this._chat;
+    if (!c || !this.chatBoot().operator || !c.ws || c.ws.readyState !== 1) return;
+    const active = this.state.route === 'chat' && !document.hidden && Date.now() - (c.lastInput || 0) < 5 * 60 * 1000;
+    if (c.focusSent === active) return;
+    c.focusSent = active;
+    c.ws.send(JSON.stringify({ type: 'focus', active }));
   },
 
   // ── rendering helpers ─────────────────────────────────────────────────
@@ -445,7 +586,7 @@ Object.assign(Component.prototype, {
     const c = this._chat;
     const isOp = !!cb.operator;
     const off = {
-      showChat: false, chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
+      showChat: false, chatPushShow: false, chatPhoneView: 'list', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
       chatHistory: [], chatHasHistory: false, chatNoHistory: false
     };
     if (!c) return off;
@@ -499,11 +640,20 @@ Object.assign(Component.prototype, {
     const wView = s.chatWView || 'home';
     const first = (window.CC_BOOT && window.CC_BOOT.userFirstName) || '';
     const brand = (window.CC_BOOT && window.CC_BOOT.name) || 'Support';
+    // Route changes move the operator in or out of the inbox: tell the relay.
+    if (isOp && c.lastRoute !== s.route) { c.lastRoute = s.route; setTimeout(() => this.chatFocusTick(), 0); }
+    const push = (isOp && c.push) || { state: 'unsupported' };
+    const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || '';
 
     return {
       showChat: isOp && s.route === 'chat',
       chatExit: () => this.setState({ route: this._chatPrevRoute && this._chatPrevRoute !== 'chat' ? this._chatPrevRoute : 'home' }),
       chatLiveLabel: live, chatLiveFg: liveFg,
+      chatPushShow: push.state !== 'unsupported', chatPushLabel: pushLabel, chatPushIsOn: push.state === 'on', chatPushFg: push.state === 'on' ? 'var(--brand-ink)' : 'var(--ink)',
+      chatPushGo: e => this.chatPushButton(e),
+      // Phones show the list or the thread, not both.
+      chatPhoneView: (c.id || c.newDraft) ? 'thread' : 'list',
+      chatBack: () => this.chatOpen(0),
       chatQ: c.q, onChatQ: e => { c.q = e.target.value; clearTimeout(c.qTimer); c.qTimer = setTimeout(() => this.chatLoadList(), 300); this.setState({}); },
       chatFilters: filters, chatRows: rows,
       chatListLoading: c.loading && !c.list.length, chatEmpty: !c.loading && !c.list.length,

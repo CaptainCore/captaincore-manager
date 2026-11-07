@@ -38,6 +38,14 @@ Email (`app/ChatNotify.php`, DB v66):
 - **Settings:** `captaincore_chat_reply_domain` (mg.anchor.host) and `captaincore_chat_mailgun_signing_key`, or the `CAPTAINCORE_CHAT_REPLY_DOMAIN` / `CAPTAINCORE_CHAT_MAILGUN_SIGNING_KEY` constants. Without a reply domain the email only links to the chat.
 - **Customer link:** `/account/chat/<id>` opens the corner panel on that thread for customers.
 
+Phone notifications (`app/ChatPush.php`, `app/WebPush.php`, DB v67):
+- **How:** standard web push with no library. `WebPush` does RFC 8291 encryption (checked against the RFC's own test vector) and VAPID (ES256 JWT) on openssl. The VAPID key pair is generated into `captaincore_push_vapid` on first use (or `CAPTAINCORE_PUSH_VAPID_PRIVATE`); changing it invalidates every subscription.
+- **Device:** Router.php serves `/account/push-sw.js` (the service worker, `templates/core/push-sw.js`) and `/account/app.webmanifest` (start_url `/account/chat`); core.php adds the manifest, apple-touch-icon and home-screen meta tags. On iPhone, push works only from the home-screen app, so Safari gets an "Add to Home Screen" hint. Tapping a notification focuses the app (`cc-open` message → `applyUrl`) or opens the conversation. The SW sets the app badge to the waiting count.
+- **Inbox:** the bell in the top bar turns it on (permission, subscribe, `POST /chat/push`, then `POST /chat/push/test`), and when on offers "Send a test" / "Turn off on this device". Every load re-sends an existing subscription. Logging out (`logoutGo`) removes this device's subscription; an expired session does not.
+- **Who gets one:** each customer message (chat, new conversation, email reply) pushes to every operator's devices except operators the relay reports as watching: the inbox sends `focus` frames (inbox route, visible tab, input in the last 5 minutes) and the publish response lists them. Operator status is checked at send time. 404/410 deletes a subscription; 20 failures in a row too. Endpoints must be a known push service (Apple, FCM, Mozilla, Windows). `captaincore_chat_push_preview` = `name` hides the message text on the lock screen.
+- **Phone layout:** at ≤760px the inbox shows the list or the thread (`data-view` on `.ccc-body`) with a back button; inputs are 16px so iOS doesn't zoom.
+- Verified in real Chrome through FCM: turning it on delivers the test, a customer message while watching does not push, after leaving it does.
+
 Local relay: `~/Cove/App/directives/anchor.localhost` proxies `/chat-relay/*` to 127.0.0.1:8490. `wp captaincore chat relay --relay-url=https://anchor.localhost/chat-relay --publish-url=http://127.0.0.1:8490` prints the relay's config.json.
 
 Production relay: `chat.anchor.host` on its own droplet. Set it up with `wp captaincore chat relay --relay-url=https://chat.anchor.host`.

@@ -247,6 +247,7 @@ return array(
     'CaptainCore\\UpdateQueueCLI' => $baseDir . '/app/UpdateQueueCLI.php',
     'CaptainCore\\User' => $baseDir . '/app/User.php',
     'CaptainCore\\Users' => $baseDir . '/app/Users.php',
+    'CaptainCore\\WebPush' => $baseDir . '/app/WebPush.php',
     'CaptainCore\\WebRiskCheck' => $baseDir . '/app/WebRiskCheck.php',
     'CaptainCore\\WebRiskLogs' => $baseDir . '/app/WebRiskLogs.php',
     'Composer\\CaBundle\\CaBundle' => $vendorDir . '/composer/ca-bundle/src/CaBundle.php',
