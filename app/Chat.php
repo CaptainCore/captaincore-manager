@@ -323,7 +323,7 @@ class Chat {
 		}
 		$subject = trim( (string) ( $input['subject'] ?? '' ) );
 		if ( $subject === '' ) {
-			$subject = $body !== '' ? self::first_line( $body, 80 ) : ( count( $files ) === 1 ? 'Sent ' . sanitize_file_name( (string) $files[0]['name'] ) : 'Sent ' . count( $files ) . ' files' );
+			$subject = $body !== '' ? self::first_line( self::markdown_plain( $body ), 80 ) : ( count( $files ) === 1 ? 'Sent ' . sanitize_file_name( (string) $files[0]['name'] ) : 'Sent ' . count( $files ) . ' files' );
 		}
 		$subject = self::clean_line( $subject, self::MAX_SUBJECT );
 		if ( is_wp_error( $subject ) ) {
@@ -706,6 +706,91 @@ class Chat {
 			// [{key, by: [{id, name}]}] in the order each was first used.
 			'reactions'       => $reactions,
 		];
+	}
+
+	// ── markdown ────────────────────────────────────────────────────────
+
+	/**
+	 * Message text as email HTML: chat.js's chatText rules (basic markdown
+	 * on escaped text) with inline styles for mail clients.
+	 */
+	public static function markdown_html( $text ) {
+		$keep   = [];
+		$hold   = function ( $html ) use ( &$keep ) {
+			$keep[] = $html;
+			return "\x00" . ( count( $keep ) - 1 ) . "\x00";
+		};
+		$link   = fn( $href, $label ) => $hold( '<a href="' . $href . '" style="color:#1E4FA8;">' . $label . '</a>' );
+		$code   = 'font-family:SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:#F1F3F6;border-radius:4px;';
+		$inline = function ( $x ) use ( $hold, $link, $code ) {
+			$x = preg_replace_callback( '/`([^`\n]+)`/', fn( $m ) => $hold( '<code style="' . $code . 'padding:1px 5px;">' . $m[1] . '</code>' ), $x );
+			$x = preg_replace_callback( '/\[([^\]\n]+)\]\((https?:\/\/[^\s)<]+)\)/', fn( $m ) => $link( $m[2], $m[1] ), $x );
+			$x = preg_replace_callback( '/https?:\/\/[^\s<\x00]+[^\s<.,;:!?)\]\'"&\x00]/', fn( $m ) => $link( $m[0], $m[0] ), $x );
+			$x = preg_replace( '/\*\*(?=\S)([^*\n]*?\S)\*\*/', '<strong>$1</strong>', $x );
+			$x = preg_replace( '/~~(?=\S)([^~\n]*?\S)~~/', '<del>$1</del>', $x );
+			$x = preg_replace( '/(^|[^\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])/', '$1<em>$2</em>', $x );
+			return preg_replace( '/(^|[^\w])_(?=\S)([^_\n]*?\S)_(?!\w)/', '$1<em>$2</em>', $x );
+		};
+		$lines = explode( "\n", esc_html( str_replace( "\r\n", "\n", (string) $text ) ) );
+		$out   = [];
+		$para  = [];
+		$flush = function () use ( &$para, &$out, $inline ) {
+			if ( $para ) {
+				$out[] = '<p style="margin:0 0 8px;">' . implode( '<br>', array_map( $inline, $para ) ) . '</p>';
+				$para  = [];
+			}
+		};
+		$count = count( $lines );
+		for ( $i = 0; $i < $count; $i++ ) {
+			$line = $lines[ $i ];
+			if ( preg_match( '/^\s*```/', $line ) ) {
+				$flush();
+				$block = [];
+				for ( $i++; $i < $count && ! preg_match( '/^\s*```/', $lines[ $i ] ); $i++ ) {
+					$block[] = $lines[ $i ];
+				}
+				$out[] = '<pre style="' . $code . 'padding:10px 12px;white-space:pre-wrap;margin:0 0 8px;">' . implode( "\n", $block ) . '</pre>';
+				continue;
+			}
+			$matched = false;
+			foreach ( [
+				[ '/^\s*&gt;\s?/', '<blockquote style="margin:0 0 8px;padding-left:11px;border-left:3px solid #D5DAE1;color:#666D7A;">', '</blockquote>', 'quote' ],
+				[ '/^\s*[-*]\s+/', '<ul style="margin:0 0 8px;padding-left:22px;">', '</ul>', 'li' ],
+				[ '/^\s*\d+[.)]\s+/', '<ol style="margin:0 0 8px;padding-left:22px;">', '</ol>', 'li' ],
+			] as [ $re, $open, $close, $kind ] ) {
+				if ( ! preg_match( $re, $line ) ) {
+					continue;
+				}
+				$flush();
+				$items = [];
+				for ( ; $i < $count && preg_match( $re, $lines[ $i ] ); $i++ ) {
+					$items[] = $inline( preg_replace( $re, '', $lines[ $i ] ) );
+				}
+				$i--;
+				$out[]   = $open . ( $kind === 'li' ? '<li>' . implode( '</li><li>', $items ) . '</li>' : implode( '<br>', $items ) ) . $close;
+				$matched = true;
+				break;
+			}
+			if ( $matched ) {
+				continue;
+			}
+			if ( trim( $line ) === '' ) {
+				$flush();
+				continue;
+			}
+			$para[] = $line;
+		}
+		$flush();
+		return preg_replace_callback( '/\x00(\d+)\x00/', fn( $m ) => $keep[ (int) $m[1] ], implode( '', $out ) );
+	}
+
+	/** Text with the markdown marks taken out (subjects, previews). */
+	public static function markdown_plain( $text ) {
+		$text = preg_replace( '/\[([^\]\n]+)\]\((https?:[^)\s]+)\)/', '$1', (string) $text );
+		$text = preg_replace( '/^\s*(```.*|&gt;\s?|>\s?|[-*]\s+|\d+[.)]\s+)/m', '', $text );
+		$text = preg_replace( '/\*\*(?=\S)([^*\n]*?\S)\*\*|~~(?=\S)([^~\n]*?\S)~~|`([^`\n]+)`/', '$1$2$3', $text );
+		$text = preg_replace( '/(^|[^\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])|(^|[^\w])_(?=\S)([^_\n]*?\S)_(?!\w)/', '$1$3$2$4', $text );
+		return trim( $text );
 	}
 
 	// ── reactions ───────────────────────────────────────────────────────

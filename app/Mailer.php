@@ -180,7 +180,7 @@ class Mailer {
 
         $items = '';
         foreach ( $replies as $r ) {
-            $body     = nl2br( make_clickable( esc_html( (string) $r->body ) ) );
+            $body     = \CaptainCore\Chat::markdown_html( (string) $r->body );
             $author   = esc_html( (string) $r->author_name !== '' ? (string) $r->author_name : $site_name );
             $when     = esc_html( wp_date( 'M j, g:i a', strtotime( $r->created_at . ' UTC' ) ) );
             $attached = '';

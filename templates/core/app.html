@@ -254,6 +254,18 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-pf button{flex:none;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--ink-dim);cursor:pointer}
 .ccc-pf button:hover{background:var(--panel-2);color:var(--ink)}
 .ccc-pf-up{margin:-2px 0 8px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink)}
+/* Message markdown (chatText) */
+.ccc-mb p,.ccc-bb p{margin:0 0 .45em}.ccc-mb p:last-child,.ccc-bb p:last-child{margin-bottom:0}
+.ccc-mb ul,.ccc-mb ol,.ccc-bb ul,.ccc-bb ol{margin:.2em 0 .5em;padding-left:1.4em}.ccc-mb li,.ccc-bb li{margin:.1em 0}
+.ccc-mb code,.ccc-bb code{font:500 .88em var(--mono);padding:1px 5px;border-radius:5px;background:var(--panel-2)}
+.ccc-mb pre,.ccc-bb pre{margin:.3em 0 .5em;padding:9px 12px;border-radius:8px;background:var(--panel-2);overflow-x:auto;white-space:pre}
+.ccc-mb pre code,.ccc-bb pre code{padding:0;background:none;font-size:.85em}
+.ccc-mb blockquote,.ccc-bb blockquote{margin:.2em 0 .5em;padding:2px 0 2px 11px;border-left:3px solid var(--rule);color:var(--ink-dim)}
+.ccc-mb>:last-child,.ccc-bb>:last-child{margin-bottom:0}
+.ccc-bwrap{min-width:0}.ccc-bb{max-width:100%;box-sizing:border-box}.ccc-bb pre{max-width:100%}
+.ccc-them .ccc-bb code,.ccc-them .ccc-bb pre{background:var(--paper)}
+.ccc-me .ccc-bb code,.ccc-me .ccc-bb pre{background:rgba(255,255,255,.18)}
+.ccc-me .ccc-bb blockquote{border-left-color:rgba(255,255,255,.45);color:rgba(255,255,255,.85)}
 /* Reactions (Groddle's): pills under a message, a hover button, a picker */
 .ccc-reacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .ccc-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink);font:600 var(--fs-12) var(--sans);cursor:pointer;line-height:1}

@@ -589,10 +589,53 @@ Object.assign(Component.prototype, {
   chatEsc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); },
 
   // Escaped text with http(s) links and line breaks. Nothing else becomes markup.
+  // Message text as HTML: basic markdown on escaped text, so nothing a
+  // person types becomes markup except what these rules make. Blocks:
+  // ``` fences, > quotes, - / * and 1. lists, paragraphs with line breaks.
+  // Inline: `code`, [text](https://…), bare links, **bold**, *italic* or
+  // _italic_, ~~strike~~. Chat::markdown_html renders the same for email.
   chatText(t) {
-    return this.chatEsc(t)
-      .replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"&]/g, u => '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + '</a>')
-      .replace(/\n/g, '<br>');
+    const keep = [];
+    const hold = html => '\u0000' + (keep.push(html) - 1) + '\u0000';
+    const link = (href, text) => hold('<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + text + '</a>');
+    const inline = x => x
+      .replace(/`([^`\n]+)`/g, (m, code) => hold('<code>' + code + '</code>'))
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)<]+)\)/g, (m, text, href) => link(href, text))
+      .replace(/https?:\/\/[^\s<\u0000]+[^\s<.,;:!?)\]'"&\u0000]/g, u => link(u, u))
+      .replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g, '<strong>$1</strong>')
+      .replace(/~~(?=\S)([^~\n]*?\S)~~/g, '<del>$1</del>')
+      .replace(/(^|[^\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])/g, '$1<em>$2</em>')
+      .replace(/(^|[^\w])_(?=\S)([^_\n]*?\S)_(?!\w)/g, '$1<em>$2</em>');
+    const lines = this.chatEsc(t).split('\n');
+    const out = [];
+    let para = [];
+    const flush = () => { if (para.length) { out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^\s*```/.test(line)) {
+        flush();
+        const code = [];
+        for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) code.push(lines[i]);
+        out.push('<pre><code>' + code.join('\n') + '</code></pre>');
+        continue;
+      }
+      const block = (re, wrap, item) => {
+        if (!re.test(line)) return false;
+        flush();
+        const items = [];
+        for (; i < lines.length && re.test(lines[i]); i++) items.push(inline(lines[i].replace(re, '')));
+        i--;
+        out.push(wrap[0] + items.map(item).join('') + wrap[1]);
+        return true;
+      };
+      if (block(/^\s*&gt;\s?/, ['<blockquote>', '</blockquote>'], (x, n) => (n ? '<br>' : '') + x)) continue;
+      if (block(/^\s*[-*]\s+/, ['<ul>', '</ul>'], x => '<li>' + x + '</li>')) continue;
+      if (block(/^\s*\d+[.)]\s+/, ['<ol>', '</ol>'], x => '<li>' + x + '</li>')) continue;
+      if (!line.trim()) { flush(); continue; }
+      para.push(line);
+    }
+    flush();
+    return out.join('').replace(/\u0000(\d+)\u0000/g, (m, n) => keep[n]);
   },
 
   chatInitials(name) {
@@ -913,6 +956,8 @@ Object.assign(Component.prototype, {
       : x.waiting_since && isOp ? { label: 'Waiting ' + this.chatAgo(x.waiting_since), bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }
       : { label: 'Open', bg: 'var(--ok-soft)', fg: 'color-mix(in srgb,var(--ok) 75%,var(--ink))' };
 
+    // List previews drop the markdown marks.
+    const plain = t => String(t || '').replace(/```/g, '').replace(/\*\*|~~|`/g, '').replace(/\[([^\]\n]+)\]\((https?:[^)\s]+)\)/g, '$1');
     const rowTyping = id => { const t = c.typing[id]; return t && t.until > Date.now() ? (t.text ? '✎ ' + t.text.slice(-120) : 'Typing…') : ''; };
     const rows = c.list.map(x => {
       const on = x.id === c.id;
@@ -921,7 +966,7 @@ Object.assign(Component.prototype, {
       if (isOp && x.guest) chips.push({ label: 'Guest', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       if (isOp && x.site_id) chips.push({ label: 'Site #' + x.site_id, bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       return {
-        key: 'c' + x.id, name, subject: isOp ? x.subject : (x.preview || ''), preview: isOp ? (rowTyping(x.id) || x.preview || '') : '', ago: this.chatAgo(x.last_message_at),
+        key: 'c' + x.id, name, subject: isOp ? x.subject : plain(x.preview), preview: isOp ? (rowTyping(x.id) || plain(x.preview)) : '', ago: this.chatAgo(x.last_message_at),
         initials: this.chatInitials(isOp ? name : 'Support'), avBg: this.chatColor(isOp ? name : 'Support'),
         chips, unread: String(x.unread || 0), hasUnread: (x.unread || 0) > 0, bold: (x.unread || 0) > 0 ? 700 : 600,
         bg: on ? 'var(--paper)' : 'transparent', shadow: on ? 'var(--shadow-sm)' : 'none', outline: on ? '1px solid var(--rule)' : '0',
@@ -1036,7 +1081,7 @@ Object.assign(Component.prototype, {
       chatUploadLabel: 'Uploading ' + (c.files.length === 1 ? '1 file' : c.files.length + ' files') + '…',
       chatBoxBg: note ? 'var(--ccc-note)' : 'var(--panel)', chatBoxRule: note ? 'var(--ccc-note-rule)' : 'var(--rule)',
       chatPlaceholder: note ? 'Write an internal note. Only staff can see it.' : isOp ? 'Reply to ' + custFirst : c.id ? 'Write a reply…' : 'How can we help?',
-      chatHint: note ? 'Internal notes are never shown to the customer.' : isOp ? 'Enter sends, Shift+Enter for a new line.' + (conv && conv.guest ? ' This contact has no Manager login, so they won’t see replies here.' : '') : '',
+      chatHint: note ? 'Internal notes are never shown to the customer. **bold**, _italic_, `code` and - lists work.' : isOp ? 'Enter sends, Shift+Enter for a new line. **bold**, _italic_, `code` and - lists work.' + (conv && conv.guest ? ' This contact has no Manager login, so they won’t see replies here.' : '') : '',
       chatTypingShow: !!ty,
       // Operator sidebar
       chatCustName: conv ? (conv.customer_name || 'Guest') : '', chatCustEmail: conv ? (conv.customer_email || '') : '',
