@@ -180,6 +180,7 @@ Object.assign(Component.prototype, {
       c.scrollPin = true;
       this._chatClear = true;
       this.chatClearFiles();
+      clearTimeout(c.draftTimer); c.draftText = c.draftSent = '';
       this.setState({ chatSending: false, chatBody: '', chatId: String(c.id) });
       this.chatMarkRead();
     }).catch(e => {
@@ -356,9 +357,13 @@ Object.assign(Component.prototype, {
         const conv = c.list.find(x => x.id === ev.conversation_id) || (c.conv && c.conv.conversation.id === ev.conversation_id ? c.conv.conversation : null);
         if (!conv || conv.customer_user_id !== u.id) return;
       }
-      c.typing[ev.conversation_id] = { name: u.name || 'Someone', until: Date.now() + 4000 };
+      // A customer's draft preview carries text ('' once they clear it).
+      const hasText = typeof ev.text === 'string';
+      if (hasText && !ev.text.trim()) delete c.typing[ev.conversation_id];
+      else c.typing[ev.conversation_id] = { name: u.name || 'Someone', until: Date.now() + (hasText ? 8000 : 4000), text: hasText ? ev.text : '' };
+      if (c.conv && c.conv.conversation.id === ev.conversation_id && c.nearBottom) c.scrollPin = true;
       clearTimeout(c.typingTimer);
-      c.typingTimer = setTimeout(() => this.setState({}), 4100);
+      c.typingTimer = setTimeout(() => this.setState({}), (hasText ? 8000 : 4000) + 100);
     } else if (ev.type === 'read') {
       if (c.conv && c.conv.conversation.id === ev.conversation_id)
         c.conv.customer_last_read_message_id = Math.max(c.conv.customer_last_read_message_id || 0, ev.message_id || 0);
@@ -412,10 +417,26 @@ Object.assign(Component.prototype, {
     if (viewing) setTimeout(() => this.chatMarkRead(), 0);
   },
 
-  chatTyping() {
+  chatTyping(text) {
     const c = this._chat;
     const cb = this.chatBoot();
-    if (!c || !c.ws || c.ws.readyState !== 1 || !c.id || Date.now() - c.lastTyped < 2000) return;
+    if (!c || !c.ws || c.ws.readyState !== 1 || !c.id) return;
+    // Customers send their draft so far, which operators see as a preview
+    // (the relay passes a customer's text to operators only). At most one
+    // frame per 600ms, the last one trailing so the final text arrives.
+    if (!cb.operator) {
+      c.draftText = String(text || '').slice(-1000);
+      clearTimeout(c.draftTimer);
+      const send = () => {
+        if (!c.ws || c.ws.readyState !== 1 || !c.id || c.draftText === c.draftSent) return;
+        c.draftSent = c.draftText; c.draftAt = Date.now();
+        c.ws.send(JSON.stringify({ type: 'typing', conversation_id: c.id, text: c.draftText }));
+      };
+      const wait = 600 - (Date.now() - (c.draftAt || 0));
+      if (wait <= 0) send(); else c.draftTimer = setTimeout(send, wait);
+      return;
+    }
+    if (Date.now() - c.lastTyped < 2000) return;
     c.lastTyped = Date.now();
     const frame = { type: 'typing', conversation_id: c.id };
     // Operators name the customer. A note in progress goes to operators only.
@@ -664,7 +685,12 @@ Object.assign(Component.prototype, {
       if (lastOp && !lastOp.imported && (c.conv.customer_last_read_message_id || 0) >= lastOp.id) out += '<div class="ccc-seen">Seen by ' + esc(String(conv.customer_name || 'the customer').split(' ')[0]) + '</div>';
     }
     const ty = c.typing[conv.id];
-    if (ty && ty.until > Date.now()) out += '<div class="ccc-typing"><i></i><i></i><i></i> ' + esc(ty.name) + ' is typing</div>';
+    if (ty && ty.until > Date.now() && ty.text && cb.operator) {
+      // The customer's draft as they write it (operators only).
+      out += '<div class="ccc-msg ccc-draft"><span class="ccc-av" style="background:' + this.chatColor(ty.name) + '">' + esc(this.chatInitials(ty.name)) + '</span><div class="ccc-mbody">' +
+        '<div class="ccc-mh"><b>' + esc(ty.name) + '</b><span class="ccc-typing ccc-typing-in"><i></i><i></i><i></i> typing</span></div>' +
+        '<div class="ccc-mb">' + this.chatText(ty.text) + '</div></div></div>';
+    } else if (ty && ty.until > Date.now()) out += '<div class="ccc-typing"><i></i><i></i><i></i> ' + esc(ty.name) + ' is typing</div>';
     if (!msgs.length) out += '<div class="ccc-empty">No messages yet.</div>';
     return out;
   },
@@ -795,6 +821,7 @@ Object.assign(Component.prototype, {
       : x.waiting_since && isOp ? { label: 'Waiting ' + this.chatAgo(x.waiting_since), bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }
       : { label: 'Open', bg: 'var(--ok-soft)', fg: 'color-mix(in srgb,var(--ok) 75%,var(--ink))' };
 
+    const rowTyping = id => { const t = c.typing[id]; return t && t.until > Date.now() ? (t.text ? '✎ ' + t.text.slice(-120) : 'Typing…') : ''; };
     const rows = c.list.map(x => {
       const on = x.id === c.id;
       const name = isOp ? (x.customer_name || x.customer_email || 'Guest') : x.subject;
@@ -802,7 +829,7 @@ Object.assign(Component.prototype, {
       if (isOp && x.guest) chips.push({ label: 'Guest', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       if (isOp && x.site_id) chips.push({ label: 'Site #' + x.site_id, bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       return {
-        key: 'c' + x.id, name, subject: isOp ? x.subject : (x.preview || ''), preview: isOp ? (x.preview || '') : '', ago: this.chatAgo(x.last_message_at),
+        key: 'c' + x.id, name, subject: isOp ? x.subject : (x.preview || ''), preview: isOp ? (rowTyping(x.id) || x.preview || '') : '', ago: this.chatAgo(x.last_message_at),
         initials: this.chatInitials(isOp ? name : 'Support'), avBg: this.chatColor(isOp ? name : 'Support'),
         chips, unread: String(x.unread || 0), hasUnread: (x.unread || 0) > 0, bold: (x.unread || 0) > 0 ? 700 : 600,
         bg: on ? 'var(--paper)' : 'transparent', shadow: on ? 'var(--shadow-sm)' : 'none', outline: on ? '1px solid var(--rule)' : '0',
@@ -901,7 +928,7 @@ Object.assign(Component.prototype, {
         fg: (s.chatMode || 'reply') === v ? (v === 'note' ? 'color-mix(in srgb,var(--warn) 80%,var(--ink))' : 'var(--ink)') : 'var(--ink-dim)'
       })) : [],
       chatBody: s.chatBody || '',
-      onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(); },
+      onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(e.target.value); },
       chatKey: e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); } },
       chatSendGo: () => this.chatSend(),
       chatSendOpacity: ((s.chatBody || '').trim() || c.files.length) && !s.chatSending ? 1 : 0.45,
