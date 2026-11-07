@@ -244,7 +244,6 @@ return array(
     'CaptainCore\\Snapshots' => $baseDir . '/app/Snapshots.php',
     'CaptainCore\\SpamSignals' => $baseDir . '/app/SpamSignals.php',
     'CaptainCore\\SpamSignalsCLI' => $baseDir . '/app/SpamSignalsCLI.php',
-    'CaptainCore\\SpamWords' => $baseDir . '/app/SpamWords.php',
     'CaptainCore\\TopPluginsCLI' => $baseDir . '/app/TopPluginsCLI.php',
     'CaptainCore\\TrustedLogins' => $baseDir . '/app/TrustedLogins.php',
     'CaptainCore\\UpdateQueueCLI' => $baseDir . '/app/UpdateQueueCLI.php',

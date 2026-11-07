@@ -370,7 +370,6 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Snapshots' => __DIR__ . '/../..' . '/app/Snapshots.php',
         'CaptainCore\\SpamSignals' => __DIR__ . '/../..' . '/app/SpamSignals.php',
         'CaptainCore\\SpamSignalsCLI' => __DIR__ . '/../..' . '/app/SpamSignalsCLI.php',
-        'CaptainCore\\SpamWords' => __DIR__ . '/../..' . '/app/SpamWords.php',
         'CaptainCore\\TopPluginsCLI' => __DIR__ . '/../..' . '/app/TopPluginsCLI.php',
         'CaptainCore\\TrustedLogins' => __DIR__ . '/../..' . '/app/TrustedLogins.php',
         'CaptainCore\\UpdateQueueCLI' => __DIR__ . '/../..' . '/app/UpdateQueueCLI.php',

@@ -45,13 +45,10 @@ class SpamSignalsCLI {
 
 		if ( isset( $assoc_args['prune'] ) ) {
 			\WP_CLI::log( 'Pruned ' . SpamSignals::prune( $days ) . " signals not seen in $days days." );
-			\WP_CLI::log( 'Pruned ' . SpamWords::prune( $days ) . ' word counts (not seen in ' . $days . ' days, or one-off tokens older than 30).' );
 		}
 
 		$summary = SpamSignals::summary( $days );
 		\WP_CLI::log( "Sites reporting in the last $days days: {$summary['sites']}" );
-		$words = SpamWords::summary();
-		\WP_CLI::log( "Word counts: {$words['days']} site-days, {$words['spam_docs']} spam and {$words['ham_docs']} kept messages, {$words['tokens']} tokens ({$words['usable']} on 3+ sites and 5+ messages)" );
 		if ( $summary['by_kind'] ) {
 			\WP_CLI\Utils\format_items( 'table', array_map( 'get_object_vars', $summary['by_kind'] ), [ 'kind', 'verdict', 'signals', 'events' ] );
 		}
