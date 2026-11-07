@@ -170,12 +170,17 @@ class Chat {
 				$where[] = '(c.contact_name LIKE %s OR c.contact_email LIKE %s OR c.subject LIKE %s)';
 				array_push( $args, $like, $like, $like );
 			} else {
-				$where[] = 'c.subject LIKE %s';
-				$args[]  = $like;
+				// Customers search their own history: subjects and what was said.
+				$where[] = "(c.subject LIKE %s OR EXISTS (SELECT 1 FROM $m ms WHERE ms.chat_conversation_id = c.chat_conversation_id
+					AND ms.kind = 'comment' AND ms.internal = 0 AND ms.body LIKE %s))";
+				array_push( $args, $like, $like );
 			}
 		}
 		$status = (string) ( $q['status'] ?? '' );
-		if ( $status === 'waiting' ) {
+		if ( ! $operator && $status === 'open' ) {
+			// A snoozed conversation is still open as far as the customer knows.
+			$where[] = "c.status IN ('open', 'snoozed')";
+		} elseif ( $status === 'waiting' ) {
 			$where[] = "c.status = 'open' AND c.waiting_since IS NOT NULL";
 		} elseif ( in_array( $status, self::STATUSES, true ) ) {
 			$where[] = 'c.status = %s';

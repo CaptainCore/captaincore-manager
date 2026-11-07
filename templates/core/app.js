@@ -3265,6 +3265,7 @@ class Component extends DCLogic {
   navItem(id, label, icon) {
     const active = this.state.route === id;
     const count = id === 'chat' ? (this._chat && this._chat.counts ? this._chat.counts.waiting : 0)
+      : id === 'support' ? (this._chat ? this._chat.list.reduce((n, x) => n + (x.unread || 0), 0) : 0)
       : this._hydrated ? (id === 'sites' ? this.FLEET.length : id === 'domains' ? this.DOMAINS.length : 0) : 0;
     return { id, label, icon: this.ICONS[icon || id],
       fg: active ? 'var(--brand-ink)' : 'var(--ink-dim)',
@@ -3335,6 +3336,9 @@ class Component extends DCLogic {
     const primary = isOp
       ? [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing')]
       : [this.navItem('home', 'Home'), this.navItem('sites', 'Sites'), this.navItem('domains', 'Domains'), this.navItem('accounts', 'Accounts'), this.navItem('billing', 'Billing'), this.navItem('reports', 'Reports')];
+    // Customers with chat get their conversation history as a page.
+    const supportOn = !isOp && window.CC_BOOT && window.CC_BOOT.chat && window.CC_BOOT.chat.enabled && !window.CC_BOOT.chat.operator;
+    if (supportOn) primary.push(this.navItem('support', 'Support', 'chat'));
     const chatNav = isOp && window.CC_BOOT && window.CC_BOOT.chat && window.CC_BOOT.chat.enabled ? [this.navItem('chat', 'Chat')] : [];
     const operate = [...chatNav, this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
 
@@ -3352,7 +3356,9 @@ class Component extends DCLogic {
       { label: 'Domains', desc: 'DNS and email forwarding', meta: this._hydrated ? String(this.DOMAINS.length) : (booted ? '…' : '6'), icon: this.ICONS.domains, act: 'domains', acc: 'domains' },
       { label: 'Billing', desc: 'Invoices and payment methods', meta: booted ? '' : '1 due', icon: this.ICONS.billing, act: 'billing', acc: 'billing' },
       { label: 'Reports', desc: 'Monthly maintenance summaries', meta: booted ? '' : 'June ready', icon: this.ICONS.reports, act: 'reports', acc: 'reports' },
-      { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts', acc: 'terminal' }
+      supportOn
+        ? { label: 'Get help', desc: 'Message us or look back at past conversations', meta: '', icon: this.ICONS.support, act: 'support', acc: 'terminal' }
+        : { label: 'Get help', desc: 'Invite a teammate or contact us', meta: '', icon: this.ICONS.support, act: 'accounts', acc: 'terminal' }
     ]).map(l => ({ ...l,
       // Per-section accent hue on the icon chip (falls back to brand blue).
       chipBg: l.acc ? 'color-mix(in srgb,var(--acc-' + l.acc + ') 13%,transparent)' : 'var(--brand-soft)',
@@ -3503,7 +3509,7 @@ class Component extends DCLogic {
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: isOp ? [this.navItem('users', 'Users', 'accounts'), this.navItem('settings', 'Settings')] : [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', chat: 'Chat', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      screenTitle: ({ home: 'Home', chat: 'Chat', support: 'Support', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
@@ -3551,9 +3557,9 @@ class Component extends DCLogic {
       showHome: s.route === 'home', showSites: s.route === 'sites', showSite: s.route === 'site',
       showDomains: s.route === 'domains', showDomain: s.route === 'domain',
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
-      showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports',
+      showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports', showSupport: s.route === 'support' && !!supportOn,
       showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'chat', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
+      showStub: !['home', 'chat', 'support', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',

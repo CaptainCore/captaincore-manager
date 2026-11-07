@@ -1,6 +1,7 @@
 // CaptainCore v3 — CaptainCore Chat (mixin).
 // Operators get a full-screen inbox at /account/chat; customers with chat
-// enabled get a launcher + panel in the corner (in place of Intercom).
+// enabled get a launcher + panel in the corner (in place of Intercom) and
+// their whole history as a page at /account/support.
 // Storage and every rule live in the Manager (app/Chat.php, REST under
 // /chat/*). Live delivery comes from the captaincore-chat relay: a
 // websocket authenticated with a short-lived token from GET /chat/token.
@@ -50,7 +51,22 @@ Object.assign(Component.prototype, {
       c.more = rows.length === 40;
       if (r && r.counts) { c.counts = r.counts; this.chatAppBadge(r.counts.waiting); }
       this.setState({});
+      this.chatSupportPick();
     }).catch(() => { if (seq === c.listSeq) { c.loading = false; this.setState({}); } });
+  },
+
+  // Customer Support page: on a wide screen something is always open, so
+  // arriving there shows the newest conversation (phones start on the list).
+  chatSupportPick() {
+    const c = this._chat;
+    if (!c || this.state.route !== 'support' || c.id || c.newDraft || c.loading || window.innerWidth <= 760) return;
+    if (c.list.length) this.chatOpen(c.list[0].id);
+  },
+
+  // Whether a customer can see the open thread right now.
+  chatCustomerViewing() {
+    const s = this.state;
+    return s.route === 'support' || (!!s.chatWidgetOpen && s.chatWView === 'thread');
   },
 
   chatOpen(id) {
@@ -117,7 +133,7 @@ Object.assign(Component.prototype, {
     const c = this._chat;
     if (!c || !c.conv || document.hidden) return;
     const cb = this.chatBoot();
-    if (cb.operator ? this.state.route !== 'chat' : !this.state.chatWidgetOpen) return;
+    if (cb.operator ? this.state.route !== 'chat' : !this.chatCustomerViewing()) return;
     const msgs = c.conv.messages;
     const last = msgs.length ? msgs[msgs.length - 1].id : 0;
     const cid = c.conv.conversation.id;
@@ -153,7 +169,7 @@ Object.assign(Component.prototype, {
       }
       c.scrollPin = true;
       this._chatClear = true;
-      this.setState({ chatSending: false, chatBody: '' });
+      this.setState({ chatSending: false, chatBody: '', chatId: String(c.id) });
       this.chatMarkRead();
     }).catch(e => {
       this.setState({ chatSending: false });
@@ -202,8 +218,9 @@ Object.assign(Component.prototype, {
         try { m = JSON.parse(e.data); } catch (x) { return; }
         if (m.type === 'ready') {
           c.wsState = 'live'; c.retry = 0; c.online = !!m.operators_online;
-          // Missed events while the socket was down: refetch what's on screen.
-          if (c.everLive) { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }
+          // Events published before this socket was ready (down, or still
+          // connecting after the first load) were missed: refetch what's on screen.
+          this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true);
           c.everLive = true;
           c.focusSent = null;
           this.chatFocusTick();
@@ -280,6 +297,7 @@ Object.assign(Component.prototype, {
     if (c.q.trim()) return false;
     if (c.filter === 'all') return true;
     if (c.filter === 'waiting') return conv.status === 'open' && !!conv.waiting_since;
+    if (c.filter === 'open' && !this.chatBoot().operator) return conv.status !== 'closed';
     return conv.status === c.filter;
   },
 
@@ -300,7 +318,7 @@ Object.assign(Component.prototype, {
       if (row._lastSeen !== m.id) {
         row._lastSeen = m.id;
         row.preview = String(m.body || '').slice(0, 200);
-        const onScreen = viewing && !document.hidden && (cb.operator ? this.state.route === 'chat' : this.state.chatWidgetOpen);
+        const onScreen = viewing && !document.hidden && (cb.operator ? this.state.route === 'chat' : this.chatCustomerViewing());
         if (!mine && !onScreen) row.unread = (row.unread || 0) + 1;
       }
     }
@@ -505,8 +523,8 @@ Object.assign(Component.prototype, {
     }).join('') + '</div>';
   },
 
-  // The thread as HTML. Operators get flat rows (notes and events inline);
-  // customers get bubbles.
+  // The thread as HTML. Operators and the customer Support page get flat
+  // rows (notes and events inline); the corner panel gets bubbles.
   chatThreadHtml() {
     const c = this._chat;
     const cb = this.chatBoot();
@@ -518,6 +536,7 @@ Object.assign(Component.prototype, {
     const esc = t => this.chatEsc(t);
     // Email replies (ChatNotify): operators can check what the cleanup cut.
     const orig = m => (cb.operator && m.via === 'email' && m.original) ? '<details class="ccc-orig"><summary>Original email</summary><pre>' + esc(m.original) + '</pre></details>' : '';
+    const flat = cb.operator || this.state.route === 'support';
     let out = '';
     let lastDay = '';
     let prev = null;
@@ -536,7 +555,7 @@ Object.assign(Component.prototype, {
         prev = null;
         return;
       }
-      if (cb.operator) {
+      if (flat) {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + '</span><div class="ccc-mbody">' +
@@ -601,7 +620,7 @@ Object.assign(Component.prototype, {
     const isOp = !!cb.operator;
     const off = {
       showChat: false, chatPushShow: false, chatPhoneView: 'list', chatAccessGroups: [], chatSideOpen: '0', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
-      chatHistory: [], chatHasHistory: false, chatNoHistory: false
+      chatHistory: [], chatHasHistory: false, chatNoHistory: false, supFilters: []
     };
     if (!c) return off;
     if (s.route !== 'chat') this._chatPrevRoute = s.route;
@@ -610,7 +629,7 @@ Object.assign(Component.prototype, {
     const liveFg = c.wsState === 'live' ? 'var(--ok)' : cb.live ? 'var(--warn)' : 'var(--ink-dim)';
 
     const statusChip = x => x.status === 'closed' ? { label: isOp ? 'Closed' : 'Resolved', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' }
-      : x.status === 'snoozed' ? { label: 'Snoozed', bg: 'var(--warn-soft)', fg: 'color-mix(in srgb,var(--warn) 75%,var(--ink))' }
+      : x.status === 'snoozed' && isOp ? { label: 'Snoozed', bg: 'var(--warn-soft)', fg: 'color-mix(in srgb,var(--warn) 75%,var(--ink))' }
       : x.waiting_since && isOp ? { label: 'Waiting ' + this.chatAgo(x.waiting_since), bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }
       : { label: 'Open', bg: 'var(--ok-soft)', fg: 'color-mix(in srgb,var(--ok) 75%,var(--ink))' };
 
@@ -626,6 +645,7 @@ Object.assign(Component.prototype, {
         chips, unread: String(x.unread || 0), hasUnread: (x.unread || 0) > 0, bold: (x.unread || 0) > 0 ? 700 : 600,
         bg: on ? 'var(--paper)' : 'transparent', shadow: on ? 'var(--shadow-sm)' : 'none', outline: on ? '1px solid var(--rule)' : '0',
         bar: on ? 'var(--brand)' : 'transparent',
+        letter: String(x.subject || '?').trim().charAt(0).toUpperCase() || '?', letterBg: this.chatColor(x.subject || String(x.id)),
         open: () => { this.chatOpen(x.id); if (!isOp) this.setState({ chatWView: 'thread' }); }
       };
     });
@@ -678,6 +698,12 @@ Object.assign(Component.prototype, {
     // Route changes move the operator in or out of the inbox: tell the relay.
     if (isOp && c.lastRoute !== s.route) { c.lastRoute = s.route; setTimeout(() => this.chatFocusTick(), 0); }
     const push = (isOp && c.push) || { state: 'unsupported' };
+    // Customer Support page: arriving there opens the newest conversation.
+    if (!isOp && c.lastCustRoute !== s.route) { c.lastCustRoute = s.route; if (s.route === 'support') setTimeout(() => { this.chatSupportPick(); this.chatMarkRead(); }, 0); }
+    const supMsgs = conv && c.conv ? c.conv.messages.filter(m => m.kind === 'comment') : [];
+    const supReplies = Math.max(0, supMsgs.length - 1);
+    const fullDate = ts => ts ? new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const supSite = conv && conv.site_id && !isOp ? (this.FLEET || []).find(x => String(x.id) === String(conv.site_id)) : null;
     const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || '';
 
     return {
@@ -730,8 +756,10 @@ Object.assign(Component.prototype, {
       chatHistory: hist.map(x => ({ subject: x.subject, meta: statusChip(x).label + ' · ' + this.chatAgo(x.last_message_at), go: () => this.chatOpen(x.id) })),
       chatHasHistory: hist.length > 0, chatNoHistory: !!conv && hist.length === 0,
       // Customer widget
-      chatWidgetShow: !isOp && !s.dockOpen,
-      chatWidgetOpen: !isOp && !!s.chatWidgetOpen,
+      chatWidgetShow: !isOp && !s.dockOpen && s.route !== 'support',
+      chatWidgetOpen: !isOp && !!s.chatWidgetOpen && s.route !== 'support',
+      // "View history": the Support page, on the conversation the panel had open.
+      chatWHistory: () => this.setState({ route: 'support', chatWidgetOpen: false, chatWView: 'home' }),
       chatToggleWidget: () => { const open = !s.chatWidgetOpen; this.setState({ chatWidgetOpen: open }); if (open) { this.chatLoadList(true); setTimeout(() => this.chatMarkRead(), 0); } },
       chatLauncherUnread: String(unreadTotal), chatLauncherHasUnread: unreadTotal > 0,
       chatWHome: wView === 'home', chatWThread: wView === 'thread',
@@ -745,7 +773,24 @@ Object.assign(Component.prototype, {
       chatWHasRows: rows.length > 0,
       chatWNewHint: c.newDraft && !c.id,
       chatWCanResolve: !!(conv && conv.status !== 'closed'),
-      chatWResolve: () => this.chatPatch({ status: 'closed' }, 'Marked as resolved')
+      chatWResolve: () => this.chatPatch({ status: 'closed' }, 'Marked as resolved'),
+      // Customer Support page
+      supFilters: [['all', 'All'], ['open', 'Open'], ['closed', 'Resolved']].map(([v, l]) => ({
+        label: l, bg: c.filter === v ? 'var(--paper)' : 'transparent', fg: c.filter === v ? 'var(--ink)' : 'var(--ink-dim)', shadow: c.filter === v ? 'var(--shadow-sm)' : 'none',
+        go: () => { if (c.filter !== v) { c.filter = v; this.chatLoadList(); } }
+      })),
+      supNew: () => { this.chatOpen(0); c.newDraft = true; this._chatFocus = true; this.setState({}); },
+      supNewDraft: !!(c.newDraft && !c.id), supComposer: !!conv || !!(c.newDraft && !c.id),
+      supPick: !c.id && !c.newDraft && (c.loading || c.list.length > 0 || !!c.q.trim() || c.filter !== 'all'),
+      supNone: !c.loading && !c.list.length && !c.q.trim() && c.filter === 'all' && !c.id && !c.newDraft,
+      supLetter: conv ? (String(conv.subject || '?').trim().charAt(0).toUpperCase() || '?') : '', supLetterBg: conv ? this.chatColor(conv.subject || String(conv.id)) : '',
+      supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? 'you' : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies'].join(' · ') : '',
+      supCanResolve: !!(conv && conv.status !== 'closed'),
+      supHint: conv && conv.status === 'closed' ? 'This conversation is resolved. Replying reopens it.' : 'Enter sends, Shift+Enter for a new line.' + (c.online ? '' : ' If you leave, we’ll reply by email.'),
+      supStarted: conv ? fullDate(conv.created_at) : '', supLast: conv ? fullDate(conv.last_message_at) : '',
+      supHasSite: !!supSite, supSiteName: supSite ? supSite.name : '', supOpenSite: () => { if (supSite) this.openSite(supSite.id); },
+      supOnlineLabel: c.online ? 'We’re online now' : 'Away right now', supOnlineSub: c.online ? 'Replies usually arrive here in minutes.' : 'Leave a message and we’ll reply here and by email.',
+      supTotal: c.list.length ? (c.list.length + (c.more ? '+' : '') + (c.list.length === 1 ? ' conversation' : ' conversations')) : ''
     };
   }
 
