@@ -264,6 +264,14 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccs-head{flex:none;display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))}
 .ccs-side{border-left:1px solid var(--rule);overflow-y:auto;background:var(--canvas)}
 .ccs-title{margin:0;min-width:0;font:600 17px/1.3 var(--sans);letter-spacing:-.01em;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ccs-siteopt{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 8px;margin:0 -8px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:var(--brand-ink)}
+.ccs-siteopt:hover{background:var(--paper)}
+.ccs-sitechip{display:flex;align-items:center;gap:8px;height:36px;padding:0 6px 0 11px;border:1px solid color-mix(in srgb,var(--brand) 35%,var(--rule));border-radius:9px;background:var(--brand-soft);color:var(--brand-ink);font:600 var(--fs-125) var(--sans)}
+.ccs-sitechip button{flex:none;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:inherit;cursor:pointer}
+.ccs-sitechip button:hover{background:color-mix(in srgb,var(--brand) 14%,transparent)}
+.ccs-sitepick-main{display:none;margin-top:20px;max-width:420px}
+.ccs-sitepick-main .ccs-siteopt:hover{background:var(--panel-2)}
+@media (max-width:1279px){.ccs-sitepick-main{display:block}}
 .ccs-dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 12px;font:400 var(--fs-125) var(--sans)}
 .ccs-dl dt{color:var(--ink-dim)}.ccs-dl dd{margin:0;text-align:right}
 @media (max-width:1279px){.ccs{grid-template-columns:300px minmax(0,1fr)}.ccs-side{display:none}}
@@ -3873,10 +3881,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <button onClick="{{ chatBack }}" class="ccc-back" title="All conversations">←</button>
                 <div style="flex:1;min-width:0">
                   <h2 style="margin:0;font:600 17px var(--sans);letter-spacing:-.01em">New message</h2>
-                  <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px">{{ chatWSub }}</div>
+                  <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px">{{ supNewSub }}</div>
                 </div>
               </div>
-              <div style="flex:1;padding:28px;font:400 var(--fs-14)/1.6 var(--sans);color:var(--ink-dim)">Tell us what's going on. If it's about a particular site, include its address.</div>
+              <div style="flex:1;overflow-y:auto;padding:28px">
+                <div style="font:400 var(--fs-14)/1.6 var(--sans);color:var(--ink-dim)">Tell us what's going on. If it's about one of your sites, pick it so we know where to look.</div>
+                <sc-if value="{{ supSitePickShow }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccs-sitepick-main">
+                    <div class="ccc-label">About a site <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></div>
+                <sc-if value="{{ supSitePicked }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccs-sitechip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><span class="ccc-trunc" style="flex:1;min-width:0">{{ supSitePickedName }}</span><button onClick="{{ supSiteClear }}" title="Remove">✕</button></div>
+                </sc-if>
+                <sc-if value="{{ supSiteUnpicked }}" hint-placeholder-val="{{ true }}">
+                  <div class="ccs-search" style="height:34px;margin-bottom:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                    <input value="{{ supSiteQ }}" onInput="{{ onSupSiteQ }}" placeholder="Find a site" style="border:none">
+                  </div>
+                  <sc-for list="{{ supSites }}" as="st" hint-placeholder-count="4">
+                    <div onClick="{{ st.go }}" class="ccs-siteopt"><span class="ccc-trunc" style="min-width:0">{{ st.name }}</span><span class="ccc-trunc ccc-accsub">{{ st.sub }}</span></div>
+                  </sc-for>
+                  <sc-if value="{{ supSitesNone }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">No sites match.</div></sc-if>
+                  <div class="ccc-accnone">{{ supSitesMore }}</div>
+                </sc-if>
+                  </div>
+                </sc-if>
+              </div>
             </sc-if>
             <sc-if value="{{ chatConvLoading }}" hint-placeholder-val="{{ false }}">
               <div style="padding:22px 28px"><div class="cc-skel" style="width:280px;height:24px"></div><div class="cc-skel" style="width:60%;height:60px;margin-top:20px"></div></div>
@@ -3914,6 +3943,25 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </sc-if>
           </main>
           <aside class="ccs-side">
+            <sc-if value="{{ supSitePickShow }}" hint-placeholder-val="{{ false }}">
+              <div class="ccc-sec">
+                <div class="ccc-label">About a site <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></div>
+                <sc-if value="{{ supSitePicked }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccs-sitechip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><span class="ccc-trunc" style="flex:1;min-width:0">{{ supSitePickedName }}</span><button onClick="{{ supSiteClear }}" title="Remove">✕</button></div>
+                </sc-if>
+                <sc-if value="{{ supSiteUnpicked }}" hint-placeholder-val="{{ true }}">
+                  <div class="ccs-search" style="height:34px;margin-bottom:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                    <input value="{{ supSiteQ }}" onInput="{{ onSupSiteQ }}" placeholder="Find a site" style="border:none">
+                  </div>
+                  <sc-for list="{{ supSites }}" as="st" hint-placeholder-count="4">
+                    <div onClick="{{ st.go }}" class="ccs-siteopt"><span class="ccc-trunc" style="min-width:0">{{ st.name }}</span><span class="ccc-trunc ccc-accsub">{{ st.sub }}</span></div>
+                  </sc-for>
+                  <sc-if value="{{ supSitesNone }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">No sites match.</div></sc-if>
+                  <div class="ccc-accnone">{{ supSitesMore }}</div>
+                </sc-if>
+              </div>
+            </sc-if>
             <div class="ccc-sec">
               <div class="ccc-label">Support team</div>
               <div style="display:flex;align-items:center;gap:8px;font:600 var(--fs-13) var(--sans)"><span style="width:8px;height:8px;border-radius:50%;background:{{ chatWOnlineBg }}"></span>{{ supOnlineLabel }}</div>

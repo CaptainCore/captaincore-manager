@@ -154,12 +154,12 @@ Object.assign(Component.prototype, {
     this.setState({ chatSending: true });
     const req = c.id
       ? this.api('/chat/conversations/' + c.id + '/messages', { method: 'POST', body: { body, kind: note ? 'note' : 'comment' } })
-      : this.api('/chat/conversations', { method: 'POST', body: { body } });
+      : this.api('/chat/conversations', { method: 'POST', body: Object.assign({ body }, c.newSite ? { site_id: parseInt(c.newSite, 10) } : {}) });
     req.then(r => {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not send');
       if (r.messages) {
         // A new conversation (customers).
-        c.id = r.conversation.id; c.newDraft = false;
+        c.id = r.conversation.id; c.newDraft = false; c.newSite = '';
         c.conv = { conversation: r.conversation, messages: r.messages };
         this.chatMergeConv(r.conversation, true);
         this.chatOnMessage(r.messages[0]);
@@ -770,6 +770,11 @@ Object.assign(Component.prototype, {
     const supMsgs = conv && c.conv ? c.conv.messages.filter(m => m.kind === 'comment') : [];
     const supReplies = Math.max(0, supMsgs.length - 1);
     const fullDate = ts => ts ? new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const newSite = !isOp && c.newSite ? (this.FLEET || []).find(x => x.id === c.newSite) : null;
+    const siteQ = String(c.siteQ || '').trim().toLowerCase();
+    const siteHits = isOp || !c.newDraft ? [] : (this.FLEET || []).filter(x => !siteQ || String(x.name).toLowerCase().includes(siteQ) || String(x.home_url || '').toLowerCase().includes(siteQ));
+    // The account beside each site only helps when the sites span accounts.
+    const siteManyAccounts = siteHits.length > 0 && new Set((this.FLEET || []).map(x => x.accountId)).size > 1;
     const supSite = conv && conv.site_id && !isOp ? (this.FLEET || []).find(x => String(x.id) === String(conv.site_id)) : null;
     const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || '';
 
@@ -847,7 +852,17 @@ Object.assign(Component.prototype, {
         label: l, bg: c.filter === v ? 'var(--paper)' : 'transparent', fg: c.filter === v ? 'var(--ink)' : 'var(--ink-dim)', shadow: c.filter === v ? 'var(--shadow-sm)' : 'none',
         go: () => { c.supFilter = v; if (c.filter !== v) { c.filter = v; this.chatLoadList(); } }
       })),
-      supNew: () => { this.chatOpen(0); c.newDraft = true; this._chatFocus = true; this.setState({}); },
+      supNew: () => { this.chatOpen(0); c.newDraft = true; c.newSite = ''; c.siteQ = ''; this._chatFocus = true; this.setState({}); },
+      // Optional "About a site" on a new message: the customer's own sites
+      // (the server checks it again). Eight at a time, search for the rest.
+      supSitePickShow: !!(c.newDraft && !c.id) && (this.FLEET || []).length > 0,
+      supSitePicked: !!newSite, supSitePickedName: newSite ? newSite.name : '', supSiteUnpicked: !newSite,
+      supSiteClear: () => { c.newSite = ''; this.setState({}); },
+      supSiteQ: c.siteQ || '', onSupSiteQ: e => { c.siteQ = e.target.value; this.setState({}); },
+      supSites: siteHits.slice(0, 8).map(x => ({ name: x.name, sub: siteManyAccounts ? (x.account || '') : '', go: () => { c.newSite = x.id; c.siteQ = ''; this._chatFocus = true; this.setState({}); } })),
+      supSitesMore: siteHits.length > 8 ? (siteHits.length - 8) + ' more. Type to narrow it down.' : '',
+      supSitesNone: siteHits.length === 0,
+      supNewSub: newSite ? 'About ' + newSite.name : (c.online ? 'We’re online now' : 'We’ll reply by email if you leave'),
       supNewDraft: !!(c.newDraft && !c.id), supComposer: !!conv || !!(c.newDraft && !c.id),
       supPick: !c.id && !c.newDraft && (c.loading || c.list.length > 0 || !!c.q.trim()),
       supNone: !c.loading && !c.list.length && !c.q.trim() && !c.id && !c.newDraft,
