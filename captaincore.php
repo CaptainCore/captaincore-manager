@@ -1847,13 +1847,20 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 
 		$stored   = CaptainCore\SpamSignals::record( (int) $site_id, (int) $environment_id, $signal->items );
-		$response = [ "response" => "Stored $stored spam signals for site $site_id environment $environment_id" ];
+		$words    = isset( $signal->words ) && is_object( $signal->words ) ? CaptainCore\SpamWords::record( (int) $site_id, (int) $environment_id, $signal->words ) : 0;
+		$response = [ "response" => "Stored $stored spam signals and $words word counts for site $site_id environment $environment_id" ];
 	}
 
 	// The fleet spam list for Breakwater. The CLI fetches it once per sweep and pushes it to every
 	// site running Breakwater whose copy is older. Hashes only; see CaptainCore\SpamSignals::export().
 	if ( $command === 'spam-reputation' ) {
 		$response = CaptainCore\SpamSignals::export();
+	}
+
+	// Breakwater's fleet word model, rebuilt at most twice a day. Hashes and probabilities only;
+	// see CaptainCore\SpamWords::model().
+	if ( $command === 'spam-words' ) {
+		$response = CaptainCore\SpamWords::model();
 	}
 
 	// Add capture

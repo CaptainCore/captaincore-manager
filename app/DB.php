@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 68;
+    const REQUIRED_VERSION = 69;
 
     private static function _table() {
         global $wpdb;
@@ -1514,6 +1514,38 @@ class DB {
         KEY hash (hash),
         KEY site_id (site_id),
         KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v69: Breakwater's fleet word filter. spam_words holds one row per token (a hashed word,
+        // word pair, link domain or sender domain; '=' marks single words): how many spam and kept
+        // messages across the fleet used it, and the first three sites that did (a token counts
+        // once three sites have used it). spam_word_days records each environment's day once, so a
+        // site syncing twice never counts a day twice; its sums are the message totals.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_spam_words` (
+            hash char(17) NOT NULL,
+            spam int(10) UNSIGNED NOT NULL DEFAULT 0,
+            ham int(10) UNSIGNED NOT NULL DEFAULT 0,
+            sites tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
+            site_ids varchar(64) NOT NULL DEFAULT '',
+            last_seen date NOT NULL,
+        PRIMARY KEY  (hash),
+        KEY last_seen (last_seen)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_spam_word_days` (
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            day date NOT NULL,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            spam int(10) UNSIGNED NOT NULL DEFAULT 0,
+            ham int(10) UNSIGNED NOT NULL DEFAULT 0,
+            tokens int(10) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (environment_id,day),
+        KEY day (day)
         ) $charset_collate;";
 
         dbDelta($sql);
