@@ -11066,6 +11066,15 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// What a chat customer can access (operator sidebar).
+	register_rest_route(
+		'captaincore/v1', '/chat/customers/(?P<id>[\d]+)/access', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::customer_access( (int) $r['id'] ); },
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	// Operators' phone notifications (ChatPush): this device's push
 	// subscription (POST adds, DELETE removes), GET lists devices and the
 	// VAPID public key, POST /test sends a test to the caller's devices.

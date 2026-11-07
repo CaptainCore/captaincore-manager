@@ -46,6 +46,8 @@ Phone notifications (`app/ChatPush.php`, `app/WebPush.php`, DB v67):
 - **Phone layout:** at ≤760px the inbox shows the list or the thread (`data-view` on `.ccc-body`) with a back button; inputs are 16px so iOS doesn't zoom.
 - Verified in real Chrome through FCM: turning it on delivers the test, a customer message while watching does not push, after leaving it does.
 
+Customer access (operator sidebar, "Can access"): `GET /chat/customers/<id>/access` (`Chat::customer_access`) runs `User`, `Sites` and `Domains` as that customer (then restores the operator), so it lists exactly what they can reach: accounts with their level (Owner/Full/Sites only/Domains only), sites with their URL, domains. Each links into the Manager (`openAccount`/`openSite`/`openDomain`; modified clicks open the real URL). Six per group, then "Show all N". Below 1100px the sidebar is a slide-over opened by the conversation header's Customer button.
+
 Local relay: `~/Cove/App/directives/anchor.localhost` proxies `/chat-relay/*` to 127.0.0.1:8490. `wp captaincore chat relay --relay-url=https://anchor.localhost/chat-relay --publish-url=http://127.0.0.1:8490` prints the relay's config.json.
 
 Production relay: `chat.anchor.host` on its own droplet. Set it up with `wp captaincore chat relay --relay-url=https://chat.anchor.host`.

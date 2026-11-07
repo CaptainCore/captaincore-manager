@@ -69,6 +69,11 @@ class Domains extends DB {
         
     }
 
+    /** Domain ids in scope for the user this was built for. */
+    public function domain_ids() {
+        return array_values( array_map( 'intval', (array) $this->domains ) );
+    }
+
     public function list() {
         $domains        = [];
         $provider_names = [];

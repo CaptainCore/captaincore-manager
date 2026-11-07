@@ -230,7 +230,22 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-w-item{display:flex;gap:10px;padding:11px 12px;border-bottom:1px solid var(--rule);cursor:pointer;position:relative}
 .ccc-w-item:last-child{border-bottom:0}
 .ccc-w-item:hover{background:var(--ccc-canvas)}
-@media (max-width:1100px){.ccc-body{grid-template-columns:300px minmax(0,1fr)}.ccc-side{display:none}}
+@media (max-width:1100px){.ccc-body{grid-template-columns:300px minmax(0,1fr)}.ccc-side{display:none}
+  .ccc-sidebtn{display:inline-flex !important}
+  .ccc-side[data-open="1"]{display:block;position:fixed;right:0;top:56px;bottom:0;width:min(340px,92vw);z-index:5;box-shadow:-12px 0 32px rgba(0,0,0,.18)}
+  .ccc-side[data-open="1"] .ccc-sideclose{display:grid}}
+.ccc-sidebtn{display:none;align-items:center;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap}
+.ccc-sideclose{display:none;place-items:center;position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer;z-index:1}
+.ccc-side{position:relative}
+.ccc-accgroup{margin-top:10px}.ccc-accgroup:first-of-type{margin-top:0}
+.ccc-acchead{display:flex;align-items:center;gap:6px;font:600 var(--fs-12) var(--sans);color:var(--ink);margin-bottom:4px}
+.ccc-acccount{font:600 10.5px var(--mono);color:var(--ink-dim);background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:0 6px}
+.ccc-accitem{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:5px 8px;margin:0 -8px;border-radius:7px;color:var(--brand-ink);text-decoration:none;font:500 var(--fs-125) var(--sans)}
+.ccc-accitem:hover{background:var(--paper)}
+.ccc-accsub{flex:none;max-width:55%;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)}
+.ccc-accnone{font:400 var(--fs-12) var(--sans);color:var(--ink-dim);padding:2px 0}
+.ccc-accmore{border:0;background:none;padding:4px 0;color:var(--ink-dim);font:500 var(--fs-12) var(--sans);cursor:pointer}
+.ccc-accmore:hover{color:var(--brand-ink)}
 .ccc-pushbtn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);font:500 var(--fs-125) var(--sans);cursor:pointer}
 .ccc-back{display:none;flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:17px;cursor:pointer}
 @media (max-width:760px){
@@ -7199,6 +7214,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 </div>
                 <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:2px">{{ chatSub }}</div>
               </div>
+              <button onClick="{{ chatSideToggle }}" class="ccc-sidebtn" title="Customer and access">Customer</button>
               <sc-for list="{{ chatActions }}" as="a" hint-placeholder-count="2">
                 <button onClick="{{ a.go }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:{{ a.fg }};font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap">{{ a.label }}</button>
               </sc-for>
@@ -7220,7 +7236,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
           </sc-if>
         </main>
-        <aside class="ccc-side">
+        <aside class="ccc-side" data-open="{{ chatSideOpen }}">
+          <button onClick="{{ chatSideToggle }}" class="ccc-sideclose" title="Close">✕</button>
           <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
             <div class="ccc-sec">
               <div class="ccc-label">Customer</div>
@@ -7239,6 +7256,31 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <span onClick="{{ chatOpenSite }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ chatSiteLabel }} →</span>
               </div>
             </sc-if>
+            <div class="ccc-sec">
+              <div class="ccc-label">Can access</div>
+              <sc-if value="{{ chatAccessLoading }}" hint-placeholder-val="{{ false }}">
+                <div class="cc-skel" style="height:14px;width:70%;margin:4px 0 8px"></div>
+                <div class="cc-skel" style="height:14px;width:55%"></div>
+              </sc-if>
+              <sc-if value="{{ chatAccessNote }}" hint-placeholder-val="{{ false }}">
+                <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ chatAccessNote }}</div>
+              </sc-if>
+              <sc-for list="{{ chatAccessGroups }}" as="g" hint-placeholder-count="3">
+                <div class="ccc-accgroup">
+                  <div class="ccc-acchead"><span>{{ g.label }}</span><span class="ccc-acccount">{{ g.count }}</span></div>
+                  <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">None</div></sc-if>
+                  <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+                    <a href="{{ it.href }}" onClick="{{ it.go }}" class="ccc-accitem">
+                      <span class="ccc-trunc" style="min-width:0">{{ it.name }}</span>
+                      <span class="ccc-trunc ccc-accsub">{{ it.sub }}</span>
+                    </a>
+                  </sc-for>
+                  <sc-if value="{{ g.hasMore }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ g.more }}" class="ccc-accmore">{{ g.moreLabel }}</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
             <div class="ccc-sec" style="border-bottom:0">
               <div class="ccc-label">Other conversations</div>
               <sc-for list="{{ chatHistory }}" as="h" hint-placeholder-count="3">

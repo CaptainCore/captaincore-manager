@@ -64,6 +64,48 @@ class Chat {
 		return $mode === 'on' || ( $mode === 'preview' && get_user_meta( $user_id, 'captaincore_chat_preview', true ) );
 	}
 
+	/**
+	 * What a customer can reach in the Manager (operator sidebar): accounts
+	 * with their access level, sites and domains. Built by the same classes
+	 * that scope the customer's own requests (Sites, Domains, User), run as
+	 * that customer, so it shows exactly what they see.
+	 */
+	public static function customer_access( $customer_user_id ) {
+		global $wpdb;
+		$customer_user_id = (int) $customer_user_id;
+		$user             = $customer_user_id > 0 ? get_userdata( $customer_user_id ) : false;
+		if ( ! $user ) {
+			return new \WP_Error( 'not_found', 'No such user.', [ 'status' => 404 ] );
+		}
+		if ( self::is_operator( $customer_user_id ) ) {
+			return [ 'operator' => true, 'accounts' => [], 'sites' => [], 'domains' => [] ];
+		}
+		$previous = get_current_user_id();
+		wp_set_current_user( $customer_user_id );
+		try {
+			$member      = new User();
+			$account_ids = array_map( 'intval', (array) $member->accounts() );
+			$levels      = [];
+			foreach ( $account_ids as $account_id ) {
+				$levels[ $account_id ] = (string) $member->account_level( $account_id );
+			}
+			$site_ids   = array_map( 'intval', (array) ( new Sites() )->site_ids() );
+			$domain_ids = ( new Domains() )->domain_ids();
+		} finally {
+			wp_set_current_user( $previous );
+		}
+		$in = fn( $ids ) => implode( ',', array_map( 'intval', $ids ) ?: [ 0 ] );
+		$accounts = $account_ids ? $wpdb->get_results( "SELECT account_id, name FROM {$wpdb->prefix}captaincore_accounts WHERE account_id IN ({$in( $account_ids )}) ORDER BY name" ) : [];
+		$sites    = $site_ids ? $wpdb->get_results( "SELECT site_id, name, JSON_UNQUOTE(JSON_EXTRACT(details, '$.home_url')) AS home_url FROM {$wpdb->prefix}captaincore_sites WHERE site_id IN ({$in( $site_ids )}) ORDER BY name" ) : [];
+		$domains  = $domain_ids ? $wpdb->get_results( "SELECT domain_id, name FROM {$wpdb->prefix}captaincore_domains WHERE domain_id IN ({$in( $domain_ids )}) ORDER BY name" ) : [];
+		return [
+			'operator' => false,
+			'accounts' => array_map( fn( $a ) => [ 'id' => (int) $a->account_id, 'name' => html_entity_decode( (string) $a->name ), 'level' => $levels[ (int) $a->account_id ] ?? '' ], $accounts ?: [] ),
+			'sites'    => array_map( fn( $x ) => [ 'id' => (int) $x->site_id, 'name' => (string) $x->name, 'url' => (string) ( $x->home_url ?? '' ) ], $sites ?: [] ),
+			'domains'  => array_map( fn( $d ) => [ 'id' => (int) $d->domain_id, 'name' => (string) $d->name ], $domains ?: [] ),
+		];
+	}
+
 	/** The conversation row if the user may see it, else null. */
 	public static function viewable( $user_id, $conversation_id ) {
 		$conversation = ChatConversations::get( (int) $conversation_id );

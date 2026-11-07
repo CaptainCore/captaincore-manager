@@ -81,7 +81,7 @@ Object.assign(Component.prototype, {
       if (row) Object.assign(row, r.conversation, { unread: 0 });
       this.setState({});
       this.chatMarkRead();
-      if (this.chatBoot().operator) this.chatLoadHistory(r.conversation);
+      if (this.chatBoot().operator) { this.chatLoadHistory(r.conversation); this.chatLoadAccess(r.conversation); }
     }).catch(() => { if (c.id === id) { c.convLoading = false; if (!quiet) c.convErr = 'Could not load this conversation.'; this.setState({}); } });
   },
 
@@ -95,6 +95,20 @@ Object.assign(Component.prototype, {
       c.history[uid] = { loading: false, list: (r && r.conversations) || [] };
       this.setState({});
     }).catch(() => { c.history[uid] = { loading: false, list: [] }; });
+  },
+
+  // What the customer can reach (accounts, sites, domains), for the
+  // operator sidebar. Cached per customer for the session.
+  chatLoadAccess(conv) {
+    const c = this._chat;
+    const uid = conv.customer_user_id;
+    c.access = c.access || {};
+    if (!uid || c.access[uid]) return;
+    c.access[uid] = { loading: true };
+    this.api('/chat/customers/' + uid + '/access').then(r => {
+      c.access[uid] = (r && !r.code) ? r : { error: true };
+      this.setState({});
+    }).catch(() => { c.access[uid] = { error: true }; this.setState({}); });
   },
 
   // Mark the open thread read up to its newest message, once per id, and
@@ -586,7 +600,7 @@ Object.assign(Component.prototype, {
     const c = this._chat;
     const isOp = !!cb.operator;
     const off = {
-      showChat: false, chatPushShow: false, chatPhoneView: 'list', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
+      showChat: false, chatPushShow: false, chatPhoneView: 'list', chatAccessGroups: [], chatSideOpen: '0', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
       chatHistory: [], chatHasHistory: false, chatNoHistory: false
     };
     if (!c) return off;
@@ -634,6 +648,27 @@ Object.assign(Component.prototype, {
         : { label: 'Snooze ▾', go: e => this.chatSnoozeMenu(e), primary: false }
     ].map(a => Object.assign(a, { bg: a.primary ? 'var(--brand)' : 'var(--paper)', fg: a.primary ? 'white' : 'var(--ink)', bd: a.primary ? 'var(--brand)' : 'var(--rule)' }));
     const hist = conv && c.history[conv.customer_user_id] ? c.history[conv.customer_user_id].list.filter(x => x.id !== conv.id) : [];
+    // Access groups: links into the Manager. A plain click navigates in the
+    // app; modified clicks open the real URL in a new tab.
+    const acc = conv && c.access ? c.access[conv.customer_user_id] : null;
+    const appBase = this.routeBase();
+    const levelLabel = { 'full-billing': 'Owner', 'full': 'Full', 'sites-only': 'Sites only', 'domains-only': 'Domains only' };
+    const link = (href, open) => e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); c.sideOpen = false; open(); };
+    const group = (key, label, items, max) => {
+      const all = !!(c.accessAll && c.accessAll[key]);
+      const shown = all ? items : items.slice(0, max);
+      return {
+        label, count: String(items.length), items: shown,
+        hasMore: items.length > shown.length, moreLabel: 'Show all ' + items.length,
+        more: () => { c.accessAll = Object.assign({}, c.accessAll, { [key]: true }); this.setState({}); },
+        empty: !items.length
+      };
+    };
+    const accessGroups = !acc || acc.loading || acc.error || acc.operator ? [] : [
+      group('accounts', 'Accounts', acc.accounts.map(a => ({ name: a.name, sub: levelLabel[a.level] || '', href: appBase + 'accounts/' + a.id, go: link(appBase + 'accounts/' + a.id, () => this.openAccount(a.id)) })), 5),
+      group('sites', 'Sites', acc.sites.map(x => ({ name: x.name, sub: ((h => h === x.name || h === 'www.' + x.name ? '' : h)((x.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''))), href: appBase + 'sites/' + x.id, go: link(appBase + 'sites/' + x.id, () => this.openSite(x.id)) })), 6),
+      group('domains', 'Domains', acc.domains.map(d => ({ name: d.name, sub: '', href: appBase + 'domains/' + d.id, go: link(appBase + 'domains/' + d.id, () => this.openDomain(d.id)) })), 6)
+    ];
 
     // Customer launcher: the dock owns the corner while it is open.
     const unreadTotal = isOp ? 0 : c.list.reduce((n, x) => n + (x.unread || 0), 0);
@@ -685,8 +720,13 @@ Object.assign(Component.prototype, {
       chatCustName: conv ? (conv.customer_name || 'Guest') : '', chatCustEmail: conv ? (conv.customer_email || '') : '',
       chatCustInitials: conv ? this.chatInitials(conv.customer_name || conv.customer_email) : '', chatCustBg: conv ? this.chatColor(conv.customer_name || conv.customer_email) : '',
       chatCustMeta: conv ? (conv.guest ? 'Guest · no Manager login' : 'User #' + conv.customer_user_id) : '',
-      chatHasSite: !!(conv && conv.site_id), chatSiteLabel: conv && conv.site_id ? 'Site #' + conv.site_id : '',
+      chatHasSite: !!(conv && conv.site_id), chatSiteLabel: conv && conv.site_id ? ((acc && acc.sites && (acc.sites.find(x => x.id === conv.site_id) || {}).name) || 'Site #' + conv.site_id) : '',
       chatOpenSite: () => { if (conv && conv.site_id) this.openSite(conv.site_id); },
+      chatAccessGroups: accessGroups,
+      chatAccessLoading: !!(acc && acc.loading),
+      chatAccessNote: !conv ? '' : !conv.customer_user_id ? 'Guest: no Manager login, so no access.' : acc && acc.error ? 'Could not load access.' : acc && acc.operator ? 'This person is an operator and can see everything.' : (acc && !acc.loading && !acc.accounts.length && !acc.sites.length && !acc.domains.length) ? 'No accounts, sites or domains.' : '',
+      chatSideOpen: c.sideOpen ? '1' : '0',
+      chatSideToggle: () => { c.sideOpen = !c.sideOpen; this.setState({}); },
       chatHistory: hist.map(x => ({ subject: x.subject, meta: statusChip(x).label + ' · ' + this.chatAgo(x.last_message_at), go: () => this.chatOpen(x.id) })),
       chatHasHistory: hist.length > 0, chatNoHistory: !!conv && hist.length === 0,
       // Customer widget
