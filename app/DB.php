@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 67;
+    const REQUIRED_VERSION = 68;
 
     private static function _table() {
         global $wpdb;
@@ -1632,6 +1632,22 @@ class DB {
         PRIMARY KEY  (push_subscription_id),
         UNIQUE KEY endpoint_hash (endpoint_hash),
         KEY user_id (user_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v68: emoji reactions on chat messages (Chat::react). One row per
+        // person, message and reaction key (Chat::REACTIONS).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_reactions` (
+            chat_reaction_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            chat_message_id bigint(20) UNSIGNED NOT NULL,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            reaction varchar(20) NOT NULL,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (chat_reaction_id),
+        UNIQUE KEY message_user_reaction (chat_message_id,user_id,reaction),
+        KEY chat_conversation_id (chat_conversation_id)
         ) $charset_collate;";
 
         dbDelta($sql);

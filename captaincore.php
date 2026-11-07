@@ -2772,6 +2772,11 @@ function captaincore_chat_read_func( WP_REST_Request $request ) {
 	return is_wp_error( $result ) ? $result : new WP_REST_Response( null, 204 );
 }
 
+function captaincore_chat_react_func( WP_REST_Request $request ) {
+	$p = (array) $request->get_json_params();
+	return CaptainCore\Chat::react( get_current_user_id(), (int) $request['id'], (string) ( $p['e'] ?? '' ), ! isset( $p['on'] ) || ! empty( $p['on'] ) );
+}
+
 function captaincore_chat_attachment_func( WP_REST_Request $request ) {
 	return CaptainCore\Chat::send_attachment( get_current_user_id(), (int) $request['id'], ! empty( $request['download'] ) );
 }
@@ -11115,6 +11120,14 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => [ 'CaptainCore\ChatNotify', 'inbound' ],
 			'permission_callback' => '__return_true',
 			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/messages/(?P<id>[\d]+)/reactions', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_chat_react_func',
+			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
 

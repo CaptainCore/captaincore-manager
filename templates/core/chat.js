@@ -348,6 +348,9 @@ Object.assign(Component.prototype, {
         clearTimeout(c.countsTimer);
         c.countsTimer = setTimeout(() => this.chatLoadList(true), 1500);
       }
+    } else if (ev.type === 'message.reacted') {
+      const m = c.conv && c.conv.conversation.id === ev.conversation_id && c.conv.messages.find(x => x.id === ev.message_id);
+      if (m) m.reactions = ev.reactions || [];
     } else if (ev.type === 'typing') {
       const u = ev.user || {};
       if (u.id === cb.userId) return;
@@ -659,7 +662,7 @@ Object.assign(Component.prototype, {
         return;
       }
       if (m.kind === 'note') {
-        out += '<div class="ccc-note"><div class="ccc-nh">Internal note · ' + esc(name) + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + '</div>';
+        out += '<div class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
         prev = null;
         return;
       }
@@ -668,13 +671,14 @@ Object.assign(Component.prototype, {
         out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + '</span><div class="ccc-mbody">' +
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + (m.via === 'email' ? '<span class="ccc-via">by email</span>' : '') + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
-          (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + '</div></div>';
+          (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + '</span>') +
-          '<div class="ccc-bwrap">' + (m.body ? '<div class="ccc-bb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + '</div></div>' +
+          (me ? this.chatReactBtn(m) : '') +
+          '<div class="ccc-bwrap">' + (m.body ? '<div class="ccc-bb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
           '<div class="ccc-bmeta' + (me ? ' ccc-r' : '') + '">' + (me ? '' : esc(name) + ' · ') + esc(time(m.created_at)) + '</div>';
       }
       prev = m;
@@ -706,6 +710,10 @@ Object.assign(Component.prototype, {
       el.addEventListener('scroll', () => { c.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80; });
       // Images open in the lightbox; modified clicks still open a new tab.
       el.addEventListener('click', e => {
+        const chip = e.target.closest && e.target.closest('[data-react]');
+        if (chip) { e.preventDefault(); this.chatReact(+chip.dataset.mid, chip.dataset.react, chip.getAttribute('aria-pressed') !== 'true'); return; }
+        const opener = e.target.closest && e.target.closest('[data-react-open]');
+        if (opener) { e.preventDefault(); this.chatReactPicker(opener, +opener.dataset.mid); return; }
         const a = e.target.closest && e.target.closest('a.ccc-img');
         if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         e.preventDefault();
@@ -779,6 +787,90 @@ Object.assign(Component.prototype, {
     this._chatLb = { close };
     show();
     $('[data-close]').focus();
+  },
+
+  // ── reactions (Groddle's set) ────────────────────────────────────────
+
+  CHAT_REACTIONS: [['like', '👍', 'Thumbs up'], ['heart', '❤️', 'Heart'], ['laugh', '😂', 'Laughing'], ['wow', '😮', 'Surprised'], ['sad', '😢', 'Sad'], ['tada', '🎉', 'Hooray']],
+
+  // A message's reaction pills: emoji, count, pressed when one is yours,
+  // and who reacted in the tooltip (eight names, then "and N others").
+  chatReactsHtml(m) {
+    const me = this.chatBoot().userId;
+    const defs = Object.fromEntries(this.CHAT_REACTIONS.map(r => [r[0], r]));
+    const chips = (m.reactions || []).filter(r => defs[r.key] && r.by.length).map(r => {
+      const mine = r.by.some(b => b.id === me);
+      const names = r.by.map(b => b.id === me ? 'You' : b.name);
+      const shown = names.slice(0, 8);
+      if (names.length > 8) shown.push(names.length - 8 === 1 ? '1 other' : (names.length - 8) + ' others');
+      const who = shown.length > 1 ? shown.slice(0, -1).join(', ') + ' and ' + shown[shown.length - 1] : shown[0];
+      const label = this.chatEsc(defs[r.key][2] + ': ' + who);
+      return '<button type="button" class="ccc-chip" data-react="' + r.key + '" data-mid="' + m.id + '" aria-pressed="' + mine + '" title="' + label + '" aria-label="' + label + '">' + defs[r.key][1] + '<span>' + r.by.length + '</span></button>';
+    }).join('');
+    return chips ? '<div class="ccc-reacts">' + chips + '</div>' : '';
+  },
+
+  chatReactBtn(m) {
+    return '<button type="button" class="ccc-react-add" data-react-open data-mid="' + m.id + '" title="React" aria-label="Add a reaction" aria-haspopup="true">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5a4.5 4.5 0 007 0M9 9.5h.01M15 9.5h.01"></path></svg></button>';
+  },
+
+  // Toggle one reaction, showing it at once and settling on the server's answer.
+  chatReact(mid, key, on) {
+    const c = this._chat;
+    const m = c && c.conv && c.conv.messages.find(x => x.id === mid);
+    if (!m) return;
+    const me = this.chatBoot().userId;
+    const before = JSON.parse(JSON.stringify(m.reactions || []));
+    let list = (m.reactions || []).map(r => ({ key: r.key, by: r.by.filter(b => b.id !== me || r.key !== key) }));
+    if (on) {
+      const g = list.find(r => r.key === key);
+      if (g) g.by.push({ id: me, name: 'You' }); else list.push({ key, by: [{ id: me, name: 'You' }] });
+    }
+    m.reactions = list.filter(r => r.by.length);
+    this.setState({});
+    this.api('/chat/messages/' + mid + '/reactions', { method: 'POST', body: { e: key, on } }).then(r => {
+      if (!r || r.code) throw new Error((r && r.message) || 'Could not react');
+      m.reactions = r.reactions || [];
+      this.setState({});
+    }).catch(e => { m.reactions = before; this.setState({}); this.toast(e && e.message !== 'auth' ? e.message : 'Could not react', { kind: 'error' }); });
+  },
+
+  // The picker: six emoji in a popover by the button. Esc, a pick or a
+  // click elsewhere closes it.
+  chatReactPicker(btn, mid) {
+    if (this._chatPick) this._chatPick.close();
+    const c = this._chat;
+    const m = c && c.conv && c.conv.messages.find(x => x.id === mid);
+    if (!m) return;
+    const me = this.chatBoot().userId;
+    const pick = document.createElement('div');
+    pick.className = 'ccc-rpick';
+    pick.setAttribute('role', 'menu');
+    pick.setAttribute('aria-label', 'Add a reaction');
+    pick.innerHTML = this.CHAT_REACTIONS.map(([k, g, l]) => {
+      const mine = (m.reactions || []).some(r => r.key === k && r.by.some(b => b.id === me));
+      return '<button type="button" role="menuitemcheckbox" data-pick="' + k + '" aria-checked="' + mine + '" title="' + l + '">' + g + '</button>';
+    }).join('');
+    document.body.appendChild(pick);
+    const r = btn.getBoundingClientRect();
+    const w = pick.offsetWidth, h = pick.offsetHeight;
+    pick.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+    pick.style.top = (r.top - h - 6 > 8 ? r.top - h - 6 : r.bottom + 6) + 'px';
+    const close = () => { document.removeEventListener('mousedown', away, true); document.removeEventListener('keydown', key, true); window.removeEventListener('scroll', close, true); pick.remove(); this._chatPick = null; };
+    const away = e => { if (!pick.contains(e.target)) close(); };
+    const key = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    pick.addEventListener('click', e => {
+      const b = e.target.closest('[data-pick]');
+      if (!b) return;
+      this.chatReact(mid, b.dataset.pick, b.getAttribute('aria-checked') !== 'true');
+      close();
+    });
+    document.addEventListener('mousedown', away, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('scroll', close, true);
+    this._chatPick = { close };
+    pick.querySelector('button').focus();
   },
 
   chatInputRef(el) {

@@ -41,6 +41,10 @@ class Chat {
 	// it can carry script) is always a download.
 	const INLINE_TYPES = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
 
+	// Emoji reactions on a message (Groddle's set). Keys are stored; the
+	// glyphs and labels live in chat.js.
+	const REACTIONS = [ 'like', 'heart', 'laugh', 'wow', 'sad', 'tada' ];
+
 	// Files attached from the composer (drag and drop, paste, the paperclip).
 	const MAX_FILES     = 10;
 	const MAX_FILE_SIZE = 10485760;
@@ -255,10 +259,12 @@ class Chat {
 			' ORDER BY chat_message_id DESC LIMIT %d',
 			$conversation_id, $before, $limit
 		) );
-		$rows  = array_reverse( $rows ?: [] );
-		$files = self::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, $rows ) );
-		return array_map( function ( $row ) use ( $files ) {
-			return self::present_message( $row, $files[ (int) $row->chat_message_id ] ?? [] );
+		$rows   = array_reverse( $rows ?: [] );
+		$ids    = array_map( fn( $r ) => (int) $r->chat_message_id, $rows );
+		$files  = self::attachments_for( $ids );
+		$reacts = self::reactions_for( $ids );
+		return array_map( function ( $row ) use ( $files, $reacts ) {
+			return self::present_message( $row, $files[ (int) $row->chat_message_id ] ?? [], $reacts[ (int) $row->chat_message_id ] ?? [] );
 		}, $rows );
 	}
 
@@ -677,7 +683,7 @@ class Chat {
 		return $out;
 	}
 
-	public static function present_message( $row, $attachments ) {
+	public static function present_message( $row, $attachments, $reactions = [] ) {
 		return [
 			'id'              => (int) $row->chat_message_id,
 			'conversation_id' => (int) $row->chat_conversation_id,
@@ -697,7 +703,76 @@ class Chat {
 			// email's full text, kept in case the cleanup cut too much.
 			'via'             => (string) ( $row->via ?? '' ),
 			'original'        => ( $row->via ?? '' ) === 'email' ? (string) $row->original : '',
+			// [{key, by: [{id, name}]}] in the order each was first used.
+			'reactions'       => $reactions,
 		];
+	}
+
+	// ── reactions ───────────────────────────────────────────────────────
+
+	/** Reactions per message id: [id => [{key, by: [{id, name}]}]]. */
+	public static function reactions_for( $message_ids ) {
+		global $wpdb;
+		if ( empty( $message_ids ) ) {
+			return [];
+		}
+		$t    = $wpdb->base_prefix . 'captaincore_chat_reactions';
+		$in   = implode( ',', array_map( 'intval', $message_ids ) );
+		$rows = $wpdb->get_results( "SELECT chat_message_id, user_id, reaction FROM $t WHERE chat_message_id IN ($in) ORDER BY chat_reaction_id ASC" );
+		$out  = [];
+		$name = [];
+		foreach ( $rows ?: [] as $r ) {
+			$mid = (int) $r->chat_message_id;
+			$uid = (int) $r->user_id;
+			if ( ! isset( $name[ $uid ] ) ) {
+				$u            = get_userdata( $uid );
+				$name[ $uid ] = $u ? $u->display_name : 'Someone';
+			}
+			$at = null;
+			foreach ( $out[ $mid ] ?? [] as $i => $g ) {
+				if ( $g['key'] === $r->reaction ) {
+					$at = $i;
+				}
+			}
+			if ( $at === null ) {
+				$out[ $mid ][] = [ 'key' => $r->reaction, 'by' => [] ];
+				$at            = count( $out[ $mid ] ) - 1;
+			}
+			$out[ $mid ][ $at ]['by'][] = [ 'id' => $uid, 'name' => $name[ $uid ] ];
+		}
+		return $out;
+	}
+
+	/**
+	 * Add ($on) or take back a reaction on a message the user can see.
+	 * Customers can't react to internal notes or events (they never see
+	 * them). Everyone in the conversation gets message.reacted live.
+	 */
+	public static function react( $user_id, $message_id, $key, $on = true ) {
+		global $wpdb;
+		$key     = (string) $key;
+		$message = ChatMessages::get( (int) $message_id );
+		if ( ! $message || ! self::viewable( $user_id, (int) $message->chat_conversation_id ) || ( (int) $message->internal && ! self::is_operator( $user_id ) ) ) {
+			return new \WP_Error( 'not_found', 'Message not found.', [ 'status' => 404 ] );
+		}
+		if ( ! in_array( $key, self::REACTIONS, true ) ) {
+			return new \WP_Error( 'bad_reaction', 'Unknown reaction.', [ 'status' => 400 ] );
+		}
+		if ( ! in_array( $message->kind, [ 'comment', 'note' ], true ) ) {
+			return new \WP_Error( 'bad_reaction', 'Only messages take reactions.', [ 'status' => 400 ] );
+		}
+		$t   = $wpdb->base_prefix . 'captaincore_chat_reactions';
+		$mid = (int) $message->chat_message_id;
+		$cid = (int) $message->chat_conversation_id;
+		if ( $on ) {
+			$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO $t (chat_message_id, chat_conversation_id, user_id, reaction, created_at) VALUES (%d, %d, %d, %s, %s)", $mid, $cid, $user_id, $key, gmdate( 'Y-m-d H:i:s' ) ) );
+		} else {
+			$wpdb->delete( $t, [ 'chat_message_id' => $mid, 'user_id' => (int) $user_id, 'reaction' => $key ] );
+		}
+		$reactions = self::reactions_for( [ $mid ] )[ $mid ] ?? [];
+		$event     = [ 'type' => 'message.reacted', 'conversation_id' => $cid, 'message_id' => $mid, 'reactions' => $reactions ];
+		do_action( 'captaincore_chat_event', $event, (int) ChatConversations::get( $cid )->user_id, (bool) (int) $message->internal );
+		return [ 'message_id' => $mid, 'reactions' => $reactions ];
 	}
 
 	// ── uploads ─────────────────────────────────────────────────────────

@@ -254,6 +254,23 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-pf button{flex:none;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--ink-dim);cursor:pointer}
 .ccc-pf button:hover{background:var(--panel-2);color:var(--ink)}
 .ccc-pf-up{margin:-2px 0 8px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink)}
+/* Reactions (Groddle's): pills under a message, a hover button, a picker */
+.ccc-reacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ccc-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink);font:600 var(--fs-12) var(--sans);cursor:pointer;line-height:1}
+.ccc-chip:hover{border-color:var(--ink-dim)}
+.ccc-chip[aria-pressed="true"]{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,var(--paper));color:var(--brand-ink)}
+.ccc-chip:focus-visible,.ccc-react-add:focus-visible,.ccc-rpick button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ccc-msg,.ccc-note{position:relative}
+.ccc-react-add{flex:none;width:28px;height:28px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink-dim);display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .12s}
+.ccc-react-add:hover{color:var(--brand-ink);border-color:var(--brand)}
+.ccc-msg .ccc-react-add,.ccc-note .ccc-react-add{position:absolute;right:0;top:4px}
+.ccc-bub .ccc-react-add{align-self:center}
+.ccc-msg:hover .ccc-react-add,.ccc-note:hover .ccc-react-add,.ccc-bub:hover .ccc-react-add,.ccc-react-add:focus-visible{opacity:1}
+@media (hover:none){.ccc-react-add{opacity:.55}}
+.ccc-rpick{position:fixed;z-index:96;display:flex;gap:2px;padding:4px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);box-shadow:var(--shadow);animation:ccfade .12s ease}
+.ccc-rpick button{width:36px;height:36px;border:0;border-radius:50%;background:transparent;font-size:20px;line-height:1;cursor:pointer;transition:transform .1s}
+.ccc-rpick button:hover{background:var(--panel-2);transform:scale(1.15)}
+.ccc-rpick button[aria-checked="true"]{background:color-mix(in srgb,var(--brand) 14%,transparent)}
 /* Image lightbox (chatLightbox) */
 .ccc-img{cursor:zoom-in}
 .ccc-lb{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:rgba(10,10,12,.88);backdrop-filter:blur(3px);animation:ccfade .15s ease}
