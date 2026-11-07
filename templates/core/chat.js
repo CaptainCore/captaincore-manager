@@ -18,7 +18,7 @@ Object.assign(Component.prototype, {
     const cb = this.chatBoot();
     if (!cb.enabled || this._chat) return this._chat;
     const c = this._chat = {
-      list: [], counts: null, filter: cb.operator ? 'waiting' : 'all', q: '', more: false, loading: true, listSeq: 0,
+      list: [], counts: null, filter: cb.operator ? 'waiting' : (/\/support(\/|$)/.test(location.pathname) ? 'open' : 'all'), supFilter: 'open', q: '', more: false, loading: true, listSeq: 0,
       id: 0, conv: null, convLoading: false, convErr: '', typing: {}, online: false, history: {},
       ws: null, wsState: 'off', everLive: false, retry: 0, lastTyped: 0, readSent: {}, nearBottom: true, scrollPin: false
     };
@@ -766,7 +766,7 @@ Object.assign(Component.prototype, {
     if (isOp && c.lastRoute !== s.route) { c.lastRoute = s.route; setTimeout(() => this.chatFocusTick(), 0); }
     const push = (isOp && c.push) || { state: 'unsupported' };
     // Customer Support page: arriving there opens the newest conversation.
-    if (!isOp && c.lastCustRoute !== s.route) { c.lastCustRoute = s.route; if (s.route === 'support') setTimeout(() => { this.chatSupportPick(); this.chatMarkRead(); }, 0); }
+    if (!isOp && c.lastCustRoute !== s.route) { c.lastCustRoute = s.route; if (s.route === 'support') setTimeout(() => { if (c.filter !== c.supFilter) { c.filter = c.supFilter; this.chatLoadList(); } this.chatSupportPick(); this.chatMarkRead(); }, 0); }
     const supMsgs = conv && c.conv ? c.conv.messages.filter(m => m.kind === 'comment') : [];
     const supReplies = Math.max(0, supMsgs.length - 1);
     const fullDate = ts => ts ? new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -785,7 +785,7 @@ Object.assign(Component.prototype, {
       chatQ: c.q, onChatQ: e => { c.q = e.target.value; clearTimeout(c.qTimer); c.qTimer = setTimeout(() => this.chatLoadList(), 300); this.setState({}); },
       chatFilters: filters, chatRows: rows,
       chatListLoading: c.loading && !c.list.length, chatEmpty: !c.loading && !c.list.length,
-      chatEmptyText: c.q.trim() ? 'No conversations match.' : isOp ? (c.filter === 'waiting' ? 'Nobody is waiting. 🎉' : 'Nothing here.') : 'No conversations yet.',
+      chatEmptyText: c.q.trim() ? 'No conversations match.' : isOp ? (c.filter === 'waiting' ? 'Nobody is waiting. 🎉' : 'Nothing here.') : c.filter === 'open' ? 'No open conversations.' : c.filter === 'closed' ? 'Nothing resolved yet.' : 'No conversations yet.',
       chatMore: c.more, chatLoadMore: () => this.chatLoadList(true, true),
       chatNoConv: !c.id && !c.newDraft, chatConvLoading: c.convLoading, chatHasErr: !!c.convErr, chatErr: c.convErr,
       chatHasConv: !!conv,
@@ -827,7 +827,8 @@ Object.assign(Component.prototype, {
       chatWidgetOpen: !isOp && !!s.chatWidgetOpen && s.route !== 'support',
       // "View history": the Support page, on the conversation the panel had open.
       chatWHistory: () => this.setState({ route: 'support', chatWidgetOpen: false, chatWView: 'home' }),
-      chatToggleWidget: () => { const open = !s.chatWidgetOpen; this.setState({ chatWidgetOpen: open }); if (open) { this.chatLoadList(true); setTimeout(() => this.chatMarkRead(), 0); } },
+      // The panel lists everything recent; the Support page keeps its own filter (Open by default).
+      chatToggleWidget: () => { const open = !s.chatWidgetOpen; this.setState({ chatWidgetOpen: open }); if (open) { const q = c.filter !== 'all' || c.q; c.filter = 'all'; c.q = ''; this.chatLoadList(!q); setTimeout(() => this.chatMarkRead(), 0); } },
       chatLauncherUnread: String(unreadTotal), chatLauncherHasUnread: unreadTotal > 0,
       chatWHome: wView === 'home', chatWThread: wView === 'thread',
       chatWBack: wView === 'thread',
@@ -844,12 +845,14 @@ Object.assign(Component.prototype, {
       // Customer Support page
       supFilters: [['all', 'All'], ['open', 'Open'], ['closed', 'Resolved']].map(([v, l]) => ({
         label: l, bg: c.filter === v ? 'var(--paper)' : 'transparent', fg: c.filter === v ? 'var(--ink)' : 'var(--ink-dim)', shadow: c.filter === v ? 'var(--shadow-sm)' : 'none',
-        go: () => { if (c.filter !== v) { c.filter = v; this.chatLoadList(); } }
+        go: () => { c.supFilter = v; if (c.filter !== v) { c.filter = v; this.chatLoadList(); } }
       })),
       supNew: () => { this.chatOpen(0); c.newDraft = true; this._chatFocus = true; this.setState({}); },
       supNewDraft: !!(c.newDraft && !c.id), supComposer: !!conv || !!(c.newDraft && !c.id),
-      supPick: !c.id && !c.newDraft && (c.loading || c.list.length > 0 || !!c.q.trim() || c.filter !== 'all'),
-      supNone: !c.loading && !c.list.length && !c.q.trim() && c.filter === 'all' && !c.id && !c.newDraft,
+      supPick: !c.id && !c.newDraft && (c.loading || c.list.length > 0 || !!c.q.trim()),
+      supNone: !c.loading && !c.list.length && !c.q.trim() && !c.id && !c.newDraft,
+      supNoneTitle: c.filter === 'open' ? 'Nothing open right now' : c.filter === 'closed' ? 'Nothing resolved yet' : 'No conversations yet',
+      supNoneText: c.filter === 'all' ? 'Ask about a site, billing or anything else. Every conversation stays here, including replies you send by email.' : 'Start a new conversation, or look under All for past ones.',
       supLetter: conv ? (String(conv.subject || '?').trim().charAt(0).toUpperCase() || '?') : '', supLetterBg: conv ? this.chatColor(conv.subject || String(conv.id)) : '',
       supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? 'you' : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies'].join(' · ') : '',
       supCanResolve: !!(conv && conv.status !== 'closed'),
@@ -857,7 +860,7 @@ Object.assign(Component.prototype, {
       supStarted: conv ? fullDate(conv.created_at) : '', supLast: conv ? fullDate(conv.last_message_at) : '',
       supHasSite: !!supSite, supSiteName: supSite ? supSite.name : '', supOpenSite: () => { if (supSite) this.openSite(supSite.id); },
       supOnlineLabel: c.online ? 'We’re online now' : 'Away right now', supOnlineSub: c.online ? 'Replies usually arrive here in minutes.' : 'Leave a message and we’ll reply here and by email.',
-      supTotal: c.list.length ? (c.list.length + (c.more ? '+' : '') + (c.list.length === 1 ? ' conversation' : ' conversations')) : ''
+      supTotal: c.list.length ? (c.list.length + (c.more ? '+' : '') + (c.filter === 'open' ? ' open' : c.filter === 'closed' ? ' resolved' : c.list.length === 1 ? ' conversation' : ' conversations')) : ''
     };
   }
 
