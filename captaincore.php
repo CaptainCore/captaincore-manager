@@ -2707,12 +2707,29 @@ function captaincore_site_requests_create_func( WP_REST_Request $request ) {
 // Every stored change goes to the live relay (no-op until it is configured).
 add_action( 'captaincore_chat_event', [ 'CaptainCore\ChatRelay', 'publish' ], 10, 3 );
 
+// Unread chat replies go out by email (CaptainCore\ChatNotify). WP-Cron
+// checks every minute; chat requests nudge it too, so a quiet cron only
+// delays an email until the next chat request.
+add_filter( 'cron_schedules', function ( $schedules ) {
+	$schedules['captaincore_minute'] = [ 'interval' => 60, 'display' => 'Every minute (CaptainCore)' ];
+	return $schedules;
+} );
+function captaincore_schedule_chat_notify() {
+	if ( ! wp_next_scheduled( 'captaincore_chat_notify' ) ) {
+		wp_schedule_event( time() + 60, 'captaincore_minute', 'captaincore_chat_notify' );
+	}
+}
+add_action( 'init', 'captaincore_schedule_chat_notify' );
+add_action( 'captaincore_chat_notify', [ 'CaptainCore\ChatNotify', 'run_due' ] );
+
 function captaincore_chat_token_func( WP_REST_Request $request ) {
+	CaptainCore\ChatNotify::run_due( 5 );
 	return CaptainCore\ChatRelay::token( get_current_user_id() );
 }
 
 function captaincore_chat_conversations_func( WP_REST_Request $request ) {
 	CaptainCore\Chat::wake_snoozed();
+	CaptainCore\ChatNotify::run_due( 5 );
 	$user_id = get_current_user_id();
 	$out     = [ 'conversations' => CaptainCore\Chat::conversations( $user_id, [
 		'status'   => (string) $request->get_param( 'status' ),
@@ -11046,6 +11063,17 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_chat_read_func',
 			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// Mailgun route forward() for replies to chat emails. No login: the
+	// handler checks Mailgun's signature and the per-conversation address.
+	register_rest_route(
+		'captaincore/v1', '/chat/inbound', [
+			'methods'             => 'POST',
+			'callback'            => [ 'CaptainCore\ChatNotify', 'inbound' ],
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
 		]
 	);
 

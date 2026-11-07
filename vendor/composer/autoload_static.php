@@ -269,6 +269,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\ChatCLI' => __DIR__ . '/../..' . '/app/ChatCLI.php',
         'CaptainCore\\ChatConversations' => __DIR__ . '/../..' . '/app/ChatConversations.php',
         'CaptainCore\\ChatMessages' => __DIR__ . '/../..' . '/app/ChatMessages.php',
+        'CaptainCore\\ChatNotify' => __DIR__ . '/../..' . '/app/ChatNotify.php',
         'CaptainCore\\ChatRelay' => __DIR__ . '/../..' . '/app/ChatRelay.php',
         'CaptainCore\\ComponentQueueCLI' => __DIR__ . '/../..' . '/app/ComponentQueueCLI.php',
         'CaptainCore\\Configurations' => __DIR__ . '/../..' . '/app/Configurations.php',

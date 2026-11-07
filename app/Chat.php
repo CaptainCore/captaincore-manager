@@ -211,7 +211,7 @@ class Chat {
 		}, $rows );
 	}
 
-	private static function attachments_for( $message_ids ) {
+	public static function attachments_for( $message_ids ) {
 		global $wpdb;
 		if ( empty( $message_ids ) ) {
 			return [];
@@ -233,7 +233,7 @@ class Chat {
 		return $out;
 	}
 
-	private static function last_read( $user_id, $conversation_id ) {
+	public static function last_read( $user_id, $conversation_id ) {
 		global $wpdb;
 		$r = $wpdb->base_prefix . 'captaincore_chat_reads';
 		return (int) $wpdb->get_var( $wpdb->prepare(
@@ -339,15 +339,18 @@ class Chat {
 		] );
 		$updated = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
 		self::emit( 'message.created', $updated, $message );
+		if ( $operator && $kind === 'comment' ) {
+			ChatNotify::schedule( (int) $conversation->chat_conversation_id, ChatRelay::last_customer_delivery() );
+		}
 		self::emit( 'conversation.updated', $updated );
 		return [ 'message' => $message, 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ) ];
 	}
 
 	/**
 	 * Insert a message and apply its effect on the conversation. Returns the
-	 * presented message.
+	 * presented message. Optional: via ('email'), original, external_id.
 	 */
-	private static function append( $conversation_id, $m ) {
+	public static function append( $conversation_id, $m ) {
 		global $wpdb;
 		$now      = gmdate( 'Y-m-d H:i:s' );
 		$kind     = $m['kind'];
@@ -360,13 +363,16 @@ class Chat {
 			'author_user_id'       => (int) ( $m['author_user_id'] ?? 0 ),
 			'author_name'          => (string) ( $m['author_name'] ?? '' ),
 			'body'                 => (string) $m['body'],
+			'via'                  => (string) ( $m['via'] ?? '' ),
+			'original'             => isset( $m['original'] ) ? (string) $m['original'] : null,
+			'external_id'          => (string) ( $m['external_id'] ?? '' ),
 			'created_at'           => $now,
 		] );
 		$c = $wpdb->base_prefix . 'captaincore_chat_conversations';
 		if ( $kind === 'comment' && $m['author_kind'] === 'customer' ) {
 			$wpdb->query( $wpdb->prepare(
 				"UPDATE $c SET last_customer_at = %s, last_message_at = %s, waiting_since = COALESCE(waiting_since, %s),
-				status = 'open', snoozed_until = NULL, updated_at = %s WHERE chat_conversation_id = %d",
+				status = 'open', snoozed_until = NULL, notify_after = NULL, updated_at = %s WHERE chat_conversation_id = %d",
 				$now, $now, $now, $now, $conversation_id
 			) );
 		} elseif ( $kind === 'comment' && $m['author_kind'] === 'operator' ) {
@@ -493,6 +499,7 @@ class Chat {
 			$user_id, $conversation->chat_conversation_id, $message_id, gmdate( 'Y-m-d H:i:s' )
 		) );
 		if ( ! self::is_operator( $user_id ) ) {
+			ChatNotify::cancel_if_read( (int) $conversation->chat_conversation_id, (int) $user_id );
 			do_action( 'captaincore_chat_event', [ 'type' => 'read', 'conversation_id' => (int) $conversation->chat_conversation_id, 'message_id' => (int) $message_id ], 0, true );
 		}
 		return true;
@@ -517,7 +524,7 @@ class Chat {
 	 * Fire a live event for the relay. Routing: operators get everything,
 	 * the owning customer gets it unless the message is internal.
 	 */
-	private static function emit( $type, $conversation, $message = null ) {
+	public static function emit( $type, $conversation, $message = null ) {
 		$event = [ 'type' => $type, 'conversation_id' => $conversation['id'], 'conversation' => $conversation ];
 		if ( $message ) {
 			$event['message'] = $message;
@@ -616,7 +623,11 @@ class Chat {
 			'edited_at'       => self::ts( $row->edited_at ),
 			// Came from an import (Intercom). Read marks on imported history
 			// are synthetic, so clients skip the "Seen" receipt for these.
-			'imported'        => (string) $row->external_id !== '',
+			'imported'        => (string) $row->external_id !== '' && (string) ( $row->via ?? '' ) === '',
+			// 'email' when it arrived as an email reply; original is that
+			// email's full text, kept in case the cleanup cut too much.
+			'via'             => (string) ( $row->via ?? '' ),
+			'original'        => ( $row->via ?? '' ) === 'email' ? (string) $row->original : '',
 		];
 	}
 

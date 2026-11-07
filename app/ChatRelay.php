@@ -34,6 +34,16 @@ class ChatRelay {
 	const TOKEN_CONTEXT   = 'captaincore-chat.v1.';
 	const PUBLISH_CONTEXT = 'captaincore-chat.publish.v1.';
 
+	/**
+	 * How many of the customer's own connections the last publish reached:
+	 * null when unknown (no relay, or it failed), else a count.
+	 */
+	private static $last_customer = null;
+
+	public static function last_customer_delivery() {
+		return self::$last_customer;
+	}
+
 	public static function relay_url() {
 		$url = defined( 'CAPTAINCORE_CHAT_RELAY_URL' ) ? CAPTAINCORE_CHAT_RELAY_URL : get_site_option( 'captaincore_chat_relay_url', '' );
 		return self::normalize_url( (string) $url );
@@ -96,6 +106,16 @@ class ChatRelay {
 		}
 		$raw = base64_decode( $stored, true );
 		return is_string( $raw ) && strlen( $raw ) === SODIUM_CRYPTO_SIGN_SECRETKEYBYTES ? $raw : '';
+	}
+
+	/**
+	 * A key for HMACs that never leave the Manager (reply-by-email
+	 * addresses), derived from the signing key so there is one secret to
+	 * keep. '' when no key is available.
+	 */
+	public static function derived_key( $purpose ) {
+		$sk = self::secret_key();
+		return $sk === '' ? '' : hash_hmac( 'sha256', 'captaincore-chat.' . $purpose, $sk, true );
 	}
 
 	/** Base64 public key for the relay's public_keys. */
@@ -165,6 +185,7 @@ class ChatRelay {
 	 * refetch when their socket reconnects.
 	 */
 	public static function publish( $event, $customer_user_id, $internal ) {
+		self::$last_customer = null;
 		$url = self::publish_url();
 		if ( $url === '' || ! self::configured() ) {
 			return;
@@ -190,6 +211,12 @@ class ChatRelay {
 			],
 		] );
 		$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+		if ( $code === 200 ) {
+			$out = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+			if ( is_array( $out ) && isset( $out['customer'] ) ) {
+				self::$last_customer = (int) $out['customer'];
+			}
+		}
 		if ( $code !== 200 && $code !== 409 && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'CaptainCore Chat: publish failed (' . ( is_wp_error( $response ) ? $response->get_error_message() : 'HTTP ' . $code ) . ')' );
 		}

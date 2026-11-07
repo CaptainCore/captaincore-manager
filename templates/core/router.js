@@ -58,7 +58,10 @@ Object.assign(Component.prototype, {
       // fires that leaf's lazy load — a plain setState would skip all three.
       if (parts[2]) this.goSiteTab(parts[2]);
     } else if (head === 'chat') {
-      this.setState({ route: 'chat' });
+      // Operators get the inbox. A customer (the link in a chat email) gets
+      // the corner panel opened on that conversation.
+      if (this.chatBoot && this.chatBoot().operator) this.setState({ route: 'chat' });
+      else if (this.chatBoot && this.chatBoot().enabled) this.setState({ chatWidgetOpen: true, chatWView: parts[1] ? 'thread' : 'home' });
       if (this.chatOpen) this.chatOpen(parts[1] || 0);
     } else if (head === 'ai-relay' && parts[1]) {
       this.openRelay(parts[1]);

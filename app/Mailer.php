@@ -163,6 +163,67 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  CHAT: unread operator replies (ChatNotify::send)
+     *  $replies are chat_messages rows; $files maps message id => attachments.
+     *  $reply_address '' means replies by email are not set up: the email
+     *  then only links to the conversation.
+     * ------------------------------------------------------------------------- */
+    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $site_name   = get_bloginfo( 'name' );
+        $id          = (int) $conversation->chat_conversation_id;
+        $link        = esc_url( home_url( '/account/chat/' . $id ) );
+        $names       = array_values( array_unique( array_map( fn( $r ) => (string) $r->author_name, $replies ) ) );
+        $who         = $names[0] !== '' ? $names[0] : $site_name;
+        $topic       = trim( (string) $conversation->subject ) !== '' ? trim( (string) $conversation->subject ) : 'Your conversation';
+
+        $items = '';
+        foreach ( $replies as $r ) {
+            $body     = nl2br( make_clickable( esc_html( (string) $r->body ) ) );
+            $author   = esc_html( (string) $r->author_name !== '' ? (string) $r->author_name : $site_name );
+            $when     = esc_html( wp_date( 'M j, g:i a', strtotime( $r->created_at . ' UTC' ) ) );
+            $attached = '';
+            foreach ( $files[ (int) $r->chat_message_id ] ?? [] as $f ) {
+                $attached .= "<div style='margin-top: 8px; font-size: 13px; color: #666D7A;'>&#128206; " . esc_html( $f['name'] ) . "</div>";
+            }
+            $items .= "
+                <div style='margin-bottom: 18px; padding: 16px 18px; background-color: #F5F7FA; border-radius: 10px; text-align: left;'>
+                    <div style='font-size: 13px; color: #666D7A; margin-bottom: 6px;'><strong style='color: #15181D;'>{$author}</strong> &middot; {$when}</div>
+                    <div style='font-size: 15px; line-height: 1.55; color: #15181D;'>{$body}</div>
+                    {$attached}
+                </div>";
+        }
+        $how = $reply_address !== ''
+            ? 'Reply to this email to answer, or open the conversation.'
+            : 'Open the conversation to reply.';
+
+        $content_html = "
+            <div style='font-size: 11px; color: #A3ACB9; text-align: center; margin: -20px 0 20px;'>" . esc_html( \CaptainCore\ChatNotify::MARKER ) . "</div>
+            {$items}
+            <p style='margin: 24px 0 18px; font-size: 14px; color: #666D7A; text-align: center;'>{$how}</p>
+            <div style='text-align: center;'>
+                <a href='{$link}' style='display: inline-block; background-color: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 24px; border-radius: 8px;'>Open conversation</a>
+            </div>";
+
+        $host    = wp_parse_url( home_url(), PHP_URL_HOST );
+        $headers = [ "References: <chat-{$id}@{$host}>", "In-Reply-To: <chat-{$id}@{$host}>" ];
+        if ( $reply_address !== '' ) {
+            $headers[] = 'Reply-To: ' . str_replace( [ '"', "\r", "\n" ], '', $site_name ) . " <{$reply_address}>";
+        }
+        self::send_email_with_layout(
+            $user->user_email,
+            "[{$site_name}] {$topic}",
+            count( $replies ) === 1 ? "{$who} replied" : "{$who} sent " . count( $replies ) . ' replies',
+            $topic,
+            $content_html,
+            $headers,
+            '',
+            false
+        );
+    }
+
+    /* -------------------------------------------------------------------------
      *  CORE TEMPLATE WRAPPER
      * ------------------------------------------------------------------------- */
     private static function send_email_with_layout( $to, $subject, $headline, $subheadline, $main_content_html, $extra_headers = [], $unsubscribe_url = '', $show_support_footer = true ) {

@@ -32,6 +32,12 @@ Gotchas:
 - Composer and search fields carry inline `border:none` so the global focus ring skips them.
 - Imported messages have `imported: true`, and the "Seen" receipt skips them, because their read marks come from the importer.
 
+Email (`app/ChatNotify.php`, DB v66):
+- **Out:** an operator reply the customer hasn't read is emailed after 20 minutes if it reached an open tab (the relay's publish response counts the customer's connections), or 5 minutes if not. Replies inside the wait go out together. A read (thread on screen, tab visible) or a customer message cancels it (`notify_after` = NULL). `notified_message_id` stops resends. WP-Cron `captaincore_chat_notify` runs every minute; `/chat/token` and the list route nudge it too. Each send leaves an internal event ("2 unread replies emailed to …").
+- **In:** Reply-To is `chat-<id>-<hmac16>@<reply domain>` (HMAC key derived from the chat signing key). A Mailgun route forwards to `POST /chat/inbound`, which checks Mailgun's signature (`timestamp`+`token`, webhook signing key), the address HMAC, a 12-hour window and token/Message-Id dedupe, then cleans the text (`clean_reply`: Mailgun's `stripped-text`, then our cuts for the marker line, "On … wrote:", Outlook header blocks, "Sent from my iPhone", `-- ` signatures, quoted lines). Messages get `via: 'email'` and keep `original`, which operators can open under the message. A sender that isn't the customer's address becomes an internal note. Small inline images (<30KB, signature logos) are dropped; other attachments are stored like imports. Answers 406 for permanent rejects so Mailgun stops retrying.
+- **Settings:** `captaincore_chat_reply_domain` (mg.anchor.host) and `captaincore_chat_mailgun_signing_key`, or the `CAPTAINCORE_CHAT_REPLY_DOMAIN` / `CAPTAINCORE_CHAT_MAILGUN_SIGNING_KEY` constants. Without a reply domain the email only links to the chat.
+- **Customer link:** `/account/chat/<id>` opens the corner panel on that thread for customers.
+
 Local relay: `~/Cove/App/directives/anchor.localhost` proxies `/chat-relay/*` to 127.0.0.1:8490. `wp captaincore chat relay --relay-url=https://anchor.localhost/chat-relay --publish-url=http://127.0.0.1:8490` prints the relay's config.json.
 
 Production relay: `chat.anchor.host` on its own droplet. Set it up with `wp captaincore chat relay --relay-url=https://chat.anchor.host`.

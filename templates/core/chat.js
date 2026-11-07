@@ -361,6 +361,8 @@ Object.assign(Component.prototype, {
     const day = ts => new Date(ts * 1000).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
     const time = ts => new Date(ts * 1000).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     const esc = t => this.chatEsc(t);
+    // Email replies (ChatNotify): operators can check what the cleanup cut.
+    const orig = m => (cb.operator && m.via === 'email' && m.original) ? '<details class="ccc-orig"><summary>Original email</summary><pre>' + esc(m.original) + '</pre></details>' : '';
     let out = '';
     let lastDay = '';
     let prev = null;
@@ -375,7 +377,7 @@ Object.assign(Component.prototype, {
         return;
       }
       if (m.kind === 'note') {
-        out += '<div class="ccc-note"><div class="ccc-nh">Internal note · ' + esc(name) + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + '</div>';
+        out += '<div class="ccc-note"><div class="ccc-nh">Internal note · ' + esc(name) + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + '</div>';
         prev = null;
         return;
       }
@@ -383,8 +385,8 @@ Object.assign(Component.prototype, {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + '</span><div class="ccc-mbody">' +
-          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
-          (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + '</div></div>';
+          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + (m.via === 'email' ? '<span class="ccc-via">by email</span>' : '') + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
+          (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + '</div></div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;

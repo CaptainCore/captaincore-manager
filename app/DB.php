@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 65;
+    const REQUIRED_VERSION = 66;
 
     private static function _table() {
         global $wpdb;
@@ -1525,6 +1525,8 @@ class DB {
         // cleared by an operator comment or a close. last_message_at moves
         // only for customer-visible comments. external_id holds the Intercom
         // conversation or part id for imported rows (idempotent re-runs).
+        // v66: notify_after is when an unread operator reply gets emailed
+        // (ChatNotify); notified_message_id is the last reply already sent.
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_conversations` (
             chat_conversation_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
@@ -1542,9 +1544,12 @@ class DB {
             last_message_at datetime NOT NULL,
             source varchar(20) NOT NULL DEFAULT 'chat',
             external_id varchar(64) NOT NULL DEFAULT '',
+            notify_after datetime DEFAULT NULL,
+            notified_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id),
+        KEY notify_after (notify_after),
         KEY user_id (user_id,last_message_at),
         KEY account_id (account_id),
         KEY site_id (site_id),
@@ -1557,6 +1562,8 @@ class DB {
 
         // Bodies are plain text, never HTML: the UI escapes on render.
         // internal = 1 rows (every note, some events) never reach customers.
+        // v66: via = 'email' for a reply that came in by email; original
+        // keeps that email's full text in case the cleanup cut too much.
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_messages` (
             chat_message_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             chat_conversation_id bigint(20) UNSIGNED NOT NULL,
@@ -1567,6 +1574,8 @@ class DB {
             author_name varchar(255) NOT NULL DEFAULT '',
             body longtext NOT NULL,
             external_id varchar(64) NOT NULL DEFAULT '',
+            via varchar(10) NOT NULL DEFAULT '',
+            original longtext DEFAULT NULL,
             created_at datetime NOT NULL,
             edited_at datetime DEFAULT NULL,
         PRIMARY KEY  (chat_message_id),
