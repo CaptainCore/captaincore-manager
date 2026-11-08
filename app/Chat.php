@@ -626,16 +626,42 @@ class Chat {
 
 	/**
 	 * Where attachments live: <parent of ABSPATH>/private/chat unless
-	 * CAPTAINCORE_CHAT_DIR says otherwise. Web PHP must be able to read it.
-	 * Kinsta's open_basedir leaves out ~/private (WP-CLI over SSH is not
-	 * limited, so an import there looks fine and then every file 404s), so
-	 * Kinsta hosts point it at ~/tmp/chat, like CAPTAINCORE_AI_RELAY_DIR.
+	 * CAPTAINCORE_CHAT_DIR says otherwise. Web PHP must be able to read it,
+	 * and Kinsta's open_basedir leaves out ~/private (WP-CLI over SSH is not
+	 * limited, so an import there looks fine and then every file 404s).
+	 * There, point it into uploads under a folder name with a random part,
+	 * e.g. wp-content/uploads/captaincore-chat-<32 random hex>, so it rides
+	 * the site's backups. Files are only ever served by send_attachment.
 	 */
 	public static function base_dir() {
 		if ( defined( 'CAPTAINCORE_CHAT_DIR' ) && CAPTAINCORE_CHAT_DIR ) {
 			return untrailingslashit( CAPTAINCORE_CHAT_DIR );
 		}
 		return dirname( untrailingslashit( ABSPATH ) ) . '/private/chat';
+	}
+
+	/**
+	 * Where a stored file goes: <base>/<conversation>/<sha256>. No
+	 * extension, ever: the name and type live in the database, and a file
+	 * that may sit under the web root must never look runnable (a customer
+	 * knows the sha256 of what they upload). Creates the folders, and on
+	 * first use guards the base with an empty index.php and a deny-all
+	 * .htaccess for Apache hosts. Returns '' when it cannot.
+	 */
+	public static function storage_path( $conversation_id, $sha256 ) {
+		$base = self::base_dir();
+		if ( ! preg_match( '/^[a-f0-9]{64}$/', (string) $sha256 ) || (int) $conversation_id <= 0 ) {
+			return '';
+		}
+		$dir = $base . '/' . (int) $conversation_id;
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			return '';
+		}
+		if ( ! is_file( $base . '/.htaccess' ) ) {
+			@file_put_contents( $base . '/.htaccess', "Require all denied\nDeny from all\n" );
+			@file_put_contents( $base . '/index.php', "<?php\n// Silence is golden.\n" );
+		}
+		return $dir . '/' . $sha256;
 	}
 
 	/**

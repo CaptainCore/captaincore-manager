@@ -1585,8 +1585,8 @@ class DB {
 
         dbDelta($sql);
 
-        // Files live outside the web root (Chat::base_dir()), named by
-        // sha256 so the same screenshot sent twice is stored once.
+        // Files live in Chat::base_dir() as <conversation>/<sha256> (no
+        // extension), so the same screenshot sent twice is stored once.
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_attachments` (
             chat_attachment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             chat_message_id bigint(20) UNSIGNED NOT NULL,

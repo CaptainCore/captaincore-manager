@@ -392,18 +392,16 @@ class ChatNotify {
 		return $out;
 	}
 
-	/** Store one uploaded file the way the importer does (by sha256, outside the web root). */
+	/** Store one uploaded file the way the importer does (Chat::storage_path). */
 	public static function store_file( $conversation_id, $message_id, array $f ) {
 		$src  = (string) $f['tmp_name'];
 		$sha  = hash_file( 'sha256', $src );
 		$name = sanitize_file_name( (string) ( $f['name'] ?? '' ) ) ?: 'file';
-		$ext  = strtolower( (string) pathinfo( $name, PATHINFO_EXTENSION ) );
-		$ext  = preg_match( '/^[a-z0-9]{1,5}$/', $ext ) ? '.' . $ext : '';
-		$rel  = $conversation_id . '/' . $sha . $ext;
-		$dest = Chat::base_dir() . '/' . $rel;
-		if ( ! $sha || ( ! is_dir( dirname( $dest ) ) && ! wp_mkdir_p( dirname( $dest ) ) ) ) {
+		$dest = $sha ? Chat::storage_path( $conversation_id, $sha ) : '';
+		if ( $dest === '' ) {
 			return false;
 		}
+		$rel  = (int) $conversation_id . '/' . $sha;
 		if ( ! is_file( $dest ) ) {
 			if ( ! copy( $src, $dest ) ) {
 				return false;

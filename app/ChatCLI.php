@@ -538,12 +538,10 @@ class ChatCLI {
 			return false;
 		}
 		$name = (string) ( $a['name'] ?: preg_replace( '/^[a-f0-9]{12}-/', '', basename( $a['local_path'] ) ) );
-		$ext  = strtolower( (string) pathinfo( $a['local_path'], PATHINFO_EXTENSION ) );
-		$ext  = preg_match( '/^[a-z0-9]{1,5}$/', $ext ) ? '.' . $ext : '';
-		$rel  = $conversation_id . '/' . $a['sha256'] . $ext;
-		$dest = Chat::base_dir() . '/' . $rel;
-		if ( ! is_dir( dirname( $dest ) ) && ! wp_mkdir_p( dirname( $dest ) ) ) {
-			\WP_CLI::warning( 'Cannot create ' . dirname( $dest ) );
+		$rel  = (int) $conversation_id . '/' . $a['sha256'];
+		$dest = Chat::storage_path( $conversation_id, $a['sha256'] );
+		if ( $dest === '' ) {
+			\WP_CLI::warning( 'Cannot create ' . Chat::base_dir() . '/' . (int) $conversation_id );
 			return false;
 		}
 		if ( ! is_file( $dest ) ) {
