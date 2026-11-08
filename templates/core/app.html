@@ -165,7 +165,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-sec{padding:16px 18px;border-bottom:1px solid var(--rule)}
 .ccc-label{font:600 var(--fs-11) var(--sans);text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim);margin-bottom:10px}
 .ccc-trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ccc-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12.5px var(--sans);letter-spacing:.02em}
+.ccc-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12.5px var(--sans);letter-spacing:.02em;position:relative;overflow:hidden}
+.ccc-avimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;background:var(--paper)}
 .ccc-av-sm{width:26px;height:26px;font-size:10.5px}
 .ccc-thread{flex:1;overflow-y:auto;padding:18px 0 10px}
 .ccc-thread-in{max-width:860px;margin:0 auto;padding:0 28px}
@@ -7487,7 +7488,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="4">
               <div onClick="{{ r.open }}" class="ccc-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
                 <span style="position:absolute;left:-8px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:{{ r.bar }}"></span>
-                <span class="ccc-av" style="background:{{ r.avBg }}">{{ r.initials }}</span>
+                <span class="ccc-av" style="background:{{ r.avBg }}">{{ r.initials }}<sc-if value="{{ r.hasAvatar }}" hint-placeholder-val="{{ false }}"><img class="ccc-avimg" src="{{ r.avatar }}" ref="{{ chatAvRef }}" alt="" loading="lazy" referrerpolicy="no-referrer"></sc-if></span>
                 <div style="flex:1;min-width:0">
                   <div style="display:flex;align-items:baseline;gap:6px">
                     <b class="ccc-trunc" style="flex:1;min-width:0;font:{{ r.bold }} var(--fs-13) var(--sans)">{{ r.name }}</b>
@@ -7643,7 +7644,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div class="ccc-sec">
               <div class="ccc-label">Customer</div>
               <div style="display:flex;gap:12px;align-items:center">
-                <span class="ccc-av" style="width:46px;height:46px;font-size:15px;background:{{ chatCustBg }}">{{ chatCustInitials }}</span>
+                <span class="ccc-av" style="width:46px;height:46px;font-size:15px;background:{{ chatCustBg }}">{{ chatCustInitials }}<sc-if value="{{ chatCustHasAvatar }}" hint-placeholder-val="{{ false }}"><img class="ccc-avimg" src="{{ chatCustAvatar }}" ref="{{ chatAvRef }}" alt="" referrerpolicy="no-referrer"></sc-if></span>
                 <div style="min-width:0">
                   <div class="ccc-trunc" style="font:600 var(--fs-15) var(--sans)">{{ chatCustName }}</div>
                   <div class="ccc-trunc" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ chatCustEmail }}</div>

@@ -779,6 +779,7 @@ class Chat {
 			'customer_user_id' => (int) $row->user_id,
 			'customer_name'    => $row->contact_name,
 			'customer_email'   => $row->contact_email,
+			'customer_avatar'  => self::avatar( (int) $row->user_id, (string) $row->contact_email ),
 			'account_id'       => (int) $row->account_id ?: null,
 			'site_id'          => (int) $row->site_id ?: null,
 			'subject'          => $row->subject,
@@ -809,6 +810,21 @@ class Chat {
 		return $out;
 	}
 
+	/**
+	 * A person's Gravatar URL (by user, else by email), or ''. d=404 makes
+	 * Gravatar answer 404 when there is no picture, so clients keep the
+	 * initials. Built here so a browser never needs anyone's email.
+	 */
+	public static function avatar( $user_id, $email = '' ) {
+		static $cache = [];
+		$key = $user_id > 0 ? 'u' . $user_id : 'e' . strtolower( trim( (string) $email ) );
+		if ( ! isset( $cache[ $key ] ) ) {
+			$who           = $user_id > 0 ? (int) $user_id : ( is_email( $email ) ? strtolower( trim( $email ) ) : '' );
+			$cache[ $key ] = $who ? (string) get_avatar_url( $who, [ 'size' => 96, 'default' => '404' ] ) : '';
+		}
+		return $cache[ $key ];
+	}
+
 	public static function present_message( $row, $attachments, $reactions = [] ) {
 		return [
 			'id'              => (int) $row->chat_message_id,
@@ -818,6 +834,9 @@ class Chat {
 			'author_kind'     => $row->author_kind,
 			'author_user_id'  => (int) $row->author_user_id ?: null,
 			'author_name'     => $row->author_name,
+			// Gravatar for a person with a login ('' for system, bot and guests;
+			// clients fall back to the conversation's customer_avatar).
+			'author_avatar'   => in_array( $row->author_kind, [ 'customer', 'operator' ], true ) && ( $row->via ?? '' ) !== 'bot' ? self::avatar( (int) $row->author_user_id ) : '',
 			'body'            => $row->body,
 			'attachments'     => $attachments,
 			'created_at'      => self::ts( $row->created_at ),

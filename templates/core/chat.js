@@ -867,6 +867,9 @@ Object.assign(Component.prototype, {
     let lastDay = '';
     let prev = null;
     if (conv.source === 'intercom') out += '<div class="ccc-imported">Imported from Intercom. Replies here continue the same conversation.</div>';
+    // A customer message without its own picture (imported, guest) uses the
+    // conversation's customer.
+    const avatarOf = m => m.author_avatar || (m.author_kind === 'customer' ? conv.customer_avatar : '') || '';
     msgs.forEach(m => {
       const d = day(m.created_at);
       if (d !== lastDay) { out += '<div class="ccc-day">' + esc(d) + '</div>'; lastDay = d; prev = null; }
@@ -884,14 +887,14 @@ Object.assign(Component.prototype, {
       if (flat) {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
-          '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + '</span><div class="ccc-mbody">' +
+          '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span><div class="ccc-mbody">' +
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + (m.via === 'email' ? '<span class="ccc-via">by email</span>' : '') + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
           (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
-          (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + '</span>') +
+          (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
           (me ? this.chatReactBtn(m) : '') +
           '<div class="ccc-bwrap">' + (m.body ? '<div class="ccc-bb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
           '<div class="ccc-bmeta' + (me ? ' ccc-r' : '') + '">' + (me ? '' : esc(name) + ' · ') + esc(time(m.created_at)) + '</div>';
@@ -906,12 +909,37 @@ Object.assign(Component.prototype, {
     const ty = c.typing[conv.id];
     if (ty && ty.until > Date.now() && ty.text && cb.operator) {
       // The customer's draft as they write it (operators only).
-      out += '<div class="ccc-msg ccc-draft"><span class="ccc-av" style="background:' + this.chatColor(ty.name) + '">' + esc(this.chatInitials(ty.name)) + '</span><div class="ccc-mbody">' +
+      out += '<div class="ccc-msg ccc-draft"><span class="ccc-av" style="background:' + this.chatColor(ty.name) + '">' + esc(this.chatInitials(ty.name)) + this.chatAvImg(conv.customer_avatar) + '</span><div class="ccc-mbody">' +
         '<div class="ccc-mh"><b>' + esc(ty.name) + '</b><span class="ccc-typing ccc-typing-in"><i></i><i></i><i></i> typing</span></div>' +
         '<div class="ccc-mb">' + this.chatText(ty.text) + '</div></div></div>';
     } else if (ty && ty.until > Date.now()) out += '<div class="ccc-typing"><i></i><i></i><i></i> ' + esc(ty.name) + ' is typing</div>';
     if (!msgs.length) out += '<div class="ccc-empty">No messages yet.</div>';
     return out;
+  },
+
+  // Gravatar over the initials. A URL that 404s (no picture) is remembered
+  // so it is not asked for again this session; the initials show through.
+  chatAvUrl(url) {
+    return url && !(this._avFail && this._avFail.has(url)) ? url : '';
+  },
+
+  chatAvImg(url) {
+    const u = this.chatAvUrl(url);
+    return u ? '<img class="ccc-avimg" src="' + u.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '';
+  },
+
+  chatAvRef(el) {
+    if (!el || el._ccAv) return;
+    el._ccAv = true;
+    // Hide, never remove: template-managed nodes must stay where the
+    // runtime put them. The next render leaves the failed URL out.
+    const fail = () => {
+      (this._avFail = this._avFail || new Set()).add(el.getAttribute('src'));
+      el.style.display = 'none';
+      clearTimeout(this._avRerender); this._avRerender = setTimeout(() => this.setState({}), 50);
+    };
+    el.addEventListener('error', fail);
+    if (el.complete && el.naturalWidth === 0 && el.getAttribute('src')) fail();
   },
 
   // ref for the thread scroller: rebuilds only when its content changes and
@@ -941,6 +969,7 @@ Object.assign(Component.prototype, {
       el._cccHtml = html;
       el.innerHTML = '<div class="ccc-thread-in">' + html + '</div>';
       el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
+      el.querySelectorAll('img.ccc-avimg').forEach(img => this.chatAvRef(img));
     }
     if (c.scrollPin && c.conv) { el.scrollTop = el.scrollHeight; c.scrollPin = false; c.nearBottom = true; }
   },
@@ -1141,6 +1170,7 @@ Object.assign(Component.prototype, {
       return {
         key: 'c' + x.id, name, subject: isOp ? x.subject : plain(x.preview), preview: isOp ? (rowTyping(x.id) || plain(x.preview)) : '', ago: this.chatAgo(x.last_message_at),
         initials: this.chatInitials(isOp ? name : 'Support'), avBg: this.chatColor(isOp ? name : 'Support'),
+        avatar: isOp ? this.chatAvUrl(x.customer_avatar) : '', hasAvatar: isOp && !!this.chatAvUrl(x.customer_avatar),
         chips, unread: String(x.unread || 0), hasUnread: (x.unread || 0) > 0, bold: (x.unread || 0) > 0 ? 700 : 600,
         bg: on ? 'var(--paper)' : 'transparent', shadow: on ? 'var(--shadow-sm)' : 'none', outline: on ? '1px solid var(--rule)' : '0',
         bar: on ? 'var(--brand)' : 'transparent',
@@ -1293,6 +1323,7 @@ Object.assign(Component.prototype, {
       chatTypingShow: !!ty,
       // Operator sidebar
       chatCustName: conv ? (conv.customer_name || 'Guest') : '', chatCustEmail: conv ? (conv.customer_email || '') : '',
+      chatCustAvatar: conv ? this.chatAvUrl(conv.customer_avatar) : '', chatCustHasAvatar: !!(conv && this.chatAvUrl(conv.customer_avatar)), chatAvRef: el => this.chatAvRef(el),
       chatCustInitials: conv ? this.chatInitials(conv.customer_name || conv.customer_email) : '', chatCustBg: conv ? this.chatColor(conv.customer_name || conv.customer_email) : '',
       chatCustMeta: conv ? (conv.guest ? 'Guest · no Manager login' : 'User #' + conv.customer_user_id) : '',
       chatHasSite: !!(conv && conv.site_id), chatSiteLabel: conv && conv.site_id ? ((acc && acc.sites && (acc.sites.find(x => x.id === conv.site_id) || {}).name) || 'Site #' + conv.site_id) : '',
