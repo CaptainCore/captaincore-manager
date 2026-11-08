@@ -175,7 +175,11 @@ class WebPush {
 			'TTL'              => (string) (int) ( $opts['ttl'] ?? DAY_IN_SECONDS ),
 			'Urgency'          => (string) ( $opts['urgency'] ?? 'high' ),
 		];
-		if ( ! empty( $opts['topic'] ) ) {
+		// Topic lets a newer push replace an undelivered one. Apple's web push
+		// service refuses it (400 BadWebPushTopic), so iPhones and Safari go
+		// without; the notification's tag still keeps one per conversation.
+		$apple = (bool) preg_match( '/(^|\.)push\.apple\.com$/', strtolower( (string) wp_parse_url( $endpoint, PHP_URL_HOST ) ) );
+		if ( ! empty( $opts['topic'] ) && ! $apple ) {
 			$headers['Topic'] = substr( preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $opts['topic'] ), 0, 32 );
 		}
 		$response = wp_remote_post( $endpoint, [ 'body' => $body, 'headers' => $headers, 'timeout' => 5, 'redirection' => 0 ] );
