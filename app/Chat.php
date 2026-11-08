@@ -885,7 +885,9 @@ class Chat {
 	 * Conversations still waiting on a person: open, the customer's last
 	 * message unanswered for at least $min_wait seconds (and at most
 	 * $max_wait, so old imported threads stay out), with no agent note
-	 * since that message. Each comes with what a triage needs: the thread
+	 * since that message. The waiting message has to have been written
+	 * here: one that came in with an Intercom import is answered there
+	 * (or already was), so it is not ours to triage. Each comes with what a triage needs: the thread
 	 * (internal notes included), the customer, what they can access and
 	 * the site they tagged. Oldest wait first.
 	 */
@@ -898,6 +900,8 @@ class Chat {
 			"SELECT c.* FROM $c c WHERE c.status = 'open' AND c.waiting_since IS NOT NULL AND c.waiting_since <= %s AND c.waiting_since >= %s
 			AND NOT EXISTS (SELECT 1 FROM $m b WHERE b.chat_conversation_id = c.chat_conversation_id AND b.via = 'bot' AND b.chat_message_id > COALESCE(
 				(SELECT MAX(x.chat_message_id) FROM $m x WHERE x.chat_conversation_id = c.chat_conversation_id AND x.kind = 'comment' AND x.author_kind = 'customer'), 0))
+			AND (SELECT y.external_id FROM $m y WHERE y.chat_conversation_id = c.chat_conversation_id AND y.kind = 'comment' AND y.author_kind = 'customer'
+				ORDER BY y.created_at DESC, y.chat_message_id DESC LIMIT 1) = ''
 			ORDER BY c.waiting_since ASC LIMIT %d",
 			gmdate( 'Y-m-d H:i:s', $now - max( 60, (int) $min_wait ) ), gmdate( 'Y-m-d H:i:s', $now - max( 3600, (int) $max_wait ) ), max( 1, min( 25, (int) $limit ) )
 		) );

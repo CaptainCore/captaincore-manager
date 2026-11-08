@@ -274,13 +274,28 @@ class ChatCLI {
 			return;
 		}
 
+		$m       = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$touched = false;
 		if ( $existing ) {
 			// Keep a user link someone made by hand; claim a guest thread
 			// whose email now has a user.
 			if ( (int) $existing->user_id > 0 && ! $user_id ) {
 				unset( $fields['user_id'], $fields['account_id'] );
 			}
-			ChatConversations::update( $fields, [ 'chat_conversation_id' => (int) $existing->chat_conversation_id ] );
+			// A thread someone has already answered, closed or continued in
+			// CaptainCore Chat keeps its own state here. Intercom's copy no
+			// longer knows everything, so only its new messages come over
+			// (catch_up applies them below).
+			$touched = (bool) $wpdb->get_var( $wpdb->prepare(
+				"SELECT 1 FROM $m WHERE chat_conversation_id = %d AND external_id = '' AND kind IN ('comment','event') AND author_kind IN ('customer','operator') LIMIT 1",
+				(int) $existing->chat_conversation_id
+			) );
+			if ( $touched ) {
+				$fields = array_intersect_key( $fields, array_flip( [ 'user_id', 'account_id', 'contact_name', 'contact_email' ] ) );
+			}
+			if ( $fields ) {
+				ChatConversations::update( $fields, [ 'chat_conversation_id' => (int) $existing->chat_conversation_id ] );
+			}
 			$conversation_id = (int) $existing->chat_conversation_id;
 			$y['updated']++;
 		} else {
@@ -288,12 +303,13 @@ class ChatCLI {
 			$y['new']++;
 		}
 
-		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
-		$have = array_flip( $wpdb->get_col( $wpdb->prepare( "SELECT external_id FROM $m WHERE chat_conversation_id = %d", $conversation_id ) ) );
+		$have = array_flip( $wpdb->get_col( $wpdb->prepare( "SELECT external_id FROM $m WHERE chat_conversation_id = %d AND external_id <> ''", $conversation_id ) ) );
+		$added = [];
 		foreach ( $messages as $msg ) {
 			if ( isset( $have[ $msg['external_id'] ] ) ) {
 				continue;
 			}
+			$added[] = $msg;
 			$message_id = ChatMessages::insert( [
 				'chat_conversation_id' => $conversation_id,
 				'kind'                 => $msg['kind'],
@@ -312,13 +328,64 @@ class ChatCLI {
 				}
 			}
 		}
+		if ( $touched ) {
+			$this->catch_up( $conversation_id, $added );
+			return;
+		}
 		$this->mark_history_read( $conversation_id, (int) ( $fields['user_id'] ?? $existing->user_id ?? 0 ) );
 	}
 
 	/**
+	 * New Intercom messages on a thread that also has CaptainCore Chat
+	 * activity, applied the way Chat applies a message: a customer comment
+	 * opens the thread and starts the wait (unless it is already waiting),
+	 * an operator comment ends the wait. Only messages newer than the
+	 * thread's latest count; older ones just fill in the history. Read
+	 * marks stay as they are, so these show as new.
+	 */
+	private function catch_up( $conversation_id, array $added ) {
+		$row = ChatConversations::get( $conversation_id );
+		if ( ! $row || ! $added ) {
+			return;
+		}
+		usort( $added, fn( $a, $b ) => strcmp( $a['created_at'], $b['created_at'] ) );
+		$set = [];
+		$last = (string) $row->last_message_at;
+		$waiting = $row->status === 'open' ? $row->waiting_since : null;
+		$status = $row->status;
+		foreach ( $added as $msg ) {
+			if ( $msg['kind'] !== 'comment' || $msg['created_at'] <= $last ) {
+				continue;
+			}
+			$last = $msg['created_at'];
+			if ( $msg['author_kind'] === 'customer' ) {
+				$status  = 'open';
+				$waiting = $waiting ?: $msg['created_at'];
+				$set['last_customer_at'] = $msg['created_at'];
+			} else {
+				$waiting = null;
+				$set['last_operator_at'] = $msg['created_at'];
+			}
+			$set['last_message_at'] = $msg['created_at'];
+		}
+		if ( ! $set ) {
+			return;
+		}
+		$set['status']        = $status;
+		$set['waiting_since'] = $status === 'open' ? $waiting : null;
+		if ( $status === 'open' ) {
+			$set['snoozed_until'] = null;
+		}
+		$set['updated_at'] = gmdate( 'Y-m-d H:i:s' );
+		ChatConversations::update( $set, [ 'chat_conversation_id' => (int) $conversation_id ] );
+	}
+
+	/**
 	 * Imported history arrives already read, for the customer and every
-	 * operator. INSERT IGNORE keeps any read mark made since, so a re-run
-	 * never resets real progress.
+	 * operator: it was read in Intercom. A catch-up run moves the marks
+	 * forward over the new Intercom messages and never back. Threads with
+	 * CaptainCore Chat activity skip this (catch_up), so a reply waiting
+	 * there is never marked read by an import.
 	 */
 	private function mark_history_read( $conversation_id, $customer_id ) {
 		global $wpdb;
@@ -333,7 +400,9 @@ class ChatCLI {
 		}
 		$now = gmdate( 'Y-m-d H:i:s' );
 		foreach ( array_unique( array_filter( array_merge( $this->operator_ids, [ $customer_id ] ) ) ) as $user_id ) {
-			$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO $r (user_id, chat_conversation_id, last_read_message_id, updated_at) VALUES (%d, %d, %d, %s)", $user_id, $conversation_id, $last, $now ) );
+			$wpdb->query( $wpdb->prepare( "INSERT INTO $r (user_id, chat_conversation_id, last_read_message_id, updated_at) VALUES (%d, %d, %d, %s)
+				ON DUPLICATE KEY UPDATE updated_at = IF(VALUES(last_read_message_id) > last_read_message_id, VALUES(updated_at), updated_at),
+				last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id))", $user_id, $conversation_id, $last, $now ) );
 		}
 	}
 
