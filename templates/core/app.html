@@ -65,6 +65,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
    becomes an overlay drawer, side-by-side grids stack, wide tables scroll
    sideways, pill bars scroll instead of clipping. */
 @supports (height:100dvh){.cc-shell{height:100dvh !important}}
+/* iOS zooms the page into any field whose text is under 16px and leaves it
+   zoomed. 16px fields stop that; the feature query matches iOS/iPadOS only. */
+@supports (-webkit-touch-callout:none){input,textarea,select{font-size:16px !important}}
 @media (min-width:761px){.cc-backdrop{display:none !important}}
 @media (max-width:760px){
   .cc-rail{position:fixed;top:0;left:0;bottom:0;z-index:65;box-shadow:var(--shadow)}
