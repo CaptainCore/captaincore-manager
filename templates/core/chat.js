@@ -30,7 +30,36 @@ Object.assign(Component.prototype, {
     if (cb.live) this.chatConnect();
     else this._chatPoll = setInterval(() => { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }, 30000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this.chatMarkRead(); });
+    this.chatKeyboardInit();
     return c;
+  },
+
+  // Phone keyboards. iOS keeps the page its full height when the keyboard
+  // opens and slides it up, so the header and the top of a short thread go
+  // out of sight. While a keyboard is up (the visual viewport is well short
+  // of the layout one), html gets .cc-kb and the visible area as
+  // --cc-vvtop/--cc-vvh; the chat screens pin to it (app.html), and a
+  // reader at the bottom of the thread stays there.
+  chatKeyboardInit() {
+    const vv = window.visualViewport;
+    if (!vv || this._chatKb) return;
+    this._chatKb = true;
+    const root = document.documentElement;
+    const apply = () => {
+      const kb = window.innerWidth <= 760 && root.clientHeight - vv.height > 120;
+      root.classList.toggle('cc-kb', kb);
+      if (kb) {
+        root.style.setProperty('--cc-vvh', Math.round(vv.height) + 'px');
+        root.style.setProperty('--cc-vvtop', Math.round(vv.offsetTop) + 'px');
+      } else {
+        root.style.removeProperty('--cc-vvh');
+        root.style.removeProperty('--cc-vvtop');
+      }
+      const c = this._chat;
+      if (c && c.nearBottom) requestAnimationFrame(() => document.querySelectorAll('.ccc-thread').forEach(el => { el.scrollTop = el.scrollHeight; }));
+    };
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
   },
 
   // ── data ──────────────────────────────────────────────────────────────

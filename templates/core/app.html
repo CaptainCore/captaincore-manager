@@ -169,6 +169,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-av-sm{width:26px;height:26px;font-size:10.5px}
 .ccc-thread{flex:1;overflow-y:auto;padding:18px 0 10px}
 .ccc-thread-in{max-width:860px;margin:0 auto;padding:0 28px}
+/* Phones: messages sit at the bottom of the thread, newest just above the
+   composer, and while the keyboard is up (chat.js chatKeyboardInit) the chat
+   screens fill exactly the visible area so the header never slides away. */
+@media (max-width:760px){
+  .ccc-thread{display:flex;flex-direction:column}
+  .ccc-thread-in{margin-top:auto;width:100%}
+  html.cc-kb .ccc-screen,html.cc-kb .cc-shell,html.cc-kb .ccc-widget{position:fixed !important;left:0 !important;right:0 !important;top:var(--cc-vvtop,0) !important;bottom:auto !important;height:var(--cc-vvh,100%) !important;max-height:none !important}
+  html.cc-kb .ccc-widget{width:auto !important;max-width:none !important;border-radius:0 !important}
+}
 .ccc-day{display:flex;align-items:center;gap:12px;margin:18px 0 10px;font:600 var(--fs-115) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
 .ccc-day:before,.ccc-day:after{content:"";flex:1;height:1px;background:var(--rule)}
 .ccc-msg{display:flex;gap:12px;padding:6px 0}
@@ -7436,7 +7445,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
   <!-- ══ CaptainCore Chat: operator inbox, full screen (chat.js) ══ -->
   <sc-if value="{{ showChat }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:var(--paper);animation:ccfade .15s ease">
+    <div class="ccc-screen" style="position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:var(--paper);animation:ccfade .15s ease">
       <div class="ccc-top">
         <span onClick="{{ chatExit }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Dashboard</span>
         <span style="width:1px;height:22px;background:var(--rule)"></span>
