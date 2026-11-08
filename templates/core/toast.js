@@ -10,7 +10,8 @@ Object.assign(Component.prototype, {
     const id = 't' + Date.now() + Math.floor(Math.random() * 10000);
     const kind = opts.kind || 'info';
     this.setState(st => ({ toasts: [...(st.toasts || []), { id, text, kind }] }));
-    const ms = opts.timeout != null ? opts.timeout : (kind === 'loading' ? 0 : 3200);
+    // Long messages stay up long enough to read (about 60ms a character, up to 12s).
+    const ms = opts.timeout != null ? opts.timeout : (kind === 'loading' ? 0 : Math.min(12000, Math.max(3200, String(text).length * 60)));
     if (ms) { clearTimeout(this._toastTimers && this._toastTimers[id]);
       this._toastTimers = this._toastTimers || {};
       this._toastTimers[id] = setTimeout(() => this.dismissToast(id), ms); }
@@ -20,7 +21,7 @@ Object.assign(Component.prototype, {
   updateToast(id, text, opts = {}) {
     const kind = opts.kind || 'success';
     this.setState(st => ({ toasts: (st.toasts || []).map(t => t.id === id ? { ...t, text, kind } : t) }));
-    const ms = opts.timeout != null ? opts.timeout : 3200;
+    const ms = opts.timeout != null ? opts.timeout : Math.min(12000, Math.max(3200, String(text).length * 60));
     if (ms) { this._toastTimers = this._toastTimers || {};
       this._toastTimers[id] = setTimeout(() => this.dismissToast(id), ms); }
   },

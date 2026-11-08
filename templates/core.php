@@ -117,10 +117,14 @@ $cc_boot['chat']      = [
 // Operators can turn on notifications for this device (ChatPush). The
 // service worker lives under the app path (Router.php serves it).
 $cc_app_base = '/' . ( isset( $configurations->path ) && trim( $configurations->path, '/' ) !== '' ? trim( $configurations->path, '/' ) . '/' : ( isset( $configurations->path ) ? '' : 'account/' ) );
+// Changes on every deploy, so the service worker and manifest URLs never hit
+// a host page cache's copy from an older build (Kinsta caches logged-out GETs,
+// and browsers fetch the manifest without cookies).
+$cc_app_ver = (string) filemtime( plugin_dir_path( __DIR__ ) . 'captaincore.php' );
 if ( $cc_boot['chat']['operator'] ) {
 	$cc_boot['chat']['push'] = [
 		'publicKey' => CaptainCore\WebPush::public_key(),
-		'sw'        => $cc_app_base . 'push-sw', // no .js: see Router.php
+		'sw'        => $cc_app_base . 'push-sw?v=' . $cc_app_ver, // no .js: see Router.php; ?v= skips stale host page caches
 	];
 }
 $load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== '' && ! $chat_enabled
@@ -149,7 +153,7 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.
 // Installable as a home-screen app (operators' phone notifications: ChatPush).
 $cc_app_icon = get_site_icon_url( 180 );
 ?>
-<link rel="manifest" href="<?php echo esc_url( $cc_app_base . 'app-manifest' ); ?>">
+<link rel="manifest" href="<?php echo esc_url( $cc_app_base . 'app-manifest?v=' . $cc_app_ver ); ?>">
 <link rel="icon" id="cc-favicon" href="<?php echo esc_url( get_site_icon_url( 32 ) ?: home_url( '/favicon.ico' ) ); ?>">
 <?php if ( $cc_app_icon ) : ?><link rel="apple-touch-icon" href="<?php echo esc_url( $cc_app_icon ); ?>"><?php endif; ?>
 <meta name="apple-mobile-web-app-capable" content="yes">
