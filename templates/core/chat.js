@@ -1096,9 +1096,10 @@ Object.assign(Component.prototype, {
         ? { label: 'Reopen', go: () => this.chatPatch({ status: 'open' }, 'Reopened'), primary: false }
         : { label: 'Close', go: () => this.chatPatch({ status: 'closed' }, 'Closed'), primary: true },
       conv.status === 'snoozed'
-        ? { label: 'Unsnooze', go: () => this.chatPatch({ status: 'open' }, 'Back in the inbox'), primary: false }
-        : { label: 'Snooze ▾', go: e => this.chatSnoozeMenu(e), primary: false }
-    ].map(a => Object.assign(a, { bg: a.primary ? 'var(--brand)' : 'var(--paper)', fg: a.primary ? 'white' : 'var(--ink)', bd: a.primary ? 'var(--brand)' : 'var(--rule)' }));
+        ? { label: 'Unsnooze', title: 'Unsnooze', go: () => this.chatPatch({ status: 'open' }, 'Back in the inbox'), primary: false, clock: true }
+        : { label: 'Snooze ▾', title: 'Snooze', go: e => this.chatSnoozeMenu(e), primary: false, clock: true }
+    ].map(a => Object.assign(a, { bg: a.primary ? 'var(--brand)' : 'var(--paper)', fg: a.primary ? 'white' : 'var(--ink)', bd: a.primary ? 'var(--brand)' : 'var(--rule)',
+      title: a.title || a.label, clock: !!a.clock, iconOnly: a.clock ? '1' : '0' })); // phones show the clock alone
     const hist = conv && c.history[conv.customer_user_id] ? c.history[conv.customer_user_id].list.filter(x => x.id !== conv.id) : [];
     // Access groups: links into the Manager. A plain click navigates in the
     // app; modified clicks open the real URL in a new tab.

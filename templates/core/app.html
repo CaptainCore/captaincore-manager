@@ -348,6 +348,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-accmore:hover{color:var(--brand-ink)}
 .ccc-pushbtn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);font:500 var(--fs-125) var(--sans);cursor:pointer}
 .ccc-back{display:none;flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:17px;cursor:pointer}
+.ccc-acticon{display:none}
 @media (max-width:760px){
   .ccc-body{grid-template-columns:minmax(0,1fr)}
   .ccc-list,.ccc-main{min-width:0}
@@ -357,6 +358,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   .ccc-back{display:grid;place-items:center}
   .ccc-pushlabel,.ccc-livepill{display:none !important}
   .ccc-pushbtn{width:34px;height:34px;padding:0;justify-content:center}
+  .ccc-act[data-icon="1"]{width:34px;padding:0 !important}
+  .ccc-act[data-icon="1"] .ccc-actlabel{display:none}
+  .ccc-act[data-icon="1"] .ccc-acticon{display:block}
   .ccc-top{padding-left:14px;padding-right:14px}
   .ccc-convhead{padding:10px 12px !important;gap:8px !important;flex-wrap:wrap}
   .ccc-convhead h2{font-size:15.5px !important}
@@ -7515,7 +7519,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               </div>
               <button onClick="{{ chatSideToggle }}" class="ccc-sidebtn" title="Customer and access">Customer</button>
               <sc-for list="{{ chatActions }}" as="a" hint-placeholder-count="2">
-                <button onClick="{{ a.go }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:{{ a.fg }};font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap">{{ a.label }}</button>
+                <button onClick="{{ a.go }}" title="{{ a.title }}" class="ccc-act" data-icon="{{ a.iconOnly }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:{{ a.fg }};font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px">
+                  <sc-if value="{{ a.clock }}" hint-placeholder-val="{{ false }}"><svg class="ccc-acticon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3 2 6"></path><path d="m22 6-3-3"></path></svg></sc-if>
+                  <span class="ccc-actlabel">{{ a.label }}</span>
+                </button>
               </sc-for>
             </div>
             <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
