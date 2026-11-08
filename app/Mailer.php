@@ -229,6 +229,41 @@ class Mailer {
         );
     }
 
+    /**
+     * Dark mode for every email the layout sends.
+     *
+     * Mail apps that follow the reader's dark mode (Apple Mail on Mac, iPhone and
+     * iPad, Outlook for Mac and iOS, Thunderbird, most web views) apply this. The
+     * emails are built from inline styles with one small palette, so the rules
+     * match those inline colours and swap each for its dark counterpart. No
+     * caller needs dark mode classes, and a colour outside the palette (the
+     * tinted status badges) keeps its light look, which still reads on dark.
+     * Gmail ignores it and shows the light email, or inverts it on phones.
+     */
+    private static function dark_mode_css( $brand_color, $accent ) {
+        $brand  = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $brand_color ) ? $brand_color : '#123E8C';
+        $accent = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $accent ) ? $accent : '#5C97F7';
+        $text   = fn( $hex ) => "[style*='color: {$hex}' i]:not([style*='background-color: {$hex}' i])";
+        return "<style>
+            :root { color-scheme: light dark; supported-color-schemes: light dark; }
+            @media (prefers-color-scheme: dark) {
+                .cc-body, body.cc-body { background-color: #0F1115 !important; }
+                .cc-card, .cc-card [style*='background-color: #ffffff' i] { background-color: #1A1D23 !important; }
+                .cc-card { box-shadow: none !important; }
+                .cc-card [style*='background-color: #F5F7FA' i], .cc-card [style*='background: #F5F7FA' i],
+                .cc-card [style*='background: #F4F6F9' i], .cc-card [style*='background-color: #EDF0F5' i] { background-color: #262A32 !important; }
+                [style*='#E3E7EE' i] { border-color: #2E333B !important; }
+                {$text('#15181D')} { color: #F1F3F6 !important; }
+                {$text('#565C66')} { color: #C9CED6 !important; }
+                {$text('#666D7A')} { color: #A9B0BB !important; }
+                {$text($brand)}, {$text('#123E8C')} { color: {$accent} !important; }
+                .cc-card a:not([style]) { color: {$accent} !important; }
+                .cc-logo-light { display: none !important; }
+                .cc-logo-dark { display: inline-block !important; }
+            }
+        </style>";
+    }
+
     /* -------------------------------------------------------------------------
      *  CORE TEMPLATE WRAPPER
      * ------------------------------------------------------------------------- */
@@ -247,9 +282,17 @@ class Mailer {
 
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
-        $logo_url    = esc_url( $config->email_logo ?? $config->logo ?? '' );
-        $site_name   = esc_html( get_bloginfo( 'name' ) );
         $site_url    = esc_url( home_url() );
+        $logo_url    = esc_url( $config->email_logo ?? $config->logo ?? '' );
+        $logo_dark   = esc_url( $config->email_logo_dark ?? '' );
+        $site_name   = esc_html( get_bloginfo( 'name' ) );
+        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7' );
+        // A logo for dark backgrounds, shown in place of the regular one when the
+        // reader's mail app is in dark mode. Hidden inline so apps that ignore the
+        // dark mode styles (Gmail) only ever show the regular logo.
+        $logo_dark_html = $logo_dark !== ''
+            ? "<a href='{$site_url}' target='_blank' class='cc-logo-dark' style='display: none; mso-hide: all; text-decoration: none;'><img src='{$logo_dark}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>"
+            : '';
 
         // Build unsubscribe link if provided
         $unsubscribe_html = '';
@@ -278,18 +321,21 @@ class Mailer {
         <head>
             <meta charset='UTF-8'>
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <meta name='color-scheme' content='light dark'>
+            <meta name='supported-color-schemes' content='light dark'>
             <title>{$subject_html}</title>
+            {$dark_css}
         </head>
-        <body style='margin: 0; padding: 0; background-color: #F5F7FA; font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #565C66;'>
-            <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+        <body class='cc-body' style='margin: 0; padding: 0; background-color: #F5F7FA; font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #565C66;'>
+            <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' class='cc-body'>
                 <tr>
                     <td style='padding: 40px 20px; text-align: center;'>
 
                         <div style='margin-bottom: 30px;'>
-                            <a href='{$site_url}' target='_blank' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>
+                            <a href='{$site_url}' target='_blank' class='cc-logo-light' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>{$logo_dark_html}
                         </div>
 
-                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' class='cc-card' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
 
                             <!-- Header Area -->
                             <tr>
