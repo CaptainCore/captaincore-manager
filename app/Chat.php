@@ -624,6 +624,13 @@ class Chat {
 
 	// ── files ───────────────────────────────────────────────────────────
 
+	/**
+	 * Where attachments live: <parent of ABSPATH>/private/chat unless
+	 * CAPTAINCORE_CHAT_DIR says otherwise. Web PHP must be able to read it.
+	 * Kinsta's open_basedir leaves out ~/private (WP-CLI over SSH is not
+	 * limited, so an import there looks fine and then every file 404s), so
+	 * Kinsta hosts point it at ~/tmp/chat, like CAPTAINCORE_AI_RELAY_DIR.
+	 */
 	public static function base_dir() {
 		if ( defined( 'CAPTAINCORE_CHAT_DIR' ) && CAPTAINCORE_CHAT_DIR ) {
 			return untrailingslashit( CAPTAINCORE_CHAT_DIR );
