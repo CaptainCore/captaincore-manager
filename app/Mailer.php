@@ -168,7 +168,9 @@ class Mailer {
      *  $reply_address '' means replies by email are not set up: the email
      *  then only links to the conversation.
      * ------------------------------------------------------------------------- */
-    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address ) {
+    // $can_open: chat is on for the customer, so the email links to the
+    // conversation. Without it, replying to the email is the way back.
+    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -195,16 +197,20 @@ class Mailer {
                 </div>";
         }
         $how = $reply_address !== ''
-            ? 'Reply to this email to answer, or open the conversation.'
+            ? ( $can_open ? 'Reply to this email to answer, or open the conversation.' : 'Reply to this email to answer.' )
             : 'Open the conversation to reply.';
+        $button = $can_open ? "
+            <div style='text-align: center;'>
+                <a href='{$link}' style='display: inline-block; background-color: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 24px; border-radius: 8px;'>Open conversation</a>
+            </div>" : '';
+        // A conversation an operator started: nothing from the customer yet.
+        $started = empty( $conversation->last_customer_at ) && ! (int) $conversation->notified_message_id;
 
         $content_html = "
             <div style='font-size: 11px; color: #A3ACB9; text-align: center; margin: -20px 0 20px;'>" . esc_html( \CaptainCore\ChatNotify::MARKER ) . "</div>
             {$items}
             <p style='margin: 24px 0 18px; font-size: 14px; color: #666D7A; text-align: center;'>{$how}</p>
-            <div style='text-align: center;'>
-                <a href='{$link}' style='display: inline-block; background-color: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 24px; border-radius: 8px;'>Open conversation</a>
-            </div>";
+            {$button}";
 
         $host    = wp_parse_url( home_url(), PHP_URL_HOST );
         $headers = [ "References: <chat-{$id}@{$host}>", "In-Reply-To: <chat-{$id}@{$host}>" ];
@@ -214,7 +220,7 @@ class Mailer {
         self::send_email_with_layout(
             $user->user_email,
             "[{$site_name}] {$topic}",
-            count( $replies ) === 1 ? "{$who} replied" : "{$who} sent " . count( $replies ) . ' replies',
+            $started ? "{$who} sent you a message" : ( count( $replies ) === 1 ? "{$who} replied" : "{$who} sent " . count( $replies ) . ' replies' ),
             $topic,
             $content_html,
             $headers,

@@ -147,6 +147,41 @@ Object.assign(Component.prototype, {
 
   // What the customer can reach (accounts, sites, domains), for the
   // operator sidebar. Cached per customer for the session.
+  // Operators: start a conversation with a customer. The To picker searches
+  // every non-admin user (GET /users, loaded once when first needed).
+  chatNewForCustomer() {
+    const c = this.chatInit();
+    if (!c) return;
+    this.chatOpen(0);
+    c.newDraft = true; c.newTo = null; c.toQ = ''; c.newSite = ''; c.siteQ = ''; c.newSubject = '';
+    this._chatToFocus = true;
+    this.chatLoadUsers();
+    this.setState({ chatBody: '', chatMode: 'reply' });
+  },
+
+  chatLoadUsers() {
+    if (this._chatUsers !== undefined) return;
+    this._chatUsers = null;
+    this.api('/users/').then(r => {
+      this._chatUsers = (Array.isArray(r) ? r : [])
+        .filter(u => !(u.roles || []).includes('administrator'))
+        .map(u => ({ id: parseInt(u.user_id, 10), name: this.decodeHtml ? this.decodeHtml(u.name || u.username || '') : (u.name || u.username || ''), email: String(u.email || '') }));
+      this.setState({});
+    }).catch(() => { this._chatUsers = undefined; this.setState({}); });
+  },
+
+  chatPickCustomer(u) {
+    const c = this._chat;
+    c.newTo = u; c.toQ = ''; c.newSite = ''; c.siteQ = '';
+    this.chatLoadAccess({ customer_user_id: u.id });
+    this._chatFocus = true;
+    this.setState({});
+  },
+
+  chatToRef(el) {
+    if (el && this._chatToFocus) { this._chatToFocus = false; setTimeout(() => el.focus(), 0); }
+  },
+
   chatLoadAccess(conv) {
     const c = this._chat;
     const uid = conv.customer_user_id;
@@ -185,7 +220,10 @@ Object.assign(Component.prototype, {
     if (!c || (!body && !c.files.length) || s.chatSending) return;
     const note = cb.operator && s.chatMode === 'note';
     this.setState({ chatSending: true });
-    const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {});
+    const opNew = cb.operator && !c.id;
+    if (opNew && !c.newTo) { this.setState({ chatSending: false }); this.toast('Choose who to message first.', { kind: 'info' }); return; }
+    const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
+      opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {});
     let payload = fields;
     if (c.files.length) {
       // Attachments go as multipart; the text rides along as fields.
@@ -199,8 +237,8 @@ Object.assign(Component.prototype, {
     req.then(r => {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not send');
       if (r.messages) {
-        // A new conversation (customers).
-        c.id = r.conversation.id; c.newDraft = false; c.newSite = '';
+        // A new conversation (a customer's, or one an operator started).
+        c.id = r.conversation.id; c.newDraft = false; c.newSite = ''; c.newTo = null; c.newSubject = ''; c.toQ = '';
         c.conv = { conversation: r.conversation, messages: r.messages };
         this.chatMergeConv(r.conversation, true);
         this.chatOnMessage(r.messages[0]);
@@ -1172,6 +1210,18 @@ Object.assign(Component.prototype, {
     const siteManyAccounts = siteHits.length > 0 && new Set((this.FLEET || []).map(x => x.accountId)).size > 1;
     const supSite = conv && conv.site_id && !isOp ? (this.FLEET || []).find(x => String(x.id) === String(conv.site_id)) : null;
     const soundOn = !!(c.alert && c.alert.sound);
+    // Operator "New message" panel.
+    const opNew = isOp && !!c.newDraft && !c.id;
+    const newTo = opNew ? c.newTo : null;
+    const newToFirst = newTo ? String(newTo.name || newTo.email).split(' ')[0] : '';
+    const newToAcc = newTo && c.access ? c.access[newTo.id] : null;
+    const toQ = String(c.toQ || '').trim().toLowerCase();
+    const users = this._chatUsers;
+    const toHits = opNew && !newTo && users && toQ ? users.filter(u => (u.name + ' ' + u.email).toLowerCase().includes(toQ)).slice(0, 8) : [];
+    const newSites = newToAcc && Array.isArray(newToAcc.sites) ? newToAcc.sites : [];
+    const nsQ = String(c.siteQ || '').trim().toLowerCase();
+    const nsHits = newSites.filter(x => !nsQ || (x.name + ' ' + (x.url || '')).toLowerCase().includes(nsQ));
+    const nsPicked = opNew && c.newSite ? newSites.find(x => String(x.id) === String(c.newSite)) : null;
     const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || (soundOn ? 'Chime on' : 'Chime muted');
 
     return {
@@ -1180,6 +1230,24 @@ Object.assign(Component.prototype, {
       chatLiveLabel: live, chatLiveFg: liveFg,
       chatPushShow: isOp, chatPushLabel: pushLabel, chatPushIsOn: push.state === 'on', chatPushFg: push.state === 'on' ? 'var(--brand-ink)' : 'var(--ink)',
       chatPushGo: e => this.chatPushButton(e),
+      chatNewGo: () => this.chatNewForCustomer(),
+      chatOpNew: opNew,
+      chatNewCancel: () => { c.newDraft = false; c.newTo = null; this.setState({ chatBody: '' }); },
+      chatToPicked: !!newTo, chatToUnpicked: opNew && !newTo,
+      chatToName: newTo ? newTo.name : '', chatToEmail: newTo ? newTo.email : '',
+      chatToClear: () => { c.newTo = null; c.newSite = ''; this._chatToFocus = true; this.setState({}); },
+      chatToQ: c.toQ || '', onChatToQ: e => { c.toQ = e.target.value; this.setState({}); }, chatToRef: el => this.chatToRef(el),
+      chatToHits: toHits.map(u => ({ name: u.name || u.email, email: u.email, go: () => this.chatPickCustomer(u) })),
+      chatToLoading: opNew && !newTo && users === null,
+      chatToNone: opNew && !newTo && !!users && !!toQ && !toHits.length,
+      chatToTip: opNew && !newTo && !!users && !toQ,
+      chatNewSitesShow: !!newTo && newSites.length > 0,
+      chatNewSitePicked: !!nsPicked, chatNewSiteUnpicked: !nsPicked, chatNewSiteName: nsPicked ? nsPicked.name : '',
+      chatNewSiteClear: () => { c.newSite = ''; this.setState({}); },
+      chatNewSiteQ: c.siteQ || '', onChatNewSiteQ: e => { c.siteQ = e.target.value; this.setState({}); },
+      chatNewSites: nsHits.slice(0, 6).map(x => ({ name: x.name, sub: (x.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''), go: () => { c.newSite = x.id; c.siteQ = ''; this.setState({}); } })),
+      chatNewSitesMore: nsHits.length > 6 ? (nsHits.length - 6) + ' more. Search to narrow.' : '',
+      onChatNewSubject: e => { c.newSubject = e.target.value; },
       // Phones show the list or the thread, not both.
       chatPhoneView: (c.id || c.newDraft) ? 'thread' : 'list',
       chatBack: () => this.chatOpen(0),
@@ -1217,7 +1285,10 @@ Object.assign(Component.prototype, {
       chatUploading: !!s.chatSending && c.files.length > 0,
       chatUploadLabel: 'Uploading ' + (c.files.length === 1 ? '1 file' : c.files.length + ' files') + '…',
       chatBoxBg: note ? 'var(--ccc-note)' : 'var(--panel)', chatBoxRule: note ? 'var(--ccc-note-rule)' : 'var(--rule)',
-      chatPlaceholder: note ? 'Write an internal note. Only staff can see it.' : isOp ? 'Reply to ' + custFirst : c.id ? 'Write a reply…' : 'How can we help?',
+      chatPlaceholder: note ? 'Write an internal note. Only staff can see it.' : isOp && !c.id ? 'Write your message…' : isOp ? 'Reply to ' + custFirst : c.id ? 'Write a reply…' : 'How can we help?',
+      chatNewHint: !newTo ? 'Choose who to message, then write it here. Enter sends.'
+        : newToAcc && newToAcc.chat === false ? 'Chat isn’t on for ' + newToFirst + ' yet, so this goes to ' + newTo.email + ' by email right away. Their reply to that email comes back here.'
+        : newToFirst + ' sees this in the Manager. If it’s still unread after 10 minutes (5 if they’re offline), it goes to ' + newTo.email + ' by email.',
       chatHint: note ? 'Internal notes are never shown to the customer. **bold**, _italic_, `code` and - lists work.' : isOp ? 'Enter sends, Shift+Enter for a new line. **bold**, _italic_, `code` and - lists work.' + (conv && conv.guest ? ' This contact has no Manager login, so they won’t see replies here.' : '') : '',
       chatTypingShow: !!ty,
       // Operator sidebar

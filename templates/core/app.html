@@ -169,6 +169,10 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-av-sm{width:26px;height:26px;font-size:10.5px}
 .ccc-thread{flex:1;overflow-y:auto;padding:18px 0 10px}
 .ccc-thread-in{max-width:860px;margin:0 auto;padding:0 28px}
+.ccc-newbtn{flex:none;width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink);cursor:pointer}
+.ccc-newbtn:hover{color:var(--brand-ink);border-color:color-mix(in srgb,var(--brand) 40%,var(--rule))}
+.ccc-newform{flex:1;overflow-y:auto;padding:22px 28px;max-width:640px;width:100%}
+@media (max-width:760px){.ccc-newform{padding:16px 14px}}
 /* Phones: messages sit at the bottom of the thread, newest just above the
    composer, and while the keyboard is up (chat.js chatKeyboardInit) the chat
    screens fill exactly the visible area so the header never slides away. */
@@ -7462,9 +7466,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
       <div class="ccc-body" data-view="{{ chatPhoneView }}">
         <aside class="ccc-list">
           <div style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink-dim)">
+            <div style="display:flex;gap:8px">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:36px;padding:0 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink-dim)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-              <input value="{{ chatQ }}" onInput="{{ onChatQ }}" placeholder="Search name, email or subject" style="flex:1;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none">
+              <input value="{{ chatQ }}" onInput="{{ onChatQ }}" placeholder="Search name, email or subject" style="flex:1;min-width:0;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none">
+            </div>
+            <button onClick="{{ chatNewGo }}" class="ccc-newbtn" title="New message to a customer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></button>
             </div>
             <div style="display:flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:2px">
               <sc-for list="{{ chatFilters }}" as="f" hint-placeholder-count="5">
@@ -7515,6 +7522,71 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           </sc-if>
           <sc-if value="{{ chatHasErr }}" hint-placeholder-val="{{ false }}">
             <div style="padding:22px 28px;color:var(--ink-dim);font:400 var(--fs-14) var(--sans)">{{ chatErr }}</div>
+          </sc-if>
+          <sc-if value="{{ chatOpNew }}" hint-placeholder-val="{{ false }}">
+            <div class="ccc-convhead" style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">
+              <button onClick="{{ chatBack }}" class="ccc-back" title="All conversations">←</button>
+              <h2 style="flex:1;margin:0;font:600 17px var(--sans);letter-spacing:-.01em">New message</h2>
+              <button onClick="{{ chatNewCancel }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);cursor:pointer">Cancel</button>
+            </div>
+            <div class="ccc-newform">
+              <div class="ccc-label">To</div>
+              <sc-if value="{{ chatToPicked }}" hint-placeholder-val="{{ false }}">
+                <div class="ccs-sitechip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg><span class="ccc-trunc" style="flex:1;min-width:0">{{ chatToName }} <span style="font-weight:400;opacity:.8">· {{ chatToEmail }}</span></span><button onClick="{{ chatToClear }}" title="Change">✕</button></div>
+              </sc-if>
+              <sc-if value="{{ chatToUnpicked }}" hint-placeholder-val="{{ true }}">
+                <div class="ccs-search" style="margin-bottom:6px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                  <input ref="{{ chatToRef }}" value="{{ chatToQ }}" onInput="{{ onChatToQ }}" placeholder="Search customers by name or email" style="flex:1;min-width:0;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none">
+                </div>
+                <sc-for list="{{ chatToHits }}" as="u" hint-placeholder-count="3">
+                  <div onClick="{{ u.go }}" class="ccs-siteopt"><span class="ccc-trunc" style="min-width:0">{{ u.name }}</span><span class="ccc-trunc ccc-accsub">{{ u.email }}</span></div>
+                </sc-for>
+                <sc-if value="{{ chatToLoading }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">Loading customers…</div></sc-if>
+                <sc-if value="{{ chatToNone }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">No customers match.</div></sc-if>
+                <sc-if value="{{ chatToTip }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">Type a name or email.</div></sc-if>
+              </sc-if>
+              <sc-if value="{{ chatNewSitesShow }}" hint-placeholder-val="{{ false }}">
+                <div class="ccc-label" style="margin-top:18px">About a site <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></div>
+                <sc-if value="{{ chatNewSitePicked }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccs-sitechip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg><span class="ccc-trunc" style="flex:1;min-width:0">{{ chatNewSiteName }}</span><button onClick="{{ chatNewSiteClear }}" title="Remove">✕</button></div>
+                </sc-if>
+                <sc-if value="{{ chatNewSiteUnpicked }}" hint-placeholder-val="{{ true }}">
+                  <div class="ccs-search" style="height:34px;margin-bottom:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                    <input value="{{ chatNewSiteQ }}" onInput="{{ onChatNewSiteQ }}" placeholder="Find one of their sites" style="flex:1;min-width:0;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none">
+                  </div>
+                  <sc-for list="{{ chatNewSites }}" as="st" hint-placeholder-count="3">
+                    <div onClick="{{ st.go }}" class="ccs-siteopt"><span class="ccc-trunc" style="min-width:0">{{ st.name }}</span><span class="ccc-trunc ccc-accsub">{{ st.sub }}</span></div>
+                  </sc-for>
+                  <div class="ccc-accnone">{{ chatNewSitesMore }}</div>
+                </sc-if>
+              </sc-if>
+              <div class="ccc-label" style="margin-top:18px">Subject <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional, else the first line)</span></div>
+              <div class="ccs-search"><input onInput="{{ onChatNewSubject }}" placeholder="What it’s about" maxlength="200" style="flex:1;min-width:0;border:none;background:transparent;color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none"></div>
+            </div>
+            <div class="ccc-composer">
+              <div class="ccc-composer-in">
+                <sc-if value="{{ chatHasFiles }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccc-pending">
+                    <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
+                      <div class="ccc-pf">
+                        <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
+                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                        <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
+                        <button onClick="{{ pf.remove }}" title="Remove">✕</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div class="ccc-cbox" style="background:var(--paper);border-color:var(--rule)">
+                  <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
+                  <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
+                  <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+                </div>
+                <div style="margin-top:6px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ chatNewHint }}</div>
+              </div>
+            </div>
           </sc-if>
           <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
             <div class="ccc-convhead" style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">

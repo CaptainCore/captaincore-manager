@@ -11,12 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Email for CaptainCore Chat: unread replies go out by email, and replies to
  * that email come back into the thread.
  *
- * Out. An operator reply that the customer has not read gets emailed. The
- * wait depends on whether the reply reached an open tab (the relay reports
- * that on publish): 20 minutes if it did, 5 if the customer was offline or
- * the relay could not say. Replies inside the wait go out together in one
- * email. A read (the thread on screen in a visible tab) or a customer
- * message cancels the email.
+ * Out. An operator message the customer has not read gets emailed. The
+ * wait depends on whether it reached an open tab (the relay reports that on
+ * publish): 10 minutes if it did, 5 if the customer was offline or the relay
+ * could not say, none when chat is not on for them yet (email is the only
+ * way it reaches them, and the email then has no link into the Manager).
+ * Messages inside the wait go out together in one email. A read (the thread
+ * on screen in a visible tab) or a customer message cancels the email.
  *
  * In. The email's Reply-To is chat-<conversation>-<hmac>@<reply domain>.
  * A Mailgun route forwards mail for that address to POST /chat/inbound,
@@ -33,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ChatNotify {
 
-	const DELAY_ONLINE  = 1200;
+	const DELAY_ONLINE  = 600;
 	const DELAY_OFFLINE = 300;
 	const MARKER        = '##- Reply above this line -##';
 	const MAX_FILES     = 10;
@@ -73,10 +74,11 @@ class ChatNotify {
 	public static function schedule( $conversation_id, $online ) {
 		global $wpdb;
 		$conversation = ChatConversations::get( (int) $conversation_id );
-		if ( ! $conversation || (int) $conversation->user_id <= 0 || ! Chat::enabled_for( (int) $conversation->user_id ) ) {
+		if ( ! $conversation || (int) $conversation->user_id <= 0 ) {
 			return;
 		}
-		$delay = (int) apply_filters( 'captaincore_chat_email_delay', $online ? self::DELAY_ONLINE : self::DELAY_OFFLINE, $online );
+		$delay = ! Chat::enabled_for( (int) $conversation->user_id ) ? 0
+			: (int) apply_filters( 'captaincore_chat_email_delay', $online ? self::DELAY_ONLINE : self::DELAY_OFFLINE, $online );
 		$at    = gmdate( 'Y-m-d H:i:s', time() + max( 0, $delay ) );
 		$c     = $wpdb->base_prefix . 'captaincore_chat_conversations';
 		$wpdb->query( $wpdb->prepare(
@@ -143,7 +145,7 @@ class ChatNotify {
 			return false;
 		}
 		$user = get_userdata( (int) $conversation->user_id );
-		if ( ! $user || ! is_email( $user->user_email ) || ! Chat::enabled_for( (int) $user->ID ) ) {
+		if ( ! $user || ! is_email( $user->user_email ) || Chat::is_operator( (int) $user->ID ) ) {
 			return false;
 		}
 		$replies = self::unread_replies( (int) $conversation_id, (int) $user->ID, (int) $conversation->notified_message_id );
@@ -154,7 +156,7 @@ class ChatNotify {
 		ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
 
 		$files = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, $replies ) );
-		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ) );
+		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ) );
 
 		$event = Chat::append( (int) $conversation_id, [
 			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',

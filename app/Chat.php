@@ -113,6 +113,7 @@ class Chat {
 		$domains  = $domain_ids ? $wpdb->get_results( "SELECT domain_id, name FROM {$wpdb->prefix}captaincore_domains WHERE domain_id IN ({$in( $domain_ids )}) ORDER BY name" ) : [];
 		return [
 			'operator' => false,
+			'chat'     => self::enabled_for( $customer_user_id ), // false: they only get email
 			'accounts' => array_map( fn( $a ) => [ 'id' => (int) $a->account_id, 'name' => html_entity_decode( (string) $a->name ), 'level' => $levels[ (int) $a->account_id ] ?? '' ], $accounts ?: [] ),
 			'sites'    => array_map( fn( $x ) => [ 'id' => (int) $x->site_id, 'name' => (string) $x->name, 'url' => (string) ( $x->home_url ?? '' ) ], $sites ?: [] ),
 			'domains'  => array_map( fn( $d ) => [ 'id' => (int) $d->domain_id, 'name' => (string) $d->name ], $domains ?: [] ),
@@ -315,27 +316,16 @@ class Chat {
 	 */
 	public static function create( $user_id, $input, $files = [] ) {
 		if ( self::is_operator( $user_id ) ) {
-			return new \WP_Error( 'customers_only', "Operators can't start conversations yet.", [ 'status' => 403 ] );
+			return self::create_for_customer( $user_id, $input, $files );
 		}
 		if ( ! self::enabled_for( $user_id ) ) {
 			return new \WP_Error( 'chat_disabled', 'Chat is not available yet.', [ 'status' => 403 ] );
 		}
-		$files = self::uploads( $files );
-		if ( is_wp_error( $files ) ) {
-			return $files;
+		$opening = self::opening( $input, $files );
+		if ( is_wp_error( $opening ) ) {
+			return $opening;
 		}
-		$body = self::body_or_files( $input['body'] ?? '', $files );
-		if ( is_wp_error( $body ) ) {
-			return $body;
-		}
-		$subject = trim( (string) ( $input['subject'] ?? '' ) );
-		if ( $subject === '' ) {
-			$subject = $body !== '' ? self::first_line( self::markdown_plain( $body ), 80 ) : ( count( $files ) === 1 ? 'Sent ' . sanitize_file_name( (string) $files[0]['name'] ) : 'Sent ' . count( $files ) . ' files' );
-		}
-		$subject = self::clean_line( $subject, self::MAX_SUBJECT );
-		if ( is_wp_error( $subject ) ) {
-			return $subject;
-		}
+		[ $body, $subject, $files ] = $opening;
 
 		// Links come only from what the user can already reach.
 		$site_id = (int) ( $input['site_id'] ?? 0 );
@@ -378,6 +368,90 @@ class Chat {
 		self::emit( 'conversation.created', $conversation, $message );
 		ChatPush::customer_message( $conversation, $message );
 		return [ 'conversation' => $conversation, 'messages' => [ $message ] ];
+	}
+
+	/** A new conversation's first message: [ body, subject, files ] or an error. */
+	private static function opening( $input, $files ) {
+		$files = self::uploads( $files );
+		if ( is_wp_error( $files ) ) {
+			return $files;
+		}
+		$body = self::body_or_files( $input['body'] ?? '', $files );
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
+		$subject = trim( (string) ( $input['subject'] ?? '' ) );
+		if ( $subject === '' ) {
+			$subject = $body !== '' ? self::first_line( self::markdown_plain( $body ), 80 ) : ( count( $files ) === 1 ? 'Sent ' . sanitize_file_name( (string) $files[0]['name'] ) : 'Sent ' . count( $files ) . ' files' );
+		}
+		$subject = self::clean_line( $subject, self::MAX_SUBJECT );
+		return is_wp_error( $subject ) ? $subject : [ $body, $subject, $files ];
+	}
+
+	/**
+	 * An operator starts a conversation with a customer (customer_user_id).
+	 * The first message is the operator's, so nothing is waiting. The
+	 * customer sees it live in the Manager when chat is on for them, and
+	 * ChatNotify emails it if it goes unread (right away when chat is not on
+	 * for them yet: email is then the only way it reaches them).
+	 * site_id and account_id must be ones the customer can reach.
+	 */
+	private static function create_for_customer( $operator_id, $input, $files ) {
+		$customer_id = (int) ( $input['customer_user_id'] ?? 0 );
+		$customer    = $customer_id > 0 ? get_userdata( $customer_id ) : false;
+		if ( ! $customer ) {
+			return new \WP_Error( 'customer', 'Choose who to message.', [ 'status' => 400 ] );
+		}
+		if ( self::is_operator( $customer_id ) ) {
+			return new \WP_Error( 'customer', 'That person is an operator. Leave them an internal note instead.', [ 'status' => 400 ] );
+		}
+		$opening = self::opening( $input, $files );
+		if ( is_wp_error( $opening ) ) {
+			return $opening;
+		}
+		[ $body, $subject, $files ] = $opening;
+
+		$access     = self::customer_access( $customer_id );
+		$access     = is_wp_error( $access ) ? [ 'accounts' => [], 'sites' => [] ] : $access;
+		$site_id    = (int) ( $input['site_id'] ?? 0 );
+		if ( $site_id > 0 && ! in_array( $site_id, array_map( fn( $x ) => (int) $x['id'], $access['sites'] ), true ) ) {
+			return new \WP_Error( 'site', "That site isn't on the customer's account.", [ 'status' => 400 ] );
+		}
+		$accounts   = array_map( fn( $a ) => (int) $a['id'], $access['accounts'] );
+		$account_id = (int) ( $input['account_id'] ?? 0 );
+		if ( $account_id > 0 && ! in_array( $account_id, $accounts, true ) ) {
+			return new \WP_Error( 'account', "That account isn't the customer's.", [ 'status' => 400 ] );
+		}
+		if ( $account_id === 0 && count( $accounts ) === 1 ) {
+			$account_id = $accounts[0];
+		}
+
+		$operator = get_userdata( $operator_id );
+		$now      = gmdate( 'Y-m-d H:i:s' );
+		$id       = ChatConversations::insert( [
+			'user_id'         => $customer_id,
+			'account_id'      => $account_id,
+			'site_id'         => $site_id,
+			'contact_name'    => $customer->display_name,
+			'contact_email'   => $customer->user_email,
+			'subject'         => $subject,
+			'status'          => 'open',
+			'last_message_at' => $now,
+			'source'          => 'chat',
+			'created_at'      => $now,
+			'updated_at'      => $now,
+		] );
+		if ( ! $id ) {
+			return new \WP_Error( 'storage', 'Could not save the conversation.', [ 'status' => 500 ] );
+		}
+		$message = self::append( $id, [
+			'kind' => 'comment', 'author_kind' => 'operator', 'author_user_id' => (int) $operator_id,
+			'author_name' => $operator ? $operator->display_name : '', 'body' => $body,
+		] );
+		$message = self::attach( $id, $message, $files );
+		self::emit( 'conversation.created', self::present_conversation( ChatConversations::get( $id ), false ), $message );
+		ChatNotify::schedule( $id, ChatRelay::last_customer_delivery() );
+		return [ 'conversation' => self::present_conversation( ChatConversations::get( $id ), true ), 'messages' => [ $message ] ];
 	}
 
 	/**
