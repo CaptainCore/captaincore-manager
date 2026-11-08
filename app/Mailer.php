@@ -257,7 +257,7 @@ class Mailer {
                 {$text('#565C66')} { color: #C9CED6 !important; }
                 {$text('#666D7A')} { color: #A9B0BB !important; }
                 {$text($brand)}, {$text('#123E8C')} { color: {$accent} !important; }
-                .cc-card a:not([style]) { color: {$accent} !important; }
+                .cc-card a:not([style*='background' i]) { color: {$accent} !important; }
                 .cc-logo-light { display: none !important; }
                 .cc-logo-dark { display: inline-block !important; }
             }
