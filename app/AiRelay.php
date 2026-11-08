@@ -204,14 +204,15 @@ class AiRelay {
 			return $dir;
 		}
 
-		// Stored under a random name with the checked extension, never the
-		// visitor's filename, so nothing they send decides a path.
+		// Stored under a random name with no extension, never the visitor's
+		// filename, so nothing they send decides a path, and a web server
+		// that can see the folder never serves it as a file of its type.
 		$id   = bin2hex( random_bytes( 8 ) );
-		$path = $dir . '/' . $id . '.' . $ext;
+		$path = $dir . '/' . $id;
 		if ( ! move_uploaded_file( $file['tmp_name'], $path ) ) {
 			return new \WP_Error( 'move_failed', 'The file could not be saved.', [ 'status' => 500 ] );
 		}
-		chmod( $path, 0640 );
+		chmod( $path, 0600 ); // owner only: the web server must not read it, PHP serves it
 
 		$staged[ $id ] = [
 			'id'         => $id,
@@ -230,7 +231,7 @@ class AiRelay {
 		if ( ! isset( $staged[ $id ] ) ) {
 			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
 		}
-		$path = self::dir_path( 'staging/' . (int) $user_id ) . '/' . $id . '.' . $staged[ $id ]['ext'];
+		$path = self::stored( self::dir_path( 'staging/' . (int) $user_id ), $id, $staged[ $id ]['ext'] );
 		if ( is_file( $path ) ) {
 			unlink( $path );
 		}
@@ -732,7 +733,7 @@ class AiRelay {
 				if ( ( $file['id'] ?? '' ) !== $file_id ) {
 					continue;
 				}
-				$path = self::dir_path( 'projects/' . $project->storage_key ) . '/' . $file['id'] . '.' . $file['ext'];
+				$path = self::stored( self::dir_path( 'projects/' . $project->storage_key ), $file['id'], $file['ext'] );
 				if ( ! is_file( $path ) ) {
 					break 2;
 				}
@@ -1098,8 +1099,8 @@ class AiRelay {
 				}
 			}
 			$file = $staged[ $id ];
-			$name = $file['id'] . '.' . $file['ext'];
-			if ( is_file( $from . '/' . $name ) && rename( $from . '/' . $name, $dest . '/' . $name ) ) {
+			$src  = self::stored( $from, $file['id'], $file['ext'] );
+			if ( is_file( $src ) && rename( $src, $dest . '/' . $file['id'] ) ) {
 				$files[] = [ 'id' => $file['id'], 'name' => $file['name'], 'size' => (int) $file['size'], 'ext' => $file['ext'] ];
 			}
 			unset( $staged[ $id ] );
@@ -1207,11 +1208,29 @@ class AiRelay {
 		];
 	}
 
+	// <parent of ABSPATH>/private/ai-relay unless CAPTAINCORE_AI_RELAY_DIR
+	// says otherwise. On Kinsta that is a folder in uploads with a random
+	// part in its name (web PHP cannot read ~/private, and ~/tmp is not
+	// backed up). Every name below it is random too, and files are only
+	// served through the REST routes; dir() adds the index.php and deny-all
+	// .htaccess guard on first use.
 	private static function base_dir() {
 		if ( defined( 'CAPTAINCORE_AI_RELAY_DIR' ) && CAPTAINCORE_AI_RELAY_DIR ) {
 			return untrailingslashit( CAPTAINCORE_AI_RELAY_DIR );
 		}
 		return dirname( untrailingslashit( ABSPATH ) ) . '/private/ai-relay';
+	}
+
+	/**
+	 * A stored file's path: <dir>/<id>. Files saved before 2026-11-08 were
+	 * <id>.<ext>, which is still found where one remains.
+	 */
+	private static function stored( $dir, $id, $ext ) {
+		$path = $dir . '/' . $id;
+		if ( ! is_file( $path ) && $ext !== '' && is_file( $path . '.' . $ext ) ) {
+			return $path . '.' . $ext;
+		}
+		return $path;
 	}
 
 	private static function dir_path( $sub ) {
@@ -1222,6 +1241,11 @@ class AiRelay {
 		$path = self::dir_path( $sub );
 		if ( ! is_dir( $path ) && ! wp_mkdir_p( $path ) ) {
 			return new \WP_Error( 'storage', 'File storage is not available.', [ 'status' => 500 ] );
+		}
+		$base = self::base_dir();
+		if ( ! is_file( $base . '/.htaccess' ) ) {
+			@file_put_contents( $base . '/.htaccess', "Require all denied\nDeny from all\n" );
+			@file_put_contents( $base . '/index.php', "<?php\n// Silence is golden.\n" );
 		}
 		return $path;
 	}

@@ -26,6 +26,7 @@
 Object.assign(Component.prototype, {
 
   openDomain(id) {
+    id = String(id); // DOMAINS ids are strings; callers like chat pass numbers
     this.setState({ route: 'domain', domainId: id, domTab: 'dns', paletteOpen: false,
       dnsRecs: this._hydrated ? [] : this.DNS_RECS.map(r => ({ ...r })),
       dnsDirty: false, dnsDel: [], dnsEdit: 0,

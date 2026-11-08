@@ -346,6 +346,7 @@ class Component extends DCLogic {
   }
 
   openAccount(id) {
+    id = String(id);
     this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false,
       accInvites: [{ uid: 1, e: 'bookkeeper@ledgerly.com', level: 'Domains only', sent: 'Jul 10' }],
       trusted: this.TRUSTED.map(t => ({ ...t })), invEmail: '', invLevel: 'Full access' });
@@ -965,6 +966,7 @@ class Component extends DCLogic {
     this.setState(st => ({ jobs: [{ id: Date.now(), label, target, state: 'running', pct: 4 }, ...st.jobs] }));
   }
   openSite(id, env) {
+    id = String(id);
     this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, capSel: '', capLimit: 60 });
   }
 
@@ -2045,6 +2047,7 @@ class Component extends DCLogic {
   }
 
   openDomain(id) {
+    id = String(id);
     this.setState({ route: 'domain', domainId: id, domTab: 'dns', paletteOpen: false,
       dnsRecs: this.DNS_RECS.map(r => ({ ...r })), dnsDirty: false,
       fwds: this.FWDS.map(f => ({ ...f })), fwdAlias: '', fwdDest: '',

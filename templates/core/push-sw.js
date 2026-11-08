@@ -1,5 +1,5 @@
 // CaptainCore operator notifications: the service worker behind web push.
-// Served at <app path>/push-sw.js (Router.php), so its scope is the app.
+// Served at <app path>/push-sw (Router.php, no extension for Kinsta), so its scope is the app.
 // Payloads come from ChatPush: {title, body, url, tag, badge, icon}. The
 // device needs no login to show them; tapping opens the conversation
 // (focusing an open app window when there is one).

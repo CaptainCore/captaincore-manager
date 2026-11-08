@@ -114,13 +114,16 @@ class Router {
             // Home-screen app pieces for operator notifications (ChatPush):
             // the service worker must live under the app path so its scope
             // covers the app, and the manifest names the installed app.
-            if ( $route === 'push-sw.js' ) {
+            // Served without file extensions: Kinsta's nginx answers any URL
+            // ending in .js (or another static extension) itself and 404s
+            // before PHP runs. The old names still work where PHP sees them.
+            if ( $route === 'push-sw' || $route === 'push-sw.js' ) {
                 header( 'Content-Type: application/javascript; charset=utf-8' );
                 header( 'Cache-Control: no-cache' );
                 readfile( plugin_dir_path( __DIR__ ) . 'templates/core/push-sw.js' );
                 exit;
             }
-            if ( $route === 'app.webmanifest' ) {
+            if ( $route === 'app-manifest' || $route === 'app.webmanifest' ) {
                 header( 'Content-Type: application/manifest+json; charset=utf-8' );
                 header( 'Cache-Control: max-age=3600' );
                 echo wp_json_encode( self::manifest(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );

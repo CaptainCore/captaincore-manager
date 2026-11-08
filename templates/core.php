@@ -120,7 +120,7 @@ $cc_app_base = '/' . ( isset( $configurations->path ) && trim( $configurations->
 if ( $cc_boot['chat']['operator'] ) {
 	$cc_boot['chat']['push'] = [
 		'publicKey' => CaptainCore\WebPush::public_key(),
-		'sw'        => $cc_app_base . 'push-sw.js',
+		'sw'        => $cc_app_base . 'push-sw', // no .js: see Router.php
 	];
 }
 $load_intercom     = $user->role !== 'administrator' && $intercom_embed_id !== '' && ! $chat_enabled
@@ -149,7 +149,8 @@ $v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.
 // Installable as a home-screen app (operators' phone notifications: ChatPush).
 $cc_app_icon = get_site_icon_url( 180 );
 ?>
-<link rel="manifest" href="<?php echo esc_url( $cc_app_base . 'app.webmanifest' ); ?>">
+<link rel="manifest" href="<?php echo esc_url( $cc_app_base . 'app-manifest' ); ?>">
+<link rel="icon" id="cc-favicon" href="<?php echo esc_url( get_site_icon_url( 32 ) ?: home_url( '/favicon.ico' ) ); ?>">
 <?php if ( $cc_app_icon ) : ?><link rel="apple-touch-icon" href="<?php echo esc_url( $cc_app_icon ); ?>"><?php endif; ?>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">

@@ -25,6 +25,7 @@ Object.assign(Component.prototype, {
     };
     this.chatLoadList();
     if (cb.operator) this.chatPushInit();
+    if (cb.operator) this.chatAlertInit();
     if (cb.operator) this.chatFocusInit();
     if (cb.live) this.chatConnect();
     else this._chatPoll = setInterval(() => { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }, 30000);
@@ -136,6 +137,7 @@ Object.assign(Component.prototype, {
     if (!c || !c.conv || document.hidden) return;
     const cb = this.chatBoot();
     if (cb.operator ? this.state.route !== 'chat' : !this.chatCustomerViewing()) return;
+    if (cb.operator) this.chatAlertSeen(c.conv.conversation.id);
     const msgs = c.conv.messages;
     const last = msgs.length ? msgs[msgs.length - 1].id : 0;
     const cid = c.conv.conversation.id;
@@ -420,6 +422,11 @@ Object.assign(Component.prototype, {
         if (!mine && !onScreen) row.unread = (row.unread || 0) + 1;
       }
     }
+    if (cb.operator && m.kind === 'comment' && !m.internal) {
+      const onScreen = viewing && !document.hidden && this.state.route === 'chat';
+      if (m.author_kind === 'customer' && !onScreen) this.chatAlert(m.conversation_id);
+      else if (m.author_kind === 'operator') this.chatAlertSeen(m.conversation_id); // answered, here or elsewhere
+    }
     if (viewing) setTimeout(() => this.chatMarkRead(), 0);
   },
 
@@ -498,34 +505,30 @@ Object.assign(Component.prototype, {
     return Uint8Array.from(s, ch => ch.charCodeAt(0));
   },
 
-  // The bell in the inbox's top bar.
+  // The bell in the inbox's top bar: device notifications and the sound.
   chatPushButton(e) {
     const c = this._chat;
     const p = c && c.push;
     if (!p) return;
-    if (p.state === 'install') {
-      this.toast('To get notifications on this iPhone, tap Share, then Add to Home Screen, and open the app from there.', { kind: 'info' });
-      return;
-    }
-    if (p.state === 'denied') {
-      this.toast('Notifications are blocked for this site. Allow them in your browser or iOS Settings, then try again.', { kind: 'info' });
-      return;
-    }
+    const items = [];
+    if (p.state === 'off') items.push({ label: 'Turn on notifications', act: () => this.chatPushOn() });
+    if (p.state === 'install') items.push({ label: 'Get notifications on iPhone', act: () => this.toast('To get notifications on this iPhone, tap Share, then Add to Home Screen, and open the app from there.', { kind: 'info' }) });
+    if (p.state === 'denied') items.push({ label: 'Notifications are blocked', act: () => this.toast('Notifications are blocked for this site. Allow them in your browser or iOS Settings, then try again.', { kind: 'info' }) });
     if (p.state === 'on') {
-      this.openCtxMenu(e, [
-        { label: 'Send a test notification', act: () => this.api('/chat/push/test', { method: 'POST' }).then(r => this.toast(r && r.sent ? 'Test sent.' : 'No device took the test. Try turning notifications off and on.', { kind: r && r.sent ? 'success' : 'info' })).catch(() => this.toast('Could not send a test.', { kind: 'error' })) },
-        { label: 'Turn off on this device', act: () => this.chatPushOff() }
-      ]);
-      return;
+      items.push({ label: 'Send a test notification', act: () => this.api('/chat/push/test', { method: 'POST' }).then(r => this.toast(r && r.sent ? 'Test sent.' : 'No device took the test. Try turning notifications off and on.', { kind: r && r.sent ? 'success' : 'info' })).catch(() => this.toast('Could not send a test.', { kind: 'error' })) });
+      items.push({ label: 'Turn off notifications', act: () => this.chatPushOff() });
     }
-    this.chatPushOn();
+    const a = c.alert;
+    if (a) items.push({ label: a.sound ? 'Mute the chime' : 'Turn on the chime', act: () => this.chatSoundToggle() });
+    if (items.length) this.openCtxMenu(e, items);
   },
 
   chatPushOn() {
     const c = this._chat;
     const p = c.push;
     const cfg = this.chatBoot().push;
-    if (!p.reg || p.state === 'busy') return;
+    if (p.state === 'busy') return;
+    if (!p.reg) { this.toast('Notifications could not start in this browser. Reload the page and try again.', { kind: 'error' }); return; }
     p.state = 'busy'; this.setState({});
     // requestPermission must run straight from the tap (iOS).
     Notification.requestPermission().then(perm => {
@@ -558,6 +561,105 @@ Object.assign(Component.prototype, {
       this.api('/chat/push', { method: 'DELETE', body: { endpoint: sub.endpoint } }).catch(() => {}),
       sub.unsubscribe().catch(() => {})
     ]).then(() => this.chatAppBadge(0));
+  },
+
+  // ── alerts (operators) ────────────────────────────────────────────────
+  // A customer message that arrives while its conversation is not on
+  // screen (another tab, another page, another conversation) plays a chime
+  // and counts in the tab: "(2) Title" and a badge on the favicon. The
+  // count is conversations, and one clears when it is opened on screen or
+  // an operator answers it. The sound is per browser (localStorage).
+
+  chatAlertInit() {
+    const c = this._chat;
+    let sound = true;
+    try { sound = localStorage.getItem('cc-chat-sound') !== 'off'; } catch (x) {}
+    c.alert = { ids: new Set(), sound, ctx: null, title: document.title, icon: null, iconImg: null };
+    // Browsers only let a page play sound after a click or key press.
+    const unlock = () => { this.chatAudio(); document.removeEventListener('pointerdown', unlock, true); document.removeEventListener('keydown', unlock, true); };
+    document.addEventListener('pointerdown', unlock, true);
+    document.addEventListener('keydown', unlock, true);
+  },
+
+  chatAudio() {
+    const a = this._chat && this._chat.alert;
+    if (!a) return null;
+    try {
+      if (!a.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; a.ctx = new AC(); }
+      if (a.ctx.state === 'suspended') a.ctx.resume().catch(() => {});
+    } catch (x) { return null; }
+    return a.ctx;
+  },
+
+  chatChime() {
+    const a = this._chat && this._chat.alert;
+    if (!a || !a.sound) return;
+    const ctx = this.chatAudio();
+    if (!ctx || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    [[880, 0], [1318.5, 0.12]].forEach(([freq, at]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, now + at);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + at + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.45);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + at);
+      osc.stop(now + at + 0.5);
+    });
+  },
+
+  chatSoundToggle() {
+    const a = this._chat.alert;
+    a.sound = !a.sound;
+    try { localStorage.setItem('cc-chat-sound', a.sound ? 'on' : 'off'); } catch (x) {}
+    if (a.sound) this.chatChime();
+    this.toast(a.sound ? 'The chime is on for new messages.' : 'The chime is muted.', { kind: 'success' });
+    this.setState({});
+  },
+
+  chatAlert(conversationId) {
+    const a = this._chat && this._chat.alert;
+    if (!a) return;
+    a.ids.add(conversationId);
+    this.chatChime();
+    this.chatAlertPaint();
+  },
+
+  chatAlertSeen(conversationId) {
+    const a = this._chat && this._chat.alert;
+    if (!a || !a.ids.delete(conversationId)) return;
+    this.chatAlertPaint();
+  },
+
+  chatAlertPaint() {
+    const a = this._chat.alert;
+    const n = a.ids.size;
+    document.title = n ? '(' + n + ') ' + a.title : a.title;
+    let link = document.getElementById('cc-favicon');
+    if (!link) return;
+    if (a.icon === null) a.icon = link.href;
+    if (!n) { link.href = a.icon; return; }
+    const draw = img => {
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 64;
+        const g = cv.getContext('2d');
+        if (img) g.drawImage(img, 0, 0, 64, 64);
+        g.beginPath(); g.arc(44, 20, 20, 0, Math.PI * 2); g.fillStyle = '#e5484d'; g.fill();
+        g.fillStyle = '#fff'; g.font = 'bold ' + (n > 9 ? 22 : 28) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(n > 9 ? '9+' : String(n), 44, 21);
+        link.href = cv.toDataURL('image/png');
+      } catch (x) { if (img) draw(null); } // an icon from another origin taints the canvas: badge only
+    };
+    if (a.iconImg) { draw(a.iconImg.complete && a.iconImg.naturalWidth ? a.iconImg : null); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { a.iconImg = img; draw(img); };
+    img.onerror = () => { a.iconImg = img; draw(null); };
+    img.src = a.icon;
   },
 
   chatAppBadge(n) {
@@ -1039,13 +1141,14 @@ Object.assign(Component.prototype, {
     // The account beside each site only helps when the sites span accounts.
     const siteManyAccounts = siteHits.length > 0 && new Set((this.FLEET || []).map(x => x.accountId)).size > 1;
     const supSite = conv && conv.site_id && !isOp ? (this.FLEET || []).find(x => String(x.id) === String(conv.site_id)) : null;
-    const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || '';
+    const soundOn = !!(c.alert && c.alert.sound);
+    const pushLabel = { off: 'Turn on notifications', busy: 'Turning on…', on: 'Notifications on', denied: 'Notifications blocked', install: 'Get notifications' }[push.state] || (soundOn ? 'Chime on' : 'Chime muted');
 
     return {
       showChat: isOp && s.route === 'chat',
       chatExit: () => this.setState({ route: this._chatPrevRoute && this._chatPrevRoute !== 'chat' ? this._chatPrevRoute : 'home' }),
       chatLiveLabel: live, chatLiveFg: liveFg,
-      chatPushShow: push.state !== 'unsupported', chatPushLabel: pushLabel, chatPushIsOn: push.state === 'on', chatPushFg: push.state === 'on' ? 'var(--brand-ink)' : 'var(--ink)',
+      chatPushShow: isOp, chatPushLabel: pushLabel, chatPushIsOn: push.state === 'on', chatPushFg: push.state === 'on' ? 'var(--brand-ink)' : 'var(--ink)',
       chatPushGo: e => this.chatPushButton(e),
       // Phones show the list or the thread, not both.
       chatPhoneView: (c.id || c.newDraft) ? 'thread' : 'list',

@@ -241,6 +241,7 @@ Object.assign(Component.prototype, {
   },
 
   openAccount(id) {
+    id = String(id); // ACCOUNTS ids are strings; callers like chat pass numbers
     this.setState({ route: 'account', accountId: id, accTab: 'users', paletteOpen: false, accRename: false,
       accInvites: this._hydrated ? [] : [{ uid: 1, e: 'bookkeeper@ledgerly.com', level: 'Domains only', sent: 'Jul 10' }],
       trusted: this._hydrated ? [] : this.TRUSTED.map(t => ({ ...t })), invEmail: '', invLevel: 'Full access' });

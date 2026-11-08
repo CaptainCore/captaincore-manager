@@ -10,6 +10,7 @@
 Object.assign(Component.prototype, {
 
   openSite(id, env) {
+    id = String(id); // FLEET ids are strings; callers like chat pass numbers
     this.setState({ route: 'site', siteId: id, siteTab: 'overview', env: env || 'Production', qsOpen: '', bkOpen: '', paletteOpen: false, logFile: '', logMode: 'live', laView: '', capSel: '', capLimit: 60, rgFilter: '' });
     if (this._hydrated) this.loadSiteDetail(id);
   },
