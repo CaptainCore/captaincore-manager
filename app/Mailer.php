@@ -200,6 +200,18 @@ class Mailer {
                 }
                 $attached .= "<div style='margin-top: 8px; font-size: 13px; color: #666D7A;'>&#128206; " . esc_html( $f['name'] ) . "</div>";
             }
+            // Linked CaptainCore logs: title, site and date, then the entry.
+            foreach ( \CaptainCore\Chat::logs_for( [ $r ] )[ (int) $r->chat_message_id ] ?? [] as $lg ) {
+                if ( ! empty( $lg['missing'] ) ) {
+                    continue;
+                }
+                $meta      = esc_html( implode( ' · ', array_filter( [ $lg['site_name'], wp_date( 'M j, Y', $lg['created_at'] ) ] ) ) );
+                $attached .= "<div style='margin-top: 10px; padding: 12px 14px; background-color: #ffffff; border: 1px solid #E3E8EE; border-radius: 8px;'>
+                    <div style='font-size: 12px; color: #666D7A; margin-bottom: 4px;'>&#128203; Log &middot; {$meta}</div>
+                    <div style='font-size: 14px; font-weight: 700; color: #15181D; margin-bottom: 4px;'>" . esc_html( $lg['title'] ) . "</div>
+                    <div style='font-size: 14px; line-height: 1.5; color: #15181D;'>" . \CaptainCore\Chat::markdown_html( mb_substr( (string) $lg['body'], 0, 2000 ) ) . "</div>
+                </div>";
+            }
             $items .= "
                 <div style='margin-bottom: 18px; padding: 16px 18px; background-color: #F5F7FA; border-radius: 10px; text-align: left;'>
                     <div style='font-size: 13px; color: #666D7A; margin-bottom: 6px;'><strong style='color: #15181D;'>{$author}</strong> &middot; {$when}</div>

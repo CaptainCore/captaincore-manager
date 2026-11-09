@@ -2771,6 +2771,13 @@ function captaincore_chat_conversation_func( WP_REST_Request $request ) {
 	] );
 }
 
+function captaincore_chat_logs_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::log_options( get_current_user_id(), (int) $request['id'], [
+		'site' => (int) $request->get_param( 'site' ),
+		'q'    => (string) $request->get_param( 'q' ),
+	] );
+}
+
 function captaincore_chat_draft_func( WP_REST_Request $request ) {
 	$user_id = get_current_user_id();
 	if ( ! CaptainCore\Chat::is_operator( $user_id ) || ! CaptainCore\Chat::viewable( $user_id, (int) $request['id'] ) ) {
@@ -11132,6 +11139,15 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_chat_update_func',
 				'permission_callback' => 'captaincore_permission_check',
 			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_chat_logs_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 

@@ -304,6 +304,41 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-msg:hover .ccc-react-add,.ccc-note:hover .ccc-react-add,.ccc-bub:hover .ccc-react-add,.ccc-react-add:focus-visible{opacity:1}
 @media (hover:none){.ccc-react-add{opacity:.55}}
 .ccc-msg .ccc-edit-btn,.ccc-note .ccc-edit-btn{right:34px}
+.ccc-logbtn{margin-left:-6px}
+.ccc-pf-log{max-width:320px}
+.ccc-logs{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-width:560px;width:100%}
+.ccc-log{padding:10px 12px;border:1px solid var(--rule);border-left:3px solid var(--brand);border-radius:10px;background:var(--paper);color:var(--ink);text-align:left}
+.ccc-log-gone{border-left-color:var(--rule);font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccc-log-h{display:flex;align-items:center;gap:7px;font:600 var(--fs-13) var(--sans)}
+.ccc-log-h svg{flex:none;color:var(--brand-ink)}
+.ccc-log-int{font:600 10px var(--sans);border-radius:999px;padding:1px 7px;background:var(--ccc-note);color:color-mix(in srgb,var(--warn) 80%,var(--ink))}
+.ccc-log-meta{margin-top:2px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)}
+.ccc-log-b{margin-top:6px;font:400 var(--fs-13)/1.55 var(--sans);overflow-wrap:anywhere}
+.ccc-log-b a{color:var(--brand-ink);text-decoration:underline}
+.ccc-log-b>:first-child{margin-top:0}.ccc-log-b>:last-child{margin-bottom:0}
+.ccc-log-clip{max-height:7.8em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+.ccc-log-foot{display:flex;gap:12px;margin-top:6px;font:500 var(--fs-12) var(--sans)}
+.ccc-log-foot:empty{display:none}
+.ccc-log-foot button{border:0;background:none;padding:0;color:var(--brand-ink);font:inherit;cursor:pointer}
+.ccc-log-foot a{color:var(--brand-ink);text-decoration:none}
+.ccc-log-foot a:hover,.ccc-log-foot button:hover{text-decoration:underline}
+.ccc-me .ccc-log{color:var(--ink)}
+.ccc-lpick{position:fixed;z-index:96;width:min(440px,calc(100vw - 16px));max-height:min(460px,calc(100vh - 100px));display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow);animation:ccfade .12s ease;overflow:hidden}
+.ccc-lpick-head{display:flex;align-items:center;gap:10px;padding:10px 12px 6px}
+.ccc-lpick-head b{flex:none;font:600 var(--fs-13) var(--sans)}
+.ccc-lpick-head select{flex:1;min-width:0;height:30px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 6px}
+.ccc-lpick input{margin:4px 12px 8px;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none}
+.ccc-lpick input:focus{border-color:var(--brand)}
+.ccc-lpick-list{overflow:auto;border-top:1px solid var(--rule)}
+.ccc-lpick-row{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);padding:9px 12px;cursor:pointer}
+.ccc-lpick-row:last-child{border-bottom:0}
+.ccc-lpick-row:hover,.ccc-lpick-row:focus-visible{background:var(--panel-2);outline:none}
+.ccc-lpick-row[aria-selected="true"]{background:color-mix(in srgb,var(--brand) 9%,transparent)}
+.ccc-lpick-row:disabled{opacity:.5;cursor:not-allowed}
+.ccc-lpick-t{display:block;font:500 var(--fs-13) var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ccc-lpick-t em{font:600 10px var(--sans);font-style:normal;border-radius:999px;padding:1px 6px;margin-left:4px;background:var(--panel-2);color:var(--ink-dim)}
+.ccc-lpick-s{display:block;margin-top:2px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ccc-lpick-none{padding:14px 12px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccc-dbar{margin-left:auto;min-width:0;display:flex;align-items:center;gap:8px;font:500 var(--fs-12) var(--sans);color:color-mix(in srgb,var(--ok) 70%,var(--ink))}
 .ccc-dbar svg{flex:none}
 .ccc-dwarn{flex:none;font-weight:600;color:color-mix(in srgb,var(--warn) 80%,var(--ink))}
@@ -7785,8 +7820,20 @@ button.ccc-edited:hover{color:var(--ink)}
                   </div>
                   <sc-if value="{{ chatUploading }}" hint-placeholder-val="{{ false }}"><div class="ccc-pf-up">{{ chatUploadLabel }}</div></sc-if>
                 </sc-if>
+                <sc-if value="{{ chatHasLogs }}" hint-placeholder-val="{{ false }}">
+                  <div class="ccc-pending">
+                    <sc-for list="{{ chatLinked }}" as="lk" hint-placeholder-count="1">
+                      <div class="ccc-pf ccc-pf-log">
+                        <span class="ccc-pf-ico">📋</span>
+                        <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ lk.title }}</div><div class="ccc-trunc ccc-pf-size">{{ lk.sub }}</div></div>
+                        <button onClick="{{ lk.remove }}" title="Remove">✕</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
                 <div class="ccc-cbox" style="background:{{ chatBoxBg }};border-color:{{ chatBoxRule }}">
                   <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
+                  <sc-if value="{{ chatCanLink }}" hint-placeholder-val="{{ false }}"><button onClick="{{ chatLogGo }}" data-log-btn class="ccc-clip ccc-logbtn" title="Link a CaptainCore log" aria-label="Link a CaptainCore log"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg></button></sc-if>
                   <textarea ref="{{ chatInputRef }}" rows="1" value="{{ chatBody }}" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                   <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                 </div>

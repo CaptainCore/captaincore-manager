@@ -106,7 +106,7 @@ Object.assign(Component.prototype, {
     id = parseInt(id, 10) || 0;
     if (c.id === id && c.conv) return;
     this.chatDraftFlush();
-    c.dftSeed = ''; c.dftRemote = false;
+    c.dftSeed = ''; c.dftRemote = false; c.logs = [];
     c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false; c.edit = null;
     this.chatClearFiles();
     this._chatClear = true;
@@ -221,12 +221,14 @@ Object.assign(Component.prototype, {
     const s = this.state;
     const cb = this.chatBoot();
     const body = (s.chatBody || '').trim();
-    if (!c || (!body && !c.files.length) || s.chatSending) return;
+    if (!c) return;
+    c.logs = c.logs || [];
+    if ((!body && !c.files.length && !c.logs.length) || s.chatSending) return;
     const note = cb.operator && s.chatMode === 'note';
     this.setState({ chatSending: true });
     const opNew = cb.operator && !c.id;
     if (opNew && !c.newTo) { this.setState({ chatSending: false }); this.toast('Choose who to message first.', { kind: 'info' }); return; }
-    const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
+    const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, c.id && c.logs.length ? { log_refs: c.logs.map(l => l.id + ':' + l.site_id).join(',') } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
       opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {});
     let payload = fields;
     if (c.files.length) {
@@ -253,6 +255,7 @@ Object.assign(Component.prototype, {
       c.scrollPin = true;
       this._chatClear = true;
       this.chatClearFiles();
+      c.logs = [];
       clearTimeout(c.draftTimer); c.draftText = c.draftSent = '';
       // The server clears the draft this answered (Chat::clear_draft).
       clearTimeout(c.dftTimer); c.dftPending = null; c.dftSeed = ''; c.dftRemote = false;
@@ -512,6 +515,9 @@ Object.assign(Component.prototype, {
       if (orig) items.push({ label: orig.open ? 'Hide original email' : 'Show original email', act: () => { orig.open = !orig.open; } });
       if (isOp && m.email_from) items.push({ label: 'Copy sender address', act: () => this.ctxCopy(m.email_from, 'address') });
     }
+    const logCard = e.target.closest('.ccc-log');
+    if (logCard && logCard.dataset.url) items.push({ label: 'Open site timeline ↗', act: () => window.open(logCard.dataset.url, '_blank') });
+    if (isOp && this.chatComposer()) items.push({ label: 'Link a log…', act: () => this.chatLogPicker(document.querySelector('[data-log-btn]')) });
     items.push({ label: 'Copy link to conversation', act: () => this.ctxCopy(this.chatLink(conv.id), 'link') });
     this.openCtxMenu(e, items);
   },
@@ -682,7 +688,7 @@ Object.assign(Component.prototype, {
     if (row && m.kind === 'comment') {
       if (row._lastSeen !== m.id) {
         row._lastSeen = m.id;
-        row.preview = String(m.body || '').slice(0, 200);
+        row.preview = String(m.body || '').slice(0, 200) || ((m.logs || []).length ? '📋 Shared a log' : (m.attachments || []).length ? '📎 Sent a file' : '');
         const onScreen = viewing && !document.hidden && (cb.operator ? this.state.route === 'chat' : this.chatCustomerViewing());
         if (!mine && !onScreen) row.unread = (row.unread || 0) + 1;
       }
@@ -1105,7 +1111,7 @@ Object.assign(Component.prototype, {
         return;
       }
       if (m.kind === 'note') {
-        out += '<div data-mid="' + m.id + '" class="ccc-note">' + this.chatEditBtn(m) + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + (m.edited_at ? ' · ' + edited(m) : '') + '</div>' + body(m, 'ccc-mb') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
+        out += '<div data-mid="' + m.id + '" class="ccc-note">' + this.chatEditBtn(m) + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + (m.edited_at ? ' · ' + edited(m) : '') + '</div>' + body(m, 'ccc-mb') + this.chatLogsHtml(m) + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
         prev = null;
         return;
       }
@@ -1114,14 +1120,14 @@ Object.assign(Component.prototype, {
         out += '<div data-mid="' + m.id + '" class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span><div class="ccc-mbody">' +
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span>' + edited(m) + '</div>') +
-          body(m, 'ccc-mb') + (cont && m.edited_at ? '<div class="ccc-edline">' + edited(m) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatEditBtn(m) + this.chatReactBtn(m) + '</div>';
+          body(m, 'ccc-mb') + (cont && m.edited_at ? '<div class="ccc-edline">' + edited(m) + '</div>' : '') + this.chatLogsHtml(m) + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatEditBtn(m) + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
         out += '<div data-mid="' + m.id + '" class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
           (me ? this.chatEditBtn(m) + this.chatReactBtn(m) : '') +
-          '<div class="ccc-bwrap' + (c.edit && c.edit.id === m.id ? ' ccc-bwrap-edit' : '') + '">' + body(m, 'ccc-bb') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
+          '<div class="ccc-bwrap' + (c.edit && c.edit.id === m.id ? ' ccc-bwrap-edit' : '') + '">' + body(m, 'ccc-bb') + this.chatLogsHtml(m) + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
           '<div class="ccc-bmeta' + (me ? ' ccc-r' : '') + '">' + (me ? '' : esc(name) + ' · ') + esc(time(m.created_at)) + (m.edited_at ? ' · ' + edited(m) : '') + '</div>';
       }
       prev = m;
@@ -1192,6 +1198,8 @@ Object.assign(Component.prototype, {
         if (chip) { e.preventDefault(); this.chatReact(+chip.dataset.mid, chip.dataset.react, chip.getAttribute('aria-pressed') !== 'true'); return; }
         const opener = e.target.closest && e.target.closest('[data-react-open]');
         if (opener) { e.preventDefault(); this.chatReactPicker(opener, +opener.dataset.mid); return; }
+        const more = e.target.closest && e.target.closest('[data-log-more]');
+        if (more) { e.preventDefault(); c.logOpen = c.logOpen || {}; c.logOpen[more.dataset.logMore] = !c.logOpen[more.dataset.logMore]; this.setState({}); return; }
         const ed = e.target.closest && e.target.closest('[data-edit-open],[data-edit-save],[data-edit-cancel],[data-history]');
         if (ed) {
           e.preventDefault();
@@ -1397,6 +1405,119 @@ Object.assign(Component.prototype, {
 
   // A message's reaction pills: emoji, count, pressed when one is yours,
   // and who reacted in the tooltip (eight names, then "and N others").
+  // ── CaptainCore logs in messages ──────────────────────────────────────
+  // Operators link timeline entries from the site picker (Chat::log_options);
+  // they ride the message as log_refs and render as cards (Chat::logs_for).
+
+  chatLogsHtml(m) {
+    const logs = m.logs || [];
+    if (!logs.length) return '';
+    const c = this._chat;
+    const esc = t => this.chatEsc(t);
+    const day = ts => new Date(ts * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return '<div class="ccc-logs">' + logs.map(l => {
+      if (l.missing) return '<div class="ccc-log ccc-log-gone">This log was removed.</div>';
+      const key = m.id + '-' + l.id;
+      const long = String(l.body || '').length > 420 || String(l.body || '').split('\n').length > 7;
+      const open = c.logOpen && c.logOpen[key];
+      const meta = [l.site_name, day(l.created_at), l.author, l.files ? l.files + (l.files === 1 ? ' file changed' : ' files changed') : ''].filter(Boolean).join(' · ');
+      return '<div class="ccc-log" data-url="' + esc(l.url || '') + '">' +
+        '<div class="ccc-log-h"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg>' +
+        '<b>' + esc(l.title) + '</b>' + (l.public ? '' : '<span class="ccc-log-int">Internal</span>') + '</div>' +
+        '<div class="ccc-log-meta">' + esc(meta) + '</div>' +
+        (l.body && l.body.trim() !== l.title ? '<div class="ccc-log-b' + (long && !open ? ' ccc-log-clip' : '') + '">' + this.chatText(l.body) + '</div>' : '') +
+        '<div class="ccc-log-foot">' + (long ? '<button type="button" data-log-more="' + key + '">' + (open ? 'Show less' : 'Show all') + '</button>' : '') +
+        (l.url ? '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">Site timeline ↗</a>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  },
+
+  // The picker: a popover above the composer with the customer's sites,
+  // a search, and the newest logs on the chosen site. Internal (private)
+  // logs can go in a note only.
+  chatLogPicker(btn) {
+    const c = this._chat;
+    if (!c || !c.id) return;
+    if (this._chatLogPick) { this._chatLogPick.close(); return; }
+    const cid = c.id;
+    const esc = t => this.chatEsc(t);
+    const pick = document.createElement('div');
+    pick.className = 'ccc-lpick';
+    pick.setAttribute('role', 'dialog');
+    pick.setAttribute('aria-label', 'Link a CaptainCore log');
+    pick.innerHTML = '<div class="ccc-lpick-head"><b>Link a log</b><select aria-label="Site"></select></div>' +
+      '<input type="search" placeholder="Search this site’s logs" aria-label="Search logs"><div class="ccc-lpick-list" role="listbox"><div class="ccc-lpick-none">Loading…</div></div>';
+    document.body.appendChild(pick);
+    const sel = pick.querySelector('select'), input = pick.querySelector('input'), list = pick.querySelector('.ccc-lpick-list');
+    const place = () => {
+      const r = (btn && btn.getBoundingClientRect && btn.offsetParent !== null) ? btn.getBoundingClientRect() : { left: window.innerWidth / 2 - 220, top: window.innerHeight - 80 };
+      const w = pick.offsetWidth, h = pick.offsetHeight;
+      pick.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + 'px';
+      pick.style.top = Math.max(8, r.top - h - 8) + 'px';
+    };
+    let data = null, timer = 0, seq = 0;
+    const note = () => this.state.chatMode === 'note';
+    const render = () => {
+      if (!data) return;
+      const linked = new Set((c.logs || []).map(l => l.id + ':' + l.site_id));
+      if (!data.logs.length) { list.innerHTML = '<div class="ccc-lpick-none">' + (data.site_id ? (input.value.trim() ? 'No logs match.' : 'No logs on this site yet.') : 'The customer has no sites. Pick one with “Other site…”.') + '</div>'; place(); return; }
+      list.innerHTML = data.logs.map(l => {
+        const off = !l.public && !note();
+        const on = linked.has(l.id + ':' + data.site_id);
+        return '<button type="button" role="option" class="ccc-lpick-row" data-log="' + l.id + '"' + (off ? ' disabled title="Internal log: switch to Internal note to link it"' : '') + ' aria-selected="' + on + '">' +
+          '<span class="ccc-lpick-t">' + esc(l.title) + (l.public ? '' : ' <em>Internal</em>') + (on ? ' <em>Linked</em>' : '') + '</span>' +
+          '<span class="ccc-lpick-s">' + esc(new Date(l.created_at * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + l.author + (l.excerpt && l.excerpt !== l.title ? ' · ' + l.excerpt : '')) + '</span></button>';
+      }).join('');
+      place();
+    };
+    const load = site => {
+      const n = ++seq;
+      const qs = [];
+      if (site) qs.push('site=' + site);
+      if (input.value.trim()) qs.push('q=' + encodeURIComponent(input.value.trim()));
+      this.api('/chat/conversations/' + cid + '/logs' + (qs.length ? '?' + qs.join('&') : '')).then(r => {
+        if (n !== seq) return;
+        if (!r || r.code) throw new Error((r && r.message) || 'Could not load logs');
+        data = r;
+        sel.innerHTML = r.sites.map(st => '<option value="' + st.id + '"' + (st.id === r.site_id ? ' selected' : '') + '>' + esc(st.name + (st.customer ? '' : ' (not theirs)')) + '</option>').join('') + '<option value="other">Other site…</option>';
+        render();
+      }).catch(e => { if (n === seq) { list.innerHTML = '<div class="ccc-lpick-none">' + esc(e && e.message !== 'auth' ? e.message : 'Could not load logs') + '</div>'; place(); } });
+    };
+    sel.addEventListener('change', () => {
+      if (sel.value === 'other') {
+        const v = window.prompt('Site ID to pick a log from (it can only go in a note unless the customer can access it):');
+        if (v && /^\d+$/.test(v.trim())) load(+v.trim()); else if (data) sel.value = String(data.site_id);
+        return;
+      }
+      load(+sel.value);
+    });
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load(data ? data.site_id : 0), 250); });
+    list.addEventListener('click', e => {
+      const b = e.target.closest('[data-log]');
+      if (!b || b.disabled || !data) return;
+      const l = data.logs.find(x => x.id === +b.dataset.log);
+      const site = data.sites.find(st => st.id === data.site_id);
+      c.logs = c.logs || [];
+      const k = l.id + ':' + data.site_id;
+      if (c.logs.some(x => x.id + ':' + x.site_id === k)) c.logs = c.logs.filter(x => x.id + ':' + x.site_id !== k);
+      else if (c.logs.length >= 5) { this.toast('Link at most 5 logs in one message.', { kind: 'info' }); return; }
+      else c.logs.push(Object.assign({ site_id: data.site_id, site_name: site ? site.name : '' }, l));
+      this.setState({});
+      this.chatDraftEdited(this.state.chatBody || '');
+      close();
+      this._chatFocus = true;
+    });
+    const close = () => { clearTimeout(timer); document.removeEventListener('mousedown', away, true); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', place); pick.remove(); this._chatLogPick = null; };
+    const away = e => { if (!pick.contains(e.target) && !(btn && btn.contains(e.target))) close(); };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+    document.addEventListener('mousedown', away, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('resize', place);
+    this._chatLogPick = { close };
+    place();
+    input.focus();
+    load(0);
+  },
+
   // ── drafts (operators) ────────────────────────────────────────────────
   // One waiting reply per conversation (Chat::save_draft), usually written
   // by an AI model through /draft-chat. Opening the thread puts it in the
@@ -1416,12 +1537,14 @@ Object.assign(Component.prototype, {
     if (draft && cur === draft.body) { c.dftSeed = cur; return; }
     if (draft && untouched) this.chatDraftFill(draft);
     else if (draft) c.dftRemote = true; // they've changed the text: offer, don't overwrite
-    else if (c.dftSeed && cur === c.dftSeed) { c.dftSeed = ''; c.dftFill = ''; this.setState({ chatBody: '' }); } // sent or discarded elsewhere
+    else if (c.dftSeed && cur === c.dftSeed) { c.dftSeed = ''; c.dftFill = ''; c.logs = []; this.setState({ chatBody: '' }); } // sent or discarded elsewhere
     else c.dftSeed = '';
   },
 
   chatDraftFill(draft) {
     const c = this._chat;
+    // Logs the draft links come along as chips.
+    c.logs = (draft.logs || []).filter(l => !l.missing).map(l => ({ id: l.id, site_id: l.site_id, site_name: l.site_name, title: l.title, created_at: l.created_at, public: l.public }));
     c.dftSeed = draft.body;
     c.dftFill = draft.body;
     c.dftRemote = false;
@@ -1433,8 +1556,8 @@ Object.assign(Component.prototype, {
   // Discard is the way to drop it.
   chatDraftEdited(text) {
     const c = this._chat;
-    if (!c || !c.conv || !c.conv.draft || c.dftRemote || !String(text).trim()) return;
-    c.dftPending = { id: c.conv.conversation.id, body: String(text), kind: this.state.chatMode === 'note' ? 'note' : 'comment' };
+    if (!c || !c.conv || !c.conv.draft || c.dftRemote || (!String(text).trim() && !(c.logs || []).length)) return;
+    c.dftPending = { id: c.conv.conversation.id, body: String(text), kind: this.state.chatMode === 'note' ? 'note' : 'comment', log_refs: (c.logs || []).map(l => l.id + ':' + l.site_id).join(',') };
     clearTimeout(c.dftTimer);
     c.dftTimer = setTimeout(() => this.chatDraftFlush(), 1200);
   },
@@ -1446,7 +1569,7 @@ Object.assign(Component.prototype, {
     const p = c.dftPending;
     c.dftPending = null;
     if (c.conv && c.conv.conversation.id === p.id) c.dftSeed = p.body;
-    this.api('/chat/conversations/' + p.id + '/draft', { method: 'PUT', body: { body: p.body, kind: p.kind } }).then(r => {
+    this.api('/chat/conversations/' + p.id + '/draft', { method: 'PUT', body: { body: p.body, kind: p.kind, log_refs: p.log_refs } }).then(r => {
       if (r && r.draft && c.conv && c.conv.conversation.id === p.id && c.conv.draft) c.conv.draft = r.draft;
     }).catch(() => {});
   },
@@ -1461,7 +1584,7 @@ Object.assign(Component.prototype, {
     const clear = cur === c.dftSeed || cur === was.body;
     c.conv.draft = null; c.dftSeed = ''; c.dftRemote = false;
     const lr = c.list.find(x => x.id === id); if (lr) lr.draft = '';
-    if (clear) { c.dftFill = ''; this.setState({ chatBody: '' }); } else this.setState({});
+    if (clear) { c.dftFill = ''; c.logs = []; this.setState({ chatBody: '' }); } else this.setState({});
     this.api('/chat/conversations/' + id + '/draft', { method: 'DELETE' }).then(r => {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not discard the draft');
       this.toast('Draft discarded', { kind: 'info' });
@@ -1917,7 +2040,14 @@ Object.assign(Component.prototype, {
         else if (e.key === 'ArrowUp' && !e.target.value && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && this.chatEditLast()) e.preventDefault();
       },
       chatSendGo: () => this.chatSend(),
-      chatSendOpacity: ((s.chatBody || '').trim() || c.files.length) && !s.chatSending ? 1 : 0.45,
+      chatSendOpacity: ((s.chatBody || '').trim() || c.files.length || (c.logs || []).length) && !s.chatSending ? 1 : 0.45,
+      chatCanLink: isOp && !!c.id,
+      chatLogGo: e => this.chatLogPicker(e && e.currentTarget),
+      chatHasLogs: isOp && (c.logs || []).length > 0,
+      chatLinked: (c.logs || []).map(l => ({
+        key: 'l' + l.id + ':' + l.site_id, title: l.title, sub: [l.site_name, new Date(l.created_at * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), l.public ? '' : 'internal'].filter(Boolean).join(' · '),
+        remove: () => { c.logs = c.logs.filter(x => x !== l); this.setState({}); this.chatDraftEdited(s.chatBody || ''); }
+      })),
       chatDropRef: el => this.chatDropRef(el),
       chatDragging: c.drag > 0 && this.chatCanAttach(),
       chatAttachGo: () => this.chatPickFiles(),

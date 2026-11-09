@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 71;
+    const REQUIRED_VERSION = 72;
 
     private static function _table() {
         global $wpdb;
@@ -1580,6 +1580,7 @@ class DB {
             created_at datetime NOT NULL,
             edited_at datetime DEFAULT NULL,
             edited_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            log_refs varchar(255) NOT NULL DEFAULT '',
         PRIMARY KEY  (chat_message_id),
         KEY chat_conversation_id (chat_conversation_id,chat_message_id),
         KEY external_id (external_id)
@@ -1654,6 +1655,9 @@ class DB {
 
         dbDelta($sql);
 
+        // v72 (above): chat_messages.log_refs and chat_drafts.log_refs,
+        // CaptainCore logs linked as "<process_log_id>:<site_id>,…" (Chat::logs_for).
+
         // v70: earlier versions of edited chat messages (Chat::edit_message).
         // One row per version that was replaced: its text, who wrote that
         // version (user_name kept as it was, so bot and email authors read
@@ -1686,6 +1690,7 @@ class DB {
             user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             agent varchar(20) NOT NULL DEFAULT '',
             based_on_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            log_refs varchar(255) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id)

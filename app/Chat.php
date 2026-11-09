@@ -31,6 +31,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   - Drafts are operator-only: one waiting reply per conversation, often
  *     from an AI agent, loaded into the reply box for a person to send.
  *     An operator comment clears it (a note clears only a note draft).
+ *   - Operators can link CaptainCore logs (the site timeline) into a
+ *     message. A reply takes only public logs from a site the customer can
+ *     use; a note takes any. The card shows the log as it is now.
  *
  * Customer access follows the `captaincore_chat_mode` site option:
  *   off      operators only (history, imports). Customers keep Intercom.
@@ -66,6 +69,7 @@ class Chat {
 	const REACTIONS = [ 'like', 'heart', 'laugh', 'wow', 'sad', 'tada' ];
 
 	// Files attached from the composer (drag and drop, paste, the paperclip).
+	const MAX_LOGS      = 5;
 	const MAX_FILES     = 10;
 	const MAX_FILE_SIZE = 52428800; // 50 MB, so screen recordings fit
 
@@ -230,7 +234,7 @@ class Chat {
 		$args[] = $limit;
 
 		$sql = "SELECT c.*,
-			(SELECT IF(m.body = '', '📎 Sent a file', SUBSTRING(m.body, 1, 200)) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
+			(SELECT IF(m.body = '', IF(m.log_refs <> '', '📋 Shared a log', '📎 Sent a file'), SUBSTRING(m.body, 1, 200)) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id
 				AND m.kind = 'comment' ORDER BY m.chat_message_id DESC LIMIT 1) AS preview,
 			(SELECT COUNT(*) FROM $m m WHERE m.chat_conversation_id = c.chat_conversation_id AND m.kind = 'comment'
 				AND m.author_kind = %s AND m.chat_message_id > GREATEST(
@@ -295,8 +299,9 @@ class Chat {
 		$ids    = array_map( fn( $r ) => (int) $r->chat_message_id, $rows );
 		$files  = self::attachments_for( $ids );
 		$reacts = self::reactions_for( $ids );
-		return array_map( function ( $row ) use ( $files, $reacts ) {
-			return self::present_message( $row, $files[ (int) $row->chat_message_id ] ?? [], $reacts[ (int) $row->chat_message_id ] ?? [] );
+		$logs   = self::logs_for( $rows );
+		return array_map( function ( $row ) use ( $files, $reacts, $logs ) {
+			return self::present_message( $row, $files[ (int) $row->chat_message_id ] ?? [], $reacts[ (int) $row->chat_message_id ] ?? [], $logs[ (int) $row->chat_message_id ] ?? [] );
 		}, $rows );
 	}
 
@@ -510,7 +515,11 @@ class Chat {
 		if ( is_wp_error( $files ) ) {
 			return $files;
 		}
-		$body = self::body_or_files( $input['body'] ?? '', $files );
+		$refs = self::log_refs( $user_id, $conversation, $input['log_refs'] ?? '', $kind );
+		if ( is_wp_error( $refs ) ) {
+			return $refs;
+		}
+		$body = self::body_or_files( $input['body'] ?? '', $files ?: ( $refs !== '' ? [ 'log' ] : [] ) );
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
@@ -522,6 +531,7 @@ class Chat {
 			'author_name'    => $agent !== '' ? self::AGENTS[ $agent ] : ( $user ? $user->display_name : '' ),
 			'body'           => $body,
 			'via'            => $agent !== '' ? 'bot' : '',
+			'log_refs'       => $refs,
 		] );
 		$message = self::attach( (int) $conversation->chat_conversation_id, $message, $files );
 		if ( $operator ) {
@@ -559,6 +569,7 @@ class Chat {
 			'original'             => isset( $m['original'] ) ? (string) $m['original'] : null,
 			'external_id'          => (string) ( $m['external_id'] ?? '' ),
 			'email_from'           => (string) ( $m['email_from'] ?? '' ),
+			'log_refs'             => (string) ( $m['log_refs'] ?? '' ),
 			'created_at'           => $now,
 		] );
 		$c = $wpdb->base_prefix . 'captaincore_chat_conversations';
@@ -1073,7 +1084,10 @@ class Chat {
 		return $cache[ $key ];
 	}
 
-	public static function present_message( $row, $attachments, $reactions = [] ) {
+	public static function present_message( $row, $attachments, $reactions = [], $logs = null ) {
+		if ( $logs === null ) {
+			$logs = ( $row->log_refs ?? '' ) !== '' ? ( self::logs_for( [ $row ] )[ (int) $row->chat_message_id ] ?? [] ) : [];
+		}
 		return [
 			'id'              => (int) $row->chat_message_id,
 			'conversation_id' => (int) $row->chat_conversation_id,
@@ -1104,6 +1118,8 @@ class Chat {
 			'email_from'      => ( $row->via ?? '' ) === 'email' ? (string) ( $row->email_from ?? '' ) : '',
 			// [{key, by: [{id, name}]}] in the order each was first used.
 			'reactions'       => $reactions,
+			// Linked CaptainCore logs (Chat::logs_for), as they read now.
+			'logs'            => $logs,
 		];
 	}
 
@@ -1363,6 +1379,192 @@ class Chat {
 		return [ 'message_id' => (int) $message->chat_message_id, 'revisions' => $out ];
 	}
 
+	// ── CaptainCore logs ────────────────────────────────────────────────
+
+	/**
+	 * [title, body]. Without a process name the first line is the title,
+	 * and it comes off the body so it doesn't show twice.
+	 */
+	private static function log_split( $name, $description ) {
+		$description = trim( str_replace( "\r\n", "\n", (string) $description ) );
+		if ( trim( (string) $name ) !== '' ) {
+			return [ trim( (string) $name ), $description ];
+		}
+		$parts = explode( "\n", $description, 2 );
+		$title = trim( self::markdown_plain( ltrim( $parts[0], "# \t" ) ) );
+		if ( $title === '' ) {
+			return [ 'Log entry', $description ];
+		}
+		return [ mb_strlen( $title ) > 90 ? mb_substr( $title, 0, 89 ) . '…' : $title, mb_strlen( $title ) > 90 ? $description : trim( $parts[1] ?? '' ) ];
+	}
+
+	/**
+	 * Linked logs for message rows, keyed by message id, in the order they
+	 * were linked: [{id, site_id, site_name, title, body (markdown as
+	 * written), author, created_at, files, public, url}]. A log deleted
+	 * since shows as {id, missing: true}.
+	 */
+	public static function logs_for( $rows ) {
+		global $wpdb;
+		$pairs = [];
+		foreach ( $rows as $row ) {
+			foreach ( array_filter( explode( ',', (string) ( $row->log_refs ?? '' ) ) ) as $ref ) {
+				[ $log_id, $site_id ] = array_map( 'intval', explode( ':', $ref ) + [ 1 => 0 ] );
+				if ( $log_id > 0 ) {
+					$pairs[ (int) $row->chat_message_id ][] = [ $log_id, $site_id ];
+				}
+			}
+		}
+		if ( ! $pairs ) {
+			return [];
+		}
+		$log_ids  = array_unique( array_merge( ...array_map( fn( $p ) => array_column( $p, 0 ), array_values( $pairs ) ) ) );
+		$site_ids = array_unique( array_merge( ...array_map( fn( $p ) => array_column( $p, 1 ), array_values( $pairs ) ) ) );
+		$in       = fn( $ids ) => implode( ',', array_map( 'intval', $ids ) ?: [ 0 ] );
+		$p        = $wpdb->prefix;
+		$logs     = [];
+		foreach ( $wpdb->get_results( "SELECT l.*, pr.name, (SELECT COUNT(*) FROM {$p}captaincore_process_log_file f WHERE f.process_log_id = l.process_log_id) AS files
+			FROM {$p}captaincore_process_logs l LEFT JOIN {$p}captaincore_processes pr ON pr.process_id = l.process_id WHERE l.process_log_id IN ({$in( $log_ids )})" ) ?: [] as $l ) {
+			$logs[ (int) $l->process_log_id ] = $l;
+		}
+		$sites = [];
+		foreach ( $wpdb->get_results( "SELECT site_id, name FROM {$p}captaincore_sites WHERE site_id IN ({$in( $site_ids )})" ) ?: [] as $st ) {
+			$sites[ (int) $st->site_id ] = (string) $st->name;
+		}
+		$out = [];
+		foreach ( $pairs as $mid => $list ) {
+			foreach ( $list as [ $log_id, $site_id ] ) {
+				$l = $logs[ $log_id ] ?? null;
+				if ( ! $l ) {
+					$out[ $mid ][] = [ 'id' => $log_id, 'missing' => true ];
+					continue;
+				}
+				[ $title, $text ] = self::log_split( $l->name, $l->description );
+				$out[ $mid ][] = [
+					'id'         => $log_id,
+					'site_id'    => $site_id ?: null,
+					'site_name'  => $sites[ $site_id ] ?? '',
+					'title'      => $title,
+					'body'       => $text,
+					'author'     => self::user_name( (int) $l->user_id, 'System' ),
+					'created_at' => self::ts( $l->created_at ),
+					'files'      => (int) $l->files,
+					'public'     => (int) $l->public !== 0,
+					'url'        => $site_id ? home_url( '/account/sites/' . $site_id . '/timeline' ) : '',
+				];
+			}
+		}
+		return $out;
+	}
+
+	/** Site ids the conversation's customer can use ([] for guests). */
+	private static function customer_site_ids( $conversation ) {
+		$access = (int) $conversation->user_id > 0 ? self::customer_access( (int) $conversation->user_id ) : [];
+		return is_wp_error( $access ) || ! empty( $access['operator'] ) ? [] : array_column( $access['sites'] ?? [], 'id' );
+	}
+
+	/**
+	 * Check the logs an operator links into a message and return them as
+	 * log_refs ("<log>:<site>,…"), '' for none. $raw is that string or an
+	 * array of the same pairs. Each log must be on that site's timeline; a
+	 * reply also needs a public log on a site the customer can use.
+	 */
+	private static function log_refs( $user_id, $conversation, $raw, $kind ) {
+		global $wpdb;
+		$list = is_array( $raw ) ? $raw : explode( ',', (string) $raw );
+		$list = array_values( array_unique( array_filter( array_map( 'trim', array_map( 'strval', $list ) ) ) ) );
+		if ( ! $list ) {
+			return '';
+		}
+		if ( ! self::is_operator( $user_id ) ) {
+			return new \WP_Error( 'operators_only', 'Only operators can link logs.', [ 'status' => 403 ] );
+		}
+		if ( count( $list ) > self::MAX_LOGS ) {
+			return new \WP_Error( 'too_many_logs', 'Link at most ' . self::MAX_LOGS . ' logs in one message.', [ 'status' => 400 ] );
+		}
+		$p     = $wpdb->prefix;
+		$sites = $kind === 'comment' ? self::customer_site_ids( $conversation ) : null;
+		$out   = [];
+		foreach ( $list as $ref ) {
+			if ( ! preg_match( '/^(\d+):(\d+)$/', $ref, $m ) ) {
+				return new \WP_Error( 'bad_log', 'Logs are linked as <log id>:<site id>.', [ 'status' => 400 ] );
+			}
+			$row = $wpdb->get_row( $wpdb->prepare(
+				"SELECT l.public FROM {$p}captaincore_process_logs l JOIN {$p}captaincore_process_log_site s ON s.process_log_id = l.process_log_id
+				WHERE l.process_log_id = %d AND s.site_id = %d LIMIT 1", (int) $m[1], (int) $m[2]
+			) );
+			if ( ! $row ) {
+				return new \WP_Error( 'bad_log', "Log {$m[1]} isn't on that site's timeline.", [ 'status' => 400 ] );
+			}
+			if ( $sites !== null && (int) $row->public === 0 ) {
+				return new \WP_Error( 'private_log', "Log {$m[1]} is internal. Link it in a note instead.", [ 'status' => 400 ] );
+			}
+			if ( $sites !== null && ! in_array( (int) $m[2], $sites, true ) ) {
+				return new \WP_Error( 'log_site', "The customer can't access that log's site. Link it in a note instead.", [ 'status' => 400 ] );
+			}
+			$out[] = (int) $m[1] . ':' . (int) $m[2];
+		}
+		return implode( ',', $out );
+	}
+
+	/**
+	 * Logs an operator can link into this conversation: the sites they can
+	 * pick from (the customer's, plus the conversation's own site), and the
+	 * newest 30 logs on one of them, optionally searched.
+	 */
+	public static function log_options( $user_id, $conversation_id, $q = [] ) {
+		global $wpdb;
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! self::is_operator( $user_id ) ) {
+			return self::not_found();
+		}
+		$p       = $wpdb->prefix;
+		$mine    = self::customer_site_ids( $conversation );
+		$ids     = array_values( array_unique( array_merge( (int) $conversation->site_id ? [ (int) $conversation->site_id ] : [], $mine ) ) );
+		$in      = implode( ',', array_map( 'intval', $ids ) ?: [ 0 ] );
+		$sites   = array_map( fn( $s ) => [ 'id' => (int) $s->site_id, 'name' => (string) $s->name, 'customer' => in_array( (int) $s->site_id, $mine, true ) ],
+			$wpdb->get_results( "SELECT site_id, name FROM {$p}captaincore_sites WHERE site_id IN ($in) ORDER BY name" ) ?: [] );
+		$site_id = (int) ( $q['site'] ?? 0 );
+		if ( $site_id && ! in_array( $site_id, $ids, true ) ) {
+			// Any other site works for a note; it just isn't suggested.
+			$name = $wpdb->get_var( $wpdb->prepare( "SELECT name FROM {$p}captaincore_sites WHERE site_id = %d", $site_id ) );
+			if ( $name === null ) {
+				return new \WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+			}
+			$sites[] = [ 'id' => $site_id, 'name' => (string) $name, 'customer' => false ];
+		}
+		if ( ! $site_id ) {
+			$site_id = (int) $conversation->site_id ?: ( $sites[0]['id'] ?? 0 );
+		}
+		$logs = [];
+		if ( $site_id ) {
+			$where  = 's.site_id = %d';
+			$args   = [ $site_id ];
+			$search = trim( (string) ( $q['q'] ?? '' ) );
+			if ( $search !== '' ) {
+				$like  = '%' . $wpdb->esc_like( mb_substr( $search, 0, 100 ) ) . '%';
+				$where .= ' AND (l.description LIKE %s OR pr.name LIKE %s)';
+				array_push( $args, $like, $like );
+			}
+			$rows = $wpdb->get_results( $wpdb->prepare(
+				"SELECT l.process_log_id, l.description, l.public, l.user_id, l.created_at, pr.name FROM {$p}captaincore_process_log_site s
+				JOIN {$p}captaincore_process_logs l ON l.process_log_id = s.process_log_id LEFT JOIN {$p}captaincore_processes pr ON pr.process_id = l.process_id
+				WHERE $where ORDER BY l.created_at DESC LIMIT 30", $args
+			) );
+			foreach ( $rows ?: [] as $r ) {
+				$logs[] = [
+					'id'         => (int) $r->process_log_id,
+					'title'      => self::log_split( $r->name, $r->description )[0],
+					'excerpt'    => mb_substr( preg_replace( '/\s+/', ' ', self::markdown_plain( self::log_split( $r->name, $r->description )[1] ) ), 0, 160 ),
+					'author'     => self::user_name( (int) $r->user_id, 'System' ),
+					'created_at' => self::ts( $r->created_at ),
+					'public'     => (int) $r->public !== 0,
+				];
+			}
+		}
+		return [ 'sites' => $sites, 'site_id' => $site_id, 'logs' => $logs ];
+	}
+
 	// ── drafts ──────────────────────────────────────────────────────────
 
 	/** The conversation's waiting draft, presented, or null. */
@@ -1381,6 +1583,8 @@ class Chat {
 			'agent'               => (string) $row->agent,
 			'user_id'             => (int) $row->user_id ?: null,
 			'based_on_message_id' => (int) $row->based_on_message_id,
+			'log_refs'            => (string) $row->log_refs,
+			'logs'                => $row->log_refs !== '' ? ( self::logs_for( [ (object) [ 'chat_message_id' => 0, 'log_refs' => $row->log_refs ] ] )[0] ?? [] ) : [],
 			'created_at'          => self::ts( $row->created_at ),
 			'updated_at'          => self::ts( $row->updated_at ),
 		];
@@ -1393,7 +1597,8 @@ class Chat {
 	 * name unless keep_author is false, so the strip still reads "Draft by
 	 * Claude" while they polish it. Operators get draft.updated live.
 	 *
-	 * @param array $input body, kind (comment|note), agent, keep_author
+	 * @param array $input body, kind (comment|note), agent, keep_author,
+	 *                     log_refs ("<log>:<site>,…"; left out keeps the draft's)
 	 */
 	public static function save_draft( $user_id, $conversation_id, $input ) {
 		global $wpdb;
@@ -1402,7 +1607,10 @@ class Chat {
 			return self::not_found();
 		}
 		$cid  = (int) $conversation->chat_conversation_id;
-		$kind = (string) ( $input['kind'] ?? 'comment' ) ?: 'comment';
+		$t    = $wpdb->base_prefix . 'captaincore_chat_drafts';
+		$old  = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_conversation_id = %d", $cid ) );
+		// Left out, kind stays what the draft was.
+		$kind = (string) ( $input['kind'] ?? ( $old ? $old->kind : 'comment' ) ) ?: 'comment';
 		if ( ! in_array( $kind, [ 'comment', 'note' ], true ) ) {
 			return new \WP_Error( 'bad_kind', 'kind must be comment or note.', [ 'status' => 400 ] );
 		}
@@ -1410,13 +1618,15 @@ class Chat {
 		if ( $agent !== '' && ! isset( self::AGENTS[ $agent ] ) ) {
 			return new \WP_Error( 'bad_agent', 'Unknown agent.', [ 'status' => 400 ] );
 		}
-		$body = self::clean_body( $input['body'] ?? '' );
+		$now  = gmdate( 'Y-m-d H:i:s' );
+		$refs = self::log_refs( $user_id, $conversation, array_key_exists( 'log_refs', $input ) ? $input['log_refs'] : ( $old ? $old->log_refs : '' ), $kind );
+		if ( is_wp_error( $refs ) ) {
+			return $refs;
+		}
+		$body = self::body_or_files( $input['body'] ?? '', $refs !== '' ? [ 'log' ] : [] );
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
-		$t    = $wpdb->base_prefix . 'captaincore_chat_drafts';
-		$now  = gmdate( 'Y-m-d H:i:s' );
-		$old  = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_conversation_id = %d", $cid ) );
 		$keep = $old && $agent === '' && ( ! isset( $input['keep_author'] ) || ! empty( $input['keep_author'] ) );
 		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$wpdb->replace( $t, [
@@ -1426,6 +1636,7 @@ class Chat {
 			'user_id'              => $keep ? (int) $old->user_id : (int) $user_id,
 			'agent'                => $keep ? (string) $old->agent : $agent,
 			// An edit of a draft is still based on what its writer saw.
+			'log_refs'             => $refs,
 			'based_on_message_id'  => $keep ? (int) $old->based_on_message_id : (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d", $cid ) ),
 			'created_at'           => $old ? $old->created_at : $now,
 			'updated_at'           => $now,
