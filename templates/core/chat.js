@@ -334,28 +334,187 @@ Object.assign(Component.prototype, {
     });
   },
 
-  chatPatch(patch, done) {
+  // Patch a conversation: the open one, or `id` (context menus on rows).
+  chatPatch(patch, done, id) {
     const c = this._chat;
-    if (!c || !c.id) return;
-    this.api('/chat/conversations/' + c.id, { method: 'PATCH', body: patch }).then(r => {
+    id = id || (c && c.id);
+    if (!c || !id) return;
+    this.api('/chat/conversations/' + id, { method: 'PATCH', body: patch }).then(r => {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not update');
       this.chatMergeConv(r.conversation);
       if (done) this.toast(done, { kind: 'success' });
-      this.chatLoadConv(c.id, true);
+      if (id === c.id) this.chatLoadConv(c.id, true);
       if (this.chatBoot().operator) this.chatLoadList(true);
     }).catch(e => this.toast(e && e.message !== 'auth' ? e.message : 'Could not update', { kind: 'error' }));
   },
 
-  chatSnoozeMenu(e) {
+  // Snooze choices for the open conversation, or `id`. `prefix` labels them
+  // when they sit in a longer context menu.
+  chatSnoozeEntries(id, prefix) {
     const at = (h, m, addDays) => { const d = new Date(); d.setDate(d.getDate() + addDays); d.setHours(h, m, 0, 0); return Math.floor(d.getTime() / 1000); };
     const nextMonday = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(9, 0, 0, 0); return Math.floor(d.getTime() / 1000); };
-    const snooze = (until, label) => () => this.chatPatch({ status: 'snoozed', snoozed_until: until }, 'Snoozed until ' + label);
-    this.openCtxMenu(e, [
-      { label: 'In 1 hour', act: snooze(Math.floor(Date.now() / 1000) + 3600, 'in an hour') },
-      { label: 'Tomorrow, 9am', act: snooze(at(9, 0, 1), 'tomorrow 9am') },
-      { label: 'Next Monday, 9am', act: snooze(nextMonday(), 'Monday 9am') },
-      { label: 'In a week', act: snooze(Math.floor(Date.now() / 1000) + 7 * 86400, 'next week') }
+    const snooze = (until, label) => () => this.chatPatch({ status: 'snoozed', snoozed_until: until }, 'Snoozed until ' + label, id);
+    const p = prefix || '';
+    return [
+      { label: p + (p ? '1 hour' : 'In 1 hour'), act: snooze(Math.floor(Date.now() / 1000) + 3600, 'in an hour') },
+      { label: p + (p ? 'until tomorrow, 9am' : 'Tomorrow, 9am'), act: snooze(at(9, 0, 1), 'tomorrow 9am') },
+      { label: p + (p ? 'until Monday, 9am' : 'Next Monday, 9am'), act: snooze(nextMonday(), 'Monday 9am') },
+      ...(p ? [] : [{ label: 'In a week', act: snooze(Math.floor(Date.now() / 1000) + 7 * 86400, 'next week') }])
+    ];
+  },
+
+  chatSnoozeMenu(e) {
+    this.openCtxMenu(e, this.chatSnoozeEntries());
+  },
+
+  // ── context menus ─────────────────────────────────────────────────────
+  // Right-click anywhere in chat. Shift+right-click keeps the browser's own
+  // menu (spell check, inspect).
+
+  chatLink(id) { return location.origin + this.routeBase() + 'chat/' + id; },
+
+  // A conversation: an inbox or Support row, the open one's header, or the
+  // sidebar's other conversations.
+  chatConvCtx(e, x) {
+    if (!x || e.shiftKey) return;
+    const c = this._chat;
+    const isOp = this.chatBoot().operator;
+    const open = x.id !== c.id;
+    const items = [];
+    if (open) items.push({ label: 'Open', act: () => { this.chatOpen(x.id); if (!isOp) this.setState({ chatWView: 'thread' }); } });
+    items.push({ label: 'Open in new tab ↗', act: () => window.open(this.chatLink(x.id), '_blank') });
+    if (!isOp) {
+      items.push(x.status === 'closed'
+        ? { label: 'Reopen', act: () => this.chatPatch({ status: 'open' }, 'Reopened', x.id) }
+        : { label: 'Mark as resolved', act: () => this.chatPatch({ status: 'closed' }, 'Marked as resolved', x.id) });
+      items.push({ label: 'Copy link', act: () => this.ctxCopy(this.chatLink(x.id), 'link') });
+      return this.openCtxMenu(e, items);
+    }
+    if ((x.unread || 0) > 0) items.push({ label: 'Mark as read', act: () => this.chatMarkConv(x, false) });
+    else if (x.waiting_since) items.push({ label: 'Mark as unread', act: () => this.chatMarkConv(x, true) });
+    if (x.status === 'closed') items.push({ label: 'Reopen', act: () => this.chatPatch({ status: 'open' }, 'Reopened', x.id) });
+    else items.push({ label: 'Close', act: () => this.chatPatch({ status: 'closed' }, 'Closed', x.id) });
+    if (x.status === 'snoozed') items.push({ label: 'Unsnooze', act: () => this.chatPatch({ status: 'open' }, 'Back in the inbox', x.id) });
+    else if (x.status !== 'closed') items.push(...this.chatSnoozeEntries(x.id, 'Snooze '));
+    if (x.site_id) items.push({ label: 'Open site', act: () => this.openSite(String(x.site_id)) });
+    if (x.customer_user_id) {
+      const first = String(x.customer_name || 'customer').split(' ')[0];
+      items.push({ label: 'New message to ' + first, act: () => this.chatNewTo(x) });
+    }
+    if (x.customer_email) items.push({ label: 'Copy email', act: () => this.ctxCopy(x.customer_email, 'email') });
+    items.push({ label: 'Copy link', act: () => this.ctxCopy(this.chatLink(x.id), 'link') });
+    this.openCtxMenu(e, items);
+  },
+
+  // Operator Mark as read / unread from a row. The open conversation marks
+  // itself read again while on screen, so marking it unread leaves it.
+  chatMarkConv(x, unread) {
+    const c = this._chat;
+    this.api('/chat/conversations/' + x.id + '/read', { method: 'POST', body: unread ? { unread: true } : { message_id: 0 } }).then(r => {
+      if (r && r.code) throw new Error(r.message);
+      if (unread && x.id === c.id) this.chatOpen(0);
+      this.chatLoadList(true);
+      this.toast(unread ? 'Marked as unread' : 'Marked as read', { kind: 'success' });
+    }).catch(err => this.toast(err && err.message && err.message !== 'auth' ? err.message : 'Could not update', { kind: 'error' }));
+  },
+
+  // New message panel, already addressed to this conversation's customer.
+  chatNewTo(x) {
+    this.chatNewForCustomer();
+    this.chatPickCustomer({ id: Number(x.customer_user_id), name: x.customer_name || x.customer_email || '', email: x.customer_email || '' });
+  },
+
+  // The customer card in the operator sidebar.
+  chatCustCtx(e) {
+    const c = this._chat;
+    const conv = c && c.conv && c.conv.conversation;
+    if (!conv || e.shiftKey) return;
+    const acc = conv.customer_user_id && c.access ? c.access[conv.customer_user_id] : null;
+    const first = String(conv.customer_name || 'customer').split(' ')[0];
+    const items = [];
+    if (conv.customer_user_id) items.push({ label: 'New message to ' + first, act: () => this.chatNewTo(conv) });
+    if (acc && acc.switch_url) items.push({ label: 'Access as ' + first + ' ↗', act: () => { window.location.href = acc.switch_url; } });
+    if (conv.customer_email) items.push({ label: 'Copy email', act: () => this.ctxCopy(conv.customer_email, 'email') });
+    if (conv.customer_name) items.push({ label: 'Copy name', act: () => this.ctxCopy(conv.customer_name, 'name') });
+    if (conv.customer_user_id) items.push({ label: 'Copy user ID', act: () => this.ctxCopy(String(conv.customer_user_id), 'user ID') });
+    if (items.length) this.openCtxMenu(e, items);
+  },
+
+  // A site, account or domain under "Can access".
+  chatAccessCtx(e, kind, x, href) {
+    if (e.shiftKey) return;
+    const tab = { label: 'Open in new tab ↗', act: () => window.open(location.origin + href, '_blank') };
+    if (kind === 'sites') {
+      const f = (this.FLEET || []).find(s => String(s.id) === String(x.id));
+      const entries = this.siteCtxEntries(f || { id: String(x.id), name: x.name, envs: '' });
+      entries.splice(1, 0, tab);
+      return this.openCtxMenu(e, entries);
+    }
+    if (kind === 'accounts') return this.openCtxMenu(e, [
+      { label: 'Open account', act: () => this.openAccount(x.id) }, tab,
+      { label: 'Copy account name', act: () => this.ctxCopy(x.name, 'account name') }
     ]);
+    this.openCtxMenu(e, [
+      { label: 'Open domain', act: () => this.openDomain(x.id) }, tab,
+      { label: 'Visit ' + x.name + ' ↗', act: () => window.open('https://' + x.name, '_blank') },
+      { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
+    ]);
+  },
+
+  // Anything in a thread: a message or note, an image or file, a link, or a
+  // text selection. The thread is plain HTML, so one listener covers it.
+  chatThreadCtx(e, el) {
+    if (e.shiftKey) return;
+    const c = this._chat;
+    const conv = c && c.conv && c.conv.conversation;
+    if (!conv) return;
+    const isOp = this.chatBoot().operator;
+    const row = e.target.closest('[data-mid]');
+    const m = row ? c.conv.messages.find(x => x.id === +row.dataset.mid) : null;
+    const items = [];
+    const sel = String((window.getSelection && window.getSelection()) || '').trim();
+    if (sel && el.contains(window.getSelection().anchorNode)) items.push({ label: 'Copy selection', act: () => this.ctxCopy(sel, 'selection') });
+    const file = e.target.closest('a[href*="/chat/attachments/"]');
+    const link = !file && e.target.closest('a[href]');
+    if (file) {
+      const img = file.classList.contains('ccc-img');
+      if (img) items.push({ label: 'View image', act: () => {
+        const all = [...el.querySelectorAll('a.ccc-img')];
+        this.chatLightbox(all.map(a => ({ url: a.href, name: (a.querySelector('img') || {}).alt || 'image' })), all.indexOf(file));
+      } });
+      items.push({ label: 'Open in new tab ↗', act: () => window.open(file.href, '_blank') });
+      items.push({ label: 'Download', act: () => { window.location.href = file.href + (file.href.indexOf('?') > -1 ? '&' : '?') + 'download=1'; } });
+    } else if (link) {
+      items.push({ label: 'Open link in new tab ↗', act: () => window.open(link.href, '_blank', 'noopener') });
+      items.push({ label: 'Copy link address', act: () => this.ctxCopy(link.href, 'link') });
+    }
+    if (m) {
+      if (m.body) items.push({ label: m.kind === 'note' ? 'Copy note' : m.kind === 'event' ? 'Copy event' : 'Copy message', act: () => this.ctxCopy(m.body, 'text') });
+      if (m.body && m.kind !== 'event' && this.chatComposer()) items.push({ label: 'Quote in reply', act: () => this.chatQuote(m.body) });
+      const opener = row.querySelector('[data-react-open]');
+      if (opener && m.kind !== 'event') items.push({ label: 'Add reaction…', act: () => this.chatReactPicker(opener, m.id) });
+      const orig = isOp && row.querySelector('details.ccc-orig');
+      if (orig) items.push({ label: orig.open ? 'Hide original email' : 'Show original email', act: () => { orig.open = !orig.open; } });
+      if (isOp && m.email_from) items.push({ label: 'Copy sender address', act: () => this.ctxCopy(m.email_from, 'address') });
+    }
+    items.push({ label: 'Copy link to conversation', act: () => this.ctxCopy(this.chatLink(conv.id), 'link') });
+    this.openCtxMenu(e, items);
+  },
+
+  // The composer on screen (inbox, Support page or corner panel), or null.
+  chatComposer() {
+    return [...document.querySelectorAll('textarea')].find(t => t._cccPaste && t.offsetParent !== null) || null;
+  },
+
+  chatQuote(body) {
+    const t = this.chatComposer();
+    if (!t) return;
+    const quote = String(body).split('\n').map(l => '> ' + l).join('\n') + '\n\n';
+    const before = t.value && !/\n\n$/.test(t.value) ? t.value.replace(/\n*$/, '') + '\n\n' : t.value;
+    t.value = before + quote;
+    this.setState({ chatBody: t.value });
+    t.focus();
+    t.setSelectionRange(t.value.length, t.value.length);
   },
 
   // ── live relay ────────────────────────────────────────────────────────
@@ -885,25 +1044,25 @@ Object.assign(Component.prototype, {
       if (d !== lastDay) { out += '<div class="ccc-day">' + esc(d) + '</div>'; lastDay = d; prev = null; }
       const name = m.author_name || (m.author_kind === 'operator' ? (window.CC_BOOT && window.CC_BOOT.name) || 'Support' : conv.customer_name || 'Customer');
       if (m.kind === 'event') {
-        out += '<div class="ccc-sys' + (m.internal ? ' ccc-sys-int' : '') + '">' + esc(m.body) + ' · ' + esc(time(m.created_at)) + '</div>';
+        out += '<div data-mid="' + m.id + '" class="ccc-sys' + (m.internal ? ' ccc-sys-int' : '') + '">' + esc(m.body) + ' · ' + esc(time(m.created_at)) + '</div>';
         prev = null;
         return;
       }
       if (m.kind === 'note') {
-        out += '<div class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
+        out += '<div data-mid="' + m.id + '" class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
         prev = null;
         return;
       }
       if (flat) {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
-        out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
+        out += '<div data-mid="' + m.id + '" class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span><div class="ccc-mbody">' +
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
           (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
-        out += '<div class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
+        out += '<div data-mid="' + m.id + '" class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
           (me ? this.chatReactBtn(m) : '') +
           '<div class="ccc-bwrap">' + (m.body ? '<div class="ccc-bb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
@@ -961,6 +1120,7 @@ Object.assign(Component.prototype, {
     if (!el._cccBound) {
       el._cccBound = true;
       el.addEventListener('scroll', () => { c.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80; });
+      el.addEventListener('contextmenu', e => this.chatThreadCtx(e, el));
       // Images open in the lightbox; modified clicks still open a new tab.
       el.addEventListener('click', e => {
         const chip = e.target.closest && e.target.closest('[data-react]');
@@ -1185,7 +1345,8 @@ Object.assign(Component.prototype, {
         bg: on ? 'var(--paper)' : 'transparent', shadow: on ? 'var(--shadow-sm)' : 'none', outline: on ? '1px solid var(--rule)' : '0',
         bar: on ? 'var(--brand)' : 'transparent',
         letter: String(x.subject || '?').trim().charAt(0).toUpperCase() || '?', letterBg: this.chatColor(x.subject || String(x.id)),
-        open: () => { this.chatOpen(x.id); if (!isOp) this.setState({ chatWView: 'thread' }); }
+        open: () => { this.chatOpen(x.id); if (!isOp) this.setState({ chatWView: 'thread' }); },
+        ctx: e => this.chatConvCtx(e, x)
       };
     });
     const counts = c.counts || {};
@@ -1225,9 +1386,9 @@ Object.assign(Component.prototype, {
       };
     };
     const accessGroups = !acc || acc.loading || acc.error || acc.operator ? [] : [
-      group('accounts', 'Accounts', acc.accounts.map(a => ({ name: a.name, sub: levelLabel[a.level] || '', href: appBase + 'accounts/' + a.id, go: link(appBase + 'accounts/' + a.id, () => this.openAccount(a.id)) })), 5),
-      group('sites', 'Sites', acc.sites.map(x => ({ name: x.name, sub: ((h => h === x.name || h === 'www.' + x.name ? '' : h)((x.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''))), href: appBase + 'sites/' + x.id, go: link(appBase + 'sites/' + x.id, () => this.openSite(x.id)) })), 6),
-      group('domains', 'Domains', acc.domains.map(d => ({ name: d.name, sub: '', href: appBase + 'domains/' + d.id, go: link(appBase + 'domains/' + d.id, () => this.openDomain(d.id)) })), 6)
+      group('accounts', 'Accounts', acc.accounts.map(a => ({ name: a.name, sub: levelLabel[a.level] || '', href: appBase + 'accounts/' + a.id, go: link(appBase + 'accounts/' + a.id, () => this.openAccount(a.id)), ctx: e => this.chatAccessCtx(e, 'accounts', a, appBase + 'accounts/' + a.id) })), 5),
+      group('sites', 'Sites', acc.sites.map(x => ({ name: x.name, sub: ((h => h === x.name || h === 'www.' + x.name ? '' : h)((x.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''))), href: appBase + 'sites/' + x.id, go: link(appBase + 'sites/' + x.id, () => this.openSite(x.id)), ctx: e => this.chatAccessCtx(e, 'sites', x, appBase + 'sites/' + x.id) })), 6),
+      group('domains', 'Domains', acc.domains.map(d => ({ name: d.name, sub: '', href: appBase + 'domains/' + d.id, go: link(appBase + 'domains/' + d.id, () => this.openDomain(d.id)), ctx: e => this.chatAccessCtx(e, 'domains', d, appBase + 'domains/' + d.id) })), 6)
     ];
 
     // Customer launcher: the dock owns the corner while it is open.
@@ -1343,7 +1504,9 @@ Object.assign(Component.prototype, {
       chatAccessNote: !conv ? '' : !conv.customer_user_id ? 'Guest: no Manager login, so no access.' : acc && acc.error ? 'Could not load access.' : acc && acc.operator ? 'This person is an operator and can see everything.' : (acc && !acc.loading && !acc.accounts.length && !acc.sites.length && !acc.domains.length) ? 'No accounts, sites or domains.' : '',
       chatSideOpen: c.sideOpen ? '1' : '0',
       chatSideToggle: () => { c.sideOpen = !c.sideOpen; this.setState({}); },
-      chatHistory: hist.map(x => ({ subject: x.subject, meta: statusChip(x).label + ' · ' + this.chatAgo(x.last_message_at), go: () => this.chatOpen(x.id) })),
+      chatHistory: hist.map(x => ({ subject: x.subject, meta: statusChip(x).label + ' · ' + this.chatAgo(x.last_message_at), go: () => this.chatOpen(x.id), ctx: e => this.chatConvCtx(e, x) })),
+      chatHeadCtx: e => this.chatConvCtx(e, conv),
+      chatCustCtx: e => this.chatCustCtx(e),
       chatHasHistory: hist.length > 0, chatNoHistory: !!conv && hist.length === 0,
       // Customer widget
       chatWidgetShow: !isOp && !s.dockOpen && s.route !== 'support',

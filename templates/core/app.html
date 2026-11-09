@@ -3905,7 +3905,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                 <div class="cc-skel" style="height:62px;margin:6px 4px;border-radius:10px"></div>
               </sc-if>
               <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="4">
-                <div onClick="{{ r.open }}" class="ccs-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
+                <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" class="ccs-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
                   <span style="position:absolute;left:-8px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:{{ r.bar }}"></span>
                   <span class="ccc-av" style="background:{{ r.letterBg }}">{{ r.letter }}</span>
                   <div style="flex:1;min-width:0">
@@ -3989,7 +3989,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div class="ccs-head">
                 <button onClick="{{ chatBack }}" class="ccc-back" title="All conversations">←</button>
                 <span class="ccc-av" style="width:38px;height:38px;font-size:14px;background:{{ supLetterBg }}">{{ supLetter }}</span>
-                <div style="flex:1;min-width:0">
+                <div onContextMenu="{{ chatHeadCtx }}" style="flex:1;min-width:0">
                   <div style="display:flex;align-items:center;gap:8px">
                     <h2 class="ccs-title">{{ chatSubject }}</h2>
                     <span style="flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font:500 var(--fs-115) var(--sans);background:{{ chatStatusBg }};color:{{ chatStatusFg }}">{{ chatStatusLabel }}</span>
@@ -7489,7 +7489,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <div class="cc-skel" style="height:64px;margin:6px 4px;border-radius:10px"></div>
             </sc-if>
             <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="4">
-              <div onClick="{{ r.open }}" class="ccc-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
+              <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" class="ccc-row" style="background:{{ r.bg }};box-shadow:{{ r.shadow }};outline:{{ r.outline }}">
                 <span style="position:absolute;left:-8px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:{{ r.bar }}"></span>
                 <span class="ccc-av" style="background:{{ r.avBg }}">{{ r.initials }}<sc-if value="{{ r.hasAvatar }}" hint-placeholder-val="{{ false }}"><img class="ccc-avimg" src="{{ r.avatar }}" ref="{{ chatAvRef }}" alt="" loading="lazy" referrerpolicy="no-referrer"></sc-if></span>
                 <div style="flex:1;min-width:0">
@@ -7595,7 +7595,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
             <div class="ccc-convhead" style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 35%,var(--paper))">
               <button onClick="{{ chatBack }}" class="ccc-back" title="All conversations">←</button>
-              <div style="flex:1;min-width:0">
+              <div onContextMenu="{{ chatHeadCtx }}" style="flex:1;min-width:0">
                 <div style="display:flex;align-items:center;gap:8px">
                   <h2 class="ccc-trunc" style="margin:0;font:600 17px var(--sans);letter-spacing:-.01em">{{ chatSubject }}</h2>
                   <span style="flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font:500 var(--fs-115) var(--sans);background:{{ chatStatusBg }};color:{{ chatStatusFg }}">{{ chatStatusLabel }}</span>
@@ -7646,7 +7646,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
           <sc-if value="{{ chatHasConv }}" hint-placeholder-val="{{ false }}">
             <div class="ccc-sec">
               <div class="ccc-label">Customer</div>
-              <div style="display:flex;gap:12px;align-items:center">
+              <div onContextMenu="{{ chatCustCtx }}" style="display:flex;gap:12px;align-items:center">
                 <span class="ccc-av" style="width:46px;height:46px;font-size:15px;background:{{ chatCustBg }}">{{ chatCustInitials }}<sc-if value="{{ chatCustHasAvatar }}" hint-placeholder-val="{{ false }}"><img class="ccc-avimg" src="{{ chatCustAvatar }}" ref="{{ chatAvRef }}" alt="" referrerpolicy="no-referrer"></sc-if></span>
                 <div style="min-width:0">
                   <div class="ccc-trunc" style="font:600 var(--fs-15) var(--sans)">{{ chatCustName }}</div>
@@ -7675,7 +7675,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                   <div class="ccc-acchead"><span>{{ g.label }}</span><span class="ccc-acccount">{{ g.count }}</span></div>
                   <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}"><div class="ccc-accnone">None</div></sc-if>
                   <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
-                    <a href="{{ it.href }}" onClick="{{ it.go }}" class="ccc-accitem">
+                    <a href="{{ it.href }}" onClick="{{ it.go }}" onContextMenu="{{ it.ctx }}" class="ccc-accitem">
                       <span class="ccc-trunc" style="min-width:0">{{ it.name }}</span>
                       <span class="ccc-trunc ccc-accsub">{{ it.sub }}</span>
                     </a>
@@ -7689,7 +7689,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             <div class="ccc-sec" style="border-bottom:0">
               <div class="ccc-label">Other conversations</div>
               <sc-for list="{{ chatHistory }}" as="h" hint-placeholder-count="3">
-                <div onClick="{{ h.go }}" style="padding:8px 10px;margin:0 -10px;border-radius:8px;cursor:pointer" style-hover="background:var(--paper)">
+                <div onClick="{{ h.go }}" onContextMenu="{{ h.ctx }}" style="padding:8px 10px;margin:0 -10px;border-radius:8px;cursor:pointer" style-hover="background:var(--paper)">
                   <div class="ccc-trunc" style="font:500 var(--fs-125) var(--sans)">{{ h.subject }}</div>
                   <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ h.meta }}</div>
                 </div>
@@ -7740,7 +7740,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
             </div>
             <div style="border:1px solid var(--rule);border-radius:12px;overflow:hidden">
               <sc-for list="{{ chatRows }}" as="r" hint-placeholder-count="3">
-                <div onClick="{{ r.open }}" class="ccc-w-item">
+                <div onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" class="ccc-w-item">
                   <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:baseline;gap:6px">
                       <b class="ccc-trunc" style="flex:1;min-width:0;font:{{ r.bold }} var(--fs-125) var(--sans)">{{ r.name }}</b>

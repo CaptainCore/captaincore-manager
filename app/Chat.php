@@ -111,9 +111,12 @@ class Chat {
 		$accounts = $account_ids ? $wpdb->get_results( "SELECT account_id, name FROM {$wpdb->prefix}captaincore_accounts WHERE account_id IN ({$in( $account_ids )}) ORDER BY name" ) : [];
 		$sites    = $site_ids ? $wpdb->get_results( "SELECT site_id, name, JSON_UNQUOTE(JSON_EXTRACT(details, '$.home_url')) AS home_url FROM {$wpdb->prefix}captaincore_sites WHERE site_id IN ({$in( $site_ids )}) ORDER BY name" ) : [];
 		$domains  = $domain_ids ? $wpdb->get_results( "SELECT domain_id, name FROM {$wpdb->prefix}captaincore_domains WHERE domain_id IN ({$in( $domain_ids )}) ORDER BY name" ) : [];
+		// User Switching's "switch to" link, for the operator viewing this.
+		$switch = class_exists( 'user_switching' ) ? \user_switching::maybe_switch_url( $user ) : false;
 		return [
-			'operator' => false,
-			'chat'     => self::enabled_for( $customer_user_id ), // false: they only get email
+			'operator'   => false,
+			'chat'       => self::enabled_for( $customer_user_id ), // false: they only get email
+			'switch_url' => $switch ? html_entity_decode( $switch ) : '',
 			'accounts' => array_map( fn( $a ) => [ 'id' => (int) $a->account_id, 'name' => html_entity_decode( (string) $a->name ), 'level' => $levels[ (int) $a->account_id ] ?? '' ], $accounts ?: [] ),
 			'sites'    => array_map( fn( $x ) => [ 'id' => (int) $x->site_id, 'name' => (string) $x->name, 'url' => (string) ( $x->home_url ?? '' ) ], $sites ?: [] ),
 			'domains'  => array_map( fn( $d ) => [ 'id' => (int) $d->domain_id, 'name' => (string) $d->name ], $domains ?: [] ),
@@ -650,6 +653,10 @@ class Chat {
 			return self::not_found();
 		}
 		$m       = $wpdb->base_prefix . 'captaincore_chat_messages';
+		if ( (int) $message_id <= 0 ) {
+			// No message given (an inbox row's "Mark as read"): up to the latest.
+			$message_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d", $conversation->chat_conversation_id ) );
+		}
 		$belongs = $wpdb->get_var( $wpdb->prepare(
 			"SELECT 1 FROM $m WHERE chat_message_id = %d AND chat_conversation_id = %d", $message_id, $conversation->chat_conversation_id
 		) );
@@ -666,6 +673,37 @@ class Chat {
 			ChatNotify::cancel_if_read( (int) $conversation->chat_conversation_id, (int) $user_id );
 			do_action( 'captaincore_chat_event', [ 'type' => 'read', 'conversation_id' => (int) $conversation->chat_conversation_id, 'message_id' => (int) $message_id ], 0, true );
 		}
+		return true;
+	}
+
+	/**
+	 * An operator's "Mark as unread": moves their read mark back to just before
+	 * the customer's latest message, so it counts as unread again. The inbox
+	 * counts customer messages after both the read mark and the last operator
+	 * reply, so this only shows when the customer spoke last.
+	 */
+	public static function mark_unread( $user_id, $conversation_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return new \WP_Error( 'forbidden', 'Only operators can mark a conversation unread.', [ 'status' => 403 ] );
+		}
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$id   = (int) $conversation->chat_conversation_id;
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d AND kind = 'comment' AND author_kind = 'customer'", $id ) );
+		if ( ! $last ) {
+			return new \WP_Error( 'nothing_unread', 'The customer has not written in this conversation.', [ 'status' => 400 ] );
+		}
+		$before = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(MAX(chat_message_id), 0) FROM $m WHERE chat_conversation_id = %d AND chat_message_id < %d", $id, $last ) );
+		$r      = $wpdb->base_prefix . 'captaincore_chat_reads';
+		$wpdb->query( $wpdb->prepare(
+			"INSERT INTO $r (user_id, chat_conversation_id, last_read_message_id, updated_at) VALUES (%d, %d, %d, %s)
+			ON DUPLICATE KEY UPDATE last_read_message_id = VALUES(last_read_message_id), updated_at = VALUES(updated_at)",
+			$user_id, $id, $before, gmdate( 'Y-m-d H:i:s' )
+		) );
 		return true;
 	}
 

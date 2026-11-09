@@ -2780,7 +2780,10 @@ function captaincore_chat_message_func( WP_REST_Request $request ) {
 }
 
 function captaincore_chat_read_func( WP_REST_Request $request ) {
-	$result = CaptainCore\Chat::mark_read( get_current_user_id(), (int) $request['id'], (int) ( $request->get_json_params()['message_id'] ?? 0 ) );
+	$p      = (array) $request->get_json_params();
+	$result = ! empty( $p['unread'] )
+		? CaptainCore\Chat::mark_unread( get_current_user_id(), (int) $request['id'] )
+		: CaptainCore\Chat::mark_read( get_current_user_id(), (int) $request['id'], (int) ( $p['message_id'] ?? 0 ) );
 	return is_wp_error( $result ) ? $result : new WP_REST_Response( null, 204 );
 }
 
