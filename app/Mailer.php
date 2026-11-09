@@ -187,6 +187,17 @@ class Mailer {
             $when     = esc_html( wp_date( 'M j, g:i a', strtotime( $r->created_at . ' UTC' ) ) );
             $attached = '';
             foreach ( $files[ (int) $r->chat_message_id ] ?? [] as $f ) {
+                // Images and videos as pictures (a video's frame carries a
+                // play button and opens the conversation to watch it).
+                $thumb = ( ! empty( $f['inline'] ) || ! empty( $f['video'] ) ) ? \CaptainCore\Chat::email_thumb( (int) $f['id'] ) : null;
+                if ( $thumb ) {
+                    $img = "<img src='" . esc_url( $thumb['url'] ) . "' width='{$thumb['width']}' height='{$thumb['height']}' alt='" . esc_attr( ( ! empty( $f['video'] ) ? 'Video: ' : '' ) . $f['name'] ) . "' style='display: block; width: {$thumb['width']}px; max-width: 100%; height: auto; border: 0; border-radius: 8px;'>";
+                    $attached .= "<div style='margin-top: 10px;'>" . ( $can_open ? "<a href='{$link}' style='text-decoration: none;'>{$img}</a>" : $img ) . "</div>";
+                    if ( ! empty( $f['video'] ) ) {
+                        $attached .= "<div style='margin-top: 6px; font-size: 13px; color: #666D7A;'>&#127916; " . esc_html( $f['name'] ) . ( $can_open ? " &middot; <a href='{$link}' style='color: {$brand_color};'>Watch in the conversation</a>" : '' ) . "</div>";
+                    }
+                    continue;
+                }
                 $attached .= "<div style='margin-top: 8px; font-size: 13px; color: #666D7A;'>&#128206; " . esc_html( $f['name'] ) . "</div>";
             }
             $items .= "

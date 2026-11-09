@@ -2796,6 +2796,15 @@ function captaincore_chat_attachment_func( WP_REST_Request $request ) {
 	return CaptainCore\Chat::send_attachment( get_current_user_id(), (int) $request['id'], ! empty( $request['download'] ) );
 }
 
+function captaincore_chat_thumb_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::send_thumb( (int) $request['id'], (string) $request['sig'] );
+}
+
+function captaincore_chat_thumb_save_func( WP_REST_Request $request ) {
+	$files = $request->get_file_params();
+	return CaptainCore\Chat::save_thumb( get_current_user_id(), (int) $request['id'], $files['thumb'] ?? null );
+}
+
 function captaincore_ai_relay_state_func( WP_REST_Request $request ) {
 	$user_id = get_current_user_id();
 	return [
@@ -11167,6 +11176,24 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_chat_attachment_func',
 			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// Reply emails' pictures: GET is public and signed (Chat::send_thumb);
+	// POST takes a video frame a browser drew (Chat::save_thumb).
+	register_rest_route(
+		'captaincore/v1', '/chat/attachments/(?P<id>[\d]+)/thumb', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_chat_thumb_func',
+				'permission_callback' => '__return_true',
+				'show_in_index'       => false,
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_chat_thumb_save_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
 		]
 	);
 

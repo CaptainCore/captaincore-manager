@@ -210,7 +210,9 @@ class ChatRelay {
 		$sig      = self::b64url( sodium_crypto_sign_detached( self::PUBLISH_CONTEXT . $ts . '.' . $body, self::secret_key() ) );
 		$response = wp_remote_post( $url . '/internal/publish', [
 			'body'        => $body,
-			'timeout'     => 3,
+			// After a failure, wait at most a second until it answers again,
+			// so a relay that is down doesn't add 3 seconds to every send.
+			'timeout'     => get_site_transient( 'captaincore_chat_relay_down' ) ? 1 : 3,
 			'redirection' => 0,
 			'headers'     => [
 				'Content-Type'     => 'application/json',
@@ -219,6 +221,11 @@ class ChatRelay {
 			],
 		] );
 		$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+		if ( $code === 0 || $code >= 500 ) {
+			set_site_transient( 'captaincore_chat_relay_down', time(), 300 );
+		} elseif ( get_site_transient( 'captaincore_chat_relay_down' ) ) {
+			delete_site_transient( 'captaincore_chat_relay_down' );
+		}
 		if ( $code === 200 ) {
 			$out = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 			if ( is_array( $out ) && isset( $out['customer'] ) ) {

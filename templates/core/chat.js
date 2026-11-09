@@ -536,6 +536,7 @@ Object.assign(Component.prototype, {
         let m;
         try { m = JSON.parse(e.data); } catch (x) { return; }
         if (m.type === 'ready') {
+          this.chatFallbackPoll(false);
           c.wsState = 'live'; c.retry = 0; c.online = !!m.operators_online;
           // Events published before this socket was ready (down, or still
           // connecting after the first load) were missed: refetch what's on screen.
@@ -557,6 +558,7 @@ Object.assign(Component.prototype, {
         if (c.ws !== ws) return;
         c.ws = null; c.wsState = 'off';
         clearInterval(c.refreshTimer);
+        this.chatFallbackPoll(true);
         this.setState({});
         // 4001 = token rejected or expired: fetch a new one right away.
         const delay = e.code === 4001 ? 500 : Math.min(30000, 1000 * Math.pow(2, c.retry++));
@@ -564,9 +566,24 @@ Object.assign(Component.prototype, {
       };
     }).catch(() => {
       c.wsState = 'off';
+      this.chatFallbackPoll(true);
       this.setState({});
       c.reconnectTimer = setTimeout(() => this.chatConnect(), Math.min(60000, 2000 * Math.pow(2, c.retry++)));
     });
+  },
+
+  // While the relay is unreachable, refresh from the Manager every 30
+  // seconds the way a site without a relay does, so nothing waits for the
+  // socket to come back. Stops once it is live again.
+  chatFallbackPoll(on) {
+    const c = this._chat;
+    if (!c) return;
+    if (on && !c.fallbackTimer) {
+      c.fallbackTimer = setInterval(() => { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }, 30000);
+    } else if (!on && c.fallbackTimer) {
+      clearInterval(c.fallbackTimer);
+      c.fallbackTimer = null;
+    }
   },
 
   chatOnEvent(ev) {
@@ -1167,9 +1184,52 @@ Object.assign(Component.prototype, {
         }, { once: true });
         v.addEventListener('error', () => { const t = box.querySelector('template'); if (t) box.replaceWith(t.content.cloneNode(true)); }, { once: true });
       });
+      this.chatMakeThumbs();
       el.querySelectorAll('img.ccc-avimg').forEach(img => this.chatAvRef(img));
     }
     if (c.scrollPin && c.conv) { el.scrollTop = el.scrollHeight; c.scrollPin = false; c.nearBottom = true; }
+  },
+
+  // Reply emails show a video as a picture with a play button. The server
+  // can't make one, so the first browser allowed to (an operator, or the
+  // person who sent it) draws a frame and posts it (Chat::save_thumb).
+  chatMakeThumbs() {
+    const c = this._chat, cb = this.chatBoot();
+    if (!c || !c.conv) return;
+    c.thumbTried = c.thumbTried || {};
+    c.conv.messages.forEach(m => (m.attachments || []).forEach(f => {
+      if (!f.video || f.thumb || c.thumbTried[f.id]) return;
+      if (!cb.operator && m.author_user_id !== cb.userId) return;
+      c.thumbTried[f.id] = true;
+      this.chatVideoFrame(this.chatFileUrl(f)).then(blob => {
+        const fd = new FormData();
+        fd.append('thumb', blob, 'thumb.jpg');
+        return this.api('/chat/attachments/' + f.id + '/thumb', { method: 'POST', body: fd });
+      }).then(r => { if (r && r.thumb) f.thumb = true; }).catch(() => {});
+    }));
+  },
+
+  // A JPEG of one frame (a second in, or a quarter of a short clip).
+  chatVideoFrame(url) {
+    return new Promise((resolve, reject) => {
+      const v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.preload = 'auto';
+      let timer;
+      const end = (err, blob) => { clearTimeout(timer); v.removeAttribute('src'); v.load(); err ? reject(err) : resolve(blob); };
+      timer = setTimeout(() => end(new Error('timeout')), 20000);
+      v.addEventListener('loadedmetadata', () => { v.currentTime = Math.min(1, (v.duration || 0) / 4); }, { once: true });
+      v.addEventListener('seeked', () => {
+        try {
+          const k = Math.min(1, 1280 / (v.videoWidth || 1280));
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(16, Math.round(v.videoWidth * k)); cv.height = Math.max(16, Math.round(v.videoHeight * k));
+          cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+          cv.toBlob(b => b ? end(null, b) : end(new Error('blob')), 'image/jpeg', 0.85);
+        } catch (e) { end(e); }
+      }, { once: true });
+      v.addEventListener('error', () => end(new Error('decode')), { once: true });
+      v.src = url;
+    });
   },
 
   // Open the viewer on one image or video of a thread, with every image
@@ -1383,7 +1443,7 @@ Object.assign(Component.prototype, {
     if (!c) return off;
     if (s.route !== 'chat') this._chatPrevRoute = s.route;
     const conv = c.conv && c.conv.conversation;
-    const live = !cb.live ? 'Refreshing every 30s' : c.wsState === 'live' ? 'Live' : c.wsState === 'connecting' ? 'Connecting…' : 'Reconnecting…';
+    const live = !cb.live ? 'Refreshing every 30s' : c.wsState === 'live' ? 'Live' : c.fallbackTimer ? 'Reconnecting… (refreshing every 30s)' : c.wsState === 'connecting' ? 'Connecting…' : 'Reconnecting…';
     const liveFg = c.wsState === 'live' ? 'var(--ok)' : cb.live ? 'var(--warn)' : 'var(--ink-dim)';
 
     const statusChip = x => x.status === 'closed' ? { label: isOp ? 'Closed' : 'Resolved', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' }

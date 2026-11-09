@@ -45,6 +45,11 @@ class Chat {
 	// own type and byte ranges so browsers can seek; anything else is a download.
 	const VIDEO_TYPES = [ 'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg' ];
 
+	// Reply emails show images and videos as pictures (Chat::email_thumb).
+	// Stored as <file>-thumb, at most this size (twice the email's width).
+	const THUMB_MAX_W = 1120;
+	const THUMB_MAX_H = 840;
+
 	// Automated helpers that write as themselves (`agent` on a message).
 	// For now they only leave internal notes: they read, triage and
 	// recommend; a person answers the customer.
@@ -300,6 +305,7 @@ class Chat {
 				'size'   => (int) $row->size,
 				'inline' => in_array( $row->mime, self::INLINE_TYPES, true ),
 				'video'  => in_array( $row->mime, self::VIDEO_TYPES, true ),
+				'thumb'  => in_array( $row->mime, self::VIDEO_TYPES, true ) && is_file( self::thumb_file( $row ) ),
 				'url'    => rest_url( 'captaincore/v1/chat/attachments/' . (int) $row->chat_attachment_id ),
 			];
 		}
@@ -850,6 +856,144 @@ class Chat {
 			$end   = $m[2] === '' ? $size - 1 : min( (int) $m[2], $size - 1 );
 		}
 		return $size > 0 && $start <= $end && $start < $size ? [ $start, $end ] : false;
+	}
+
+	// ── email thumbnails ────────────────────────────────────────────────
+	// Mail clients can't sign in, so a reply email's pictures come from a
+	// signed public URL that serves only the small JPEG, never the file.
+	// Videos get theirs from a browser (anchor.host has no ffmpeg): the
+	// first viewer allowed to (an operator or whoever sent it) draws a
+	// frame and posts it; GD re-encodes it with a play button on top.
+
+	public static function thumb_file( $attachment ) {
+		return self::base_dir() . '/' . ltrim( (string) $attachment->storage_path, '/' ) . '-thumb';
+	}
+
+	public static function thumb_sig( $attachment_id ) {
+		$key = ChatRelay::derived_key( 'thumb.v1' );
+		return $key === '' ? '' : substr( hash_hmac( 'sha256', 'thumb.' . (int) $attachment_id, $key ), 0, 32 );
+	}
+
+	/**
+	 * The email picture for an attachment, made now for an image: [url,
+	 * width, height] at email size, or null (a video nobody has drawn a
+	 * frame of yet, an internal note's file, anything else).
+	 */
+	public static function email_thumb( $attachment_id ) {
+		$attachment = ChatAttachments::get( (int) $attachment_id );
+		$message    = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
+		if ( ! $message || (int) $message->internal || strpos( (string) $attachment->storage_path, '..' ) !== false || self::thumb_sig( $attachment_id ) === '' ) {
+			return null;
+		}
+		$thumb = self::thumb_file( $attachment );
+		if ( ! is_file( $thumb ) && in_array( $attachment->mime, self::INLINE_TYPES, true ) && (int) $attachment->size <= 26214400 ) {
+			$src = self::base_dir() . '/' . ltrim( $attachment->storage_path, '/' );
+			$img = is_file( $src ) ? @imagecreatefromstring( (string) file_get_contents( $src ) ) : false;
+			if ( $img ) {
+				self::write_thumb( $img, $thumb, false );
+			}
+		}
+		$size = is_file( $thumb ) ? @getimagesize( $thumb ) : false;
+		if ( ! $size ) {
+			return null;
+		}
+		$w = (int) min( 520, max( 1, round( $size[0] / 2 ) ) );
+		return [
+			'url'    => add_query_arg( 'sig', self::thumb_sig( $attachment_id ), rest_url( 'captaincore/v1/chat/attachments/' . (int) $attachment_id . '/thumb' ) ),
+			'width'  => $w,
+			'height' => (int) round( $w * $size[1] / max( 1, $size[0] ) ),
+		];
+	}
+
+	/** Public, signed: the email picture. 404 for anything else. */
+	public static function send_thumb( $attachment_id, $sig ) {
+		$expected   = self::thumb_sig( $attachment_id );
+		$attachment = $expected !== '' && hash_equals( $expected, (string) $sig ) ? ChatAttachments::get( (int) $attachment_id ) : null;
+		$message    = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
+		$path       = $message && ! (int) $message->internal && strpos( (string) $attachment->storage_path, '..' ) === false ? self::thumb_file( $attachment ) : '';
+		if ( $path === '' || ! is_file( $path ) ) {
+			return new \WP_Error( 'not_found', 'Not found.', [ 'status' => 404 ] );
+		}
+		while ( ob_get_level() ) {
+			ob_end_clean();
+		}
+		header( 'Content-Type: image/jpeg' );
+		header( 'Content-Length: ' . filesize( $path ) );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( "Content-Security-Policy: default-src 'none'; sandbox" );
+		header( 'Cache-Control: public, max-age=604800' );
+		readfile( $path );
+		exit;
+	}
+
+	/**
+	 * A frame of a video, drawn by a browser. The first one wins; only an
+	 * operator or the person who sent the video may give it one.
+	 */
+	public static function save_thumb( $user_id, $attachment_id, $file ) {
+		$attachment = ChatAttachments::get( (int) $attachment_id );
+		$message    = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
+		$operator   = self::is_operator( $user_id );
+		if ( ! $message || ! in_array( $attachment->mime, self::VIDEO_TYPES, true ) || ! self::viewable( $user_id, (int) $attachment->chat_conversation_id )
+			|| ( (int) $message->internal && ! $operator ) || strpos( (string) $attachment->storage_path, '..' ) !== false ) {
+			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
+		}
+		if ( ! $operator && (int) $message->author_user_id !== (int) $user_id ) {
+			return new \WP_Error( 'forbidden', 'Only the sender or support can do that.', [ 'status' => 403 ] );
+		}
+		$thumb = self::thumb_file( $attachment );
+		if ( is_file( $thumb ) ) {
+			return [ 'thumb' => true ];
+		}
+		$tmp = is_array( $file ) ? (string) ( $file['tmp_name'] ?? '' ) : '';
+		if ( $tmp === '' || (int) ( $file['error'] ?? 1 ) !== 0 || (int) ( $file['size'] ?? 0 ) > 4194304 || ( ! is_uploaded_file( $tmp ) && ! defined( 'CAPTAINCORE_CHAT_TESTING' ) ) ) {
+			return new \WP_Error( 'bad_thumb', 'Send a JPEG or PNG under 4 MB as "thumb".', [ 'status' => 400 ] );
+		}
+		$type = function_exists( 'finfo_open' ) ? (string) finfo_file( finfo_open( FILEINFO_MIME_TYPE ), $tmp ) : '';
+		$img  = in_array( $type, [ 'image/jpeg', 'image/png', 'image/webp' ], true ) ? @imagecreatefromstring( (string) file_get_contents( $tmp ) ) : false;
+		if ( ! $img || imagesx( $img ) < 16 || imagesy( $img ) < 16 ) {
+			return new \WP_Error( 'bad_thumb', 'That is not a picture.', [ 'status' => 400 ] );
+		}
+		if ( ! self::write_thumb( $img, $thumb, true ) ) {
+			return new \WP_Error( 'thumb_failed', 'Could not save it.', [ 'status' => 500 ] );
+		}
+		return [ 'thumb' => true ];
+	}
+
+	/** Scale to thumbnail size, add a play button for a video, save as JPEG. */
+	private static function write_thumb( $img, $path, $play ) {
+		$w     = imagesx( $img );
+		$h     = imagesy( $img );
+		$scale = min( 1, self::THUMB_MAX_W / $w, self::THUMB_MAX_H / $h );
+		$tw    = max( 1, (int) round( $w * $scale ) );
+		$th    = max( 1, (int) round( $h * $scale ) );
+		$out   = imagecreatetruecolor( $tw, $th );
+		imagefill( $out, 0, 0, imagecolorallocate( $out, 255, 255, 255 ) ); // transparent PNGs on white
+		imagecopyresampled( $out, $img, 0, 0, 0, 0, $tw, $th, $w, $h );
+		if ( $play ) {
+			// Drawn four times larger and scaled down, so the edges are smooth.
+			$d   = (int) max( 56, min( 150, round( min( $tw, $th ) * 0.24 ) ) );
+			$big = $d * 4;
+			$btn = imagecreatetruecolor( $big, $big );
+			imagealphablending( $btn, false );
+			imagesavealpha( $btn, true );
+			imagefill( $btn, 0, 0, imagecolorallocatealpha( $btn, 0, 0, 0, 127 ) );
+			imagealphablending( $btn, true );
+			imagefilledellipse( $btn, $big / 2, $big / 2, $big - 2, $big - 2, imagecolorallocatealpha( $btn, 0, 0, 0, 45 ) );
+			$r = $big * 0.2;
+			$cx = $big / 2 + $r * 0.2;
+			imagefilledpolygon( $btn, [ (int) ( $cx - $r * 0.8 ), (int) ( $big / 2 - $r ), (int) ( $cx - $r * 0.8 ), (int) ( $big / 2 + $r ), (int) ( $cx + $r ), (int) ( $big / 2 ) ], imagecolorallocate( $btn, 255, 255, 255 ) );
+			imagealphablending( $out, true );
+			imagecopyresampled( $out, $btn, (int) ( ( $tw - $d ) / 2 ), (int) ( ( $th - $d ) / 2 ), 0, 0, $d, $d, $big, $big );
+		}
+		$tmp = $path . '.' . wp_generate_password( 8, false ) . '.tmp';
+		$ok  = imagejpeg( $out, $tmp, 82 ) && rename( $tmp, $path );
+		if ( $ok ) {
+			chmod( $path, 0600 );
+		} else {
+			@unlink( $tmp );
+		}
+		return $ok;
 	}
 
 	// ── presentation ────────────────────────────────────────────────────
