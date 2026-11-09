@@ -1,6 +1,8 @@
 // CaptainCore v3 — Site requests (mixin).
-// Customer "New site › Request" submissions + the operator queue that walks
-// each request through its 3 steps (Requested → Preparing → Ready). v1 parity:
+// The operator queue that walks each request through its 3 steps (Requested →
+// Preparing → Ready). The New site dialog no longer offers Request (customers
+// create sites directly and can leave notes for the team), so this only shows
+// requests already on file until they are finished. v1 parity:
 // core-legacy.php requested_sites stepper (markup 3792-3872, methods 17074+).
 // Backend: GET/POST /site-requests, POST /site-requests/continue|back,
 // PUT /site-requests/update, POST /site-requests/delete — every write returns
@@ -18,24 +20,6 @@ Object.assign(Component.prototype, {
       this._siteRequests = Array.isArray(list) ? list : [];
       this.setState({});
     }).catch(() => { this._srLoading = false; this._siteRequests = []; this.setState({}); });
-  },
-
-  // Customer submission from the New site › Request tab (real path for the
-  // mock nsCreate branch). v1 contract: client stamps created_at + step.
-  submitSiteRequest() {
-    const st = this.state;
-    const name = (st.nsName || '').trim();
-    const acc = this.ACCOUNTS.find(a => a.name === st.nsAcc);
-    if (!name) { this.toast('Enter a site name', { kind: 'error' }); return; }
-    if (!acc) { this.toast('Pick an account', { kind: 'error' }); return; }
-    const request = { name, account_id: acc.id, notes: (st.nsNotes || '').trim(),
-      created_at: Math.round(Date.now() / 1000), step: 1 };
-    const tid = this.toast('Requesting new site…', { kind: 'loading' });
-    this.api('/site-requests', { method: 'POST', body: { request, account_id: acc.id } })
-      .then(list => { this._siteRequests = Array.isArray(list) ? list : [];
-        this.updateToast(tid, 'Site request sent', { kind: 'success' });
-        this.setState({ nsOpen: false, nsName: '', nsNotes: '' }); })
-      .catch(() => this.updateToast(tid, 'Could not send the request', { kind: 'error' }));
   },
 
   _srAction(path, req, method) {

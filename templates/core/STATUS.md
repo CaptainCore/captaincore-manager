@@ -15,6 +15,12 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## New site dialog redesign, Request removed (2026-11-09)
+
+The New path of the New site dialog is now a two-column, friendlier form (`new-site.js` mixin, markup in `app.html` under "New site dialog", `.ns-*` rules in the stylesheet). Left: the web address input names the site (`nsNameFromDomain`, `mybakery.com` → `mybakery`; editing Site name stops the sync, clearing it resumes), account cards for customers with more than one account (`nsAccountId` falls back to the first account if the dialog opened before accounts loaded), Fresh WordPress / Copy an existing site cards (`nsStart`; shown only with clone sources, the copy picker is the old `ddNsClone` dropdown), region tabs + city cards for the datacenter (`nsDcGroup`, distances from the Photon place search show on the cards), operator settings (provider + shared/customer/billing accounts, unchanged logic), and a notes box. Right: a browser mock with `<name>.kinsta.cloud`, a canvas dot globe (`nsGlobeAttach`/`nsGlobeDraw`: Natural Earth 110m land sampled on a 1.6° equal-area grid in `NS_LAND`, drag to spin, click a datacenter, turns to the selection, draws the searched place with an arc) and a live summary. Under 760px the preview moves below the form and the globe hides.
+
+Request is gone from the dialog for everyone (customers now see no tab row). Requests already on file still show in the queue (`site-requests.js`), and the `/site-requests` routes stay for that queue and the legacy UI. Notes go to `POST /providers/kinsta/new-site` as `site.notes` (2000 chars max); `captaincore_provider_new_site_func` emails them to the admin address with `Mailer::send_new_site_notes` only once Kinsta returned an operation id, and they are never stored on the provider action. Verified locally in Playwright (operator light, customer dark, customer at 400px) and the email with a `pre_wp_mail` capture; a real create was not run, since anchor.localhost holds the live Kinsta credentials.
+
 ## CaptainCore Chat (2026-11-06)
 
 Replaces the Intercom embed. Rules and storage live in `app/Chat.php` (REST `/chat/*`). Live delivery comes from the captaincore-chat relay (Go, separate repo), through `app/ChatRelay.php`. `chat.js` holds the UI:

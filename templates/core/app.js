@@ -49,7 +49,7 @@ class Component extends DCLogic {
     timeline: null, tlDraft: '', tlEdit: 0, tlEditText: '',
     nsOpen: false, nsPath: 'kinsta', nsName: '', nsNotes: '', nsAddr: '', nsUser: '', nsPass: '', nsProviderId: '',
     nsProto: 'sftp', nsPort: '22', nsHome: '',
-    nsAcc: 'Bloom & Branch Floral', nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)',
+    nsDc: 'Ashburn (US East)', nsClone: 'None (fresh install)', nsStart: 'fresh', nsDcGroup: '', nsNameTouched: false,
     nsVerify: 'ok', ddRect: null,
     nsShared: [], nsCustomerId: '', nsBillingId: '',
     nsDomain: '', nsErrors: [], nsBusy: false,
@@ -407,8 +407,9 @@ class Component extends DCLogic {
       return { ...d, miles: Math.round(2 * 3959 * Math.asin(Math.sqrt(a))) };
     }).sort((x, y) => x.miles - y.miles);
     this._dcpResults = null;
+    this._dcpPoint = place; // the globe draws it with an arc to the pick
     // Nearest wins immediately; the ranked list stays up for overriding.
-    this.setState({ dcpPlace: place.label, nsDc: this._dcpRanked[0].title, dcpQ: '' });
+    this.setState({ dcpPlace: place.label, nsDc: this._dcpRanked[0].title, nsDcGroup: '', dcpQ: '' });
   }
 
   // Target a set of sites-list rows in the dock terminal — the sites-list
@@ -1238,24 +1239,21 @@ class Component extends DCLogic {
         go: () => this.openSitesTerminal(filtered.filter(x => s.sel[x.id]), 'selected sites') }]),
       openNewSite: () => { const patch = { nsOpen: true, nsErrors: [] };
         // v1 parity (showNewSiteKinsta): customers default their first account as billing.
-        if (!isOp && this.ACCOUNTS.length && !this.state.nsBillingId) patch.nsBillingId = this.ACCOUNTS[0].id;
-        // The design-mode fixture account survives hydration as the Request
-        // tab's selected value — reseed so the dialog never presents an
-        // account that doesn't exist (sole account preselects itself).
-        if (this._hydrated && !this.ACCOUNTS.find(a => a.name === this.state.nsAcc)) {
-          patch.nsAcc = this.ACCOUNTS.length === 1 ? this.ACCOUNTS[0].name : 'Select an account…';
-        }
+        if (!isOp && this.ACCOUNTS.length && !this.ACCOUNTS.find(a => a.id === String(this.state.nsBillingId))) patch.nsBillingId = this.ACCOUNTS[0].id;
         this.setState(patch); this.loadNsProviders(); this.verifyNsProvider(isOp); },
       closeNs: () => this.setState({ nsOpen: false }),
       nsOpen: s.nsOpen,
       // Import and Connect manually are operator-only — they assign sites to
       // accounts and bill them (POST /sites is also admin-gated server-side).
-      nsPaths: [['kinsta', 'New'], ['request', 'Request'], ['import', 'Import from provider'], ['manual', 'Connect manually']]
+      // Customers only have New, so the tab row hides for them (nsShowTabs).
+      // The old Request path (POST /site-requests) is gone from the dialog;
+      // requests already on file still show in the queue (site-requests.js).
+      nsPaths: [['kinsta', 'New site'], ['import', 'Import from provider'], ['manual', 'Connect manually']]
         .filter(([id]) => isOp || (id !== 'import' && id !== 'manual'))
         .map(([id, label]) => ({ label,
           bg: s.nsPath === id ? 'var(--brand-soft)' : 'var(--paper)', fg: s.nsPath === id ? 'var(--brand-ink)' : 'var(--ink-dim)', bd: s.nsPath === id ? 'var(--brand)' : 'var(--rule)',
           go: () => { this.setState({ nsPath: id }); if (id === 'import') setTimeout(() => this.primeImport(), 0); } })),
-      nsIsRequest: s.nsPath === 'request', nsIsKinsta: s.nsPath === 'kinsta',
+      nsIsKinsta: s.nsPath === 'kinsta',
       nsIsImport: s.nsPath === 'import' && isOp, nsIsManual: s.nsPath === 'manual' && isOp,
       nsName: s.nsName, onNsName: e => this.setState({ nsName: e.target.value }),
       // Kinsta caps site names at 5–32 chars (MyKinsta enforces the same range).
@@ -1270,10 +1268,6 @@ class Component extends DCLogic {
       nsPort: s.nsPort, onNsPort: e => this.setState({ nsPort: e.target.value }),
       nsHome: s.nsHome, onNsHome: e => this.setState({ nsHome: e.target.value }),
       nsProtoChips: ['sftp', 'ssh'].map(l => chip(l, s.nsProto, 'nsProto')),
-      nsAcc: s.nsAcc,
-      ddNsAccOpen: s.ddOpen === 'nsAcc',
-      ddToggleNsAcc: e => this.ddToggleAt('nsAcc', e),
-      ddNsAccOpts: this.ddOpts(this.ACCOUNTS.map(a => a.name), s.nsAcc, 'nsAcc'),
       // Provider connection picker (v1's Hosting Provider select). Shown only
       // when the caller can use more than one Kinsta connection; changing it
       // resets the clone source (cloning only works within one connection)
@@ -1301,8 +1295,7 @@ class Component extends DCLogic {
       // the SELECTED provider connection — the clone API resolves
       // source_env_id from sites/{clone_site_id}/environments, and Kinsta
       // cannot clone across companies.
-      ddNsCloneOpts: this.ddOpts(['None (fresh install)', ...this.FLEET.filter(f => f.provider === 'Kinsta' && f.providerSiteId
-        && String(f.providerConnId || String(NS_KINSTA_PROVIDER)) === String(s.nsProviderId || NS_KINSTA_PROVIDER)).map(f => f.name)], s.nsClone, 'nsClone'),
+      ddNsCloneOpts: this.ddOpts(this.nsCloneSources(s).map(f => f.name), s.nsClone, 'nsClone'),
       nsDc: s.nsDc,
       // v1 parity: the clone API ignores region, so Datacenter hides while cloning.
       nsShowDc: s.nsClone.startsWith('None'),
@@ -1349,13 +1342,12 @@ class Component extends DCLogic {
       nsVerifyOutdated: s.nsVerify === 'outdated',
       nsCtaDim: s.nsPath === 'kinsta' && (s.nsVerify !== 'ok' || s.nsBusy) ? '.5' : '1',
       nsEnvChips: ['Production only', 'Production + Staging'].map(l => chip(l, s.nsEnvs, 'nsEnvs')),
-      nsCta: { request: 'Request site', kinsta: s.nsBusy ? 'Creating…' : 'Create on Kinsta',
+      nsCta: { kinsta: s.nsBusy ? 'Creating…' : 'Create site',
         import: this.nsImportCta(s), manual: 'Connect site' }[s.nsPath],
       ...this.computeNsImport(s, isOp),
+      ...this.nsVals(s, isOp),
       nsCreate: () => { const st = this.state;
-        if (st.nsPath === 'request') { if (this._hydrated) { this.submitSiteRequest(); return; }
-          this.runJob('site-request', (st.nsName || 'new site') + ' · ' + st.nsAcc); }
-        else if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
+        if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
         else if (st.nsPath === 'import') { this.importProviderSites(); return; }
         else { if (this._hydrated) { this.submitManualSite(); return; }
           this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs); }
@@ -1759,11 +1751,17 @@ class Component extends DCLogic {
   createKinstaSite() {
     const st = this.state;
     const name = st.nsName.trim();
-    const domain = st.nsDomain.trim() || name;
+    const domain = st.nsDomain.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[/?#].*$/, '') || name;
+    const cloning = st.nsStart === 'clone' && this.nsCloneSources(st).length > 0;
     const errors = [];
-    if (name.length < 5 || name.length > 32) errors.push('Name must be between 5 and 32 characters in length');
+    if (!name) errors.push('Enter a web address or a name for the site');
+    else if (name.length < 5 || name.length > 32) errors.push('Site names need 5 to 32 characters');
+    if (cloning && st.nsClone.startsWith('None')) errors.push('Choose the site to copy, or start from a fresh WordPress install');
+    if ((st.nsNotes || '').length > 2000) errors.push('Notes can be at most 2,000 characters');
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || this.props.role || 'operator') === 'operator';
+    if (!isOp && !this.nsAccountId(st, false)) errors.push('Your accounts are still loading. Give it a moment and try again.');
     if (errors.length) { this.setState({ nsErrors: errors }); return; }
-    const cloneSrc = st.nsClone.startsWith('None') ? null : this.FLEET.find(f => f.name === st.nsClone);
+    const cloneSrc = !cloning || st.nsClone.startsWith('None') ? null : this.FLEET.find(f => f.name === st.nsClone);
     const site = {
       name, domain,
       clone_site_id: cloneSrc ? String(cloneSrc.providerSiteId) : '',
@@ -1771,15 +1769,17 @@ class Component extends DCLogic {
       datacenter: (NS_DATACENTERS.find(d => d.title === st.nsDc) || {}).value || 'us-ashburn-1',
       // run() reads shared_with via array_column(…, "account_id") — send objects.
       shared_with: st.nsShared.map(id => ({ account_id: id })),
-      account_id: st.nsBillingId || '',
-      customer_id: st.nsCustomerId || ''
+      account_id: this.nsAccountId(st, isOp),
+      customer_id: st.nsCustomerId || '',
+      // Emailed to the team when set (never stored on the provider action).
+      notes: (st.nsNotes || '').trim()
     };
     this.setState({ nsBusy: true, nsErrors: [] });
     this.api('/providers/kinsta/new-site', { method: 'POST', body: { site } }).then(res => {
       if (res && res.errors && res.errors.length) { this.setState({ nsErrors: res.errors, nsBusy: false }); return; }
-      this.toast(`Site ${name} is being created at Kinsta — it will appear in the fleet once provisioned`, { kind: 'success' });
-      this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsClone: 'None (fresh install)',
-        nsShared: [], nsCustomerId: '', nsBillingId: '' });
+      this.toast(`${name} is on its way. It shows up in your sites in a few minutes.`, { kind: 'success' });
+      this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsNotes: '', nsNameTouched: false,
+        nsClone: 'None (fresh install)', nsStart: 'fresh', nsShared: [], nsCustomerId: '', nsBillingId: '' });
       // Progress tracking: a manual dock job (no daemon token — finished by
       // nsProgressDone) that pollProviderActions streams provisioning steps
       // into. expand opens the console so the remote API progress is visible.

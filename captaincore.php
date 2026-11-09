@@ -4436,6 +4436,19 @@ function captaincore_provider_new_site_func( $request ) {
 		];
 	}
 
+	// Notes for the team ride along to an email only; they are never part of
+	// the persisted provider action below.
+	$notes = isset( $site->notes ) && is_string( $site->notes ) ? trim( wp_unslash( $site->notes ) ) : '';
+	if ( function_exists( 'mb_substr' ) ) {
+		$notes = mb_substr( $notes, 0, 2000 );
+	} else {
+		$notes = substr( $notes, 0, 2000 );
+	}
+	$clone_name = '';
+	if ( ! empty( $site->clone_site_id ) && ! empty( $clone_rows ) ) {
+		$clone_name = $clone_rows[0]->name ?? '';
+	}
+
 	// Rebuild the payload from the fields the dialog actually sends. The whole
 	// object is persisted as ProviderActions.action and then read back by
 	// ProviderAction::run() as its own state - result, step, site_id and
@@ -4452,7 +4465,23 @@ function captaincore_provider_new_site_func( $request ) {
 		"shared_with"   => $shared_with,
 	];
 
-	return ( new CaptainCore\Provider( $provider ) )->new_site( $site );
+	$result = ( new CaptainCore\Provider( $provider ) )->new_site( $site );
+
+	// Only a create the provider accepted gets the email, so the team never
+	// chases notes for a site that does not exist.
+	$accepted = is_array( $result ) && ! empty( $result['operation_id'] );
+	if ( $notes !== '' && $accepted ) {
+		$account_id = ! empty( $site->customer_id ) ? $site->customer_id : ( $result['customer_id'] ?? $site->account_id );
+		$account    = $account_id ? ( new CaptainCore\Accounts )->get( $account_id ) : null;
+		CaptainCore\Mailer::send_new_site_notes(
+			[ 'name' => $site->name, 'domain' => $site->domain, 'datacenter' => $site->datacenter, 'clone' => $clone_name ],
+			$notes,
+			$account->name ?? '',
+			$user
+		);
+	}
+
+	return $result;
 }
 
 function captaincore_provider_deploy_to_staging_func( $request ) {

@@ -393,6 +393,28 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   .ccc-msg{padding-left:12px !important;padding-right:12px !important}
   .ccc-cbox textarea,.ccc-list input{font-size:16px !important}
 }
+/* New site dialog (new-site.js): form column + live preview column. */
+.ns-body{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:26px;align-items:start}
+.ns-main{display:flex;flex-direction:column;gap:22px;min-width:0}
+.ns-aside{position:sticky;top:0;display:flex;flex-direction:column;gap:10px}
+.ns-sec{display:flex;flex-direction:column;gap:10px}
+.ns-h{display:flex;align-items:center;gap:9px;font:600 var(--fs-135) var(--sans)}
+.ns-ic{flex:none;width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center}
+.ns-sub{font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)}
+.ns-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.ns-grid-2{grid-template-columns:1fr 1fr}
+.ns-grid-dc{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.ns-card{border:1px solid var(--rule);border-radius:11px;padding:10px 12px;cursor:pointer;background:var(--paper);transition:border-color .12s,background .12s,box-shadow .12s,transform .12s;user-select:none}
+.ns-card:hover{border-color:color-mix(in srgb,var(--brand) 50%,var(--rule)) !important;transform:translateY(-1px)}
+.ns-check{flex:none;font:700 var(--fs-12) var(--sans);color:var(--brand-ink)}
+.ns-sk{display:block;height:6px;border-radius:3px;background:var(--panel-2)}
+.ns-globe{border:1px solid var(--rule);border-radius:12px;background:var(--panel);padding:4px 4px 12px}
+@media (max-width:760px){
+  .ns-body{grid-template-columns:1fr;gap:18px}
+  .ns-aside{position:static}
+  .ns-globe{display:none}
+  .ns-grid-2{grid-template-columns:1fr}
+}
 </style>
 </helmet>
 <div class="cc-shell" style="height:100vh;display:flex;flex-direction:column;background:var(--canvas);color:var(--ink);font-family:var(--sans);overflow:hidden">
@@ -5983,167 +6005,249 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 
   <!-- ══ New site dialog ══ -->
   <sc-if value="{{ nsOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeNs }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
-      <div onClick="{{ stopProp }}" style="width:620px;max-width:100%;max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
-        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
-          <span style="font:600 var(--fs-15) var(--sans)">New site</span>
-          <div style="flex:1"></div>
-          <span onClick="{{ closeNs }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+    <div onClick="{{ closeNs }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:{{ nsDialogW }}px;max-width:100%;max-height:88vh;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:flex-start;gap:10px;padding:16px 20px 14px;border-bottom:1px solid var(--rule)">
+          <div style="flex:1;min-width:0">
+            <div style="font:650 var(--fs-155) var(--sans);letter-spacing:-.01em">{{ nsTitle }}</div>
+            <sc-if value="{{ nsLedeShow }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:3px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ nsLede }}</div>
+            </sc-if>
+          </div>
+          <span onClick="{{ closeNs }}" style="cursor:pointer;color:var(--ink-dim);width:28px;height:28px;display:grid;place-items:center;border-radius:7px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
-        <div style="flex:none;display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-          <sc-for list="{{ nsPaths }}" as="c" hint-placeholder-count="4">
+        <sc-if value="{{ nsShowTabs }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none;display:flex;gap:8px;padding:10px 20px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+          <sc-for list="{{ nsPaths }}" as="c" hint-placeholder-count="3">
             <span onClick="{{ c.go }}" style="padding:6px 12px;border-radius:99px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font:500 var(--fs-125) var(--sans);cursor:pointer">{{ c.label }}</span>
           </sc-for>
         </div>
-        <div style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:11px">
-          <sc-if value="{{ nsIsRequest }}" hint-placeholder-val="{{ false }}">
-            <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Request a site — we provision it, connect billing, and let you know when it's ready.</span>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" placeholder="mynewsite.com" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Account</span>
-              <div style="flex:1">
-                <div onClick="{{ ddToggleNsAcc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsAcc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
-                <sc-if value="{{ ddNsAccOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
-                  <!-- Fixed overlay anchored to the toggle (ddToggleAt): overlays the
-                       form without shifting it and escapes the dialog's overflow clip. -->
-                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                    <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
-                    <div style="max-height:150px;overflow-y:auto">
-                      <sc-for list="{{ ddNsAccOpts }}" as="o" hint-placeholder-count="4">
-                        <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
-                      </sc-for>
-                    </div>
-                  </div>
-                </sc-if>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Notes</span><input value="{{ nsNotes }}" onInput="{{ onNsNotes }}" placeholder="Anything we should know?" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 9px;outline:none"></div>
-          </sc-if>
+        </sc-if>
+        <div style="flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:11px">
           <sc-if value="{{ nsIsKinsta }}" hint-placeholder-val="{{ true }}">
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site name</span><input value="{{ nsName }}" onInput="{{ onNsName }}" maxlength="32" placeholder="mynewsite" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"><span style="font:400 var(--fs-115) var(--sans);color:{{ nsNameCountColor }};white-space:nowrap">{{ nsNameCount }}</span></div>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Domain</span><input value="{{ nsDomain }}" onInput="{{ onNsDomain }}" placeholder="mynewsite.com (defaults to site name)" style="flex:1;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none"></div>
-            <sc-if value="{{ nsShowDc }}" hint-placeholder-val="{{ true }}">
-            <sc-if value="{{ nsProvShow }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Provider</span>
-              <div style="flex:1">
-                <div onClick="{{ ddToggleNsProv }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsProviderLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
-                <sc-if value="{{ ddNsProvOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
-                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;z-index:40;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                    <sc-for list="{{ ddNsProvOpts }}" as="o" hint-placeholder-count="2">
-                      <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
-                    </sc-for>
-                  </div>
+          <div class="ns-body">
+            <div class="ns-main">
+
+              <!-- Web address → site name -->
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path></svg></span>What's the website address?</div>
+                <input ref="{{ leadFocusRef }}" value="{{ nsDomain }}" onInput="{{ onNsDomainInput }}" placeholder="mybakery.com" autocomplete="off" spellcheck="false" style="height:44px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font:500 var(--fs-145) var(--mono);padding:0 14px;outline:none">
+                <div class="ns-sub">No domain yet? Type a name for the site instead. You can connect a domain any time.</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
+                  <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);white-space:nowrap">Site name</span>
+                  <input value="{{ nsName }}" onInput="{{ onNsNameInput }}" maxlength="32" placeholder="mybakery" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;height:32px;border:1px solid {{ nsNameBd }};border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 10px;outline:none">
+                  <span style="font:500 var(--fs-115) var(--mono);color:{{ nsNameCountColor }};white-space:nowrap">{{ nsNameCount }}</span>
+                </div>
+                <sc-if value="{{ nsNameHintShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="font:400 var(--fs-12) var(--sans);color:{{ nsNameHintColor }};margin-top:-4px">{{ nsNameHint }}</div>
                 </sc-if>
               </div>
-            </div>
-            </sc-if>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Datacenter</span>
-              <div style="flex:1;display:flex;gap:6px">
-              <div style="flex:1">
-                <div onClick="{{ ddToggleNsDc }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsDc }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
-                <sc-if value="{{ ddNsDcOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
-                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                    <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search datacenters…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
-                    <div style="max-height:150px;overflow-y:auto">
-                      <sc-for list="{{ ddNsDcOpts }}" as="o" hint-placeholder-count="5">
-                        <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
-                      </sc-for>
+
+              <!-- Account cards (customers with several accounts) -->
+              <sc-if value="{{ nsAccShow }}" hint-placeholder-val="{{ false }}">
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"></path></svg></span>Which account is it for?</div>
+                <div class="ns-grid">
+                  <sc-for list="{{ nsAccCards }}" as="a" hint-placeholder-count="3">
+                    <div onClick="{{ a.pick }}" class="ns-card" style="border-color:{{ a.bd }};background:{{ a.bg }};box-shadow:{{ a.ring }};display:flex;align-items:center;gap:10px">
+                      <span style="flex:none;width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font:700 var(--fs-115) var(--sans)">{{ a.initials }}</span>
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font:600 var(--fs-125) var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span>
+                        <span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ a.sites }}</span>
+                      </span>
+                      <span class="ns-check">{{ a.mark }}</span>
                     </div>
-                  </div>
-                </sc-if>
-              </div>
-              <div onClick="{{ dcpToggle }}" title="Find the nearest datacenter to the customer's location" style="width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--rule);border-radius:7px;cursor:pointer;color:var(--ink-dim);background:var(--paper)" style-hover="border-color:var(--brand);color:var(--brand-ink)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              </div>
-              </div>
-            </div>
-            <sc-if value="{{ dcpOpen }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;gap:12px"><span style="width:110px;flex:none"></span>
-                <div style="flex:1;border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px">
-                  <div style="display:flex;gap:6px">
-                    <input value="{{ dcpQ }}" onInput="{{ onDcpQ }}" onKeyDown="{{ dcpKey }}" placeholder="Customer city or address…" style="flex:1;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
-                    <span onClick="{{ dcpSearch }}" style="display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;background:var(--brand);color:#fff;font:600 var(--fs-125) var(--sans);cursor:pointer">{{ dcpSearchLabel }}</span>
-                  </div>
-                  <sc-if value="{{ dcpErrShow }}" hint-placeholder-val="{{ false }}">
-                    <div style="margin-top:8px;font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ dcpErr }}</div>
-                  </sc-if>
-                  <sc-if value="{{ dcpResultsShow }}" hint-placeholder-val="{{ false }}">
-                    <div style="margin-top:8px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:3px;max-height:170px;overflow-y:auto">
-                      <sc-for list="{{ dcpResults }}" as="p" hint-placeholder-count="3">
-                        <div onClick="{{ p.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer;font:500 var(--fs-125) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="background:var(--panel-2)">{{ p.label }}</div>
-                      </sc-for>
-                    </div>
-                  </sc-if>
-                  <sc-if value="{{ dcpPlaceShow }}" hint-placeholder-val="{{ false }}">
-                    <div style="margin-top:10px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Distances from {{ dcpPlace }}</div>
-                    <div style="margin-top:6px;max-height:190px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:3px">
-                      <sc-for list="{{ dcpRanked }}" as="d" hint-placeholder-count="5">
-                        <div onClick="{{ d.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ d.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ d.mark }}</span><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ d.title }}</span><span style="font:500 var(--fs-11) var(--mono);color:var(--ink-dim)">{{ d.miles }}</span></div>
-                      </sc-for>
-                    </div>
-                  </sc-if>
-                  <div style="margin-top:8px;font:400 10.5px var(--sans);color:var(--ink-dim)">Place search by Photon · OpenStreetMap data</div>
+                  </sc-for>
                 </div>
               </div>
-            </sc-if>
-            </sc-if>
-            <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Clone from</span>
-              <div style="flex:1">
-                <div onClick="{{ ddToggleNsClone }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsClone }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
-                <sc-if value="{{ ddNsCloneOpen }}" hint-placeholder-val="{{ false }}">
-                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
-                  <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                    <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search sites…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;margin-bottom:4px">
-                    <div style="max-height:150px;overflow-y:auto">
-                      <sc-for list="{{ ddNsCloneOpts }}" as="o" hint-placeholder-count="4">
-                        <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-12) var(--mono)">{{ o.label }}</span></div>
-                      </sc-for>
+              </sc-if>
+
+              <!-- Starting point -->
+              <sc-if value="{{ nsStartShow }}" hint-placeholder-val="{{ true }}">
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.6 6.4L21 9.2l-5 4.4 1.5 6.6L12 16.8 6.5 20.2 8 13.6 3 9.2l6.4-.8z"></path></svg></span>How do you want to start?</div>
+                <div class="ns-grid ns-grid-2">
+                  <sc-for list="{{ nsStartCards }}" as="c" hint-placeholder-count="2">
+                    <div onClick="{{ c.pick }}" class="ns-card" style="border-color:{{ c.bd }};background:{{ c.bg }};box-shadow:{{ c.ring }};display:flex;gap:10px;align-items:flex-start">
+                      <span style="flex:none;width:30px;height:30px;border-radius:8px;background:var(--panel-2);color:var(--brand-ink);display:grid;place-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span>
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font:600 var(--fs-125) var(--sans)">{{ c.title }}</span>
+                        <span style="display:block;margin-top:2px;font:400 var(--fs-12)/1.4 var(--sans);color:var(--ink-dim)">{{ c.sub }}</span>
+                      </span>
+                      <span class="ns-check">{{ c.mark }}</span>
                     </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ nsIsClone }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <div onClick="{{ ddToggleNsClone }}" style="display:flex;align-items:center;gap:8px;height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);padding:0 12px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--mono);color:{{ nsCloneLabelDim }};flex:1">{{ nsCloneLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                    <sc-if value="{{ ddNsCloneOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                      <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                        <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search your sites…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;margin-bottom:4px">
+                        <div style="max-height:180px;overflow-y:auto">
+                          <sc-for list="{{ ddNsCloneOpts }}" as="o" hint-placeholder-count="4">
+                            <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-12) var(--mono)">{{ o.label }}</span></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
                   </div>
+                  <div class="ns-sub" style="margin-top:-2px">The copy is made in the same datacenter as the original.</div>
                 </sc-if>
               </div>
-            </div>
-            <sc-if value="{{ nsShowAccounts }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Accounts</span>
-                <div style="flex:1">
-                  <div onClick="{{ ddToggleNsAccts }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);flex:1">Assign accounts…</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
-                  <sc-if value="{{ ddNsAcctsOpen }}" hint-placeholder-val="{{ false }}">
-                    <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
-                    <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
-                      <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
-                      <div style="max-height:150px;overflow-y:auto">
-                        <sc-for list="{{ ddNsAcctsOpts }}" as="o" hint-placeholder-count="4">
-                          <div onClick="{{ o.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer" style-hover="background:var(--panel-2)"><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+              </sc-if>
+
+              <!-- Datacenter -->
+              <sc-if value="{{ nsShowWhere }}" hint-placeholder-val="{{ true }}">
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>Where should it live?</div>
+                <div class="ns-sub" style="margin-top:-6px">{{ nsWhereNote }}</div>
+                <div style="display:flex;gap:4px;padding:3px;border:1px solid var(--rule);border-radius:99px;background:var(--panel);overflow-x:auto;scrollbar-width:none">
+                  <sc-for list="{{ nsDcTabs }}" as="t" hint-placeholder-count="4">
+                    <span onClick="{{ t.go }}" style="flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:5px 12px;border-radius:99px;background:{{ t.bg }};color:{{ t.fg }};font:600 var(--fs-12) var(--sans);cursor:pointer;white-space:nowrap">{{ t.label }}<span style="display:{{ t.dot }};width:6px;height:6px;border-radius:50%;background:var(--brand)"></span></span>
+                  </sc-for>
+                </div>
+                <div class="ns-grid ns-grid-dc">
+                  <sc-for list="{{ nsDcCards }}" as="d" hint-placeholder-count="6">
+                    <div onClick="{{ d.pick }}" class="ns-card" style="border-color:{{ d.bd }};background:{{ d.bg }};box-shadow:{{ d.ring }};padding:9px 11px;position:relative">
+                      <span style="display:block;font:600 var(--fs-125) var(--sans);padding-right:16px">{{ d.city }}</span>
+                      <span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.sub }}</span>
+                      <sc-if value="{{ d.distShow }}" hint-placeholder-val="{{ false }}">
+                        <span style="display:block;margin-top:3px;font:600 var(--fs-11) var(--mono);color:{{ d.distFg }}">{{ d.dist }}</span>
+                      </sc-if>
+                      <span class="ns-check" style="position:absolute;top:8px;right:9px">{{ d.mark }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <span onClick="{{ dcpToggle }}" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>Find the closest datacenter to your visitors</span>
+                <sc-if value="{{ dcpOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px">
+                    <div style="display:flex;gap:6px">
+                      <input value="{{ dcpQ }}" onInput="{{ onDcpQ }}" onKeyDown="{{ dcpKey }}" placeholder="Where are most of your visitors? Try a city" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
+                      <span onClick="{{ dcpSearch }}" style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:8px;background:var(--brand);color:#fff;font:600 var(--fs-125) var(--sans);cursor:pointer">{{ dcpSearchLabel }}</span>
+                    </div>
+                    <sc-if value="{{ dcpErrShow }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:8px;font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ dcpErr }}</div>
+                    </sc-if>
+                    <sc-if value="{{ dcpResultsShow }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top:8px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:3px;max-height:170px;overflow-y:auto">
+                        <sc-for list="{{ dcpResults }}" as="p" hint-placeholder-count="3">
+                          <div onClick="{{ p.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer;font:500 var(--fs-125) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="background:var(--panel-2)">{{ p.label }}</div>
                         </sc-for>
                       </div>
-                    </div>
-                  </sc-if>
-                </div>
+                    </sc-if>
+                    <div style="margin-top:8px;font:400 10.5px var(--sans);color:var(--ink-dim)">Place search by Photon · OpenStreetMap data</div>
+                  </div>
+                </sc-if>
               </div>
-              <sc-for list="{{ nsAcctRows }}" as="r" hint-placeholder-count="0">
-                <div style="display:flex;align-items:center;gap:8px;margin-left:122px;padding:7px 10px;border:1px solid var(--rule);border-radius:9px">
-                  <span style="flex:1;font:500 var(--fs-125) var(--sans)">{{ r.name }}</span>
-                  <span onClick="{{ r.toggleCust }}" style="padding:3px 10px;border-radius:99px;background:{{ r.custBg }};color:{{ r.custFg }};font:600 var(--fs-11) var(--sans);cursor:pointer">Customer</span>
-                  <span onClick="{{ r.toggleBill }}" style="padding:3px 10px;border-radius:99px;background:{{ r.billBg }};color:{{ r.billFg }};font:600 var(--fs-11) var(--sans);cursor:pointer">Billing</span>
-                  <span onClick="{{ r.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 var(--fs-12) var(--sans);padding:2px 4px" style-hover="color:var(--ink)">✕</span>
+              </sc-if>
+
+              <!-- Operator: provider connection + account assignment -->
+              <sc-if value="{{ nsShowAccounts }}" hint-placeholder-val="{{ false }}">
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></span>Operator settings</div>
+                <sc-if value="{{ nsProvShow }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Provider</span>
+                  <div style="flex:1">
+                    <div onClick="{{ ddToggleNsProv }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);flex:1">{{ nsProviderLabel }}</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                    <sc-if value="{{ ddNsProvOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                      <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                        <sc-for list="{{ ddNsProvOpts }}" as="o" hint-placeholder-count="2">
+                          <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:6px;cursor:pointer;background:{{ o.bg }}" style-hover="background:var(--panel-2)"><span style="width:12px;font:600 var(--fs-11) var(--sans);color:var(--brand-ink)">{{ o.mark }}</span><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
                 </div>
+                </sc-if>
+                <div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Accounts</span>
+                  <div style="flex:1">
+                    <div onClick="{{ ddToggleNsAccts }}" style="display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);padding:0 10px;cursor:pointer" style-hover="border-color:var(--brand)"><span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);flex:1">Assign accounts…</span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+                    <sc-if value="{{ ddNsAcctsOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:79"></div>
+                      <div style="position:fixed;top:{{ ddRectTop }}px;left:{{ ddRectLeft }}px;width:{{ ddRectWidth }}px;box-sizing:border-box;z-index:80;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:4px;animation:ccfade .12s ease">
+                        <input autofocus value="{{ ddQ }}" onInput="{{ onDdQ }}" placeholder="Search accounts…" style="width:100%;box-sizing:border-box;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 8px;outline:none;margin-bottom:4px">
+                        <div style="max-height:150px;overflow-y:auto">
+                          <sc-for list="{{ ddNsAcctsOpts }}" as="o" hint-placeholder-count="4">
+                            <div onClick="{{ o.pick }}" style="padding:6px 9px;border-radius:6px;cursor:pointer" style-hover="background:var(--panel-2)"><span style="font:500 var(--fs-125) var(--sans)">{{ o.label }}</span></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+                <sc-for list="{{ nsAcctRows }}" as="r" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:8px;margin-left:102px;padding:7px 10px;border:1px solid var(--rule);border-radius:9px">
+                    <span style="flex:1;font:500 var(--fs-125) var(--sans)">{{ r.name }}</span>
+                    <span onClick="{{ r.toggleCust }}" style="padding:3px 10px;border-radius:99px;background:{{ r.custBg }};color:{{ r.custFg }};font:600 var(--fs-11) var(--sans);cursor:pointer">Customer</span>
+                    <span onClick="{{ r.toggleBill }}" style="padding:3px 10px;border-radius:99px;background:{{ r.billBg }};color:{{ r.billFg }};font:600 var(--fs-11) var(--sans);cursor:pointer">Billing</span>
+                    <span onClick="{{ r.remove }}" style="cursor:pointer;color:var(--ink-dim);font:600 var(--fs-12) var(--sans);padding:2px 4px" style-hover="color:var(--ink)">✕</span>
+                  </div>
+                </sc-for>
+                <span style="margin-left:102px;font:400 var(--fs-115)/1.45 var(--sans);color:var(--ink-dim)">Assigned accounts get shared access. If no customer account is set, a new account named after the domain is created right away.</span>
+              </div>
+              </sc-if>
+
+              <!-- Notes for the team -->
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>Anything we should know? <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Optional</span></div>
+                <textarea value="{{ nsNotes }}" onInput="{{ onNsNotes }}" rows="3" maxlength="2000" placeholder="A launch date, a site you're moving from, help you'd like with setup… It goes straight to our team." style="width:100%;box-sizing:border-box;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font:400 var(--fs-125)/1.55 var(--sans);padding:10px 12px;outline:none;resize:vertical;min-height:76px"></textarea>
+              </div>
+
+              <sc-for list="{{ nsErrors }}" as="e" hint-placeholder-count="0">
+                <div style="font:500 var(--fs-125) var(--sans);color:var(--bad);background:var(--bad-soft);border-radius:9px;padding:9px 12px">{{ e.text }}</div>
               </sc-for>
-              <span style="margin-left:122px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Assigned accounts get shared access. If no customer account is set, a new account named after the domain is created right away.</span>
-            </sc-if>
-            <sc-for list="{{ nsErrors }}" as="e" hint-placeholder-count="0">
-              <div style="font:500 var(--fs-125) var(--sans);color:var(--bad);background:var(--bad-soft);border-radius:9px;padding:9px 12px">{{ e.text }}</div>
-            </sc-for>
-            <sc-if value="{{ nsVerifyChecking }}" hint-placeholder-val="{{ false }}">
-              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Verifying Kinsta connection…</span>
-            </sc-if>
-            <sc-if value="{{ nsVerifyOutdated }}" hint-placeholder-val="{{ false }}">
-              <div style="background:var(--bad-soft);border-radius:9px;padding:10px 12px">
-                <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">Kinsta rejected this connection's API key. Update it under Settings, Providers.</span>
+              <sc-if value="{{ nsVerifyChecking }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Verifying the Kinsta connection…</span>
+              </sc-if>
+              <sc-if value="{{ nsVerifyOutdated }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--bad-soft);border-radius:9px;padding:10px 12px">
+                  <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">Kinsta rejected this connection's API key. Update it under Settings, Providers.</span>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- Live preview -->
+            <div class="ns-aside">
+              <div style="border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow-sm)">
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel-2);border-bottom:1px solid var(--rule)">
+                  <span style="display:flex;gap:4px;flex:none"><i style="width:8px;height:8px;border-radius:50%;background:#ef6a5e"></i><i style="width:8px;height:8px;border-radius:50%;background:#f4be4f"></i><i style="width:8px;height:8px;border-radius:50%;background:#61c454"></i></span>
+                  <span style="flex:1;min-width:0;display:flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;background:var(--paper);font:500 10.5px var(--mono);color:{{ nsTempUrlDim }};overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>{{ nsTempUrl }}</span>
+                </div>
+                <div style="padding:12px 14px 14px">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                    <span style="font:700 var(--fs-125) var(--sans);color:{{ nsPreviewTitleDim }};flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsPreviewTitle }}</span>
+                    <i class="ns-sk" style="width:22px"></i><i class="ns-sk" style="width:22px"></i><i class="ns-sk" style="width:22px"></i>
+                  </div>
+                  <div style="border-radius:8px;background:linear-gradient(135deg,var(--brand-soft),color-mix(in srgb,var(--brand) 4%,transparent));padding:16px 12px;margin-bottom:10px">
+                    <i class="ns-sk" style="width:70%;height:9px;background:color-mix(in srgb,var(--brand) 35%,transparent)"></i>
+                    <i class="ns-sk" style="width:48%;margin-top:7px"></i>
+                    <i class="ns-sk" style="width:34px;height:12px;margin-top:10px;border-radius:4px;background:var(--brand)"></i>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                    <i class="ns-sk" style="height:26px;border-radius:5px"></i><i class="ns-sk" style="height:26px;border-radius:5px"></i><i class="ns-sk" style="height:26px;border-radius:5px"></i>
+                  </div>
+                </div>
               </div>
-            </sc-if>
-            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Kinsta verifies the deployment and connects the site token automatically.</span>
+              <div style="font:400 var(--fs-115)/1.5 var(--sans);color:var(--ink-dim);padding:0 2px">{{ nsPreviewNote }}</div>
+              <sc-if value="{{ nsShowWhere }}" hint-placeholder-val="{{ true }}">
+                <div class="ns-globe">
+                  <canvas ref="{{ nsGlobeRef }}" style="display:block;width:100%;height:250px;touch-action:none" aria-label="Globe of datacenter locations. Drag to spin, click a dot to choose."></canvas>
+                  <div style="text-align:center;margin-top:-6px">
+                    <div style="font:650 var(--fs-13) var(--sans)">{{ nsDcCity }}</div>
+                    <div style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ nsDcCountry }}</div>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="border-top:1px solid var(--rule);padding-top:10px;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font:400 var(--fs-12) var(--sans)">
+                <span style="color:var(--ink-dim)">Account</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumAcc }}</span>
+                <span style="color:var(--ink-dim)">Location</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumWhere }}</span>
+                <span style="color:var(--ink-dim)">Start</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumStart }}</span>
+              </div>
+            </div>
+          </div>
           </sc-if>
           <sc-if value="{{ nsIsImport }}" hint-placeholder-val="{{ false }}">
             <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Connect sites that already exist at a provider you're connected to. Sites already in the fleet are skipped.</span>

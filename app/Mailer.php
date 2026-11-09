@@ -1634,6 +1634,66 @@ class Mailer {
         );
     }
 
+    /**
+     * Notes a customer left in the New site dialog, for the team. Sent once
+     * the provider accepted the create, so it always names a real site.
+     *
+     * @param object $site    name, domain, datacenter, clone (source name or '').
+     * @param string $notes   What they wrote (already trimmed and capped).
+     * @param string $account The account the site was created in.
+     * @param object $user    User::fetch() of the creator.
+     */
+    static public function send_new_site_notes( $site, $notes, $account, $user ) {
+        $admin_email = get_option( 'admin_email' );
+        $site        = (object) $site;
+        $name        = (string) ( $site->name ?? '' );
+        $row         = function ( $label, $value, $last = false ) {
+            $pad = $last ? '' : 'padding-bottom: 10px;';
+            return "<tr><td style='{$pad} color: #666D7A; font-size: 14px;'>" . esc_html( $label ) . "</td>"
+                . "<td style='{$pad} color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $value ) . "</td></tr>";
+        };
+        $rows  = $row( 'Site name', $name );
+        if ( ! empty( $site->domain ) && $site->domain !== $name ) {
+            $rows .= $row( 'Domain', $site->domain );
+        }
+        $rows .= $row( 'Account', $account ?: 'New account' );
+        $rows .= $row( 'Start', empty( $site->clone ) ? 'Fresh WordPress' : 'Copy of ' . $site->clone );
+        if ( empty( $site->clone ) && ! empty( $site->datacenter ) ) {
+            $rows .= $row( 'Datacenter', $site->datacenter );
+        }
+        $rows .= $row( 'Created by', trim( ( $user->name ?? '' ) . ' #' . ( $user->user_id ?? '' ) ), true );
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
+                <p style='margin-bottom: 20px;'>A new site was just created and its owner left a note for the team.</p>
+                <div style='background-color: #F4F6F9; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px;'>
+                    <p style='margin: 0; color: #15181D;'>" . nl2br( esc_html( $notes ) ) . "</p>
+                </div>
+                <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>{$rows}</table>
+                </div>
+            </div>
+        ";
+
+        // Reply goes to the person who wrote the note. Header values must not
+        // carry line breaks or angle brackets from a customer-set display name.
+        $headers = [];
+        $email   = sanitize_email( $user->email ?? '' );
+        if ( $email ) {
+            $display   = trim( str_replace( [ "\r", "\n", '<', '>', '"' ], '', (string) ( $user->name ?? '' ) ) );
+            $headers[] = $display ? "Reply-To: \"{$display}\" <{$email}>" : "Reply-To: <{$email}>";
+        }
+
+        self::send_email_with_layout(
+            $admin_email,
+            "New site notes: {$name}",
+            'Notes on a new site',
+            $name,
+            $content_html,
+            $headers
+        );
+    }
+
     /* -------------------------------------------------------------------------
      *  HELPER: Make Images Responsive for Email
      * ------------------------------------------------------------------------- */
