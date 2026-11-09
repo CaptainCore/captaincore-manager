@@ -304,6 +304,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-msg:hover .ccc-react-add,.ccc-note:hover .ccc-react-add,.ccc-bub:hover .ccc-react-add,.ccc-react-add:focus-visible{opacity:1}
 @media (hover:none){.ccc-react-add{opacity:.55}}
 .ccc-msg .ccc-edit-btn,.ccc-note .ccc-edit-btn{right:34px}
+.ccc-dbar{margin-left:auto;min-width:0;display:flex;align-items:center;gap:8px;font:500 var(--fs-12) var(--sans);color:color-mix(in srgb,var(--ok) 70%,var(--ink))}
+.ccc-dbar svg{flex:none}
+.ccc-dwarn{flex:none;font-weight:600;color:color-mix(in srgb,var(--warn) 80%,var(--ink))}
+.ccc-dbar button{flex:none;height:24px;padding:0 9px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:500 var(--fs-115) var(--sans);cursor:pointer}
+.ccc-dbar button:hover{border-color:var(--ink-dim)}
+@media (max-width:640px){.ccc-dwarn{display:none}}
 .ccc-edited{font:400 11px var(--sans);color:var(--ink-dim);background:none;border:0;padding:0;margin-left:2px}
 button.ccc-edited{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 button.ccc-edited:hover{color:var(--ink)}
@@ -7752,10 +7758,19 @@ button.ccc-edited:hover{color:var(--ink)}
             <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
             <div class="ccc-composer">
               <div class="ccc-composer-in">
-                <div style="display:flex;gap:4px;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
                   <sc-for list="{{ chatModes }}" as="m" hint-placeholder-count="2">
                     <button onClick="{{ m.go }}" style="border:0;background:{{ m.bg }};color:{{ m.fg }};font:600 var(--fs-12) var(--sans);padding:5px 10px;border-radius:7px;cursor:pointer">{{ m.label }}</button>
                   </sc-for>
+                  <sc-if value="{{ chatDraftShow }}" hint-placeholder-val="{{ false }}">
+                    <div class="ccc-dbar" title="{{ chatDraftTitle }}">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path></svg>
+                      <span class="ccc-trunc">{{ chatDraftLabel }}</span>
+                      <sc-if value="{{ chatDraftHasWarn }}" hint-placeholder-val="{{ false }}"><span class="ccc-dwarn">{{ chatDraftWarn }}</span></sc-if>
+                      <sc-if value="{{ chatDraftNewer }}" hint-placeholder-val="{{ false }}"><button onClick="{{ chatDraftUse }}">Use the new draft</button></sc-if>
+                      <button onClick="{{ chatDraftDiscard }}">Discard</button>
+                    </div>
+                  </sc-if>
                 </div>
 <sc-if value="{{ chatHasFiles }}" hint-placeholder-val="{{ false }}">
                   <div class="ccc-pending">

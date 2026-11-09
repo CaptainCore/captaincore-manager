@@ -105,6 +105,8 @@ Object.assign(Component.prototype, {
     if (!c) return;
     id = parseInt(id, 10) || 0;
     if (c.id === id && c.conv) return;
+    this.chatDraftFlush();
+    c.dftSeed = ''; c.dftRemote = false;
     c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false; c.edit = null;
     this.chatClearFiles();
     this._chatClear = true;
@@ -123,7 +125,9 @@ Object.assign(Component.prototype, {
         return;
       }
       const had = c.conv ? c.conv.messages.length : -1;
+      const prevDraft = c.conv && c.conv.conversation.id === id ? c.conv.draft : undefined;
       c.conv = r;
+      if (this.chatBoot().operator) this.chatDraftSync(r.draft || null, prevDraft);
       if (had !== r.messages.length) c.scrollPin = c.scrollPin || c.nearBottom;
       const row = c.list.find(x => x.id === id);
       if (row) Object.assign(row, r.conversation, { unread: 0 });
@@ -250,6 +254,12 @@ Object.assign(Component.prototype, {
       this._chatClear = true;
       this.chatClearFiles();
       clearTimeout(c.draftTimer); c.draftText = c.draftSent = '';
+      // The server clears the draft this answered (Chat::clear_draft).
+      clearTimeout(c.dftTimer); c.dftPending = null; c.dftSeed = ''; c.dftRemote = false;
+      if (cb.operator && c.conv && c.conv.draft && (!note || c.conv.draft.kind === 'note')) {
+        c.conv.draft = null;
+        const lr = c.list.find(x => x.id === c.id); if (lr) lr.draft = '';
+      }
       this.setState({ chatSending: false, chatBody: '', chatId: String(c.id) });
       this.chatMarkRead();
     }).catch(e => {
@@ -598,6 +608,10 @@ Object.assign(Component.prototype, {
         clearTimeout(c.countsTimer);
         c.countsTimer = setTimeout(() => this.chatLoadList(true), 1500);
       }
+    } else if (ev.type === 'draft.updated') {
+      const lr = c.list.find(x => x.id === ev.conversation_id);
+      if (lr) lr.draft = ev.draft ? ev.draft.kind : '';
+      if (cb.operator && c.conv && c.conv.conversation.id === ev.conversation_id) this.chatDraftSync(ev.draft || null, c.conv.draft);
     } else if (ev.type === 'message.updated') {
       if (ev.conversation) this.chatMergeConv(ev.conversation);
       if (ev.message) this.chatAfterEdit(ev.message);
@@ -1383,6 +1397,99 @@ Object.assign(Component.prototype, {
 
   // A message's reaction pills: emoji, count, pressed when one is yours,
   // and who reacted in the tooltip (eight names, then "and N others").
+  // ── drafts (operators) ────────────────────────────────────────────────
+  // One waiting reply per conversation (Chat::save_draft), usually written
+  // by an AI model through /draft-chat. Opening the thread puts it in the
+  // reply box; edits there save back to it; sending clears it. c.dftSeed is
+  // the draft text last put in (or saved from) the box, so a newer draft
+  // only replaces text the operator hasn't changed.
+
+  chatDraftSync(draft, prev) {
+    const c = this._chat;
+    if (!c || !c.conv) return;
+    c.conv.draft = draft;
+    // The same draft again (a refetch) or the echo of our own save: nothing new.
+    if (draft && ((prev && prev.body === draft.body && prev.updated_at === draft.updated_at) || draft.body === c.dftSeed)) return;
+    const cur = this.state.chatBody || '';
+    const untouched = !cur.trim() || cur === c.dftSeed;
+    c.dftRemote = false;
+    if (draft && cur === draft.body) { c.dftSeed = cur; return; }
+    if (draft && untouched) this.chatDraftFill(draft);
+    else if (draft) c.dftRemote = true; // they've changed the text: offer, don't overwrite
+    else if (c.dftSeed && cur === c.dftSeed) { c.dftSeed = ''; c.dftFill = ''; this.setState({ chatBody: '' }); } // sent or discarded elsewhere
+    else c.dftSeed = '';
+  },
+
+  chatDraftFill(draft) {
+    const c = this._chat;
+    c.dftSeed = draft.body;
+    c.dftFill = draft.body;
+    c.dftRemote = false;
+    this.setState({ chatBody: draft.body, chatMode: draft.kind === 'note' ? 'note' : 'reply' });
+  },
+
+  // A change in the reply box while a draft is waiting saves back to it
+  // (1.2s after typing stops). An emptied box leaves the draft alone:
+  // Discard is the way to drop it.
+  chatDraftEdited(text) {
+    const c = this._chat;
+    if (!c || !c.conv || !c.conv.draft || c.dftRemote || !String(text).trim()) return;
+    c.dftPending = { id: c.conv.conversation.id, body: String(text), kind: this.state.chatMode === 'note' ? 'note' : 'comment' };
+    clearTimeout(c.dftTimer);
+    c.dftTimer = setTimeout(() => this.chatDraftFlush(), 1200);
+  },
+
+  chatDraftFlush() {
+    const c = this._chat;
+    if (!c || !c.dftPending) return;
+    clearTimeout(c.dftTimer);
+    const p = c.dftPending;
+    c.dftPending = null;
+    if (c.conv && c.conv.conversation.id === p.id) c.dftSeed = p.body;
+    this.api('/chat/conversations/' + p.id + '/draft', { method: 'PUT', body: { body: p.body, kind: p.kind } }).then(r => {
+      if (r && r.draft && c.conv && c.conv.conversation.id === p.id && c.conv.draft) c.conv.draft = r.draft;
+    }).catch(() => {});
+  },
+
+  chatDraftDiscard() {
+    const c = this._chat;
+    if (!c || !c.conv || !c.conv.draft) return;
+    const id = c.conv.conversation.id;
+    const was = c.conv.draft;
+    clearTimeout(c.dftTimer); c.dftPending = null;
+    const cur = this.state.chatBody || '';
+    const clear = cur === c.dftSeed || cur === was.body;
+    c.conv.draft = null; c.dftSeed = ''; c.dftRemote = false;
+    const lr = c.list.find(x => x.id === id); if (lr) lr.draft = '';
+    if (clear) { c.dftFill = ''; this.setState({ chatBody: '' }); } else this.setState({});
+    this.api('/chat/conversations/' + id + '/draft', { method: 'DELETE' }).then(r => {
+      if (!r || r.code) throw new Error((r && r.message) || 'Could not discard the draft');
+      this.toast('Draft discarded', { kind: 'info' });
+    }).catch(e => {
+      if (c.conv && c.conv.conversation.id === id) { c.conv.draft = was; if (lr) lr.draft = was.kind; this.setState({}); }
+      this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not discard the draft', { kind: 'error' });
+    });
+  },
+
+  chatDraftVals() {
+    const c = this._chat;
+    const d = c && c.conv && c.conv.draft;
+    if (!d || !this.chatBoot().operator) return { chatDraftShow: false };
+    const conv = c.conv.conversation;
+    const since = c.conv.messages.filter(m => m.id > d.based_on_message_id && m.kind === 'comment' && m.author_kind === 'customer').length;
+    const who = String(conv.customer_name || 'The customer').split(' ')[0];
+    return {
+      chatDraftShow: true,
+      chatDraftLabel: (d.kind === 'note' ? 'Draft note by ' : 'Draft by ') + (d.by || 'Someone') + ' · ' + (this.chatAgo(d.created_at) === 'now' ? 'just now' : /^\d/.test(this.chatAgo(d.created_at)) ? this.chatAgo(d.created_at) + ' ago' : this.chatAgo(d.created_at)),
+      chatDraftTitle: 'Written ' + new Date(d.created_at * 1000).toLocaleString() + (d.updated_at > d.created_at ? ', last changed ' + new Date(d.updated_at * 1000).toLocaleString() : '') + '. Sending clears it.',
+      chatDraftWarn: since ? who + ' wrote ' + (since === 1 ? 'again' : since + ' more times') + ' since' : '',
+      chatDraftHasWarn: since > 0,
+      chatDraftNewer: !!c.dftRemote,
+      chatDraftUse: () => this.chatDraftFill(c.conv.draft),
+      chatDraftDiscard: () => this.chatDraftDiscard()
+    };
+  },
+
   // ── edits ─────────────────────────────────────────────────────────────
   // Same rules as Chat::can_edit. The server keeps each replaced version
   // (Chat::revisions); operators read them from the "edited" label.
@@ -1620,6 +1727,8 @@ Object.assign(Component.prototype, {
     // value="{{ }}" only seeds the field (DC runtime), so clearing after a
     // send or a conversation switch happens here.
     if (this._chatClear) { this._chatClear = false; el.value = ''; }
+    const c0 = this._chat;
+    if (c0 && c0.dftFill != null) { el.value = c0.dftFill; c0.dftFill = null; }
     // A pasted screenshot (or copied file) attaches instead of pasting text.
     if (!el._cccPaste) {
       el._cccPaste = true;
@@ -1642,7 +1751,7 @@ Object.assign(Component.prototype, {
     const isOp = !!cb.operator;
     const off = {
       showChat: false, chatPushShow: false, chatPhoneView: 'list', chatAccessGroups: [], chatSideOpen: '0', chatWidgetShow: false, chatWidgetOpen: false, chatRows: [], chatFilters: [], chatActions: [], chatModes: [],
-      chatHistory: [], chatHasHistory: false, chatNoHistory: false, supFilters: [], chatPending: []
+      chatHistory: [], chatHasHistory: false, chatNoHistory: false, supFilters: [], chatPending: [], chatDraftShow: false
     };
     if (!c) return off;
     if (s.route !== 'chat') this._chatPrevRoute = s.route;
@@ -1664,6 +1773,7 @@ Object.assign(Component.prototype, {
       const chips = [statusChip(x)];
       if (isOp && x.guest) chips.push({ label: 'Guest', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       if (isOp && x.triaged) chips.push({ label: 'Triaged by Grok Bot', bg: 'color-mix(in srgb,#7c5cff 12%,transparent)', fg: 'color-mix(in srgb,#7c5cff 80%,var(--ink))' });
+      if (isOp && x.draft) chips.push({ label: x.draft === 'note' ? 'Draft note' : 'Draft reply', bg: 'color-mix(in srgb,var(--ok) 13%,transparent)', fg: 'color-mix(in srgb,var(--ok) 70%,var(--ink))' });
       if (isOp && x.site_id) chips.push({ label: 'Site #' + x.site_id, bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       return {
         key: 'c' + x.id, name, subject: isOp ? x.subject : plain(x.preview), preview: isOp ? (rowTyping(x.id) || plain(x.preview)) : '', ago: this.chatAgo(x.last_message_at),
@@ -1793,13 +1903,14 @@ Object.assign(Component.prototype, {
       chatActions: actions,
       chatThreadRef: el => this.chatThreadRef(el),
       chatInputRef: el => this.chatInputRef(el),
+      ...this.chatDraftVals(),
       chatModes: isOp ? [['reply', 'Reply'], ['note', 'Internal note']].map(([v, l]) => ({
         label: l, go: () => { this._chatFocus = true; this.setState({ chatMode: v }); },
         bg: (s.chatMode || 'reply') === v ? (v === 'note' ? 'var(--ccc-note)' : 'var(--panel-2)') : 'transparent',
         fg: (s.chatMode || 'reply') === v ? (v === 'note' ? 'color-mix(in srgb,var(--warn) 80%,var(--ink))' : 'var(--ink)') : 'var(--ink-dim)'
       })) : [],
       chatBody: s.chatBody || '',
-      onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(e.target.value); },
+      onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(e.target.value); if (isOp) this.chatDraftEdited(e.target.value); },
       chatKey: e => {
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); }
         // Up in an empty composer edits your last message, as in Slack.
