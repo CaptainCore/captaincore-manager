@@ -170,7 +170,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     // $can_open: chat is on for the customer, so the email links to the
     // conversation. Without it, replying to the email is the way back.
-    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true ) {
+    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true, $message_id = '' ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -217,6 +217,16 @@ class Mailer {
         if ( $reply_address !== '' ) {
             $headers[] = 'Reply-To: ' . str_replace( [ '"', "\r", "\n" ], '', $site_name ) . " <{$reply_address}>";
         }
+        // Signed Message-Id (ChatNotify::message_id): a reply's In-Reply-To
+        // then proves it answers this email, even from a mailbox the
+        // customer's address forwards to. API connectors pass it on as a
+        // header; PHPMailer would add its own too, so it takes ours instead.
+        $set_id = null;
+        if ( $message_id !== '' ) {
+            $headers[] = "Message-ID: <{$message_id}>";
+            $set_id    = self::message_id_setter( $message_id );
+            add_action( 'phpmailer_init', $set_id, 999 );
+        }
         self::send_email_with_layout(
             $user->user_email,
             "[{$site_name}] {$topic}",
@@ -227,6 +237,25 @@ class Mailer {
             '',
             false
         );
+        if ( $set_id ) {
+            remove_action( 'phpmailer_init', $set_id, 999 );
+        }
+    }
+
+    /**
+     * A phpmailer_init callback that makes $message_id the email's one
+     * Message-ID: PHPMailer generates its own and would also keep ours as a
+     * custom header, leaving two.
+     */
+    static public function message_id_setter( $message_id ) {
+        return function ( $phpmailer ) use ( $message_id ) {
+            $phpmailer->MessageID = "<{$message_id}>";
+            $keep = array_filter( $phpmailer->getCustomHeaders(), fn( $h ) => strcasecmp( (string) $h[0], 'Message-ID' ) !== 0 );
+            $phpmailer->clearCustomHeaders();
+            foreach ( $keep as $h ) {
+                $phpmailer->addCustomHeader( $h[0], $h[1] );
+            }
+        };
     }
 
     /**

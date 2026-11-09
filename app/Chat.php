@@ -529,6 +529,7 @@ class Chat {
 			'via'                  => (string) ( $m['via'] ?? '' ),
 			'original'             => isset( $m['original'] ) ? (string) $m['original'] : null,
 			'external_id'          => (string) ( $m['external_id'] ?? '' ),
+			'email_from'           => (string) ( $m['email_from'] ?? '' ),
 			'created_at'           => $now,
 		] );
 		$c = $wpdb->base_prefix . 'captaincore_chat_conversations';
@@ -848,6 +849,9 @@ class Chat {
 			// email's full text, kept in case the cleanup cut too much.
 			'via'             => (string) ( $row->via ?? '' ),
 			'original'        => ( $row->via ?? '' ) === 'email' ? (string) $row->original : '',
+			// The address an email reply came from. It differs from the
+			// customer's when their mail forwards elsewhere (ChatNotify::receive).
+			'email_from'      => ( $row->via ?? '' ) === 'email' ? (string) ( $row->email_from ?? '' ) : '',
 			// [{key, by: [{id, name}]}] in the order each was first used.
 			'reactions'       => $reactions,
 		];

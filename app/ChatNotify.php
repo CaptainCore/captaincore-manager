@@ -64,6 +64,41 @@ class ChatNotify {
 		return $key === '' ? '' : substr( hash_hmac( 'sha256', (string) $conversation_id, $key ), 0, 16 );
 	}
 
+	/**
+	 * Message-Id (without brackets) for the email that carries replies up to
+	 * $message_id, or ''. Signed, so a reply whose In-Reply-To is one of these
+	 * provably answers the email we sent to the customer's address.
+	 */
+	public static function message_id( $conversation_id, $message_id ) {
+		$key = ChatRelay::derived_key( 'message-id.v1' );
+		if ( $key === '' ) {
+			return '';
+		}
+		$domain = self::reply_domain() ?: (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$c      = (int) $conversation_id;
+		$m      = (int) $message_id;
+		return "chat-{$c}-{$m}-" . substr( hash_hmac( 'sha256', "{$c}:{$m}", $key ), 0, 16 ) . "@{$domain}";
+	}
+
+	/**
+	 * Whether an In-Reply-To header names an email we sent for this
+	 * conversation. Mail that a customer's address forwards on automatically
+	 * keeps our Message-Id, so a reply from that mailbox points straight back
+	 * at it. A hand forward ("Fwd:") is a new message, so a reply to it does not.
+	 */
+	private static function answers_our_email( $conversation_id, $in_reply_to ) {
+		preg_match_all( '/<([^<>\s]+)>/', (string) $in_reply_to, $ids );
+		foreach ( $ids[1] as $id ) {
+			if ( preg_match( '/^chat-(\d+)-(\d+)-[a-f0-9]{16}@/i', $id, $m ) && (int) $m[1] === (int) $conversation_id ) {
+				$expect = self::message_id( (int) $m[1], (int) $m[2] );
+				if ( $expect !== '' && hash_equals( strtolower( $expect ), strtolower( $id ) ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	// ── out ─────────────────────────────────────────────────────────────
 
 	/**
@@ -156,7 +191,7 @@ class ChatNotify {
 		ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
 
 		$files = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, $replies ) );
-		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ) );
+		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ) );
 
 		$event = Chat::append( (int) $conversation_id, [
 			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',
@@ -254,13 +289,19 @@ class ChatNotify {
 		$user     = (int) $conversation->user_id > 0 ? get_userdata( (int) $conversation->user_id ) : null;
 		$known    = array_filter( [ $user ? strtolower( $user->user_email ) : '', strtolower( (string) $conversation->contact_email ) ] );
 		$customer = $from !== '' && in_array( $from, $known, true );
+		// Not their address, but a direct reply to an email we sent them: their
+		// mail forwards to this mailbox. It counts as the customer's reply, and
+		// email_from keeps the address it really came from.
+		if ( ! $customer && $from !== '' && $known && self::answers_our_email( $conversation_id, self::header( $mail['headers'], 'In-Reply-To' ) ) ) {
+			$customer = true;
+		}
 
 		if ( $customer ) {
 			$message = Chat::append( $conversation_id, [
 				'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => $user ? (int) $user->ID : 0,
 				'author_name' => $user ? $user->display_name : (string) $conversation->contact_name,
 				'body' => $body !== '' ? $body : '(sent ' . ( count( $files ) === 1 ? 'a file' : 'files' ) . ')',
-				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external,
+				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external, 'email_from' => $from,
 			] );
 		} else {
 			// Someone else replied (a forward, a colleague, a spoof). Operators
@@ -268,7 +309,7 @@ class ChatNotify {
 			$message = Chat::append( $conversation_id, [
 				'kind' => 'note', 'author_kind' => 'system', 'author_name' => $from !== '' ? $from : 'Unknown sender',
 				'body' => 'Email reply from ' . ( $from !== '' ? $from : 'an unknown sender' ) . ", which is not the customer's address. The customer does not see this.\n\n" . ( $body !== '' ? $body : '(files only)' ),
-				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external,
+				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external, 'email_from' => $from,
 			] );
 		}
 		foreach ( $files as $file ) {

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 68;
+    const REQUIRED_VERSION = 69;
 
     private static function _table() {
         global $wpdb;
@@ -1576,6 +1576,7 @@ class DB {
             external_id varchar(64) NOT NULL DEFAULT '',
             via varchar(10) NOT NULL DEFAULT '',
             original longtext DEFAULT NULL,
+            email_from varchar(255) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             edited_at datetime DEFAULT NULL,
         PRIMARY KEY  (chat_message_id),

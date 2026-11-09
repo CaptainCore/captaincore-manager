@@ -862,6 +862,16 @@ Object.assign(Component.prototype, {
     const esc = t => this.chatEsc(t);
     // Email replies (ChatNotify): operators can check what the cleanup cut.
     const orig = m => (cb.operator && m.via === 'email' && m.original) ? '<details class="ccc-orig"><summary>Original email</summary><pre>' + esc(m.original) + '</pre></details>' : '';
+    // "by email", plus the sending address for operators when it isn't the
+    // customer's own (their mail forwards to it; ChatNotify::receive).
+    const viaTag = m => {
+      if (m.via !== 'email') return '';
+      const from = String(m.email_from || '').toLowerCase();
+      const fwd = cb.operator && m.author_kind === 'customer' && from && from !== String(conv.customer_email || '').toLowerCase();
+      return fwd
+        ? '<span class="ccc-via" title="' + esc('Sent from ' + from + ', which receives mail for ' + (conv.customer_email || 'the customer') + '. It replied to our email directly, so it counts as theirs.') + '">by email from ' + esc(from) + '</span>'
+        : '<span class="ccc-via">by email</span>';
+    };
     const flat = cb.operator || this.state.route === 'support';
     let out = '';
     let lastDay = '';
@@ -888,7 +898,7 @@ Object.assign(Component.prototype, {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span><div class="ccc-mbody">' +
-          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + (m.via === 'email' ? '<span class="ccc-via">by email</span>' : '') + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
+          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
           (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
