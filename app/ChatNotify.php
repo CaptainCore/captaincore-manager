@@ -38,7 +38,7 @@ class ChatNotify {
 	const DELAY_OFFLINE = 300;
 	const MARKER        = '##- Reply above this line -##';
 	const MAX_FILES     = 10;
-	const MAX_FILE_SIZE = 10485760;
+	const MAX_FILE_SIZE = 26214400; // Mailgun takes 25 MB per message
 
 	// ── settings ────────────────────────────────────────────────────────
 

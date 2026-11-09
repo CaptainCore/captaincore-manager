@@ -218,6 +218,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-empty{padding:30px 12px;text-align:center;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)}
 .ccc-files{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ccc-img img{display:block;max-width:min(360px,100%);max-height:260px;border-radius:10px;border:1px solid var(--rule)}
+.ccc-vid{position:relative;max-width:min(400px,100%);line-height:0}
+.ccc-vid video{display:block;width:100%;max-height:300px;border-radius:10px;border:1px solid var(--rule);background:#000}
+.ccc-vid-max{position:absolute;top:8px;right:8px;width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;opacity:0;transition:opacity .15s}
+.ccc-vid:hover .ccc-vid-max,.ccc-vid-max:focus-visible{opacity:1}
+.ccc-vid-max:hover{background:rgba(0,0,0,.8)}
+@media (hover:none){.ccc-vid-max{opacity:1}}
 .ccc-file{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);font:500 var(--fs-125) var(--sans);color:var(--ink);text-decoration:none}
 .ccc-file:hover{border-color:var(--brand)}
 .ccc-file em{font:400 var(--fs-115) var(--mono);color:var(--ink-dim);font-style:normal}
@@ -311,9 +317,11 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-lb-btn:hover{background:rgba(255,255,255,.18)}
 .ccc-lb-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 12px 24px}
 .ccc-lb-img{max-width:calc(100% - 120px);max-height:100%;object-fit:contain;border-radius:8px;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.ccc-lb-vid{width:min(1280px,calc(100% - 120px));max-height:100%;border-radius:8px;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.ccc-lb-img[hidden],.ccc-lb-vid[hidden]{display:none}
 .ccc-lb-nav{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;cursor:pointer}
 .ccc-lb-nav:hover{background:rgba(255,255,255,.18)}
-@media (max-width:760px){.ccc-lb-btn span{display:none}.ccc-lb-img{max-width:100%}.ccc-lb-nav{position:absolute;bottom:18px}.ccc-lb-nav[data-prev]{left:18px}.ccc-lb-nav[data-next]{right:18px}}
+@media (max-width:760px){.ccc-lb-btn span{display:none}.ccc-lb-img{max-width:100%}.ccc-lb-vid{width:100%}.ccc-lb-nav{position:absolute;bottom:18px}.ccc-lb-nav[data-prev]{left:18px}.ccc-lb-nav[data-next]{right:18px}}
 /* Customer Support page (/account/support): history as a threaded inbox */
 .ccs{height:100%;display:grid;grid-template-columns:320px minmax(0,1fr) 270px;animation:ccfade .2s ease}
 .ccs-list{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--canvas)}
@@ -4010,7 +4018,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                       <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
                         <div class="ccc-pf">
                           <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
-                          <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                          <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">{{ pf.ico }}</span></sc-if>
                           <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
                           <button onClick="{{ pf.remove }}" title="Remove">✕</button>
                         </div>
@@ -7576,7 +7584,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
                       <div class="ccc-pf">
                         <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
-                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">{{ pf.ico }}</span></sc-if>
                         <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
                         <button onClick="{{ pf.remove }}" title="Remove">✕</button>
                       </div>
@@ -7623,7 +7631,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
                     <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
                       <div class="ccc-pf">
                         <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
-                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                        <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">{{ pf.ico }}</span></sc-if>
                         <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
                         <button onClick="{{ pf.remove }}" title="Remove">✕</button>
                       </div>
@@ -7776,7 +7784,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
               <sc-for list="{{ chatPending }}" as="pf" hint-placeholder-count="2">
                 <div class="ccc-pf">
                   <sc-if value="{{ pf.isImg }}" hint-placeholder-val="{{ false }}"><img src="{{ pf.url }}" alt=""></sc-if>
-                  <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">📄</span></sc-if>
+                  <sc-if value="{{ pf.notImg }}" hint-placeholder-val="{{ true }}"><span class="ccc-pf-ico">{{ pf.ico }}</span></sc-if>
                   <div style="min-width:0"><div class="ccc-trunc ccc-pf-name">{{ pf.name }}</div><div class="ccc-pf-size">{{ pf.size }}</div></div>
                   <button onClick="{{ pf.remove }}" title="Remove">✕</button>
                 </div>

@@ -41,6 +41,10 @@ class Chat {
 	// it can carry script) is always a download.
 	const INLINE_TYPES = [ 'image/png', 'image/jpeg', 'image/gif', 'image/webp' ];
 
+	// Videos play in the thread (and a larger player). Served with their
+	// own type and byte ranges so browsers can seek; anything else is a download.
+	const VIDEO_TYPES = [ 'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg' ];
+
 	// Automated helpers that write as themselves (`agent` on a message).
 	// For now they only leave internal notes: they read, triage and
 	// recommend; a person answers the customer.
@@ -52,7 +56,7 @@ class Chat {
 
 	// Files attached from the composer (drag and drop, paste, the paperclip).
 	const MAX_FILES     = 10;
-	const MAX_FILE_SIZE = 10485760;
+	const MAX_FILE_SIZE = 52428800; // 50 MB, so screen recordings fit
 
 	// ── access ──────────────────────────────────────────────────────────
 
@@ -295,6 +299,7 @@ class Chat {
 				'mime'   => $row->mime,
 				'size'   => (int) $row->size,
 				'inline' => in_array( $row->mime, self::INLINE_TYPES, true ),
+				'video'  => in_array( $row->mime, self::VIDEO_TYPES, true ),
 				'url'    => rest_url( 'captaincore/v1/chat/attachments/' . (int) $row->chat_attachment_id ),
 			];
 		}
@@ -778,9 +783,10 @@ class Chat {
 	}
 
 	/**
-	 * Stream an attachment the user may see. Raster images display inline
-	 * (type checked from the bytes, not the name); everything else downloads.
-	 * $download asks for a download either way (the lightbox's button).
+	 * Stream an attachment the user may see. Raster images and videos
+	 * display inline (type checked from the bytes, not the name); everything
+	 * else downloads. Byte ranges are honoured (206) so video can seek and
+	 * Safari will play it at all. $download asks for a download either way.
 	 */
 	public static function send_attachment( $user_id, $attachment_id, $download = false ) {
 		$attachment = ChatAttachments::get( (int) $attachment_id );
@@ -792,18 +798,58 @@ class Chat {
 			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
 		}
 		$sniffed = function_exists( 'finfo_open' ) ? (string) finfo_file( finfo_open( FILEINFO_MIME_TYPE ), $path ) : '';
-		$inline  = in_array( $sniffed, self::INLINE_TYPES, true );
+		$video   = in_array( $sniffed, self::VIDEO_TYPES, true );
+		$inline  = $video || in_array( $sniffed, self::INLINE_TYPES, true );
+		$size    = (int) filesize( $path );
+		$range   = self::byte_range( (string) ( $_SERVER['HTTP_RANGE'] ?? '' ), $size );
 		while ( ob_get_level() ) {
 			ob_end_clean();
 		}
+		if ( $range === false ) {
+			status_header( 416 );
+			header( "Content-Range: bytes */$size" );
+			exit;
+		}
+		[ $start, $end ] = $range ?: [ 0, $size - 1 ];
+		if ( $range ) {
+			status_header( 206 );
+			header( "Content-Range: bytes $start-$end/$size" );
+		}
 		header( 'Content-Type: ' . ( $inline ? $sniffed : 'application/octet-stream' ) );
 		header( 'Content-Disposition: ' . ( $inline && ! $download ? 'inline' : 'attachment' ) . '; filename="' . str_replace( [ '"', "\r", "\n" ], '', $attachment->name ) . '"' );
-		header( 'Content-Length: ' . filesize( $path ) );
+		header( 'Content-Length: ' . ( $end - $start + 1 ) );
+		header( 'Accept-Ranges: bytes' );
 		header( 'X-Content-Type-Options: nosniff' );
-		header( "Content-Security-Policy: default-src 'none'; sandbox" );
+		// A video opened in its own tab is a media page that loads itself
+		// again; under sandbox its origin is null and that load is refused.
+		header( "Content-Security-Policy: default-src 'none'" . ( $video ? "; media-src 'self'" : '; sandbox' ) );
 		header( 'Cache-Control: private, max-age=86400' );
-		readfile( $path );
+		$fh = fopen( $path, 'rb' );
+		fseek( $fh, $start );
+		for ( $left = $end - $start + 1; $left > 0 && ! feof( $fh ); $left -= 1048576 ) {
+			echo fread( $fh, min( 1048576, $left ) );
+			flush();
+		}
+		fclose( $fh );
 		exit;
+	}
+
+	/**
+	 * One "bytes=" range from a Range header: [start, end], null for no
+	 * (or an unusable multi-part) range, false when it can't be satisfied.
+	 */
+	public static function byte_range( $header, $size ) {
+		if ( ! preg_match( '/^bytes=(\d*)-(\d*)$/', trim( $header ), $m ) || ( $m[1] === '' && $m[2] === '' ) ) {
+			return null;
+		}
+		if ( $m[1] === '' ) {
+			$start = max( 0, $size - (int) $m[2] );
+			$end   = $size - 1;
+		} else {
+			$start = (int) $m[1];
+			$end   = $m[2] === '' ? $size - 1 : min( (int) $m[2], $size - 1 );
+		}
+		return $size > 0 && $start <= $end && $start < $size ? [ $start, $end ] : false;
 	}
 
 	// ── presentation ────────────────────────────────────────────────────

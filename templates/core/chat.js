@@ -474,16 +474,19 @@ Object.assign(Component.prototype, {
     const items = [];
     const sel = String((window.getSelection && window.getSelection()) || '').trim();
     if (sel && el.contains(window.getSelection().anchorNode)) items.push({ label: 'Copy selection', act: () => this.ctxCopy(sel, 'selection') });
-    const file = e.target.closest('a[href*="/chat/attachments/"]');
+    const vid = e.target.closest('.ccc-vid');
+    const file = vid || e.target.closest('a[href*="/chat/attachments/"]');
     const link = !file && e.target.closest('a[href]');
     if (file) {
-      const img = file.classList.contains('ccc-img');
-      if (img) items.push({ label: 'View image', act: () => {
-        const all = [...el.querySelectorAll('a.ccc-img')];
-        this.chatLightbox(all.map(a => ({ url: a.href, name: (a.querySelector('img') || {}).alt || 'image' })), all.indexOf(file));
-      } });
-      items.push({ label: 'Open in new tab ↗', act: () => window.open(file.href, '_blank') });
-      items.push({ label: 'Download', act: () => { window.location.href = file.href + (file.href.indexOf('?') > -1 ? '&' : '?') + 'download=1'; } });
+      const href = vid ? vid.dataset.url : file.href;
+      if (vid) {
+        const v = vid.querySelector('video');
+        items.push({ label: 'Play larger', act: () => this.chatMediaOpen(el, vid) });
+        items.push({ label: v.paused ? 'Play' : 'Pause', act: () => { if (v.paused) v.play().catch(() => {}); else v.pause(); } });
+      }
+      if (file.classList.contains('ccc-img')) items.push({ label: 'View image', act: () => this.chatMediaOpen(el, file) });
+      items.push({ label: 'Open in new tab ↗', act: () => window.open(href, '_blank') });
+      items.push({ label: 'Download', act: () => { window.location.href = href + (href.indexOf('?') > -1 ? '&' : '?') + 'download=1'; } });
     } else if (link) {
       items.push({ label: 'Open link in new tab ↗', act: () => window.open(link.href, '_blank', 'noopener') });
       items.push({ label: 'Copy link address', act: () => this.ctxCopy(link.href, 'link') });
@@ -1002,9 +1005,18 @@ Object.assign(Component.prototype, {
     const h = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
     return '<div class="ccc-files">' + files.map(f => {
       const url = this.chatEsc(this.chatFileUrl(f));
+      const chip = '<a class="ccc-file" href="' + url + '" download><span>' + (f.video ? '🎬' : '📄') + '</span>' + this.chatEsc(f.name) + ' <em>' + h(f.size || 0) + '</em></a>';
+      if (f.video) {
+        // #t= makes Safari paint the first frame as the poster. A video the
+        // browser can't play turns back into the download chip (chatThreadRef).
+        return '<div class="ccc-vid" data-aid="' + f.id + '" data-url="' + url + '" data-name="' + this.chatEsc(f.name) + '">' +
+          '<video src="' + url + '#t=0.1" controls preload="metadata" playsinline title="' + this.chatEsc(f.name) + '"></video>' +
+          '<button type="button" class="ccc-vid-max" data-vid-max title="Play larger" aria-label="Play ' + this.chatEsc(f.name) + ' larger"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h5v5M20 4l-6 6M9 20H4v-5M4 20l6-6"></path></svg></button>' +
+          '<template>' + chip + '</template></div>';
+      }
       return f.inline
         ? '<a class="ccc-img" href="' + url + '" target="_blank" rel="noopener"><img src="' + url + '" alt="' + this.chatEsc(f.name) + '" loading="lazy"></a>'
-        : '<a class="ccc-file" href="' + url + '" download><span>📄</span>' + this.chatEsc(f.name) + ' <em>' + h(f.size || 0) + '</em></a>';
+        : chip;
     }).join('') + '</div>';
   },
 
@@ -1127,26 +1139,55 @@ Object.assign(Component.prototype, {
         if (chip) { e.preventDefault(); this.chatReact(+chip.dataset.mid, chip.dataset.react, chip.getAttribute('aria-pressed') !== 'true'); return; }
         const opener = e.target.closest && e.target.closest('[data-react-open]');
         if (opener) { e.preventDefault(); this.chatReactPicker(opener, +opener.dataset.mid); return; }
+        const max = e.target.closest && e.target.closest('[data-vid-max]');
+        if (max) { e.preventDefault(); this.chatMediaOpen(el, max.closest('.ccc-vid')); return; }
         const a = e.target.closest && e.target.closest('a.ccc-img');
         if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         e.preventDefault();
-        const all = [...el.querySelectorAll('a.ccc-img')];
-        this.chatLightbox(all.map(x => ({ url: x.href, name: (x.querySelector('img') || {}).alt || 'image' })), all.indexOf(a));
+        this.chatMediaOpen(el, a);
       });
     }
     const html = this.chatThreadHtml();
     if (el._cccHtml !== html) {
       el._cccHtml = html;
+      // A re-render (a new message, a reaction) must not stop a video
+      // someone is watching: note where each one was and carry it over.
+      const playing = {};
+      el.querySelectorAll('.ccc-vid video').forEach(v => {
+        if (v.currentTime > 0.2) playing[v.parentNode.dataset.aid] = { t: v.currentTime, paused: v.paused, muted: v.muted, volume: v.volume };
+      });
       el.innerHTML = '<div class="ccc-thread-in">' + html + '</div>';
       el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
+      el.querySelectorAll('.ccc-vid').forEach(box => {
+        const v = box.querySelector('video');
+        const was = playing[box.dataset.aid];
+        v.addEventListener('loadedmetadata', () => {
+          if (c.nearBottom) el.scrollTop = el.scrollHeight;
+          if (was) { v.currentTime = was.t; v.muted = was.muted; v.volume = was.volume; if (!was.paused) v.play().catch(() => {}); }
+        }, { once: true });
+        v.addEventListener('error', () => { const t = box.querySelector('template'); if (t) box.replaceWith(t.content.cloneNode(true)); }, { once: true });
+      });
       el.querySelectorAll('img.ccc-avimg').forEach(img => this.chatAvRef(img));
     }
     if (c.scrollPin && c.conv) { el.scrollTop = el.scrollHeight; c.scrollPin = false; c.nearBottom = true; }
   },
 
-  // Full-size image viewer over everything: the thread's images in order,
-  // arrows (or ← →) to step through, Download, Open in a new tab, Esc or a
-  // click outside to close. Plain DOM, so it works from every thread.
+  // Open the viewer on one image or video of a thread, with every image
+  // and video in the thread to step through. A video picks up where the
+  // inline player was, and the inline player picks up where the big one
+  // stopped.
+  chatMediaOpen(el, target) {
+    const nodes = [...el.querySelectorAll('a.ccc-img, .ccc-vid')];
+    const items = nodes.map(n => n.classList.contains('ccc-vid')
+      ? { url: n.dataset.url, name: n.dataset.name || 'video', video: n.querySelector('video') }
+      : { url: n.href, name: (n.querySelector('img') || {}).alt || 'image' });
+    items.forEach(it => { if (it.video) { it.t = it.video.currentTime || 0; it.video.pause(); } });
+    this.chatLightbox(items, nodes.indexOf(target));
+  },
+
+  // Full-size viewer over everything: the thread's images and videos in
+  // order, arrows (or ← →) to step through, Download, Open in a new tab,
+  // Esc or a click outside to close. Plain DOM, so it works from every thread.
   chatLightbox(items, index) {
     if (!items.length) return;
     if (this._chatLb) this._chatLb.close();
@@ -1155,7 +1196,7 @@ Object.assign(Component.prototype, {
     lb.className = 'ccc-lb';
     lb.setAttribute('role', 'dialog');
     lb.setAttribute('aria-modal', 'true');
-    lb.setAttribute('aria-label', 'Image viewer');
+    lb.setAttribute('aria-label', 'Media viewer');
     const icon = d => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"></path></svg>';
     lb.innerHTML =
       '<div class="ccc-lb-bar"><span class="ccc-lb-name"></span><span class="ccc-lb-count"></span>' +
@@ -1163,12 +1204,32 @@ Object.assign(Component.prototype, {
       '<a class="ccc-lb-btn" data-open target="_blank" rel="noopener" title="Open in a new tab">' + icon('M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5') + '</a>' +
       '<button class="ccc-lb-btn" data-close title="Close (Esc)">' + icon('M6 6l12 12M18 6L6 18') + '</button></div>' +
       '<div class="ccc-lb-stage"><button class="ccc-lb-nav" data-prev title="Previous (←)">' + icon('M15 6l-6 6 6 6') + '</button>' +
-      '<img class="ccc-lb-img" alt=""><button class="ccc-lb-nav" data-next title="Next (→)">' + icon('M9 6l6 6-6 6') + '</button></div>';
+      '<img class="ccc-lb-img" alt=""><video class="ccc-lb-vid" controls playsinline hidden></video><button class="ccc-lb-nav" data-next title="Next (→)">' + icon('M9 6l6 6-6 6') + '</button></div>';
     const $ = q => lb.querySelector(q);
     let i = Math.max(0, index);
+    const vid = $('.ccc-lb-vid');
+    // Hand a video's position back to its inline player.
+    const leave = () => {
+      const it = items[i];
+      if (!it || !it.video || vid.hidden) return;
+      it.t = vid.currentTime;
+      vid.pause();
+      try { it.video.currentTime = it.t; } catch (e) {}
+    };
     const show = () => {
       const it = items[i];
-      $('.ccc-lb-img').src = it.url;
+      $('.ccc-lb-img').hidden = !!it.video;
+      vid.hidden = !it.video;
+      if (it.video) {
+        $('.ccc-lb-img').removeAttribute('src');
+        vid.src = it.url;
+        vid.addEventListener('loadedmetadata', () => { if (it.t) vid.currentTime = it.t; }, { once: true });
+        vid.play().catch(() => {});
+      } else {
+        vid.pause();
+        vid.removeAttribute('src');
+        $('.ccc-lb-img').src = it.url;
+      }
       $('.ccc-lb-img').alt = it.name;
       $('.ccc-lb-name').textContent = it.name;
       $('.ccc-lb-count').textContent = items.length > 1 ? (i + 1) + ' of ' + items.length : '';
@@ -1178,13 +1239,16 @@ Object.assign(Component.prototype, {
       $('[data-prev]').style.visibility = i > 0 ? 'visible' : 'hidden';
       $('[data-next]').style.visibility = i < items.length - 1 ? 'visible' : 'hidden';
     };
-    const step = d => { const n = i + d; if (n >= 0 && n < items.length) { i = n; show(); } };
+    const step = d => { const n = i + d; if (n >= 0 && n < items.length) { leave(); i = n; show(); } };
     const key = e => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === ' ' && !vid.hidden && e.target !== vid) { e.preventDefault(); if (vid.paused) vid.play().catch(() => {}); else vid.pause(); }
       else if (e.key === 'ArrowLeft') step(-1);
       else if (e.key === 'ArrowRight') step(1);
     };
     const close = () => {
+      leave();
+      vid.removeAttribute('src');
       document.removeEventListener('keydown', key, true);
       lb.remove();
       this._chatLb = null;
@@ -1481,7 +1545,7 @@ Object.assign(Component.prototype, {
       chatHasFiles: c.files.length > 0,
       chatPending: c.files.map(f => ({
         key: f.key, name: f.name, size: f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : (f.size / 1048576).toFixed(1) + ' MB',
-        isImg: f.isImg, notImg: !f.isImg, url: f.url, remove: () => this.chatRemoveFile(f.key)
+        isImg: f.isImg, notImg: !f.isImg, ico: /^video\//.test(f.file.type) ? '🎬' : '📄', url: f.url, remove: () => this.chatRemoveFile(f.key)
       })),
       chatUploading: !!s.chatSending && c.files.length > 0,
       chatUploadLabel: 'Uploading ' + (c.files.length === 1 ? '1 file' : c.files.length + ' files') + '…',
