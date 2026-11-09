@@ -25,6 +25,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     reopens a closed or snoozed thread. An operator comment stops it.
  *     A close stops it too. Notes and events never move last_message_at.
  *   - A conversation links only to a site and account the customer can use.
+ *   - Customers can edit their own comments. Operators can edit any comment
+ *     or note (a colleague's typo, a password a customer pasted). Every
+ *     edit keeps the version it replaced; only operators read that history.
+ *   - Drafts are operator-only: one waiting reply per conversation, often
+ *     from an AI agent, loaded into the reply box for a person to send.
+ *     An operator comment clears it (a note clears only a note draft).
  *
  * Customer access follows the `captaincore_chat_mode` site option:
  *   off      operators only (history, imports). Customers keep Intercom.
@@ -53,7 +59,7 @@ class Chat {
 	// Automated helpers that write as themselves (`agent` on a message).
 	// For now they only leave internal notes: they read, triage and
 	// recommend; a person answers the customer.
-	const AGENTS = [ 'grok-bot' => 'Grok Bot' ];
+	const AGENTS = [ 'grok-bot' => 'Grok Bot', 'claude' => 'Claude' ];
 
 	// Emoji reactions on a message (Groddle's set). Keys are stored; the
 	// glyphs and labels live in chat.js.
@@ -171,6 +177,7 @@ class Chat {
 		$c     = $wpdb->base_prefix . 'captaincore_chat_conversations';
 		$m     = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$r     = $wpdb->base_prefix . 'captaincore_chat_reads';
+		$d     = $wpdb->base_prefix . 'captaincore_chat_drafts';
 		$where = [ '1=1' ];
 		// Unread: the other side's comments after both the viewer's read mark
 		// and the last reply from the viewer's side (replying means reading).
@@ -187,6 +194,9 @@ class Chat {
 			if ( ! empty( $q['site'] ) ) {
 				$where[] = 'c.site_id = %d';
 				$args[]  = (int) $q['site'];
+			}
+			if ( ! empty( $q['drafts'] ) ) {
+				$where[] = "EXISTS (SELECT 1 FROM $d dd WHERE dd.chat_conversation_id = c.chat_conversation_id)";
 			}
 		}
 		$search = trim( (string) ( $q['q'] ?? '' ) );
@@ -228,7 +238,8 @@ class Chat {
 					COALESCE((SELECT MAX(m2.chat_message_id) FROM $m m2 WHERE m2.chat_conversation_id = c.chat_conversation_id
 						AND m2.kind = 'comment' AND m2.author_kind = %s), 0))) AS unread,
 			(SELECT COUNT(*) FROM $m b WHERE b.chat_conversation_id = c.chat_conversation_id AND b.via = 'bot' AND b.chat_message_id > COALESCE(
-				(SELECT MAX(x.chat_message_id) FROM $m x WHERE x.chat_conversation_id = c.chat_conversation_id AND x.kind = 'comment' AND x.author_kind = 'customer'), 0)) AS bot_notes
+				(SELECT MAX(x.chat_message_id) FROM $m x WHERE x.chat_conversation_id = c.chat_conversation_id AND x.kind = 'comment' AND x.author_kind = 'customer'), 0)) AS bot_notes" .
+			( $operator ? ", (SELECT d.kind FROM $d d WHERE d.chat_conversation_id = c.chat_conversation_id) AS draft_kind" : '' ) . "
 			FROM $c c WHERE " . implode( ' AND ', $where ) . '
 			ORDER BY c.last_message_at DESC, c.chat_conversation_id DESC LIMIT %d';
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ) );
@@ -265,6 +276,7 @@ class Chat {
 		if ( $operator ) {
 			// "Seen by <customer>" receipt.
 			$out['customer_last_read_message_id'] = self::last_read( (int) $conversation->user_id, (int) $conversation->chat_conversation_id );
+			$out['draft']                         = self::draft( (int) $conversation->chat_conversation_id );
 		}
 		return $out;
 	}
@@ -512,6 +524,9 @@ class Chat {
 			'via'            => $agent !== '' ? 'bot' : '',
 		] );
 		$message = self::attach( (int) $conversation->chat_conversation_id, $message, $files );
+		if ( $operator ) {
+			self::clear_draft( (int) $conversation->chat_conversation_id, $kind );
+		}
 		$updated = self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), false ); // customer-safe: the relay sends it to both sides
 		self::emit( 'message.created', $updated, $message );
 		if ( $operator && $kind === 'comment' ) {
@@ -1032,6 +1047,10 @@ class Chat {
 			// Grok Bot left a triage note since the customer last wrote.
 			$out['triaged'] = (int) $row->bot_notes > 0;
 		}
+		if ( $operator && property_exists( $row, 'draft_kind' ) ) {
+			// A reply is waiting in the drafts: 'comment', 'note' or ''.
+			$out['draft'] = (string) $row->draft_kind;
+		}
 		if ( $operator ) {
 			$out['assignee_user_id'] = (int) $row->assignee_user_id ?: null;
 			$out['guest']            = (int) $row->user_id === 0;
@@ -1070,6 +1089,9 @@ class Chat {
 			'attachments'     => $attachments,
 			'created_at'      => self::ts( $row->created_at ),
 			'edited_at'       => self::ts( $row->edited_at ),
+			// Who made the latest edit ('' when never edited). Everyone sees
+			// it, so a customer knows when staff changed their message.
+			'edited_by'       => $row->edited_at ? self::user_name( (int) ( $row->edited_by ?? 0 ), (string) $row->author_name ) : '',
 			// Came from an import (Intercom). Read marks on imported history
 			// are synthetic, so clients skip the "Seen" receipt for these.
 			'imported'        => (string) $row->external_id !== '' && (string) ( $row->via ?? '' ) === '',
@@ -1235,6 +1257,216 @@ class Chat {
 		$event     = [ 'type' => 'message.reacted', 'conversation_id' => $cid, 'message_id' => $mid, 'reactions' => $reactions ];
 		do_action( 'captaincore_chat_event', $event, (int) ChatConversations::get( $cid )->user_id, (bool) (int) $message->internal );
 		return [ 'message_id' => $mid, 'reactions' => $reactions ];
+	}
+
+	// ── edits ───────────────────────────────────────────────────────────
+
+	/** A user's display name, or $fallback when there is no such user. */
+	private static function user_name( $user_id, $fallback = '' ) {
+		static $cache = [];
+		if ( $user_id <= 0 ) {
+			return $fallback;
+		}
+		if ( ! isset( $cache[ $user_id ] ) ) {
+			$u                 = get_userdata( $user_id );
+			$cache[ $user_id ] = $u ? $u->display_name : '';
+		}
+		return $cache[ $user_id ] !== '' ? $cache[ $user_id ] : $fallback;
+	}
+
+	/** Whether $user_id may change this message row (see the rules up top). */
+	public static function can_edit( $user_id, $message ) {
+		if ( ! in_array( $message->kind, [ 'comment', 'note' ], true ) ) {
+			return false;
+		}
+		if ( self::is_operator( $user_id ) ) {
+			return true;
+		}
+		return $message->kind === 'comment' && $message->author_kind === 'customer' && (int) $message->author_user_id === (int) $user_id && $user_id > 0;
+	}
+
+	/**
+	 * Change a message's text. The version it replaces goes into
+	 * captaincore_chat_revisions first. Attachments, reactions and the
+	 * original email stay as they are, and nothing is re-sent: a reply email
+	 * still waiting on its delay goes out with the new text, one already
+	 * sent keeps the old. Everyone in the conversation gets message.updated.
+	 */
+	public static function edit_message( $user_id, $message_id, $body ) {
+		global $wpdb;
+		$message  = ChatMessages::get( (int) $message_id );
+		$operator = self::is_operator( $user_id );
+		if ( ! $message || ! self::viewable( $user_id, (int) $message->chat_conversation_id ) || ( (int) $message->internal && ! $operator ) ) {
+			return new \WP_Error( 'not_found', 'Message not found.', [ 'status' => 404 ] );
+		}
+		if ( ! self::can_edit( $user_id, $message ) ) {
+			return new \WP_Error( 'not_allowed', 'You can only edit your own messages.', [ 'status' => 403 ] );
+		}
+		$mid   = (int) $message->chat_message_id;
+		$files = self::attachments_for( [ $mid ] )[ $mid ] ?? [];
+		$body  = self::body_or_files( $body, $files );
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
+		if ( $body !== (string) $message->body ) {
+			$now  = gmdate( 'Y-m-d H:i:s' );
+			$prev = (int) ( $message->edited_by ?? 0 );
+			$wpdb->insert( $wpdb->base_prefix . 'captaincore_chat_revisions', [
+				'chat_message_id'      => $mid,
+				'chat_conversation_id' => (int) $message->chat_conversation_id,
+				'body'                 => (string) $message->body,
+				'user_id'              => $message->edited_at ? $prev : (int) $message->author_user_id,
+				'user_name'            => $message->edited_at ? self::user_name( $prev ) : (string) $message->author_name,
+				'written_at'           => $message->edited_at ?: $message->created_at,
+				'replaced_at'          => $now,
+			] );
+			if ( ! $wpdb->insert_id ) {
+				return new \WP_Error( 'save_failed', 'Could not keep the earlier version, so the message was not changed.', [ 'status' => 500 ] );
+			}
+			ChatMessages::update( [ 'body' => $body, 'edited_at' => $now, 'edited_by' => (int) $user_id ], [ 'chat_message_id' => $mid ] );
+		}
+		$row       = ChatMessages::get( $mid );
+		$presented = self::present_message( $row, $files, self::reactions_for( [ $mid ] )[ $mid ] ?? [] );
+		if ( $body !== (string) $message->body ) {
+			self::emit( 'message.updated', self::present_conversation( ChatConversations::get( $row->chat_conversation_id ), false ), $presented );
+		}
+		return [ 'message' => $presented ];
+	}
+
+	/**
+	 * Every version of a message, newest (the current text) first. Operators
+	 * only: an edit is often a correction (another customer's details, a
+	 * pasted password), and the customer side shows just "edited".
+	 */
+	public static function revisions( $user_id, $message_id ) {
+		global $wpdb;
+		$message = ChatMessages::get( (int) $message_id );
+		if ( ! $message || ! self::is_operator( $user_id ) || ! self::viewable( $user_id, (int) $message->chat_conversation_id ) ) {
+			return new \WP_Error( 'not_found', 'Message not found.', [ 'status' => 404 ] );
+		}
+		$t    = $wpdb->base_prefix . 'captaincore_chat_revisions';
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $t WHERE chat_message_id = %d ORDER BY chat_revision_id DESC", (int) $message->chat_message_id ) );
+		$out  = [ [
+			'body'    => (string) $message->body,
+			'by'      => $message->edited_at ? self::user_name( (int) $message->edited_by, 'Someone' ) : (string) $message->author_name,
+			'at'      => self::ts( $message->edited_at ?: $message->created_at ),
+			'current' => true,
+		] ];
+		foreach ( $rows ?: [] as $r ) {
+			$out[] = [
+				'body'    => (string) $r->body,
+				'by'      => (string) $r->user_name,
+				'at'      => self::ts( $r->written_at ),
+				'current' => false,
+			];
+		}
+		return [ 'message_id' => (int) $message->chat_message_id, 'revisions' => $out ];
+	}
+
+	// ── drafts ──────────────────────────────────────────────────────────
+
+	/** The conversation's waiting draft, presented, or null. */
+	public static function draft( $conversation_id ) {
+		global $wpdb;
+		$t   = $wpdb->base_prefix . 'captaincore_chat_drafts';
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_conversation_id = %d", (int) $conversation_id ) );
+		if ( ! $row ) {
+			return null;
+		}
+		return [
+			'conversation_id'     => (int) $row->chat_conversation_id,
+			'kind'                => $row->kind,
+			'body'                => (string) $row->body,
+			'by'                  => $row->agent !== '' && isset( self::AGENTS[ $row->agent ] ) ? self::AGENTS[ $row->agent ] : self::user_name( (int) $row->user_id, 'Someone' ),
+			'agent'               => (string) $row->agent,
+			'user_id'             => (int) $row->user_id ?: null,
+			'based_on_message_id' => (int) $row->based_on_message_id,
+			'created_at'          => self::ts( $row->created_at ),
+			'updated_at'          => self::ts( $row->updated_at ),
+		];
+	}
+
+	/**
+	 * Write (or replace) the conversation's draft. Operators only. agent
+	 * names the AI that wrote it (Chat::AGENTS); without one it is the
+	 * operator's own. A person's edit in the reply box keeps the agent's
+	 * name unless keep_author is false, so the strip still reads "Draft by
+	 * Claude" while they polish it. Operators get draft.updated live.
+	 *
+	 * @param array $input body, kind (comment|note), agent, keep_author
+	 */
+	public static function save_draft( $user_id, $conversation_id, $input ) {
+		global $wpdb;
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! self::is_operator( $user_id ) ) {
+			return self::not_found();
+		}
+		$cid  = (int) $conversation->chat_conversation_id;
+		$kind = (string) ( $input['kind'] ?? 'comment' ) ?: 'comment';
+		if ( ! in_array( $kind, [ 'comment', 'note' ], true ) ) {
+			return new \WP_Error( 'bad_kind', 'kind must be comment or note.', [ 'status' => 400 ] );
+		}
+		$agent = (string) ( $input['agent'] ?? '' );
+		if ( $agent !== '' && ! isset( self::AGENTS[ $agent ] ) ) {
+			return new \WP_Error( 'bad_agent', 'Unknown agent.', [ 'status' => 400 ] );
+		}
+		$body = self::clean_body( $input['body'] ?? '' );
+		if ( is_wp_error( $body ) ) {
+			return $body;
+		}
+		$t    = $wpdb->base_prefix . 'captaincore_chat_drafts';
+		$now  = gmdate( 'Y-m-d H:i:s' );
+		$old  = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_conversation_id = %d", $cid ) );
+		$keep = $old && $agent === '' && ( ! isset( $input['keep_author'] ) || ! empty( $input['keep_author'] ) );
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$wpdb->replace( $t, [
+			'chat_conversation_id' => $cid,
+			'kind'                 => $kind,
+			'body'                 => $body,
+			'user_id'              => $keep ? (int) $old->user_id : (int) $user_id,
+			'agent'                => $keep ? (string) $old->agent : $agent,
+			// An edit of a draft is still based on what its writer saw.
+			'based_on_message_id'  => $keep ? (int) $old->based_on_message_id : (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d", $cid ) ),
+			'created_at'           => $old ? $old->created_at : $now,
+			'updated_at'           => $now,
+		] );
+		if ( $wpdb->last_error ) {
+			return new \WP_Error( 'save_failed', 'Could not save the draft.', [ 'status' => 500 ] );
+		}
+		$draft = self::draft( $cid );
+		self::emit_draft( $cid, $draft );
+		return [ 'draft' => $draft ];
+	}
+
+	/** Throw the draft away (operators). */
+	public static function discard_draft( $user_id, $conversation_id ) {
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! self::is_operator( $user_id ) ) {
+			return self::not_found();
+		}
+		self::clear_draft( (int) $conversation->chat_conversation_id );
+		return [ 'draft' => null ];
+	}
+
+	/**
+	 * Remove the draft once it has been answered: any operator comment
+	 * clears it, a note clears only a note draft. $sent null always clears.
+	 */
+	public static function clear_draft( $conversation_id, $sent = null ) {
+		global $wpdb;
+		$t     = $wpdb->base_prefix . 'captaincore_chat_drafts';
+		$where = [ 'chat_conversation_id' => (int) $conversation_id ];
+		if ( $sent === 'note' ) {
+			$where['kind'] = 'note';
+		}
+		if ( $wpdb->delete( $t, $where ) ) {
+			self::emit_draft( (int) $conversation_id, null );
+		}
+	}
+
+	/** draft.updated to operators only (internal, no customer). */
+	private static function emit_draft( $conversation_id, $draft ) {
+		do_action( 'captaincore_chat_event', [ 'type' => 'draft.updated', 'conversation_id' => (int) $conversation_id, 'draft' => $draft ], 0, true );
 	}
 
 	// ── agents ──────────────────────────────────────────────────────────

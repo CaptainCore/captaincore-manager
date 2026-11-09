@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 69;
+    const REQUIRED_VERSION = 71;
 
     private static function _table() {
         global $wpdb;
@@ -1579,6 +1579,7 @@ class DB {
             email_from varchar(255) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             edited_at datetime DEFAULT NULL,
+            edited_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
         PRIMARY KEY  (chat_message_id),
         KEY chat_conversation_id (chat_conversation_id,chat_message_id),
         KEY external_id (external_id)
@@ -1649,6 +1650,45 @@ class DB {
         PRIMARY KEY  (chat_reaction_id),
         UNIQUE KEY message_user_reaction (chat_message_id,user_id,reaction),
         KEY chat_conversation_id (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v70: earlier versions of edited chat messages (Chat::edit_message).
+        // One row per version that was replaced: its text, who wrote that
+        // version (user_name kept as it was, so bot and email authors read
+        // right later), when it was written and when it was replaced.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_revisions` (
+            chat_revision_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            chat_message_id bigint(20) UNSIGNED NOT NULL,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            body longtext NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            user_name varchar(255) NOT NULL DEFAULT '',
+            written_at datetime NOT NULL,
+            replaced_at datetime NOT NULL,
+        PRIMARY KEY  (chat_revision_id),
+        KEY chat_message_id (chat_message_id),
+        KEY chat_conversation_id (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v71: a reply waiting to be sent (Chat::save_draft), one per
+        // conversation, operators only. Usually written by an AI model
+        // (agent) for a person to check and send. based_on_message_id is
+        // the newest message when it was written, so the UI can say the
+        // customer has written since.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_drafts` (
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            kind varchar(10) NOT NULL DEFAULT 'comment',
+            body longtext NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            agent varchar(20) NOT NULL DEFAULT '',
+            based_on_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (chat_conversation_id)
         ) $charset_collate;";
 
         dbDelta($sql);

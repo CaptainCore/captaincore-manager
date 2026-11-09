@@ -105,7 +105,7 @@ Object.assign(Component.prototype, {
     if (!c) return;
     id = parseInt(id, 10) || 0;
     if (c.id === id && c.conv) return;
-    c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false;
+    c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false; c.edit = null;
     this.chatClearFiles();
     this._chatClear = true;
     this.setState({ chatId: id ? String(id) : '', chatBody: '', chatMode: 'reply' });
@@ -494,6 +494,8 @@ Object.assign(Component.prototype, {
     if (m) {
       if (m.body) items.push({ label: m.kind === 'note' ? 'Copy note' : m.kind === 'event' ? 'Copy event' : 'Copy message', act: () => this.ctxCopy(m.body, 'text') });
       if (m.body && m.kind !== 'event' && this.chatComposer()) items.push({ label: 'Quote in reply', act: () => this.chatQuote(m.body) });
+      if (this.chatCanEdit(m)) items.push({ label: m.kind === 'note' ? 'Edit note' : 'Edit message', act: () => this.chatEditStart(m.id) });
+      if (isOp && m.edited_at) items.push({ label: 'Show edit history', act: () => this.chatHistory(m.id) });
       const opener = row.querySelector('[data-react-open]');
       if (opener && m.kind !== 'event') items.push({ label: 'Add reaction…', act: () => this.chatReactPicker(opener, m.id) });
       const orig = isOp && row.querySelector('details.ccc-orig');
@@ -596,6 +598,9 @@ Object.assign(Component.prototype, {
         clearTimeout(c.countsTimer);
         c.countsTimer = setTimeout(() => this.chatLoadList(true), 1500);
       }
+    } else if (ev.type === 'message.updated') {
+      if (ev.conversation) this.chatMergeConv(ev.conversation);
+      if (ev.message) this.chatAfterEdit(ev.message);
     } else if (ev.type === 'message.reacted') {
       const m = c.conv && c.conv.conversation.id === ev.conversation_id && c.conv.messages.find(x => x.id === ev.message_id);
       if (m) m.reactions = ev.reactions || [];
@@ -1068,6 +1073,14 @@ Object.assign(Component.prototype, {
     // A customer message without its own picture (imported, guest) uses the
     // conversation's customer.
     const avatarOf = m => m.author_avatar || (m.author_kind === 'customer' ? conv.customer_avatar : '') || '';
+    // The text, or the inline editor while this message is being edited.
+    const body = (m, cls) => c.edit && c.edit.id === m.id ? this.chatEditHtml() : (m.body ? '<div class="' + cls + '">' + this.chatText(m.body) + '</div>' : '');
+    // "edited": operators open the earlier versions from it.
+    const edited = m => {
+      if (!m.edited_at) return '';
+      const tip = esc('Edited ' + day(m.edited_at) + ', ' + time(m.edited_at) + (m.edited_by ? ' by ' + m.edited_by : '') + (cb.operator ? '. Click for the earlier versions.' : ''));
+      return cb.operator ? '<button type="button" class="ccc-edited" data-history="' + m.id + '" title="' + tip + '">edited</button>' : '<span class="ccc-edited" title="' + tip + '">edited</span>';
+    };
     msgs.forEach(m => {
       const d = day(m.created_at);
       if (d !== lastDay) { out += '<div class="ccc-day">' + esc(d) + '</div>'; lastDay = d; prev = null; }
@@ -1078,7 +1091,7 @@ Object.assign(Component.prototype, {
         return;
       }
       if (m.kind === 'note') {
-        out += '<div data-mid="' + m.id + '" class="ccc-note">' + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + '</div><div class="ccc-mb">' + this.chatText(m.body) + '</div>' + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
+        out += '<div data-mid="' + m.id + '" class="ccc-note">' + this.chatEditBtn(m) + this.chatReactBtn(m) + '<div class="ccc-nh">Internal note · ' + esc(name) + (m.via === 'bot' ? ' <span class="ccc-bot">Bot</span>' : '') + ' · ' + esc(time(m.created_at)) + (m.edited_at ? ' · ' + edited(m) : '') + '</div>' + body(m, 'ccc-mb') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>';
         prev = null;
         return;
       }
@@ -1086,16 +1099,16 @@ Object.assign(Component.prototype, {
         const cont = prev && prev.author_kind === m.author_kind && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div data-mid="' + m.id + '" class="ccc-msg' + (cont ? ' ccc-cont' : '') + '">' +
           '<span class="ccc-av" style="background:' + this.chatColor(name) + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span><div class="ccc-mbody">' +
-          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span></div>') +
-          (m.body ? '<div class="ccc-mb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatReactBtn(m) + '</div>';
+          (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span>' + edited(m) + '</div>') +
+          body(m, 'ccc-mb') + (cont && m.edited_at ? '<div class="ccc-edline">' + edited(m) + '</div>' : '') + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatEditBtn(m) + this.chatReactBtn(m) + '</div>';
       } else {
         const me = m.author_kind === 'customer';
         const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
         out += '<div data-mid="' + m.id + '" class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
-          (me ? this.chatReactBtn(m) : '') +
-          '<div class="ccc-bwrap">' + (m.body ? '<div class="ccc-bb">' + this.chatText(m.body) + '</div>' : '') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
-          '<div class="ccc-bmeta' + (me ? ' ccc-r' : '') + '">' + (me ? '' : esc(name) + ' · ') + esc(time(m.created_at)) + '</div>';
+          (me ? this.chatEditBtn(m) + this.chatReactBtn(m) : '') +
+          '<div class="ccc-bwrap' + (c.edit && c.edit.id === m.id ? ' ccc-bwrap-edit' : '') + '">' + body(m, 'ccc-bb') + this.chatFilesHtml(m.attachments) + this.chatReactsHtml(m) + '</div>' + (me ? '' : this.chatReactBtn(m)) + '</div>' +
+          '<div class="ccc-bmeta' + (me ? ' ccc-r' : '') + '">' + (me ? '' : esc(name) + ' · ') + esc(time(m.created_at)) + (m.edited_at ? ' · ' + edited(m) : '') + '</div>';
       }
       prev = m;
     });
@@ -1150,12 +1163,30 @@ Object.assign(Component.prototype, {
       el._cccBound = true;
       el.addEventListener('scroll', () => { c.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80; });
       el.addEventListener('contextmenu', e => this.chatThreadCtx(e, el));
+      // The inline editor: Enter saves, Shift+Enter is a new line, Esc
+      // cancels (and stops here, so the page doesn't close dialogs too).
+      el.addEventListener('keydown', e => {
+        const ta = e.target.classList && e.target.classList.contains('ccc-edit-ta') ? e.target : null;
+        if (!ta) return;
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.chatEditCancel(); }
+        else if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatEditSave(ta.value); }
+      });
+      el.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('ccc-edit-ta')) this.chatGrow(e.target, 320); });
       // Images open in the lightbox; modified clicks still open a new tab.
       el.addEventListener('click', e => {
         const chip = e.target.closest && e.target.closest('[data-react]');
         if (chip) { e.preventDefault(); this.chatReact(+chip.dataset.mid, chip.dataset.react, chip.getAttribute('aria-pressed') !== 'true'); return; }
         const opener = e.target.closest && e.target.closest('[data-react-open]');
         if (opener) { e.preventDefault(); this.chatReactPicker(opener, +opener.dataset.mid); return; }
+        const ed = e.target.closest && e.target.closest('[data-edit-open],[data-edit-save],[data-edit-cancel],[data-history]');
+        if (ed) {
+          e.preventDefault();
+          if (ed.hasAttribute('data-edit-open')) this.chatEditStart(+ed.dataset.mid);
+          else if (ed.hasAttribute('data-edit-save')) this.chatEditSave(el.querySelector('.ccc-edit-ta').value);
+          else if (ed.hasAttribute('data-edit-cancel')) this.chatEditCancel();
+          else this.chatHistory(+ed.dataset.history, ed);
+          return;
+        }
         const max = e.target.closest && e.target.closest('[data-vid-max]');
         if (max) { e.preventDefault(); this.chatMediaOpen(el, max.closest('.ccc-vid')); return; }
         const a = e.target.closest && e.target.closest('a.ccc-img');
@@ -1173,7 +1204,16 @@ Object.assign(Component.prototype, {
       el.querySelectorAll('.ccc-vid video').forEach(v => {
         if (v.currentTime > 0.2) playing[v.parentNode.dataset.aid] = { t: v.currentTime, paused: v.paused, muted: v.muted, volume: v.volume };
       });
+      // Nor lose what someone is typing into the inline editor.
+      const ta = el.querySelector('.ccc-edit-ta');
+      const keep = ta ? { id: ta.parentNode.dataset.edit, v: ta.value, a: ta.selectionStart, b: ta.selectionEnd, f: document.activeElement === ta } : null;
       el.innerHTML = '<div class="ccc-thread-in">' + html + '</div>';
+      const nta = el.querySelector('.ccc-edit-ta');
+      if (nta && keep && keep.id === nta.parentNode.dataset.edit) {
+        nta.value = keep.v;
+        if (keep.f) { nta.focus(); nta.setSelectionRange(keep.a, keep.b); }
+      }
+      if (nta) this.chatGrow(nta, 320);
       el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
       el.querySelectorAll('.ccc-vid').forEach(box => {
         const v = box.querySelector('video');
@@ -1188,6 +1228,16 @@ Object.assign(Component.prototype, {
       el.querySelectorAll('img.ccc-avimg').forEach(img => this.chatAvRef(img));
     }
     if (c.scrollPin && c.conv) { el.scrollTop = el.scrollHeight; c.scrollPin = false; c.nearBottom = true; }
+    if (c.edit && c.edit.focus) {
+      const t = el.querySelector('.ccc-edit-ta');
+      if (t) {
+        c.edit.focus = false;
+        t.focus();
+        t.setSelectionRange(t.value.length, t.value.length);
+        const box = t.closest('[data-mid]');
+        if (box && box.scrollIntoView) box.scrollIntoView({ block: 'nearest' });
+      }
+    }
   },
 
   // Reply emails show a video as a picture with a play button. The server
@@ -1333,6 +1383,160 @@ Object.assign(Component.prototype, {
 
   // A message's reaction pills: emoji, count, pressed when one is yours,
   // and who reacted in the tooltip (eight names, then "and N others").
+  // ── edits ─────────────────────────────────────────────────────────────
+  // Same rules as Chat::can_edit. The server keeps each replaced version
+  // (Chat::revisions); operators read them from the "edited" label.
+
+  chatCanEdit(m) {
+    const cb = this.chatBoot();
+    if (!m || (m.kind !== 'comment' && m.kind !== 'note')) return false;
+    if (cb.operator) return true;
+    return m.kind === 'comment' && m.author_kind === 'customer' && m.author_user_id === cb.userId;
+  },
+
+  // The pencil beside the reaction button, on your own messages. Others'
+  // (an operator fixing a customer's) go through the right-click menu.
+  chatEditBtn(m) {
+    if (!this.chatCanEdit(m) || m.author_user_id !== this.chatBoot().userId || m.via === 'bot') return '';
+    return '<button type="button" class="ccc-react-add ccc-edit-btn" data-edit-open data-mid="' + m.id + '" title="Edit" aria-label="Edit message">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"></path></svg></button>';
+  },
+
+  chatEditHtml() {
+    const e = this._chat.edit;
+    return '<div class="ccc-edit" data-edit="' + e.id + '"><textarea class="ccc-edit-ta" rows="2" aria-label="Edit message"' + (e.saving ? ' readonly' : '') + '>' + this.chatEsc(e.seed) + '</textarea>' +
+      '<div class="ccc-edit-bar"><span>Enter to save · Esc to cancel</span><button type="button" class="ccc-edit-cancel" data-edit-cancel>Cancel</button>' +
+      '<button type="button" class="ccc-edit-save" data-edit-save' + (e.saving ? ' disabled' : '') + '>' + (e.saving ? 'Saving…' : 'Save') + '</button></div></div>';
+  },
+
+  chatGrow(t, max) {
+    t.style.height = 'auto';
+    t.style.height = Math.min(t.scrollHeight + 2, max) + 'px';
+  },
+
+  chatEditStart(mid) {
+    const c = this._chat;
+    const m = c && c.conv && c.conv.messages.find(x => x.id === mid);
+    if (!this.chatCanEdit(m)) return;
+    c.edit = { id: mid, seed: m.body || '', focus: true };
+    this.setState({});
+  },
+
+  // The newest message you wrote here, for Up in an empty composer.
+  chatEditLast() {
+    const c = this._chat;
+    const me = this.chatBoot().userId;
+    if (!c || !c.conv || c.edit) return false;
+    const m = [...c.conv.messages].reverse().find(x => x.author_user_id === me && x.via !== 'bot' && this.chatCanEdit(x));
+    if (!m) return false;
+    this.chatEditStart(m.id);
+    return true;
+  },
+
+  chatEditCancel() {
+    const c = this._chat;
+    if (!c || !c.edit) return;
+    c.edit = null;
+    this.setState({});
+    const t = this.chatComposer();
+    if (t) t.focus();
+  },
+
+  chatEditSave(text) {
+    const c = this._chat;
+    const e = c && c.edit;
+    if (!e || e.saving) return;
+    const m = c.conv && c.conv.messages.find(x => x.id === e.id);
+    if (!m) { c.edit = null; this.setState({}); return; }
+    const body = String(text || '').trim();
+    if (!body && !(m.attachments || []).length) { this.toast('A message needs some text.', { kind: 'info' }); return; }
+    if (body === String(m.body || '').trim()) { this.chatEditCancel(); return; }
+    e.saving = true;
+    this.setState({});
+    this.api('/chat/messages/' + e.id, { method: 'POST', body: { body } }).then(r => {
+      if (!r || r.code || !r.message) throw new Error((r && r.message) || 'Could not save the change');
+      if (c.edit === e) c.edit = null;
+      this.chatAfterEdit(r.message);
+      const t = this.chatComposer();
+      if (t) t.focus();
+    }).catch(err => {
+      e.saving = false;
+      this.setState({});
+      this.toast(err && err.message && err.message !== 'auth' ? err.message : 'Could not save the change', { kind: 'error' });
+    });
+  },
+
+  // Fold an edited message (ours, or message.updated from the relay) into
+  // the thread, and into the list preview when it is the latest reply.
+  chatAfterEdit(msg) {
+    const c = this._chat;
+    if (!c || !msg || !msg.id) return;
+    const viewing = c.conv && c.conv.conversation.id === msg.conversation_id;
+    const m = viewing && c.conv.messages.find(x => x.id === msg.id);
+    if (m) Object.assign(m, msg);
+    const row = c.list.find(x => x.id === msg.conversation_id);
+    const last = viewing && [...c.conv.messages].reverse().find(x => x.kind === 'comment');
+    if (row && msg.kind === 'comment' && (row._lastSeen === msg.id || (last && last.id === msg.id))) row.preview = String(msg.body || '').slice(0, 200);
+    this.setState({});
+  },
+
+  // Edit history (operators): every version, newest first, each showing
+  // what changed from the one before it.
+  chatHistory(mid, from) {
+    const opener = from || document.activeElement;
+    this.api('/chat/messages/' + mid + '/revisions').then(r => {
+      if (!r || r.code || !r.revisions) throw new Error((r && r.message) || 'Could not load the edit history');
+      const list = r.revisions;
+      const esc = t => this.chatEsc(t);
+      const when = ts => new Date(ts * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+      const box = document.createElement('div');
+      box.className = 'ccc-hist';
+      box.innerHTML = '<div class="ccc-hist-box" role="dialog" aria-modal="true" aria-labelledby="ccc-hist-h">' +
+        '<div class="ccc-hist-head"><h2 id="ccc-hist-h">Edit history</h2><span>' + list.length + ' versions</span><button type="button" class="ccc-tool" data-close aria-label="Close">✕</button></div>' +
+        '<ol class="ccc-hist-list">' + list.map((v, i) => {
+          const older = list[i + 1];
+          const label = v.current ? 'Current' : (!older ? 'Original' : 'Version ' + (list.length - i));
+          return '<li><div class="ccc-hist-meta"><b>' + label + '</b> · ' + esc(v.by || 'Someone') + ' · ' + esc(when(v.at)) + '</div>' +
+            '<div class="ccc-hist-body">' + (older ? this.chatWordDiff(older.body, v.body) : esc(v.body)) + '</div></li>';
+        }).join('') + '</ol></div>';
+      document.body.appendChild(box);
+      const close = () => { document.removeEventListener('keydown', key, true); box.remove(); if (opener && opener.focus && document.body.contains(opener)) opener.focus(); };
+      const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+      box.addEventListener('click', e => { if (e.target === box || e.target.closest('[data-close]')) close(); });
+      document.addEventListener('keydown', key, true);
+      box.querySelector('[data-close]').focus();
+    }).catch(e => this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not load the edit history', { kind: 'error' }));
+  },
+
+  // Word-level diff of two texts as escaped HTML: removed words in <del>,
+  // added in <ins>. Very long texts that both changed throughout skip the
+  // diff and show the newer text.
+  chatWordDiff(a, b) {
+    const esc = t => this.chatEsc(t);
+    const A = String(a || '').split(/(\s+)/).filter(Boolean);
+    const B = String(b || '').split(/(\s+)/).filter(Boolean);
+    let p = 0;
+    while (p < A.length && p < B.length && A[p] === B[p]) p++;
+    let q = 0;
+    while (q < A.length - p && q < B.length - p && A[A.length - 1 - q] === B[B.length - 1 - q]) q++;
+    const x = A.slice(p, A.length - q), y = B.slice(p, B.length - q);
+    const N = x.length, M = y.length, W = M + 1;
+    if (N * M > 3000000) return esc(b);
+    const L = new Uint32Array((N + 1) * W);
+    for (let i = N - 1; i >= 0; i--) for (let j = M - 1; j >= 0; j--) L[i * W + j] = x[i] === y[j] ? L[(i + 1) * W + j + 1] + 1 : Math.max(L[(i + 1) * W + j], L[i * W + j + 1]);
+    const ops = [];
+    const push = (k, t) => { const o = ops[ops.length - 1]; if (o && o.k === k) o.t += t; else ops.push({ k, t }); };
+    let i = 0, j = 0;
+    while (i < N && j < M) {
+      if (x[i] === y[j]) { push('=', x[i]); i++; j++; }
+      else if (L[(i + 1) * W + j] >= L[i * W + j + 1]) push('-', x[i++]);
+      else push('+', y[j++]);
+    }
+    while (i < N) push('-', x[i++]);
+    while (j < M) push('+', y[j++]);
+    return esc(A.slice(0, p).join('')) + ops.map(o => o.k === '=' ? esc(o.t) : o.k === '-' ? '<del>' + esc(o.t) + '</del>' : '<ins>' + esc(o.t) + '</ins>').join('') + esc(A.slice(A.length - q).join(''));
+  },
+
   chatReactsHtml(m) {
     const me = this.chatBoot().userId;
     const defs = Object.fromEntries(this.CHAT_REACTIONS.map(r => [r[0], r]));
@@ -1596,7 +1800,11 @@ Object.assign(Component.prototype, {
       })) : [],
       chatBody: s.chatBody || '',
       onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(e.target.value); },
-      chatKey: e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); } },
+      chatKey: e => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); }
+        // Up in an empty composer edits your last message, as in Slack.
+        else if (e.key === 'ArrowUp' && !e.target.value && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && this.chatEditLast()) e.preventDefault();
+      },
       chatSendGo: () => this.chatSend(),
       chatSendOpacity: ((s.chatBody || '').trim() || c.files.length) && !s.chatSending ? 1 : 0.45,
       chatDropRef: el => this.chatDropRef(el),

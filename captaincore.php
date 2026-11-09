@@ -2750,6 +2750,7 @@ function captaincore_chat_conversations_func( WP_REST_Request $request ) {
 		'site'     => (int) $request->get_param( 'site' ),
 		'before'   => (int) $request->get_param( 'before' ),
 		'limit'    => (int) $request->get_param( 'limit' ),
+		'drafts'   => (bool) $request->get_param( 'drafts' ),
 	] ) ];
 	if ( CaptainCore\Chat::is_operator( $user_id ) ) {
 		$out['counts'] = CaptainCore\Chat::counts();
@@ -2768,6 +2769,22 @@ function captaincore_chat_conversation_func( WP_REST_Request $request ) {
 		'before' => (int) $request->get_param( 'before' ),
 		'limit'  => (int) $request->get_param( 'limit' ),
 	] );
+}
+
+function captaincore_chat_draft_func( WP_REST_Request $request ) {
+	$user_id = get_current_user_id();
+	if ( ! CaptainCore\Chat::is_operator( $user_id ) || ! CaptainCore\Chat::viewable( $user_id, (int) $request['id'] ) ) {
+		return new WP_Error( 'not_found', 'Conversation not found.', [ 'status' => 404 ] );
+	}
+	return [ 'draft' => CaptainCore\Chat::draft( (int) $request['id'] ) ];
+}
+
+function captaincore_chat_draft_save_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::save_draft( get_current_user_id(), (int) $request['id'], (array) ( $request->get_json_params() ?: $request->get_body_params() ) );
+}
+
+function captaincore_chat_draft_delete_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::discard_draft( get_current_user_id(), (int) $request['id'] );
 }
 
 function captaincore_chat_update_func( WP_REST_Request $request ) {
@@ -2790,6 +2807,15 @@ function captaincore_chat_read_func( WP_REST_Request $request ) {
 function captaincore_chat_react_func( WP_REST_Request $request ) {
 	$p = (array) $request->get_json_params();
 	return CaptainCore\Chat::react( get_current_user_id(), (int) $request['id'], (string) ( $p['e'] ?? '' ), ! isset( $p['on'] ) || ! empty( $p['on'] ) );
+}
+
+function captaincore_chat_edit_func( WP_REST_Request $request ) {
+	$p = (array) $request->get_json_params();
+	return CaptainCore\Chat::edit_message( get_current_user_id(), (int) $request['id'], $p['body'] ?? $request['body'] );
+}
+
+function captaincore_chat_revisions_func( WP_REST_Request $request ) {
+	return CaptainCore\Chat::revisions( get_current_user_id(), (int) $request['id'] );
 }
 
 function captaincore_chat_attachment_func( WP_REST_Request $request ) {
@@ -11110,6 +11136,26 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/draft', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_chat_draft_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => 'captaincore_chat_draft_save_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => 'captaincore_chat_draft_delete_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/messages', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_chat_message_func',
@@ -11188,6 +11234,23 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => [ 'CaptainCore\ChatNotify', 'inbound' ],
 			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/messages/(?P<id>[\d]+)', [
+			'methods'             => WP_REST_Server::EDITABLE,
+			'callback'            => 'captaincore_chat_edit_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/messages/(?P<id>[\d]+)/revisions', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_chat_revisions_func',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
