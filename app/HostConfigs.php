@@ -18,11 +18,17 @@ class HostConfigs extends DB {
 
 	static $primary_key = 'host_config_id';
 
-	/** PHP versions and the Incus image each runs from. Only built images are selectable. */
+	/**
+	 * PHP versions and the site image each runs from (built on a server with
+	 * `captaincore node image build <server-id> --php=8.x`). A site's PHP
+	 * version is its container's image: `host apply` rebuilds the container on
+	 * the other image when the version changes, keeping its files, database,
+	 * address and limits.
+	 */
 	const PHP_IMAGES = [
-		'8.3' => '',
+		'8.3' => 'cc-wp-php83',
 		'8.4' => 'cc-wp-php84',
-		'8.5' => '',
+		'8.5' => 'cc-wp-php85',
 	];
 
 	const LIMITS = [
