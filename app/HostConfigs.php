@@ -63,6 +63,7 @@ class HostConfigs extends DB {
 			'noindex'             => true,
 			'mail'                => 'relay',
 			'suspended'           => false,
+			'page_cache'          => [ 'enabled' => true, 'ttl' => 60, 'exclude' => [] ],
 			'apps'                => [],
 		];
 	}
@@ -266,6 +267,11 @@ class HostConfigs extends DB {
 		$out['mail']             = ( $in['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
 		// Suspended: the edge answers every request with a holding page (503).
 		$out['suspended']        = ! empty( $in['suspended'] );
+		$cache_errors            = [];
+		$out['page_cache']       = self::sanitize_page_cache( $in['page_cache'] ?? null, $cache_errors );
+		if ( $cache_errors ) {
+			return new \WP_Error( 'invalid', $cache_errors[0], [ 'status' => 400 ] );
+		}
 
 		// Apps: long-running programs beside the site (a chat or realtime
 		// server), each a systemd service in the container that runs as the
@@ -346,6 +352,8 @@ class HostConfigs extends DB {
 		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
 		$config['mail']      = ( $config['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
 		$config['suspended'] = ! empty( $config['suspended'] );
+		$none                 = [];
+		$config['page_cache'] = self::sanitize_page_cache( $config['page_cache'] ?? null, $none );
 		$config['apps']      = $config['apps'] ?? [];
 		return $config;
 	}
@@ -450,6 +458,34 @@ class HostConfigs extends DB {
 		}
 		$domain = $id ? Domains::get( $id ) : null;
 		return ( $domain && $domain->remote_id ) ? $domain : null;
+	}
+
+	/**
+	 * Page cache: pages anonymous visitors request are saved as static files
+	 * in the container and served without PHP (`host apply` installs it; no
+	 * plugin in WordPress). `ttl` is minutes a saved page is kept; `exclude`
+	 * lists paths that are never saved, with everything under them.
+	 */
+	const PAGE_CACHE_TTLS = [ 15, 60, 360, 1440, 10080 ];
+
+	public static function sanitize_page_cache( $in, &$errors ) {
+		// No setting at all (a site from before the page cache, or a caller that left it out) means off.
+		$in  = is_array( $in ) ? $in : ( is_object( $in ) ? (array) $in : [ 'enabled' => false ] );
+		$ttl = (int) ( $in['ttl'] ?? 60 );
+		$out = [ 'enabled' => ! empty( $in['enabled'] ), 'ttl' => in_array( $ttl, self::PAGE_CACHE_TTLS, true ) ? $ttl : 60, 'exclude' => [] ];
+		foreach ( (array) ( $in['exclude'] ?? [] ) as $path ) {
+			$path = '/' . trim( strtolower( trim( (string) $path ) ), '/' );
+			if ( $path === '/' ) {
+				continue;
+			}
+			if ( ! preg_match( '@^(/[a-z0-9._~-]+)+$@', $path ) || strlen( $path ) > 200 ) {
+				$errors[] = "Page cache: \"{$path}\" is not a path like /members or /shop/sale.";
+				continue;
+			}
+			$out['exclude'][ $path ] = $path;
+		}
+		$out['exclude'] = array_slice( array_values( $out['exclude'] ), 0, 50 );
+		return $out;
 	}
 
 	/**

@@ -76,6 +76,71 @@ Object.assign(Component.prototype, {
     }).catch(() => { this._hostMail = { key, error: 'Could not read mail' }; this.setState({}); });
   },
 
+  // Page cache: the setting lives in the hosting config (saved and applied
+  // with everything else); the saved-page count and Clear cache talk to the
+  // node right away.
+  loadHostCache(force) {
+    const key = this.hostingKey();
+    if (!force && this._hostCache && this._hostCache.key === key) return;
+    const [siteId, env] = key.split('|');
+    this._hostCache = { key, loading: true, data: (this._hostCache && this._hostCache.key === key) ? this._hostCache.data : null };
+    this.setState({});
+    this.api('/sites/' + siteId + '/hosting/cache?environment=' + encodeURIComponent(env)).then(res => {
+      if (!this._hostCache || this._hostCache.key !== key) return;
+      this._hostCache = (!res || res.code) ? { key, error: (res && res.message) || 'Could not read the page cache' } : { key, data: res };
+      this.setState({});
+    }).catch(() => { this._hostCache = { key, error: 'Could not read the page cache' }; this.setState({}); });
+  },
+
+  clearHostCache() {
+    const key = this.hostingKey(), [siteId, env] = key.split('|');
+    const tid = this.toast('Clearing the page cache…', { kind: 'loading' });
+    this.api('/sites/' + siteId + '/hosting/cache?environment=' + encodeURIComponent(env), { method: 'POST', body: { environment: env } }).then(res => {
+      if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not clear the page cache', { kind: 'error', timeout: 8000 }); return; }
+      this.updateToast(tid, 'Cleared ' + (res.cleared || 0) + (res.cleared === 1 ? ' saved page' : ' saved pages') + '. Each page is saved again on its next visit.', { kind: 'success', timeout: 6000 });
+      if (this._hostCache && this._hostCache.key === key) { this._hostCache = { key, data: res }; this.setState({}); }
+    }).catch(() => this.updateToast(tid, 'Could not clear the page cache', { kind: 'error' }));
+  },
+
+  hostCacheVals(c, set, saved) {
+    if (!this._hostCache || this._hostCache.key !== this.hostingKey()) setTimeout(() => this.loadHostCache(), 0);
+    const pc = c.page_cache = c.page_cache || { enabled: false, ttl: 60, exclude: [] };
+    pc.exclude = pc.exclude || [];
+    const m = this._hostCache || {}, d = m.data || {};
+    const ago = t => { const s = Math.max(0, (d.now || 0) - t); return s < 90 ? 'a minute' : s < 5400 ? Math.round(s / 60) + ' minutes' : s < 172800 ? Math.round(s / 3600) + ' hours' : Math.round(s / 86400) + ' days'; };
+    const size = d.bytes >= 1048576 ? (d.bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round((d.bytes || 0) / 1024)) + ' KB';
+    // The node knows whether the cache runs now; the form may hold an unsaved change.
+    const live = !!(saved && saved.page_cache && saved.page_cache.enabled);
+    let status = '';
+    if (m.error) status = '';
+    else if (m.loading && !m.data) status = 'Counting saved pages…';
+    else if (!live) status = 'Off. Every page view runs PHP.';
+    else if (!d.pages) status = 'No pages saved yet. A page is saved the first time a visitor asks for it.';
+    else status = d.pages.toLocaleString() + (d.pages === 1 ? ' page' : ' pages') + ' saved · ' + size + ' · oldest ' + ago(d.oldest) + ' old';
+    const addEx = () => {
+      const raw = (this.state.hostCacheEx || '').trim().toLowerCase();
+      const path = '/' + raw.replace(/^https?:\/\/[^/]+/, '').replace(/^\/+|\/+$/g, '');
+      if (!/^(\/[a-z0-9._~-]+)+$/.test(path)) { this.toast('Enter a path like /members or /shop/sale', { kind: 'error' }); return; }
+      set(cc => { if (!cc.page_cache.exclude.includes(path)) cc.page_cache.exclude.push(path); });
+      this.setState({ hostCacheEx: '' });
+    };
+    return {
+      hostCacheIco: this.icon('bolt'),
+      hostCacheOn: !!pc.enabled, hostCacheMark: pc.enabled ? '✓' : '',
+      toggleHostCache: () => set(cc => { cc.page_cache.enabled = !cc.page_cache.enabled; }),
+      hostCacheTtls: [[15, '15 minutes'], [60, '1 hour'], [360, '6 hours'], [1440, '1 day'], [10080, '1 week']].map(([v, l]) => ({ label: l,
+        fg: pc.ttl === v ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: pc.ttl === v ? 'var(--brand-soft)' : 'transparent', bd: pc.ttl === v ? 'var(--brand)' : 'var(--rule)',
+        pick: () => set(cc => { cc.page_cache.ttl = v; }) })),
+      hostCacheExcl: pc.exclude.map(p => ({ path: p, remove: () => set(cc => { cc.page_cache.exclude = cc.page_cache.exclude.filter(x => x !== p); }) })),
+      hostCacheEx: this.state.hostCacheEx || '', onHostCacheEx: e => this.setState({ hostCacheEx: e.target.value }),
+      onHostCacheExKey: e => { if (e.key === 'Enter') { e.preventDefault(); addEx(); } }, addHostCacheEx: addEx,
+      hostCacheStatus: status, hostCacheHasStatus: !!status,
+      hostCacheErr: m.error || '', hostCacheHasErr: !!m.error,
+      hostCacheCanClear: live && !m.error,
+      hostCacheRefresh: () => this.loadHostCache(true), hostCacheClear: () => this.clearHostCache()
+    };
+  },
+
   hostMailVals(c, set) {
     if (!this._hostMail || this._hostMail.key !== this.hostingKey()) setTimeout(() => this.loadHostMail(), 0);
     const m = this._hostMail || {}, d = m.data || {};
@@ -290,7 +355,7 @@ Object.assign(Component.prototype, {
           } });
       },
       // Local backups
-      ...this.hostBackupVals(), ...this.hostMailVals(c, set),
+      ...this.hostBackupVals(), ...this.hostMailVals(c, set), ...this.hostCacheVals(c, set, d.config),
       // History
       hostHist: (d.history || []).map(r => ({ rev: 'r' + r.revision, note: r.note || '—', by: r.by, when: ago(r.created_at),
         status: (statusMap[r.status] || [r.status])[0], fg: (statusMap[r.status] || [0, 'var(--ink-dim)'])[1],

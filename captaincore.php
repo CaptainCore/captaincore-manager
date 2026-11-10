@@ -7032,6 +7032,34 @@ function captaincore_site_hosting_mail_func( $request ) {
 	return $out;
 }
 
+// Page cache of one environment: how many pages are saved (GET), or delete
+// them all (POST). Both ask the node through the CLI and answer at once.
+function captaincore_site_hosting_cache_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$action = $request->get_method() === 'POST' ? 'clear' : 'status';
+	$res    = CaptainCore\Run::execute( [ 'host', 'cache', $action, captaincore_hosting_target( $env ), '--json' ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'cache_unavailable', 'Could not reach the page cache: ' . ( $data->error ?? substr( (string) ( $res['response'] ?? '' ), 0, 200 ) ), [ 'status' => 502 ] );
+	}
+	if ( $action === 'clear' ) {
+		$site = CaptainCore\Sites::get( (int) $env->site_id );
+		CaptainCore\ProcessLog::insert( 'Cleared the page cache (' . (int) ( $data->cleared ?? 0 ) . ' saved pages)', (int) $env->site_id );
+	}
+	return [
+		'enabled' => ! empty( $data->enabled ), 'pages' => (int) ( $data->pages ?? 0 ), 'bytes' => (int) ( $data->bytes ?? 0 ),
+		'oldest'  => (int) ( $data->oldest ?? 0 ), 'newest' => (int) ( $data->newest ?? 0 ), 'now' => (int) ( $data->now ?? time() ),
+		'cleared' => isset( $data->cleared ) ? (int) $data->cleared : null,
+	];
+}
+
 // Remove an environment from its server. The caller types the site's name to
 // confirm; the CLI takes a last local backup, parks the container (kept seven
 // days) and reports back through /api host-site-removed.
@@ -12528,6 +12556,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/remove', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_remove_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/cache', [
+			'methods'             => [ 'GET', 'POST' ],
+			'callback'            => 'captaincore_site_hosting_cache_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
