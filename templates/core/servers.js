@@ -104,6 +104,7 @@ Object.assign(Component.prototype, {
       { label: 'View details', act: () => this.openServer(r.server_id) },
       { label: 'Add site…', act: () => this.addSiteToServer(r) },
       { label: 'Show sites', act: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); } },
+      { label: 'Apply settings to every site…', act: () => this.applyAllOnServer(r) },
       { label: 'Edit server…', act: () => this.openServerDialog(r) },
       ...(ssh ? [{ label: 'Copy SSH command', act: () => this.ctxCopy(ssh, 'SSH command') }] : []),
       ...(r.address ? [{ label: 'Copy IPv4', act: () => this.ctxCopy(r.address, 'IPv4') }] : []),
@@ -429,6 +430,61 @@ Object.assign(Component.prototype, {
     }).catch(() => { this._srvLog = { source, text: 'Could not read the log' }; this.setState({}); });
   },
 
+  // Sign-in protection: addresses the server has blocked from signing in to
+  // any of its sites after repeated failed attempts (fail2ban on the edge's
+  // sign-in log). Blocked addresses can still browse; only wp-login.php and
+  // xmlrpc.php answer them with a "too many attempts" page.
+  loadServerGuard(force) {
+    const id = this.state.serverId;
+    if (!force && this._srvGuard && this._srvGuard.id === id) return;
+    this._srvGuard = { id, loading: true, data: (this._srvGuard && this._srvGuard.id === id) ? this._srvGuard.data : null };
+    this.setState({});
+    this.api('/servers/' + id + '/guard').then(res => {
+      if (!this._srvGuard || this._srvGuard.id !== id) return;
+      this._srvGuard = (!res || res.code) ? { id, error: (res && res.message) || 'Could not read sign-in protection' } : { id, data: res };
+      this.setState({});
+    }).catch(() => { this._srvGuard = { id, error: 'Could not read sign-in protection' }; this.setState({}); });
+  },
+
+  unblockAddress(address) {
+    const id = this.state.serverId;
+    const tid = this.toast('Unblocking ' + address + '…', { kind: 'loading' });
+    this.api('/servers/' + id + '/guard', { method: 'POST', body: { address } }).then(res => {
+      if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not unblock ' + address, { kind: 'error', timeout: 8000 }); return; }
+      this.updateToast(tid, address + ' can sign in again', { kind: 'success' });
+      this._srvGuard = { id, data: res }; this.setState({});
+    }).catch(() => this.updateToast(tid, 'Could not unblock ' + address, { kind: 'error' }));
+  },
+
+  serverGuardVals() {
+    const id = this.state.serverId;
+    if (!this._srvGuard || this._srvGuard.id !== id) setTimeout(() => this.loadServerGuard(), 0);
+    const g = this._srvGuard || {}, d = g.data || {}, jails = d.jails || {};
+    const login = jails['cc-wp-login'] || {}, xml = jails['cc-xmlrpc'] || {};
+    const on = !!login.active;
+    const left = b => { const m = Math.max(1, Math.round((b.until - (d.now || 0)) / 60)); return m < 90 ? m + ' min left' : Math.round(m / 60) + ' h left'; };
+    const rows = (d.blocked || []).map(b => ({ address: b.address, why: b.why === 'xmlrpc' ? 'Too many XML-RPC calls' : 'Repeated failed sign-ins', left: left(b), unblock: () => this.unblockAddress(b.address) }));
+    let summary = '';
+    if (g.loading && !g.data) summary = 'Checking…';
+    else if (g.error) summary = '';
+    else if (!on) summary = 'Not set up on this server yet. It starts when a site\'s settings are applied.';
+    else summary = (rows.length ? rows.length + (rows.length === 1 ? ' address' : ' addresses') + ' blocked now' : 'No address is blocked right now') + ' · ' + ((login.blocked_total || 0) + (xml.blocked_total || 0)) + ' blocked and ' + (login.failed_total || 0) + ' failed sign-ins seen since the server last started watching';
+    return {
+      sdGuardIco: this.icon('lock'), sdGuardSummary: summary, sdGuardHasSummary: !!summary,
+      sdGuardErr: g.error || '', sdGuardHasErr: !!g.error,
+      sdGuardRows: rows, sdGuardRefresh: () => this.loadServerGuard(true)
+    };
+  },
+
+  // Every site's hosting settings applied again (after the CLI learns to write something new).
+  applyAllOnServer(r) {
+    this.uiConfirm('Apply the hosting settings of every site on ' + r.name + ' again? Each site is done in turn; PHP restarts for a second or two where its rules changed.', { label: 'Apply to every site' }).then(ok => {
+      if (!ok) return;
+      this.startJob({ label: 'apply-all', target: 'every site on ' + r.name, command: 'host apply --all', expand: true,
+        dispatch: () => this.api('/servers/' + r.server_id + '/apply-all', { method: 'POST', body: {} }), onFinish: () => this.loadServers(true) });
+    });
+  },
+
   serverLogVals(d) {
     const sources = [['edge', 'Edge (Caddy)'], ['ssh', 'SSH logins'], ['backups', 'Local backups'], ['updates', 'Automatic updates'], ['kernel', 'Kernel warnings'], ['incus', 'Incus']];
     (d.containers || []).forEach(c => { sources.push(['ct:' + c.name + ':php', c.name + ' · PHP']); sources.push(['ct:' + c.name + ':database', c.name + ' · MariaDB']); });
@@ -473,7 +529,7 @@ Object.assign(Component.prototype, {
     const poolH = status(pool.health === 'ONLINE', 'Pool healthy', 'Pool ' + (pool.health || 'unknown'));
     const timers = sys.timers || {};
     const lastCpu = h.length ? h[h.length - 1].cpu : now.cpu;
-    return { ...base, sdReady: true, ...this.serverLogVals(d),
+    return { ...base, sdReady: true, ...this.serverLogVals(d), ...this.serverGuardVals(),
       sdSub: [row && row.address, sys.os, 'up ' + this.fmtDuration(sys.uptime_s)].filter(Boolean).join(' · '),
       sdUpdated: 'Updated ' + new Date(st.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
       sdTiles: [

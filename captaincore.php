@@ -1300,6 +1300,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
 		];
 	}
+	if ( $command === 'host-environments' ) {
+		$targets = [];
+		foreach ( CaptainCore\Servers::list_all() as $server ) {
+			if ( ! empty( $post->server_id ) && (int) $post->server_id !== (int) $server->server_id ) {
+				continue;
+			}
+			foreach ( CaptainCore\Servers::sites_on( (int) $server->server_id ) as $row ) {
+				$targets[] = [ 'target' => $row->site . ( strtolower( $row->environment ) === 'production' ? '' : '-' . strtolower( $row->environment ) ), 'server' => $server->name ];
+			}
+		}
+		return [ 'response' => 'ok', 'targets' => $targets ];
+	}
 	if ( $command === 'server-get' ) {
 		$sv = CaptainCore\Servers::get( (int) ( $post->server_id ?? 0 ) );
 		return $sv ? [ 'server_id' => (int) $sv->server_id, 'name' => $sv->name, 'address' => $sv->address, 'ssh_port' => (int) $sv->ssh_port, 'ssh_user' => $sv->ssh_user ]
@@ -7369,6 +7381,42 @@ function captaincore_servers_logs_func( $request ) {
 	return [ 'source' => $source, 'text' => (string) $data->text ];
 }
 
+// Sign-in protection on a server: the addresses blocked from signing in
+// right now (GET), or one of them unblocked (POST address=...).
+function captaincore_servers_guard_func( $request ) {
+	$id = (int) $request['id'];
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$args = [ 'node', 'guard', (string) $id, '--json' ];
+	if ( $request->get_method() === 'POST' ) {
+		$address = trim( (string) ( $request->get_json_params()['address'] ?? '' ) );
+		if ( ! filter_var( $address, FILTER_VALIDATE_IP ) ) {
+			return new WP_Error( 'invalid', 'Not an address.', [ 'status' => 400 ] );
+		}
+		$args = [ 'node', 'unblock', (string) $id, $address, '--json' ];
+	}
+	$res = CaptainCore\Run::execute( $args );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$out  = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data = json_decode( (string) end( $out ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'guard_unavailable', 'Could not read sign-in protection on the server.', [ 'status' => 502 ] );
+	}
+	return [ 'blocked' => $data->blocked ?? [], 'jails' => $data->jails ?? new stdClass(), 'now' => (int) ( $data->now ?? time() ) ];
+}
+
+// Apply the hosting configuration of every site on a server again, as one job.
+function captaincore_servers_apply_all_func( $request ) {
+	$id = (int) $request['id'];
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	return [ 'token' => CaptainCore\Run::task( [ 'host', 'apply', '--all', '--server=' . $id ] ) ];
+}
+
 function captaincore_servers_get_func( $request ) {
 	$row = CaptainCore\Servers::get( (int) $request['id'] );
 	if ( ! $row ) {
@@ -12480,6 +12528,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/restart', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_servers_container_restart_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/guard', [
+			'methods'             => [ 'GET', 'POST' ],
+			'callback'            => 'captaincore_servers_guard_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/apply-all', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_apply_all_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);

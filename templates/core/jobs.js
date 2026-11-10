@@ -110,7 +110,7 @@ Object.assign(Component.prototype, {
     'create-user': 'Create user', 'delete-user': 'Delete user',
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
     'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy',
-    create: 'Build site', remove: 'Remove from server' },
+    create: 'Build site', remove: 'Remove from server', 'apply-all': 'Apply to every site' },
 
   // Cancel a running job — v1's killCommand (core-legacy.php:25227): tell the
   // daemon to kill the process over the job's own socket ({token, action:

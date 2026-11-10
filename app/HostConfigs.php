@@ -192,6 +192,9 @@ class HostConfigs extends DB {
 		if ( $out['php']['max_workers'] < $out['php']['workers'] ) {
 			return new \WP_Error( 'invalid', 'Burst workers can not be lower than workers.', [ 'status' => 400 ] );
 		}
+		// PHP's shell commands (exec, shell_exec, system, passthru, proc_open,
+		// popen) are off for web requests unless a site asks for them.
+		$out['php']['shell'] = ! empty( $php['shell'] );
 		$mem = $num( 'memory_mb', $in['memory_mb'] ?? 0 );
 		if ( is_wp_error( $mem ) ) {
 			return $mem;
@@ -358,6 +361,9 @@ class HostConfigs extends DB {
 		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
 		$config['mail']      = ( $config['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
 		$config['suspended'] = ! empty( $config['suspended'] );
+		if ( isset( $config['php'] ) && is_array( $config['php'] ) ) {
+			$config['php']['shell'] = ! empty( $config['php']['shell'] );
+		}
 		$none                 = [];
 		$config['page_cache'] = self::sanitize_page_cache( $config['page_cache'] ?? null, $none );
 		$config['apps']      = $config['apps'] ?? [];

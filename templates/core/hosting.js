@@ -289,6 +289,7 @@ Object.assign(Component.prototype, {
       hostRedirect: !!c.redirect_to_primary, hostRedirectMark: c.redirect_to_primary ? '✓' : '',
       toggleHostRedirect: () => set(cc => { cc.redirect_to_primary = !cc.redirect_to_primary; }),
       // PHP
+      hostShellMark: c.php.shell ? '✓' : '', toggleHostShell: () => set(cc => { cc.php.shell = !cc.php.shell; }),
       hostPhpSwitch: !!(d.config && d.config.php && c.php.version !== d.config.php.version),
       hostPhpSwitchNote: 'Moving from PHP ' + ((d.config && d.config.php && d.config.php.version) || '') + ' to ' + c.php.version + ' rebuilds this site\'s container on the PHP ' + c.php.version + ' image. A local backup is taken first; the swap takes about 10 seconds, and requests in that time wait instead of failing. Files, database, address and SSH keys stay as they are. If the site answers with an error on PHP ' + c.php.version + ', the switch is refused and the current container comes straight back.',
       hostPhpChips: (d.php_versions || []).map(v => ({ label: 'PHP ' + v.version + (v.available ? '' : ' (soon)'),

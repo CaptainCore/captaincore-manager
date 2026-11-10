@@ -2126,6 +2126,12 @@ button.ccc-edited:hover{color:var(--ink)}
                   <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Upload size</span><input value="{{ hostF_upload_max_filesize }}" onInput="{{ hostOn_upload_max_filesize }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">MB · {{ hostLim_upload_max_filesize }}</span></div>
                   <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Max execution time</span><input value="{{ hostF_max_execution_time }}" onInput="{{ hostOn_max_execution_time }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">seconds · {{ hostLim_max_execution_time }}</span></div>
                   <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Container memory</span><input value="{{ hostF_memory_mb }}" onInput="{{ hostOn_memory_mb }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">MB for PHP + database · {{ hostLim_memory_mb }}</span></div>
+                  <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding-top:4px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Shell commands</span>
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px">
+                      <span onClick="{{ toggleHostShell }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostShellMark }}</span>Let PHP run system commands for web requests</span>
+                      <span class="cc-meta">Off by default: exec, shell_exec, system, passthru, proc_open and popen are how an uploaded web shell runs anything, and WordPress never needs them. Turn it on for a plugin that shells out (some backup and image tools). WP-CLI and WP-Cron can always use them.</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -4829,6 +4835,25 @@ button.ccc-edited:hover{color:var(--ink)}
                   </sc-for>
                 </div>
               </div>
+            </div>
+            <div class="cc-card" style="margin-top:12px">
+              <div class="cc-card-h">
+                <span class="cc-chip" style="--h:var(--acc-billing)"><span ref="{{ sdGuardIco }}"></span></span>
+                <h2>Sign-in protection</h2>
+                <span class="cc-meta">After 10 failed sign-ins in 5 minutes an address can't sign in to any site on this server for an hour, longer each time it comes back. It can still browse.</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ sdGuardRefresh }}" class="cc-btn">Refresh</span>
+              </div>
+              <sc-if value="{{ sdGuardHasSummary }}" hint-placeholder-val="{{ true }}"><div style="padding:11px 16px;font:500 var(--fs-12) var(--sans)">{{ sdGuardSummary }}</div></sc-if>
+              <sc-if value="{{ sdGuardHasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:11px 16px;font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ sdGuardErr }}</div></sc-if>
+              <sc-for list="{{ sdGuardRows }}" as="gb" hint-placeholder-count="0">
+                <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-top:1px solid var(--rule);flex-wrap:wrap">
+                  <span style="font:500 var(--fs-13) var(--mono);min-width:150px">{{ gb.address }}</span>
+                  <span class="cc-meta" style="flex:1;min-width:160px">{{ gb.why }}</span>
+                  <span class="cc-meta">{{ gb.left }}</span>
+                  <span onClick="{{ gb.unblock }}" class="cc-btn">Unblock</span>
+                </div>
+              </sc-for>
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
               <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
