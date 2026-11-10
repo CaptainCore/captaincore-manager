@@ -1620,14 +1620,13 @@ Object.assign(Component.prototype, {
   chatCanEdit(m) {
     const cb = this.chatBoot();
     if (!m || (m.kind !== 'comment' && m.kind !== 'note')) return false;
-    if (cb.operator) return true;
-    return m.kind === 'comment' && m.author_kind === 'customer' && m.author_user_id === cb.userId;
+    if (!cb.userId || m.author_user_id !== cb.userId) return false;
+    return m.kind === 'comment' || !!cb.operator;
   },
 
-  // The pencil beside the reaction button, on your own messages. Others'
-  // (an operator fixing a customer's) go through the right-click menu.
+  // The pencil beside the reaction button, on your own messages.
   chatEditBtn(m) {
-    if (!this.chatCanEdit(m) || m.author_user_id !== this.chatBoot().userId || m.via === 'bot') return '';
+    if (!this.chatCanEdit(m) || m.via === 'bot') return '';
     return '<button type="button" class="ccc-react-add ccc-edit-btn" data-edit-open data-mid="' + m.id + '" title="Edit" aria-label="Edit message">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"></path></svg></button>';
   },

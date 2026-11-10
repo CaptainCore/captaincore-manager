@@ -25,9 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     reopens a closed or snoozed thread. An operator comment stops it.
  *     A close stops it too. Notes and events never move last_message_at.
  *   - A conversation links only to a site and account the customer can use.
- *   - Customers can edit their own comments. Operators can edit any comment
- *     or note (a colleague's typo, a password a customer pasted). Every
- *     edit keeps the version it replaced; only operators read that history.
+ *   - People edit only what they wrote: customers their own comments,
+ *     operators their own comments and notes. Every edit keeps the version
+ *     it replaced; only operators read that history.
  *   - Drafts are operator-only: one waiting reply per conversation, often
  *     from an AI agent, loaded into the reply box for a person to send.
  *     An operator comment clears it (a note clears only a note draft).
@@ -1295,10 +1295,10 @@ class Chat {
 		if ( ! in_array( $message->kind, [ 'comment', 'note' ], true ) ) {
 			return false;
 		}
-		if ( self::is_operator( $user_id ) ) {
-			return true;
+		if ( $user_id <= 0 || (int) $message->author_user_id !== (int) $user_id ) {
+			return false;
 		}
-		return $message->kind === 'comment' && $message->author_kind === 'customer' && (int) $message->author_user_id === (int) $user_id && $user_id > 0;
+		return $message->kind === 'comment' || self::is_operator( $user_id );
 	}
 
 	/**
