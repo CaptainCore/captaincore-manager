@@ -28,6 +28,29 @@ Object.assign(Component.prototype, {
     }).catch(() => { this._hostLoading = null; this._host = { key, error: 'Could not load hosting' }; this.setState({}); });
   },
 
+  // Local backups (ZFS snapshots on the node), listed live through the CLI.
+  loadHostBackups(force) {
+    const key = this.hostingKey();
+    if (!force && this._hostBk && this._hostBk.key === key) return;
+    const [siteId, env] = key.split('|');
+    this._hostBk = { key, loading: true, list: (this._hostBk && this._hostBk.key === key) ? this._hostBk.list : [] };
+    this.setState({});
+    this.api('/sites/' + siteId + '/hosting/backups?environment=' + encodeURIComponent(env)).then(res => {
+      if (this._hostBk.key !== key) return;
+      this._hostBk = (!res || res.code) ? { key, error: (res && res.message) || 'Could not list local backups', list: [] } : { key, list: res.backups || [] };
+      this.setState({});
+    }).catch(() => { this._hostBk = { key, error: 'Could not list local backups', list: [] }; this.setState({}); });
+  },
+
+  hostBackupJob(action, backup, what, label) {
+    const [siteId, env] = this.hostingKey().split('|');
+    const site = (this._detail && this._detail.site) || {};
+    this.startJob({ label: action === 'create' ? 'backup' : action, target: label + ' · ' + (site.name || ''), command: 'host backup ' + action,
+      siteId, environment: env,
+      dispatch: () => this.api('/sites/' + siteId + '/hosting/backups', { method: 'POST', body: { environment: env, action, backup, what } }),
+      onFinish: () => this.loadHostBackups(true) });
+  },
+
   hostingSend(path, body, label) {
     const [siteId, env] = this.hostingKey().split('|');
     const tid = this.toast(label + '…', { kind: 'loading' });
@@ -37,6 +60,34 @@ Object.assign(Component.prototype, {
       this.updateToast(tid, res.token ? label.replace(/…$/, '') + ': applying to ' + ((res.server && res.server.name) || 'the server') : 'Saved, but the CLI server did not answer. Use Apply again.', { kind: res.token ? 'success' : 'info' });
       this._host = null; this.loadHosting(true);
     }).catch(e => this.updateToast(tid, (e && e.message) || 'Something went wrong', { kind: 'error' }));
+  },
+
+  hostBackupVals() {
+    if (!this._hostBk || this._hostBk.key !== this.hostingKey()) setTimeout(() => this.loadHostBackups(), 0);
+    const bk = this._hostBk || { loading: true, list: [] };
+    const typeLabel = { daily: 'Daily', manual: 'Manual', 'pre-restore': 'Before restore', 'pre-deploy': 'Before deploy' };
+    const fmt = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+    return {
+      hostBkLoading: !!bk.loading && !bk.list.length, hostBkErr: bk.error || '', hostBkHasErr: !!bk.error,
+      hostBkEmpty: !bk.loading && !bk.error && !bk.list.length,
+      hostBkRows: bk.list.map(b => ({
+        when: fmt(b.created), type: typeLabel[b.type] || b.type, size: (b.used_bytes / 1e6 < 0.1 ? '<0.1' : (b.used_bytes / 1e6).toFixed(1)) + ' MB unique',
+        canDelete: b.type === 'manual',
+        restore: e => this.openCtxMenu(e, [
+          { label: 'Restore files and database', act: () => this.hostRestoreConfirm(b, 'both') },
+          { label: 'Restore files only', act: () => this.hostRestoreConfirm(b, 'files') },
+          { label: 'Restore database only', act: () => this.hostRestoreConfirm(b, 'database') }]),
+        del: async () => { if (await this.uiConfirm('Delete the manual backup from ' + fmt(b.created) + '?', { label: 'Delete backup' })) this.hostBackupJob('delete', b.name, '', 'delete backup'); }
+      })),
+      hostBkCreate: () => this.hostBackupJob('create', '', '', 'local backup'),
+      hostBkRefresh: () => this.loadHostBackups(true)
+    };
+  },
+
+  async hostRestoreConfirm(b, what) {
+    const words = { both: 'files and database', files: 'files', database: 'database' }[what];
+    if (!(await this.uiConfirm('Restore the ' + words + ' from ' + new Date(b.created).toLocaleString() + '? A backup of the site as it is now is taken first.', { label: 'Restore' }))) return;
+    this.hostBackupJob('restore', b.name, what, 'restore ' + words);
   },
 
   computeHosting(real, s) {
@@ -164,6 +215,8 @@ Object.assign(Component.prototype, {
       hostPpPassPh: c.password_protect && c.password_protect.has_password ? 'Password saved; type to change it' : 'Password (8+ characters)',
       // Tools
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
+      // Local backups
+      ...this.hostBackupVals(),
       // History
       hostHist: (d.history || []).map(r => ({ rev: 'r' + r.revision, note: r.note || '—', by: r.by, when: ago(r.created_at),
         status: (statusMap[r.status] || [r.status])[0], fg: (statusMap[r.status] || [0, 'var(--ink-dim)'])[1],

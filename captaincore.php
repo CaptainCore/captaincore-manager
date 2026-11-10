@@ -6961,6 +6961,58 @@ function captaincore_site_hosting_action_func( $request ) {
 	return captaincore_site_hosting_response( $env ) + [ 'token' => CaptainCore\HostConfigs::apply( $env ) ];
 }
 
+// <site>[-env] for CLI commands about a hosting environment.
+function captaincore_hosting_target( $env ) {
+	$site = CaptainCore\Sites::get( (int) $env->site_id );
+	return $site->site . ( strtolower( $env->environment ) === 'production' ? '' : '-' . strtolower( $env->environment ) );
+}
+
+// Local backups (ZFS snapshots) on the node: listed live through the CLI.
+function captaincore_site_hosting_backups_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$res = CaptainCore\Run::execute( [ 'host', 'backup', 'list', captaincore_hosting_target( $env ), '--json' ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'backups_unavailable', 'Could not list local backups: ' . ( $data->error ?? substr( (string) ( $res['response'] ?? '' ), 0, 200 ) ), [ 'status' => 502 ] );
+	}
+	return [ 'backups' => $data->backups ];
+}
+
+// create | restore | delete → a CLI job token the dashboard streams.
+function captaincore_site_hosting_backups_action_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$params = $request->get_json_params();
+	$action = (string) ( $params['action'] ?? '' );
+	$name   = (string) ( $params['backup'] ?? '' );
+	$what   = (string) ( $params['what'] ?? 'both' );
+	$target = captaincore_hosting_target( $env );
+	if ( $action === 'create' ) {
+		$argv = [ 'host', 'backup', 'create', $target ];
+	} elseif ( in_array( $action, [ 'restore', 'delete' ], true ) && preg_match( '/^cc-\d{8}T\d{6}-(daily|manual|pre-restore|pre-deploy)$/', $name ) ) {
+		$argv = [ 'host', 'backup', $action, $target, $name ];
+		if ( $action === 'restore' ) {
+			if ( ! in_array( $what, [ 'both', 'files', 'database' ], true ) ) {
+				return new WP_Error( 'invalid', 'Restore files, database or both.', [ 'status' => 400 ] );
+			}
+			$argv[] = '--what=' . $what;
+		}
+	} else {
+		return new WP_Error( 'invalid', 'Unknown backup action.', [ 'status' => 400 ] );
+	}
+	CaptainCore\ProcessLog::insert( ucfirst( $action ) . ' local backup' . ( $name ? " {$name}" : '' ) . ( $action === 'restore' ? " ({$what})" : '' ), (int) $env->site_id );
+	return [ 'token' => CaptainCore\Run::task( $argv ) ];
+}
+
 function captaincore_public_keys_response() {
 	$keys = [];
 	foreach ( ( new CaptainCore\PublicKeys )->all( 'public_key_id', 'ASC' ) as $key ) {
@@ -12141,6 +12193,21 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_action_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/backups', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_site_hosting_backups_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_site_hosting_backups_action_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 		]
 	);
 
