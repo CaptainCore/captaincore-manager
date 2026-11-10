@@ -392,10 +392,27 @@ Object.assign(Component.prototype, {
     }).catch(err => { console.warn('magiclogin failed', err); this.updateToast(tid, 'Could not sign in', { kind: 'error' }); });
   },
 
+  // Sites on our own servers: staging builds and deploys are CLI jobs
+  // (host staging create / host deploy) streamed into the dock.
+  realHostDeploy(real, action, body, label) {
+    const site = real.site || {};
+    this.startJob({ label: 'deploy', target: label + ' on ' + (site.name || ''), command: 'host ' + action, siteId: real.siteId,
+      dispatch: () => this.api('/sites/' + real.siteId + '/hosting/' + action, { method: 'POST', body: body || {} }),
+      onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
+  },
+
   realPush(real, direction) {
     if (!real.envs) return;
     const prod = real.envs.find(e => e.environment === 'Production');
     const stag = real.envs.find(e => e.environment === 'Staging');
+    if (real.site && real.site.provider === 'captaincore') {
+      if (direction === 'down' && !stag) { this.realHostDeploy(real, 'staging', {}, 'production → new staging'); return; }
+      if (!prod || !stag) { this.toast('This site has no ' + (prod ? 'staging' : 'production') + ' environment', { kind: 'error' }); return; }
+      const what = this.state.depWhat || 'both';
+      this.realHostDeploy(real, 'deploy', { to: direction === 'up' ? 'production' : 'staging', what },
+        (direction === 'up' ? 'staging → production' : 'production → staging') + (what === 'both' ? '' : ' (' + what + ')'));
+      return;
+    }
     // No Staging row yet: a pull builds one at the host instead of silently
     // doing nothing; a push has nothing to push from.
     if (prod && !stag && direction === 'down') { this.realPullToNewStaging(real); return; }
@@ -452,12 +469,17 @@ Object.assign(Component.prototype, {
     const label = from + ' → ' + to;
     // A pull on a site with no Staging row creates one (realPullToNewStaging).
     const newStaging = dir === 'down' && !!(real && real.envs) && !real.envs.some(e => e.environment === 'Staging');
+    const ownHost = !!(real && real.site && real.site.provider === 'captaincore');
     return {
       depOpen: !!dir,
       depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : swap ? 'Swap staging and production' : 'Push to another site',
       depFrom: from, depTo: to,
       depVerb: swap ? 'Swap' : 'Deploy', depArrow: swap ? '⇄' : '→',
-      depWarn: swap
+      depWarn: (ownHost && !newStaging && (dir === 'up' || dir === 'down'))
+        ? 'This overwrites ' + to + ' with a copy of ' + from + '. A local backup of the target is taken first (Hosting → Local backups), and the target keeps its own domain and search engine setting.'
+        : (ownHost && newStaging)
+        ? 'This site has no staging environment yet. One is built on the same server from a copy of production, with its own temporary domain, hidden from search engines. It takes about a minute.'
+        : swap
         ? 'Production gets a copy of staging. Kinsta backs up production right before the push, and that backup is then restored into staging. Each step takes several minutes.'
         : newStaging
         ? 'This site has no staging environment yet. The host creates one from a copy of ' + from + ', which can take several minutes.'
@@ -465,6 +487,11 @@ Object.assign(Component.prototype, {
       depBtn: dir === 'up' ? 'Push to production' : swap ? 'Swap environments' : newStaging ? 'Create staging' : dir === 'down' ? 'Pull to staging' : 'Push to ' + (t.name || 'site'),
       // Red whenever a production environment is about to be overwritten.
       depBtnBg: (dir === 'up' || swap || (dir === 'other' && t.environment === 'Production')) ? 'var(--bad)' : 'var(--brand)',
+      // Our own servers can deploy files, the database or both.
+      depWhatShow: ownHost && !newStaging && (dir === 'up' || dir === 'down'),
+      depWhatChips: [['both', 'Files and database'], ['files', 'Files only'], ['database', 'Database only']].map(([v, l]) => ({ label: l,
+        fg: (s.depWhat || 'both') === v ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: (s.depWhat || 'both') === v ? 'var(--brand-soft)' : 'transparent',
+        bd: (s.depWhat || 'both') === v ? 'var(--brand)' : 'var(--rule)', pick: () => this.setState({ depWhat: v }) })),
       closeDep: () => this.setState({ deployConfirm: '', ptoSel: null }),
       depGo: () => {
         if (!dir) return;

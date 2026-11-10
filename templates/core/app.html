@@ -5916,6 +5916,11 @@ button.ccc-edited:hover{color:var(--ink)}
         <div style="padding:14px 18px">
           <span style="font:400 var(--fs-13)/1.55 var(--sans)">{{ depVerb }} <strong>{{ depFrom }}</strong> {{ depArrow }} <strong>{{ depTo }}</strong>?</span>
           <div style="margin-top:10px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">{{ depWarn }}</div>
+          <sc-if value="{{ depWhatShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ depWhatChips }}" as="dw" hint-placeholder-count="3"><span onClick="{{ dw.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 11px;border-radius:999px;cursor:pointer;color:{{ dw.fg }};background:{{ dw.bg }};border:1px solid {{ dw.bd }}">{{ dw.label }}</span></sc-for>
+            </div>
+          </sc-if>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
           <button onClick="{{ closeDep }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>

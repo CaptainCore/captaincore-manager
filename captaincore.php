@@ -1300,6 +1300,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
 		];
 	}
+	if ( $command === 'host-staging-prepare' ) {
+		if ( empty( $current_site ) ) {
+			return new WP_Error( 'site_required', 'host-staging-prepare requires a site_id.', [ 'status' => 400 ] );
+		}
+		$prep = CaptainCore\HostConfigs::prepare_staging( (int) $current_site->site_id );
+		return is_wp_error( $prep ) ? $prep : [ 'response' => 'ok' ] + $prep;
+	}
 	if ( $command === 'host-config-applied' ) {
 		if ( empty( $environment_id ) ) {
 			return new WP_Error( 'site_required', 'host-config-applied requires a site_id and environment.', [ 'status' => 400 ] );
@@ -7013,6 +7020,28 @@ function captaincore_site_hosting_backups_action_func( $request ) {
 	return [ 'token' => CaptainCore\Run::task( $argv ) ];
 }
 
+// Staging on our own servers: create it, or deploy between the two
+// environments. Both return a CLI job token the dashboard streams.
+function captaincore_site_hosting_deploy_func( $request ) {
+	$site = CaptainCore\Sites::get( (int) $request['id'] );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	$params = $request->get_json_params();
+	if ( $request['action'] === 'staging' ) {
+		CaptainCore\ProcessLog::insert( 'Create staging from production', (int) $site->site_id );
+		return [ 'token' => CaptainCore\Run::task( [ 'host', 'staging', 'create', $site->site ] ) ];
+	}
+	$to   = strtolower( (string) ( $params['to'] ?? '' ) );
+	$what = (string) ( $params['what'] ?? 'both' );
+	if ( ! in_array( $to, [ 'staging', 'production' ], true ) || ! in_array( $what, [ 'both', 'files', 'database' ], true ) ) {
+		return new WP_Error( 'invalid', 'Deploy to staging or production; files, database or both.', [ 'status' => 400 ] );
+	}
+	$from = $to === 'staging' ? 'production' : 'staging';
+	CaptainCore\ProcessLog::insert( "Deploy {$from} to {$to} ({$what})", (int) $site->site_id );
+	return [ 'token' => CaptainCore\Run::task( [ 'host', 'deploy', $site->site, '--to=' . $to, '--what=' . $what ] ) ];
+}
+
 function captaincore_public_keys_response() {
 	$keys = [];
 	foreach ( ( new CaptainCore\PublicKeys )->all( 'public_key_id', 'ASC' ) as $key ) {
@@ -12192,6 +12221,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/(?P<action>restore|apply|temporary-domain)', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_action_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/(?P<action>staging|deploy)', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_hosting_deploy_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);

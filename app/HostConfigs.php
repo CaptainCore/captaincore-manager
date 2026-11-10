@@ -391,6 +391,30 @@ class HostConfigs extends DB {
 				return new \WP_Error( 'exists', "This site already has a temporary domain ({$d['name']}).", [ 'status' => 409 ] );
 			}
 		}
+		$host = self::temporary_dns( $site, $server, $site->site );
+		if ( is_wp_error( $host ) ) {
+			return $host;
+		}
+		if ( $primary ) {
+			foreach ( $config['domains'] as &$d ) {
+				$d['primary'] = false;
+			}
+			unset( $d );
+		}
+		$config['domains'][] = [ 'name' => $host, 'primary' => (bool) $primary, 'www' => false, 'temporary' => true ];
+		$row = self::save( $environment, $config, $user_id, "Added temporary domain {$host}" );
+		return is_wp_error( $row ) ? $row : $host;
+	}
+
+	/**
+	 * Create <prefix>-<4 hex>.<zone> as a CNAME to the server's record
+	 * (made on first use). Returns the hostname or WP_Error.
+	 */
+	public static function temporary_dns( $site, $server, $prefix ) {
+		$zone = self::temporary_zone();
+		if ( ! $zone || ! $server || ! $server->address ) {
+			return new \WP_Error( 'unavailable', 'No temporary domain zone or server address is set up.', [ 'status' => 400 ] );
+		}
 		$remote = $zone->remote_id;
 		$names  = [];
 		$page   = 1;
@@ -409,7 +433,7 @@ class HostConfigs extends DB {
 				return new \WP_Error( 'dns', 'Could not create the server record: ' . wp_json_encode( $made->errors ), [ 'status' => 502 ] );
 			}
 		}
-		$slug = substr( preg_replace( '/[^a-z0-9-]/', '', strtolower( $site->site ) ), 0, 40 ) ?: 'site';
+		$slug = substr( preg_replace( '/[^a-z0-9-]/', '', strtolower( $prefix ) ), 0, 40 ) ?: 'site';
 		for ( $i = 0; $i < 10; $i++ ) {
 			$label = $slug . '-' . bin2hex( random_bytes( 2 ) );
 			if ( ! isset( $names[ $label ] ) ) {
@@ -420,16 +444,85 @@ class HostConfigs extends DB {
 		if ( ! empty( $made->errors ) ) {
 			return new \WP_Error( 'dns', 'Could not create the DNS record: ' . wp_json_encode( $made->errors ), [ 'status' => 502 ] );
 		}
-		$host = "{$label}.{$zone->name}";
-		if ( $primary ) {
-			foreach ( $config['domains'] as &$d ) {
-				$d['primary'] = false;
-			}
-			unset( $d );
+		return "{$label}.{$zone->name}";
+	}
+
+	/**
+	 * The Staging environment for a site on our servers, created if missing:
+	 * environment row on production's server (next free container IP and SSH
+	 * port), a temporary domain, and revision 1 of its hosting config copied
+	 * from production's (domains, redirects, password and debug reset).
+	 * Returns what the CLI needs to build the container, or WP_Error.
+	 */
+	public static function prepare_staging( $site_id, $user_id = 0 ) {
+		$site = Sites::get( (int) $site_id );
+		$prod = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Production' ] );
+		$prod = $prod ? $prod[0] : null;
+		if ( ! $site || ! $prod || ! (int) $prod->server_id ) {
+			return new \WP_Error( 'not_own_server', 'Production is not on one of our servers.', [ 'status' => 400 ] );
 		}
-		$config['domains'][] = [ 'name' => $host, 'primary' => (bool) $primary, 'www' => false, 'temporary' => true ];
-		$row = self::save( $environment, $config, $user_id, "Added temporary domain {$host}" );
-		return is_wp_error( $row ) ? $row : $host;
+		$pd     = json_decode( (string) $prod->details ) ?: new \stdClass();
+		$server = Servers::get( (int) $prod->server_id );
+		$stag   = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Staging' ] );
+		$stag   = $stag ? $stag[0] : null;
+		if ( $stag && ! (int) $stag->server_id ) {
+			return new \WP_Error( 'exists', 'This site already has a staging environment somewhere else.', [ 'status' => 409 ] );
+		}
+		if ( ! $stag ) {
+			$slot = Servers::allocate( $server->server_id );
+			if ( is_wp_error( $slot ) ) {
+				return $slot;
+			}
+			$host = self::temporary_dns( $site, $server, $site->site . '-staging' );
+			if ( is_wp_error( $host ) ) {
+				return $host;
+			}
+			$now = current_time( 'mysql' );
+			$id  = Environments::insert( [
+				'site_id'         => (int) $site_id,
+				'environment'     => 'Staging',
+				'address'         => $server->address,
+				'username'        => $prod->username,
+				'protocol'        => $prod->protocol,
+				'port'            => (string) $slot['port'],
+				'home_directory'  => $prod->home_directory,
+				'home_url'        => "https://{$host}",
+				'server_id'       => (int) $server->server_id,
+				'monitor_enabled' => 0,
+				'updates_enabled' => 0,
+				'details'         => wp_json_encode( [ 'container' => substr( ( $pd->container ?? $site->site ) . '-staging', 0, 63 ), 'container_ip' => $slot['ip'] ] ),
+				'created_at'      => $now,
+				'updated_at'      => $now,
+			] );
+			$stag   = Environments::get( $id );
+			$config = self::current( $prod );
+			$config['domains']          = [ [ 'name' => $host, 'primary' => true, 'www' => false, 'temporary' => true ] ];
+			$config['redirects']        = [];
+			$config['password_protect'] = [ 'enabled' => false, 'username' => '', 'password_hash' => '' ];
+			$config['debug']            = false;
+			$row = self::save( $stag, $config, $user_id, 'Staging created from production' );
+			if ( is_wp_error( $row ) ) {
+				return $row;
+			}
+		}
+		$sd = json_decode( (string) $stag->details ) ?: new \stdClass();
+		$primary = function ( $env ) {
+			foreach ( self::current( $env )['domains'] as $d ) {
+				if ( ! empty( $d['primary'] ) ) {
+					return $d['name'];
+				}
+			}
+			return '';
+		};
+		return [
+			'environment_id'       => (int) $stag->environment_id,
+			'container'            => $sd->container ?? '',
+			'ip'                   => $sd->container_ip ?? '',
+			'ssh_port'             => (int) $stag->port,
+			'primary'              => $primary( $stag ),
+			'production_container' => $pd->container ?? '',
+			'production_primary'   => $primary( $prod ),
+		];
 	}
 
 	/**

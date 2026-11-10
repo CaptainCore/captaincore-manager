@@ -128,6 +128,40 @@ class Servers extends DB {
 			 WHERE e.server_id = %d AND s.status = 'active' ORDER BY s.name", (int) $server_id ) );
 	}
 
+	/**
+	 * Next free container IP (10.77.0.10–250) and SSH port (2201–2999) on a
+	 * server, from what its environments already use.
+	 */
+	public static function allocate( $server_id ) {
+		global $wpdb;
+		$rows  = $wpdb->get_results( $wpdb->prepare(
+			"SELECT port, details FROM {$wpdb->base_prefix}captaincore_environments WHERE server_id = %d", (int) $server_id ) );
+		$ips   = [];
+		$ports = [];
+		foreach ( $rows as $row ) {
+			$d = json_decode( (string) $row->details );
+			if ( ! empty( $d->container_ip ) ) {
+				$ips[ $d->container_ip ] = true;
+			}
+			$ports[ (int) $row->port ] = true;
+		}
+		$ip = '';
+		for ( $i = 10; $i <= 250; $i++ ) {
+			if ( empty( $ips[ "10.77.0.{$i}" ] ) ) {
+				$ip = "10.77.0.{$i}";
+				break;
+			}
+		}
+		$port = 0;
+		for ( $p = 2201; $p <= 2999; $p++ ) {
+			if ( empty( $ports[ $p ] ) ) {
+				$port = $p;
+				break;
+			}
+		}
+		return ( $ip && $port ) ? [ 'ip' => $ip, 'port' => $port ] : new \WP_Error( 'full', 'No free container address or SSH port on this server.', [ 'status' => 409 ] );
+	}
+
 	public static function list_all() {
 		$providers = [];
 		foreach ( ( new Providers )->all() as $p ) {
