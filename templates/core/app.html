@@ -4687,6 +4687,21 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Logs</h2>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">The last 300 lines. Each site's own access and PHP error logs are on its Activity → Logs.</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ sdLogRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Refresh</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px">
+                <sc-for list="{{ sdLogSrcs }}" as="ls" hint-placeholder-count="6"><span onClick="{{ ls.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ ls.fg }};background:{{ ls.bg }};border:1px solid {{ ls.bd }}">{{ ls.label }}</span></sc-for>
+              </div>
+              <sc-if value="{{ sdLogHint }}" hint-placeholder-val="{{ true }}"><div style="padding:0 16px 14px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Pick a log to read it.</div></sc-if>
+              <sc-if value="{{ sdLogShow }}" hint-placeholder-val="{{ false }}">
+                <pre ref="{{ sdLogRef }}" style="margin:0;max-height:420px;overflow:auto;padding:12px 16px;border-top:1px solid var(--rule);background:var(--panel);font:400 var(--fs-115,11.5px)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-all">{{ sdLogText }}</pre>
+              </sc-if>
+            </div>
+            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
               <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">System</h2></div>
               <sc-for list="{{ sdSys }}" as="sy" hint-placeholder-count="6">
                 <div style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sy.k }}</span><span style="font:400 var(--fs-13) var(--sans);min-width:0">{{ sy.v }}</span></div>

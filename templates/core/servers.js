@@ -377,6 +377,34 @@ Object.assign(Component.prototype, {
     hit.addEventListener('pointerleave', () => { tip.style.opacity = 0; cross.setAttribute('opacity', 0); });
   },
 
+  loadServerLog(source) {
+    const id = this.state.serverId;
+    this.setState({ srvLogSrc: source });
+    this._srvLog = { source, loading: true, text: '' };
+    this.setState({});
+    this.api('/servers/' + id + '/logs?source=' + encodeURIComponent(source) + '&lines=300').then(res => {
+      if (!this._srvLog || this._srvLog.source !== source) return;
+      this._srvLog = { source, text: (!res || res.code) ? ((res && res.message) || 'Could not read the log') : (res.text || '(empty)') };
+      this.setState({});
+      const el = this._srvLogEl; if (el) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 0);
+    }).catch(() => { this._srvLog = { source, text: 'Could not read the log' }; this.setState({}); });
+  },
+
+  serverLogVals(d) {
+    const sources = [['edge', 'Edge (Caddy)'], ['ssh', 'SSH logins'], ['backups', 'Local backups'], ['updates', 'Automatic updates'], ['kernel', 'Kernel warnings'], ['incus', 'Incus']];
+    (d.containers || []).forEach(c => { sources.push(['ct:' + c.name + ':php', c.name + ' · PHP']); sources.push(['ct:' + c.name + ':database', c.name + ' · MariaDB']); });
+    const cur = this.state.srvLogSrc || '';
+    const log = this._srvLog;
+    return {
+      sdLogSrcs: sources.map(([v, l]) => ({ label: l, fg: cur === v ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: cur === v ? 'var(--brand-soft)' : 'transparent',
+        bd: cur === v ? 'var(--brand)' : 'var(--rule)', pick: () => this.loadServerLog(v) })),
+      sdLogShow: !!log, sdLogText: log ? (log.loading ? 'Reading…' : log.text) : '',
+      sdLogRef: el => { this._srvLogEl = el; },
+      sdLogRefresh: () => { if (cur) this.loadServerLog(cur); },
+      sdLogHint: !log
+    };
+  },
+
   computeServerDetail(s) {
     if (s.route !== 'server') return { showServer: false };
     const st = this._srvStats, row = st && st.data ? st.data.server : ((this._srv && this._srv.list) || []).find(r => String(r.server_id) === String(s.serverId));
@@ -406,7 +434,7 @@ Object.assign(Component.prototype, {
     const poolH = status(pool.health === 'ONLINE', 'Pool healthy', 'Pool ' + (pool.health || 'unknown'));
     const timers = sys.timers || {};
     const lastCpu = h.length ? h[h.length - 1].cpu : now.cpu;
-    return { ...base, sdReady: true,
+    return { ...base, sdReady: true, ...this.serverLogVals(d),
       sdSub: [row && row.address, sys.os, 'up ' + this.fmtDuration(sys.uptime_s)].filter(Boolean).join(' · '),
       sdUpdated: 'Updated ' + new Date(st.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
       sdTiles: [

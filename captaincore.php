@@ -7144,6 +7144,29 @@ function captaincore_servers_stats_func( $request ) {
 	return $data;
 }
 
+// Recent lines from a fixed list of server log sources (CLI `node logs`).
+function captaincore_servers_logs_func( $request ) {
+	$id     = (int) $request['id'];
+	$source = (string) $request['source'];
+	$lines  = max( 10, min( 2000, (int) ( $request['lines'] ?: 200 ) ) );
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	if ( ! preg_match( '/^(edge|ssh|backups|kernel|incus|updates|ct:[a-z0-9][a-z0-9-]{0,62}:(php|database|ssh|cron))$/', $source ) ) {
+		return new WP_Error( 'invalid', 'Unknown log source.', [ 'status' => 400 ] );
+	}
+	$res = CaptainCore\Run::execute( [ 'node', 'logs', (string) $id, $source, '--lines=' . $lines ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$out  = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data = json_decode( (string) end( $out ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'logs_unavailable', 'Could not read the log.', [ 'status' => 502 ] );
+	}
+	return [ 'source' => $source, 'text' => (string) $data->text ];
+}
+
 function captaincore_servers_get_func( $request ) {
 	$row = CaptainCore\Servers::get( (int) $request['id'] );
 	if ( ! $row ) {
@@ -12232,6 +12255,14 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_create_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_servers_logs_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 
