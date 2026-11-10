@@ -10,6 +10,7 @@
   --brand:#3b82c4;--brand-ink:color-mix(in oklch,var(--brand) 72%,black);
   --brand-soft:color-mix(in srgb,var(--brand) 10%,transparent);
   --ok:#3a9e6f;--warn:#c58a3c;--bad:#d05757;
+  --chart-1:#2a78d6;--chart-2:#eb6834;
   --ok-soft:rgba(70,184,129,0.13);
   --warn-soft:rgba(224,164,88,0.16);
   --bad-soft:rgba(228,107,107,0.12);
@@ -42,6 +43,7 @@
   --brand-ink:color-mix(in oklch,var(--brand) 55%,white);
   --brand-soft:color-mix(in srgb,var(--brand) 15%,transparent);
   --ok:#46b881;--warn:#e0a458;--bad:#e46b6b;
+  --chart-1:#3987e5;--chart-2:#d95926;
   --shadow:0 12px 40px rgba(0,0,0,0.5);
   --shadow-sm:0 4px 16px rgba(0,0,0,0.35);
   --canvas:#0b0b0d;
@@ -4515,11 +4517,12 @@ button.ccc-edited:hover{color:var(--ink)}
               <div onContextMenu="{{ sv.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                   <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex:none"></span>
-                  <span style="font:600 var(--fs-15) var(--mono)">{{ sv.name }}</span>
+                  <span onClick="{{ sv.open }}" title="View server details" style="font:600 var(--fs-15) var(--mono);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ sv.name }}</span>
                   <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);border:1px solid var(--rule);border-radius:999px;padding:1px 9px">{{ sv.roleLabel }}</span>
                   <span style="font:500 var(--fs-12) var(--sans);color:{{ sv.dot }}">{{ sv.statusLabel }}</span>
                   <div style="flex:1"></div>
                   <span style="font:500 var(--fs-13) var(--sans)">{{ sv.cost }}</span>
+                  <span onClick="{{ sv.open }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--brand)">Details</span>
                   <span onClick="{{ sv.edit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--brand)">Edit</span>
                   <span onClick="{{ sv.ctx }}" title="More actions" style="font:600 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:0 8px;line-height:22px" style-hover="border-color:var(--brand);color:var(--ink)">⋯</span>
                 </div>
@@ -4616,6 +4619,80 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="padding:16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim);text-align:center">No team keys yet. Only CaptainCore's own key can log in.</div>
             </sc-if>
           </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showServer }}" hint-placeholder-val="{{ false }}">
+        <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
+          <span onClick="{{ sdBack }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">← Servers</span>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+            <h1 style="margin:0;font:600 var(--fs-22,22px) var(--mono)">{{ sdName }}</h1>
+            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sdSub }}</span>
+            <div style="flex:1"></div>
+            <sc-if value="{{ sdUpdating }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Updating…</span></sc-if>
+            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sdUpdated }}</span>
+            <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+              <sc-for list="{{ sdRanges }}" as="rg" hint-placeholder-count="3"><span onClick="{{ rg.go }}" style="padding:4px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);color:{{ rg.fg }};background:{{ rg.bg }}">{{ rg.label }}</span></sc-for>
+            </div>
+            <span onClick="{{ sdRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Refresh</span>
+          </div>
+          <sc-if value="{{ sdLoading }}" hint-placeholder-val="{{ false }}"><div style="margin-top:22px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Reading the server…</div></sc-if>
+          <sc-if value="{{ sdHasErr }}" hint-placeholder-val="{{ false }}"><div style="margin-top:22px;font:500 var(--fs-13) var(--sans);color:var(--bad)">{{ sdErr }}</div></sc-if>
+          <sc-if value="{{ sdReady }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+              <sc-for list="{{ sdStatus }}" as="ss" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--sans);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;background:var(--paper)"><span style="color:{{ ss.fg }};font-weight:700">{{ ss.icon }}</span>{{ ss.label }}</span></sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:14px">
+              <sc-for list="{{ sdTiles }}" as="tl" hint-placeholder-count="5">
+                <div style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:13px 15px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tl.k }}</span>
+                  <span style="font:600 var(--fs-20,20px) var(--sans);font-variant-numeric:tabular-nums">{{ tl.v }}</span>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tl.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-top:12px">
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">CPU</h2></div>
+                <div ref="{{ sdChartCpu }}" style="padding:10px 14px 6px"></div>
+              </div>
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Memory</h2><div style="display:flex;gap:12px;margin-left:auto"><span style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:10px;height:10px;border-radius:2px;background:var(--chart-1)"></span>In use</span><span style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:10px;height:10px;border-radius:2px;background:var(--chart-2)"></span>ZFS cache</span></div></div>
+                <div ref="{{ sdChartMem }}" style="padding:10px 14px 6px"></div>
+              </div>
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Network</h2><div style="display:flex;gap:12px;margin-left:auto"><span style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:10px;height:10px;border-radius:2px;background:var(--chart-1)"></span>In</span><span style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:10px;height:10px;border-radius:2px;background:var(--chart-2)"></span>Out</span></div></div>
+                <div ref="{{ sdChartNet }}" style="padding:10px 14px 6px"></div>
+              </div>
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Load</h2></div>
+                <div ref="{{ sdChartLoad }}" style="padding:10px 14px 6px"></div>
+              </div>
+            </div>
+            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Containers</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">One per site environment. CPU is the share of the whole server over the last minute.</span></div>
+              <div style="overflow-x:auto">
+                <div style="display:grid;grid-template-columns:minmax(200px,1.6fr) 90px 80px minmax(170px,1.2fr) minmax(150px,1fr) 110px 70px;min-width:900px">
+                  <span style="padding:8px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Container</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Status</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">CPU</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Memory</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Disk</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">IP</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">SSH</span>
+                  <sc-for list="{{ sdCts }}" as="ct" hint-placeholder-count="2">
+                    <div style="padding:10px 16px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 var(--fs-13) var(--mono)">{{ ct.name }}</span><span onClick="{{ ct.open }}" style="font:400 var(--fs-12) var(--sans);color:{{ ct.siteFg }};cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ct.site }}</span></div>
+                    <span style="padding:10px 6px;border-top:1px solid var(--rule);font:500 var(--fs-12) var(--sans);color:{{ ct.statusFg }}">{{ ct.status }}</span>
+                    <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-13) var(--sans);font-variant-numeric:tabular-nums">{{ ct.cpu }}</span>
+                    <div style="padding:10px 6px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:5px"><span style="font:400 var(--fs-12) var(--sans);font-variant-numeric:tabular-nums">{{ ct.mem }}</span><div style="height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden;max-width:160px"><div style="height:100%;width:{{ ct.memW }};background:{{ ct.memBar }};border-radius:3px"></div></div></div>
+                    <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--sans)">{{ ct.disk }}</span>
+                    <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--mono)">{{ ct.ip }}</span>
+                    <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--mono)">{{ ct.ssh }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">System</h2></div>
+              <sc-for list="{{ sdSys }}" as="sy" hint-placeholder-count="6">
+                <div style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sy.k }}</span><span style="font:400 var(--fs-13) var(--sans);min-width:0">{{ sy.v }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
       </sc-if>
 

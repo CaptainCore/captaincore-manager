@@ -101,6 +101,7 @@ Object.assign(Component.prototype, {
     const statusEntries = this.SRV_STATUSES.filter(([v]) => v !== r.status && v !== 'retired')
       .map(([v, label]) => ({ label: 'Mark ' + label.toLowerCase(), act: () => setStatus(v) }));
     return [
+      { label: 'View details', act: () => this.openServer(r.server_id) },
       { label: 'Add site…', act: () => this.addSiteToServer(r) },
       { label: 'Show sites', act: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); } },
       { label: 'Edit server…', act: () => this.openServerDialog(r) },
@@ -203,7 +204,7 @@ Object.assign(Component.prototype, {
         sitesLabel: r.max_sites ? (r.sites || 0) + ' of ' + r.max_sites + ' sites' : (r.sites || 0) + ' sites',
         barW: pct + '%', barShow: !!r.max_sites,
         cost: r.monthly_cost ? money(r.monthly_cost) + '/mo' : '',
-        seen: det.last_seen ? 'Checked ' + this.srvAgo(det.last_seen) : 'Not checked yet',
+        seen: det.last_seen ? 'Checked ' + this.srvAgo(det.last_seen) + (det.cpu != null ? ' · CPU ' + det.cpu + '%' : '') + (det.pool_cap !== undefined && det.pool_cap !== '' ? ' · disk ' + String(det.pool_cap).replace(/%?$/, '%') : '') + (det.reboot_required ? ' · reboot required' : '') + (det.updates_pending ? ' · ' + det.updates_pending + ' updates pending' : '') : 'Not checked yet · open the server to check it',
         os: det.os || '', hasOs: !!det.os,
         notes: r.notes || '', hasNotes: !!r.notes,
         sshLabel: s.copied === 'srv-ssh-' + r.server_id ? 'Copied ✓' : 'Copy SSH', hasSsh: !!ssh,
@@ -212,6 +213,7 @@ Object.assign(Component.prototype, {
         openSites: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); },
         sitesTitle: 'Show these sites in Sites',
         edit: () => this.openServerDialog(r),
+        open: () => this.openServer(r.server_id),
         ctx: e => this.openCtxMenu(e, this.serverCtxEntries(r, ssh))
       };
     });
@@ -256,5 +258,191 @@ Object.assign(Component.prototype, {
       vals['srvOn_' + k] = fl.on;
     });
     return vals;
+  }
+});
+
+// ── Server detail (/account/servers/<id>) ─────────────────────────────────
+// GET /servers/{id}/stats?range=1h|24h|7d → { now, system, containers,
+// history, server } from the node (CLI `node stats`). Refreshes every 30 s
+// while open. Charts are inline SVG drawn into refs (srvChart), one series in
+// --chart-1 or two in --chart-1/--chart-2 (validated: blue/orange pass every
+// palette check on both surfaces), with a crosshair + tooltip listing every
+// series at the hovered time; values are inserted with textContent.
+Object.assign(Component.prototype, {
+
+  openServer(id) {
+    this.setState({ route: 'server', serverId: String(id), srvRange: this.state.srvRange || '1h' });
+    this._srvStats = null;
+    this.loadServerStats();
+  },
+
+  loadServerStats() {
+    const id = this.state.serverId, range = this.state.srvRange || '1h';
+    if (!id) return;
+    const key = id + '|' + range;
+    clearTimeout(this._srvStatsTimer);
+    this._srvStatsLoading = key;
+    this.setState({});
+    this.api('/servers/' + id + '/stats?range=' + range).then(res => {
+      if (this._srvStatsLoading !== key) return;
+      this._srvStatsLoading = null;
+      this._srvStats = (!res || res.code) ? { key, error: (res && res.message) || 'Could not read the server' } : { key, data: res, at: Date.now(), v: Date.now() };
+      this.setState({});
+      if (this.state.route === 'server' && String(this.state.serverId) === String(id)) this._srvStatsTimer = setTimeout(() => this.loadServerStats(), 30000);
+    }).catch(() => { this._srvStatsLoading = null; this._srvStats = { key, error: 'Could not read the server' }; this.setState({}); });
+  },
+
+  fmtBytes(n, digits) {
+    if (n == null || isNaN(n)) return '—';
+    const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; n = Number(n);
+    while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; }
+    return (i === 0 ? Math.round(n) : n.toFixed(digits == null ? (n < 10 ? 1 : 0) : digits)) + ' ' + u[i];
+  },
+
+  fmtDuration(s) {
+    s = Math.max(0, Math.floor(s || 0));
+    const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm';
+  },
+
+  // Draw one time-series chart into el. spec: { series: [{ name, values, color }],
+  // max, fmt, stacked }. Points come from history (t = unix seconds).
+  srvChart(el, spec, version) {
+    if (!el || el._ccV === version) return;
+    el._ccV = version;
+    while (el.firstChild) el.removeChild(el.firstChild);
+    const NS = 'http://www.w3.org/2000/svg';
+    const pts = spec.t;
+    if (!pts.length) { const p = document.createElement('div'); p.style.cssText = 'height:150px;display:grid;place-items:center;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)'; p.textContent = 'Collecting: the first samples arrive within a minute or two.'; el.appendChild(p); return; }
+    const W = 560, H = 150, L = 44, R = 10, T = 8, B = 22;
+    const t0 = pts[0], t1 = pts[pts.length - 1] === t0 ? t0 + 60 : pts[pts.length - 1];
+    const top = spec.stacked ? spec.series.reduce((a, s) => a.map((v, i) => v + (s.values[i] || 0)), pts.map(() => 0)) : null;
+    let max = spec.max || Math.max(1, ...spec.series.flatMap(s => s.values), ...(top || []));
+    if (!spec.max) { const mag = Math.pow(10, Math.floor(Math.log10(max))); max = Math.ceil(max / mag * 1.15) * mag; }
+    const x = t => L + (t - t0) / (t1 - t0) * (W - L - R), y = v => T + (1 - Math.min(v, max) / max) * (H - T - B);
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', '100%'); svg.style.display = 'block'; svg.style.overflow = 'visible';
+    const mk = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+    // Recessive grid + y labels (0, half, max).
+    [0, 0.5, 1].forEach(f => {
+      svg.appendChild(mk('line', { x1: L, x2: W - R, y1: y(max * f), y2: y(max * f), stroke: 'var(--rule)', 'stroke-width': 1 }));
+      const tx = mk('text', { x: L - 6, y: y(max * f) + 4, 'text-anchor': 'end', fill: 'var(--ink-dim)', 'font-size': 10, 'font-family': 'var(--sans)' });
+      tx.textContent = spec.fmt(max * f, true); svg.appendChild(tx);
+    });
+    // X labels: start and end.
+    const tl = d => new Date(d * 1000).toLocaleString(undefined, (t1 - t0) > 86400 * 1.5 ? { month: 'short', day: 'numeric' } : { hour: 'numeric', minute: '2-digit' });
+    [[t0, 'start'], [t1, 'end']].forEach(([t, a]) => { const tx = mk('text', { x: x(t), y: H - 6, 'text-anchor': a, fill: 'var(--ink-dim)', 'font-size': 10, 'font-family': 'var(--sans)' }); tx.textContent = tl(t); svg.appendChild(tx); });
+    // Series: stacked areas (2px surface gap via stroke) or 2px lines.
+    let base = pts.map(() => 0);
+    spec.series.forEach(s => {
+      const upper = spec.stacked ? s.values.map((v, i) => base[i] + (v || 0)) : s.values;
+      const line = pts.map((t, i) => `${i ? 'L' : 'M'}${x(t).toFixed(1)},${y(upper[i] || 0).toFixed(1)}`).join('');
+      if (spec.stacked || spec.series.length === 1) {
+        const lower = spec.stacked ? base : pts.map(() => 0);
+        const area = line + pts.slice().reverse().map((t, j) => `L${x(t).toFixed(1)},${y(lower[pts.length - 1 - j]).toFixed(1)}`).join('') + 'Z';
+        svg.appendChild(mk('path', { d: area, fill: s.color, 'fill-opacity': spec.stacked ? 0.85 : 0.14, stroke: spec.stacked ? 'var(--paper)' : 'none', 'stroke-width': spec.stacked ? 2 : 0 }));
+      }
+      if (!spec.stacked) svg.appendChild(mk('path', { d: line, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+      if (spec.stacked) base = upper;
+    });
+    // Crosshair + tooltip.
+    const cross = mk('line', { y1: T, y2: H - B, stroke: 'var(--ink-dim)', 'stroke-width': 1, opacity: 0 });
+    svg.appendChild(cross);
+    const hit = mk('rect', { x: L, y: 0, width: W - L - R, height: H, fill: 'transparent' });
+    svg.appendChild(hit);
+    el.style.position = 'relative';
+    el.appendChild(svg);
+    const tip = document.createElement('div');
+    tip.style.cssText = 'position:absolute;pointer-events:none;opacity:0;background:var(--paper);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow);padding:6px 9px;font:400 var(--fs-12) var(--sans);color:var(--ink);white-space:nowrap;z-index:5';
+    el.appendChild(tip);
+    const show = ev => {
+      const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+      const tt = t0 + (sx - L) / (W - L - R) * (t1 - t0);
+      let i = 0; for (let k = 1; k < pts.length; k++) if (Math.abs(pts[k] - tt) < Math.abs(pts[i] - tt)) i = k;
+      cross.setAttribute('x1', x(pts[i])); cross.setAttribute('x2', x(pts[i])); cross.setAttribute('opacity', 0.6);
+      while (tip.firstChild) tip.removeChild(tip.firstChild);
+      const h = document.createElement('div'); h.style.cssText = 'color:var(--ink-dim);margin-bottom:3px'; h.textContent = new Date(pts[i] * 1000).toLocaleString(); tip.appendChild(h);
+      spec.series.forEach(s => {
+        const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:7px';
+        const key = document.createElement('span'); key.style.cssText = `width:12px;height:2px;background:${s.color};border-radius:1px`;
+        const v = document.createElement('b'); v.style.cssText = 'font-weight:600'; v.textContent = spec.fmt(s.values[i] || 0);
+        const n = document.createElement('span'); n.style.cssText = 'color:var(--ink-dim)'; n.textContent = s.name;
+        row.appendChild(key); row.appendChild(v); row.appendChild(n); tip.appendChild(row);
+      });
+      tip.style.opacity = 1;
+      const px = x(pts[i]) / W * r.width;
+      tip.style.left = Math.min(Math.max(0, px + 10), r.width - tip.offsetWidth) + 'px'; tip.style.top = '4px';
+    };
+    hit.addEventListener('pointermove', show);
+    hit.addEventListener('pointerleave', () => { tip.style.opacity = 0; cross.setAttribute('opacity', 0); });
+  },
+
+  computeServerDetail(s) {
+    if (s.route !== 'server') return { showServer: false };
+    const st = this._srvStats, row = st && st.data ? st.data.server : ((this._srv && this._srv.list) || []).find(r => String(r.server_id) === String(s.serverId));
+    const range = s.srvRange || '1h';
+    const base = {
+      showServer: true,
+      sdName: row ? row.name : 'Server', sdBack: () => { clearTimeout(this._srvStatsTimer); this.setState({ route: 'servers' }); this.loadServers(true); },
+      sdRanges: [['1h', 'Hour'], ['24h', 'Day'], ['7d', 'Week']].map(([v, l]) => ({ label: l,
+        fg: range === v ? 'var(--ink)' : 'var(--ink-dim)', bg: range === v ? 'var(--panel-2)' : 'transparent',
+        go: () => { this.setState({ srvRange: v }); setTimeout(() => this.loadServerStats(), 0); } })),
+      sdRefresh: () => this.loadServerStats(),
+      sdLoading: !st || !!this._srvStatsLoading && !(st && st.data),
+      sdUpdating: !!this._srvStatsLoading && !!(st && st.data),
+      sdErr: st && st.error ? st.error : '', sdHasErr: !!(st && st.error)
+    };
+    if (!st || !st.data) return { ...base, sdReady: false };
+    const d = st.data, sys = d.system, now = d.now, h = d.history || [];
+    const memUsed = r => Math.max(0, r.mem_total - r.mem_avail - (r.arc || 0));
+    const C1 = 'var(--chart-1)', C2 = 'var(--chart-2)';
+    const pct = v => (Math.round(v * 10) / 10) + '%';
+    const t = h.map(r => r.t);
+    const v = st.v;
+    const pool = sys.pool || {};
+    const status = (ok, good, bad) => ({ label: ok ? good : bad, fg: ok ? 'var(--ok)' : 'var(--warn)', icon: ok ? '✓' : '!' });
+    const reboot = status(!sys.reboot_required, 'No reboot needed', 'Reboot required');
+    const upd = status(!sys.updates_pending, 'Up to date', sys.updates_pending + ' updates pending');
+    const poolH = status(pool.health === 'ONLINE', 'Pool healthy', 'Pool ' + (pool.health || 'unknown'));
+    const timers = sys.timers || {};
+    const lastCpu = h.length ? h[h.length - 1].cpu : now.cpu;
+    return { ...base, sdReady: true,
+      sdSub: [row && row.address, sys.os, 'up ' + this.fmtDuration(sys.uptime_s)].filter(Boolean).join(' · '),
+      sdUpdated: 'Updated ' + new Date(st.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
+      sdTiles: [
+        { k: 'CPU', v: lastCpu == null ? '—' : pct(lastCpu), sub: sys.cpus + ' threads · load ' + (now.load != null ? now.load.toFixed(2) : '—') },
+        { k: 'Memory in use', v: this.fmtBytes(memUsed(now)), sub: 'of ' + this.fmtBytes(now.mem_total) + ' · ZFS cache ' + this.fmtBytes(now.arc) },
+        { k: 'Disk', v: this.fmtBytes(pool.alloc), sub: 'of ' + this.fmtBytes(pool.size) + ' (' + String(pool.cap || 0).replace(/%?$/, '%') + ') on ' + (pool.name || 'pool') },
+        { k: 'Network', v: this.fmtBytes(h.length ? h[h.length - 1].rx_bps : 0) + '/s in', sub: this.fmtBytes(h.length ? h[h.length - 1].tx_bps : 0) + '/s out' },
+        { k: 'Containers', v: String((d.containers || []).length), sub: (d.containers || []).filter(c => c.status === 'Running').length + ' running' }
+      ],
+      sdChartCpu: el => this.srvChart(el, { t, series: [{ name: 'CPU', values: h.map(r => r.cpu), color: C1 }], max: 100, fmt: x => Math.round(x) + '%' }, v),
+      sdChartMem: el => this.srvChart(el, { t, stacked: true, max: now.mem_total, fmt: (x, ax) => this.fmtBytes(x, ax ? 0 : 1),
+        series: [{ name: 'In use', values: h.map(memUsed), color: C1 }, { name: 'ZFS cache', values: h.map(r => r.arc || 0), color: C2 }] }, v),
+      sdChartNet: el => this.srvChart(el, { t, fmt: (x, ax) => this.fmtBytes(x, ax ? 0 : 1) + '/s',
+        series: [{ name: 'In', values: h.map(r => r.rx_bps || 0), color: C1 }, { name: 'Out', values: h.map(r => r.tx_bps || 0), color: C2 }] }, v),
+      sdChartLoad: el => this.srvChart(el, { t, fmt: x => x.toFixed(x < 10 ? 2 : 0), series: [{ name: 'Load (1 min)', values: h.map(r => r.load), color: C1 }] }, v),
+      sdCts: (d.containers || []).map(c => {
+        const memPct = c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100) : 0;
+        return { name: c.name, site: c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site',
+          siteFg: c.site ? 'var(--brand-ink)' : 'var(--ink-dim)', open: () => { if (c.site) { this.setState({ env: c.site.environment || 'Production' }); this.openSite(String(c.site.site_id)); } },
+          status: c.status, statusFg: c.status === 'Running' ? 'var(--ok)' : 'var(--warn)',
+          cpu: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%'),
+          mem: this.fmtBytes(c.mem) + (c.mem_limit ? ' / ' + this.fmtBytes(c.mem_limit, 0) : ''), memW: memPct.toFixed(0) + '%',
+          memBar: memPct > 85 ? 'var(--warn)' : C1,
+          disk: this.fmtBytes(c.disk) + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : ''),
+          ip: c.ip || '—', ssh: c.ssh_port || '—' };
+      }),
+      sdSys: [
+        ['CPU', sys.cpu_model + ' · ' + sys.cpus + ' threads'], ['OS', sys.os], ['Kernel', sys.kernel],
+        ['Incus', sys.incus], ['ZFS', sys.zfs + ' · cache capped at ' + (sys.arc_max / 1073741824).toFixed(0) + ' GiB'],
+        ['Pool', (pool.name || '') + ' · ' + (pool.health || '') + ' · ' + (pool.frag || '0') + '% fragmented'],
+        ['System disk', this.fmtBytes(sys.root_fs && sys.root_fs.free) + ' free of ' + this.fmtBytes(sys.root_fs && sys.root_fs.size)],
+        ['Local backups', (timers['cc-backups-daily.timer'] === 'active' ? 'Daily timer on' : 'Daily timer off') + (sys.backups_last_run ? ' · last run ' + sys.backups_last_run : ' · not run yet')],
+        ['Metrics', timers['cc-metrics.timer'] === 'active' ? 'Sampled every minute, kept 14 days' : 'Collector off'],
+        ['Security updates', timers['unattended-upgrades.service'] === 'active' ? 'Installed automatically' : 'Automatic updates off']
+      ].map(([k, val]) => ({ k, v: val || '—' })),
+      sdStatus: [poolH, upd, reboot]
+    };
   }
 });

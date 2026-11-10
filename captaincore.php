@@ -1300,6 +1300,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
 		];
 	}
+	if ( $command === 'server-get' ) {
+		$sv = CaptainCore\Servers::get( (int) ( $post->server_id ?? 0 ) );
+		return $sv ? [ 'server_id' => (int) $sv->server_id, 'name' => $sv->name, 'address' => $sv->address, 'ssh_port' => (int) $sv->ssh_port, 'ssh_user' => $sv->ssh_user ]
+			: new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
 	if ( $command === 'host-staging-prepare' ) {
 		if ( empty( $current_site ) ) {
 			return new WP_Error( 'site_required', 'host-staging-prepare requires a site_id.', [ 'status' => 400 ] );
@@ -7090,6 +7095,55 @@ function captaincore_servers_func( $request ) {
 	return CaptainCore\Servers::list_all();
 }
 
+// Live metrics from the node (CLI `node stats`). Also stores a health summary
+// on the server row (details), which the Servers card shows.
+function captaincore_servers_stats_func( $request ) {
+	$id     = (int) $request['id'];
+	$server = CaptainCore\Servers::get( $id );
+	if ( ! $server ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$range = in_array( $request['range'], [ '1h', '24h', '7d' ], true ) ? $request['range'] : '1h';
+	$res   = CaptainCore\Run::execute( [ 'node', 'stats', (string) $id, '--range=' . $range ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'stats_unavailable', 'Could not read the server: ' . substr( (string) ( $res['response'] ?? '' ), 0, 300 ), [ 'status' => 502 ] );
+	}
+	$sys     = $data->system;
+	$details = json_decode( (string) $server->details ) ?: new stdClass();
+	$details->last_seen       = current_time( 'mysql' );
+	$details->os              = $sys->os ?? '';
+	$details->kernel          = $sys->kernel ?? '';
+	$details->uptime_s        = (int) ( $sys->uptime_s ?? 0 );
+	$details->pool_health     = $sys->pool->health ?? '';
+	$details->pool_cap        = $sys->pool->cap ?? '';
+	$details->updates_pending = (int) ( $sys->updates_pending ?? 0 );
+	$details->reboot_required = ! empty( $sys->reboot_required );
+	$details->cpu             = $data->now->cpu ?? null;
+	CaptainCore\Servers::update( [ 'details' => wp_json_encode( $details ) ], [ 'server_id' => $id ] );
+	// Name each container's site, so the page can link to it.
+	global $wpdb;
+	$sites = [];
+	foreach ( $wpdb->get_results( $wpdb->prepare(
+		"SELECT e.details, e.environment, s.site_id, s.name FROM {$wpdb->base_prefix}captaincore_environments e
+		 JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id WHERE e.server_id = %d", $id ) ) as $row ) {
+		$d = json_decode( (string) $row->details );
+		if ( ! empty( $d->container ) ) {
+			$sites[ $d->container ] = [ 'site_id' => (int) $row->site_id, 'name' => $row->name, 'environment' => $row->environment ];
+		}
+	}
+	foreach ( $data->containers as $c ) {
+		$c->site = $sites[ $c->name ] ?? null;
+	}
+	unset( $data->status );
+	$data->server = CaptainCore\Servers::present( CaptainCore\Servers::get( $id ) );
+	return $data;
+}
+
 function captaincore_servers_get_func( $request ) {
 	$row = CaptainCore\Servers::get( (int) $request['id'] );
 	if ( ! $row ) {
@@ -12178,6 +12232,14 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_create_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/stats', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_servers_stats_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 
