@@ -61,6 +61,7 @@ class HostConfigs extends DB {
 			'password_protect'    => [ 'enabled' => false, 'username' => '', 'password_hash' => '' ],
 			'debug'               => false,
 			'noindex'             => true,
+			'mail'                => 'relay',
 			'apps'                => [],
 		];
 	}
@@ -259,6 +260,9 @@ class HostConfigs extends DB {
 		// Hidden from search engines unless turned off (new sites start on a
 		// temporary domain): X-Robots-Tag at the edge + blog_public 0.
 		$out['noindex']          = ! array_key_exists( 'noindex', $in ) || ! empty( $in['noindex'] );
+		// Outgoing mail through the server's relay (Mailgun, mg.<hosting zone>),
+		// or off: the relay refuses mail from this site's container.
+		$out['mail']             = ( $in['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
 
 		// Apps: long-running programs beside the site (a chat or realtime
 		// server), each a systemd service in the container that runs as the
@@ -337,6 +341,7 @@ class HostConfigs extends DB {
 		$config['ip_deny']   = $config['ip_deny'] ?? [];
 		$config['debug']     = ! empty( $config['debug'] );
 		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
+		$config['mail']      = ( $config['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
 		$config['apps']      = $config['apps'] ?? [];
 		return $config;
 	}
@@ -441,6 +446,12 @@ class HostConfigs extends DB {
 		}
 		$domain = $id ? Domains::get( $id ) : null;
 		return ( $domain && $domain->remote_id ) ? $domain : null;
+	}
+
+	/** The relay's Mailgun sending domain: mg.<hosting zone> (mg.anchorhost.xyz). */
+	public static function mail_domain() {
+		$zone = self::temporary_zone();
+		return $zone ? 'mg.' . $zone->name : '';
 	}
 
 	/** DNS label for a server's own record: cc-vin1 → vin1.nodes */

@@ -2176,7 +2176,40 @@ button.ccc-edited:hover{color:var(--ink)}
                 </div>
               </div>
 
-              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+              <div class="cc-card" style="margin-top:14px">
+                <div class="cc-card-h">
+                  <span class="cc-chip" style="--h:var(--acc-reports)"><span ref="{{ hostMailIco }}"></span></span>
+                  <h2>Email</h2>
+                  <span class="cc-meta">WordPress mail goes to this server's relay, which sends it through Mailgun as {{ hostMailDomain }}. The site never sees the credentials.</span>
+                  <div style="flex:1"></div>
+                  <span onClick="{{ hostMailRefresh }}" class="cc-btn">Refresh</span>
+                </div>
+                <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--rule)">
+                  <span onClick="{{ toggleHostMail }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostMailMark }}</span>Send outgoing email</span>
+                  <span class="cc-meta">Password resets, form notifications and orders. Turning it off makes the relay refuse this site's mail, for a hacked site sending spam. At most 30 messages and 100 recipients a minute.</span>
+                  <sc-if value="{{ hostMailOn }}" hint-placeholder-val="{{ true }}"><span style="font:400 var(--fs-12) var(--sans)">Sends as <span style="font-family:var(--mono)">{{ hostMailFrom }}</span> unless a plugin sets another address.</span></sc-if>
+                  <sc-if value="{{ hostMailAligned }}" hint-placeholder-val="{{ true }}"><span class="cc-pill" style="color:var(--ok);background:var(--ok-soft);align-self:flex-start">Fully authenticated (SPF and DKIM)</span></sc-if>
+                  <sc-if value="{{ hostMailUnaligned }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--warn)">{{ hostMailAlignNote }}</span></sc-if>
+                </div>
+                <sc-if value="{{ hostMailHasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;font:500 var(--fs-12) var(--sans);color:var(--bad)">{{ hostMailErr }}</div></sc-if>
+                <sc-if value="{{ hostMailLoading }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px" class="cc-meta">Reading recent mail from Mailgun…</div></sc-if>
+                <sc-if value="{{ hostMailEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;display:flex;align-items:center;gap:14px" class="cc-meta"><div ref="{{ hostMailIllo }}" style="width:64px;height:48px"></div><span>No mail from this site in Mailgun's recent logs.</span></div></sc-if>
+                <sc-for list="{{ hostMailRows }}" as="ml" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--rule);flex-wrap:wrap">
+                    <span class="cc-pill" style="color:{{ ml.fg }};background:color-mix(in srgb,{{ ml.fg }} 12%,transparent);min-width:74px;justify-content:center">{{ ml.status }}</span>
+                    <div style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1">
+                      <span style="font:500 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ml.subject }}</span>
+                      <span class="cc-meta">to {{ ml.to }}</span>
+                      <sc-if value="{{ ml.hasReason }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--bad)">{{ ml.reason }}</span></sc-if>
+                    </div>
+                    <sc-if value="{{ ml.test }}" hint-placeholder-val="{{ false }}"><span class="cc-meta" style="border:1px solid var(--rule);border-radius:6px;padding:0 6px">test</span></sc-if>
+                    <span class="cc-meta" style="white-space:nowrap">{{ ml.when }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              
+<div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
                   <span class="cc-chip" style="--h:var(--brand)"><span ref="{{ hostIcoBackups }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Local backups</h2>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Snapshots of files and database together, on this server. Keeps the last 30 daily backups, and every backup taken before a deploy or restore for 30 days. Off-site backups are under History → Backups.</span>

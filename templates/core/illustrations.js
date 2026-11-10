@@ -128,6 +128,17 @@ const CC_ILLO = {
     <path class="a l" d="M60 38 L78 46 L70 48.5 L67 56 Z"/>
   </svg>`,
 
+  // Email: an envelope with a letter rising out of it, and a paper plane.
+  mail: `<svg viewBox="0 0 96 72" aria-hidden="true">
+    <ellipse class="s" cx="44" cy="65" rx="30" ry="4"/>
+    <rect class="f l" x="22" y="10" width="40" height="30" rx="3"/>
+    <path class="l" d="M28 18h22M28 24h28M28 30h16"/>
+    <path class="t l" d="M12 28 L44 50 L76 28 V58 a3 3 0 0 1 -3 3 H15 a3 3 0 0 1 -3 -3 Z"/>
+    <path class="t2 l" d="M12 58 L37 42 M76 58 L51 42"/>
+    <path class="a l" d="M70 8 L90 2 L84 22 L78 15 Z"/>
+    <path class="l" d="M78 15 L90 2"/>
+  </svg>`,
+
   // Local backups: snapshots stacked with a clock.
   backups: `<svg viewBox="0 0 96 72" aria-hidden="true">
     <ellipse class="s" cx="44" cy="65" rx="30" ry="4"/>
@@ -164,14 +175,15 @@ const CC_ICON = {
   apps: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
-  terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/>'
+  terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>'
 };
 
 // Hues per kind, from the app's accent tokens (so the brand color carries).
 const CC_ILLO_HUE = {
   server: 'var(--acc-terminal)', rack: 'var(--acc-terminal)', container: 'var(--brand)', wordpress: 'var(--brand)',
   realtime: 'var(--acc-domains)', app: 'var(--acc-domains)', database: 'var(--acc-reports)', edge: 'var(--acc-billing)',
-  visitor: 'var(--brand)', backups: 'var(--brand)'
+  visitor: 'var(--brand)', backups: 'var(--brand)', mail: 'var(--acc-reports)'
 };
 
 Object.assign(Component.prototype, {

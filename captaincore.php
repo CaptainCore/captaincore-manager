@@ -6981,6 +6981,46 @@ function captaincore_site_hosting_action_func( $request ) {
 	return captaincore_site_hosting_response( $env ) + [ 'token' => CaptainCore\HostConfigs::apply( $env ) ];
 }
 
+// Outgoing mail for one environment: the relay's sending domain and the
+// container's recent messages from Mailgun (the relay tags each message with
+// its container name).
+function captaincore_site_hosting_mail_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$details   = json_decode( (string) $env->details ) ?: new stdClass();
+	$container = (string) ( $details->container ?? '' );
+	$domain    = CaptainCore\HostConfigs::mail_domain();
+	$config    = CaptainCore\HostConfigs::current( $env );
+	$out       = [ 'domain' => $domain, 'container' => $container, 'relay' => ( $config['mail'] ?? 'relay' ) !== 'off', 'events' => [], 'error' => '' ];
+	if ( $domain === '' || $container === '' ) {
+		return $out;
+	}
+	$res = CaptainCore\Remote\Mailgun::get( "v3/{$domain}/events", [ 'tags' => $container, 'limit' => 50, 'ascending' => 'no' ] );
+	if ( ! empty( $res->errors ) ) {
+		$out['error'] = 'Could not read Mailgun.';
+		return $out;
+	}
+	foreach ( (array) ( $res->items ?? [] ) as $e ) {
+		if ( ! in_array( $e->event ?? '', [ 'accepted', 'delivered', 'failed', 'rejected', 'complained' ], true ) ) {
+			continue;
+		}
+		$headers = $e->message->headers ?? new stdClass();
+		$out['events'][] = [
+			'event'     => (string) $e->event,
+			'severity'  => (string) ( $e->severity ?? '' ),
+			'time'      => (int) ( $e->timestamp ?? 0 ),
+			'to'        => (string) ( $e->recipient ?? '' ),
+			'from'      => (string) ( $headers->from ?? ( $e->envelope->sender ?? '' ) ),
+			'subject'   => (string) ( $headers->subject ?? '' ),
+			'reason'    => (string) ( $e->{'delivery-status'}->description ?? ( $e->{'delivery-status'}->message ?? ( $e->reason ?? '' ) ) ),
+			'test'      => ! empty( $e->flags->{'is-test-mode'} ),
+		];
+	}
+	return $out;
+}
+
 // <site>[-env] for CLI commands about a hosting environment.
 function captaincore_hosting_target( $env ) {
 	$site = CaptainCore\Sites::get( (int) $env->site_id );
@@ -12453,6 +12493,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/(?P<action>staging|deploy)', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_deploy_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/mail', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_hosting_mail_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);

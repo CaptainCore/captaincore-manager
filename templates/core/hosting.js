@@ -62,6 +62,48 @@ Object.assign(Component.prototype, {
     }).catch(e => this.updateToast(tid, (e && e.message) || 'Something went wrong', { kind: 'error' }));
   },
 
+  // Outgoing mail: the relay's domain and this site's recent messages (Mailgun events by tag).
+  loadHostMail(force) {
+    const key = this.hostingKey();
+    if (!force && this._hostMail && this._hostMail.key === key) return;
+    const [siteId, env] = key.split('|');
+    this._hostMail = { key, loading: true, data: (this._hostMail && this._hostMail.key === key) ? this._hostMail.data : null };
+    this.setState({});
+    this.api('/sites/' + siteId + '/hosting/mail?environment=' + encodeURIComponent(env)).then(res => {
+      if (this._hostMail.key !== key) return;
+      this._hostMail = (!res || res.code) ? { key, error: (res && res.message) || 'Could not read mail' } : { key, data: res };
+      this.setState({});
+    }).catch(() => { this._hostMail = { key, error: 'Could not read mail' }; this.setState({}); });
+  },
+
+  hostMailVals(c, set) {
+    if (!this._hostMail || this._hostMail.key !== this.hostingKey()) setTimeout(() => this.loadHostMail(), 0);
+    const m = this._hostMail || {}, d = m.data || {};
+    const on = c.mail !== 'off';
+    const primary = ((c.domains || []).find(x => x.primary) || (c.domains || [])[0] || {});
+    const zone = (d.domain || '').replace(/^mg\./, '');
+    const aligned = !!zone && (primary.name === zone || String(primary.name || '').endsWith('.' + zone));
+    const tone = { delivered: 'var(--ok)', accepted: 'var(--brand)', failed: 'var(--bad)', rejected: 'var(--bad)', complained: 'var(--warn)' };
+    const label = { delivered: 'Delivered', accepted: 'Accepted', failed: 'Failed', rejected: 'Rejected', complained: 'Complaint' };
+    // One row per message: Mailgun lists newest first, so the latest event wins.
+    const seen = {}, rows = [];
+    (d.events || []).forEach(e => { const k = e.subject + '|' + e.to + '|' + Math.round(e.time / 300); if (seen[k]) return; seen[k] = 1; rows.push(e); });
+    return {
+      hostMailIco: this.icon('mail'), hostMailIllo: this.illo('mail'),
+      hostMailOn: on, hostMailMark: on ? '✓' : '', toggleHostMail: () => set(cc => { cc.mail = cc.mail === 'off' ? 'relay' : 'off'; }),
+      hostMailDomain: d.domain || 'the hosting zone',
+      hostMailFrom: 'wordpress@' + (primary.name || 'the primary domain'),
+      hostMailAligned: on && aligned, hostMailUnaligned: on && !aligned && !!primary.name,
+      hostMailAlignNote: 'Mail from ' + (primary.name || 'this domain') + ' is signed for ' + (d.domain || 'the relay') + ', not for ' + (primary.name || 'it') + '. Receivers accept it unless the domain has a strict DMARC policy; sending records for the site\'s own domain come next.',
+      hostMailRows: rows.slice(0, 12).map(e => ({ status: label[e.event] || e.event, fg: tone[e.event] || 'var(--ink-dim)',
+        subject: e.subject || '(no subject)', to: e.to, when: e.time ? new Date(e.time * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '',
+        reason: e.reason, hasReason: !!e.reason && e.event !== 'delivered' && e.event !== 'accepted', test: !!e.test })),
+      hostMailEmpty: !m.loading && !m.error && !rows.length, hostMailLoading: !!m.loading && !rows.length,
+      hostMailErr: m.error || (d.error || ''), hostMailHasErr: !!(m.error || d.error),
+      hostMailRefresh: () => this.loadHostMail(true)
+    };
+  },
+
   hostBackupVals() {
     if (!this._hostBk || this._hostBk.key !== this.hostingKey()) setTimeout(() => this.loadHostBackups(), 0);
     const bk = this._hostBk || { loading: true, list: [] };
@@ -226,7 +268,7 @@ Object.assign(Component.prototype, {
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
       hostNoindexMark: c.noindex !== false ? '✓' : '', toggleHostNoindex: () => set(cc => { cc.noindex = cc.noindex === false; }),
       // Local backups
-      ...this.hostBackupVals(),
+      ...this.hostBackupVals(), ...this.hostMailVals(c, set),
       // History
       hostHist: (d.history || []).map(r => ({ rev: 'r' + r.revision, note: r.note || '—', by: r.by, when: ago(r.created_at),
         status: (statusMap[r.status] || [r.status])[0], fg: (statusMap[r.status] || [0, 'var(--ink-dim)'])[1],
