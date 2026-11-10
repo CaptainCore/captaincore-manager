@@ -7711,6 +7711,7 @@ button.ccc-edited:hover{color:var(--ink)}
         <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
           <span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ cxIcoLogs }}"></span></span>
           <span style="font:600 var(--fs-15) var(--sans)">{{ cxLogTitle }}</span>
+          <sc-if value="{{ cxLogLoading }}" hint-placeholder-val="{{ false }}"><span style="width:14px;height:14px;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--brand);animation:ccspin .7s linear infinite;flex:none"></span></sc-if>
           <span class="cc-meta">{{ cxLogMeta }}</span>
           <div style="flex:1"></div>
           <span onClick="{{ cxLogToggleRaw }}" class="cc-btn">{{ cxLogRawLabel }}</span>
@@ -7720,7 +7721,16 @@ button.ccc-edited:hover{color:var(--ink)}
         <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--rule)">
           <sc-for list="{{ cxLogSrcs }}" as="ls" hint-placeholder-count="4"><span onClick="{{ ls.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 11px;border-radius:999px;cursor:pointer;color:{{ ls.fg }};background:{{ ls.bg }};border:1px solid {{ ls.bd }}">{{ ls.label }}</span></sc-for>
         </div>
-        <pre ref="{{ cxLogDlgRef }}" style="margin:0;flex:1;min-height:0;overflow:auto;padding:12px 16px;background:var(--panel);font:400 var(--fs-115,11.5px)/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word">{{ cxLogText }}</pre>
+        <sc-if value="{{ cxLogLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="height:3px;flex:none;background:linear-gradient(90deg,transparent 0%,var(--brand) 50%,transparent 100%);background-size:200% 100%;animation:ccshimmer 1.1s linear infinite"></div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--panel)">
+            <span style="width:30px;height:30px;border-radius:50%;border:3px solid var(--rule);border-top-color:var(--brand);animation:ccspin .7s linear infinite"></span>
+            <span style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ cxLogWait }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ cxLogLoaded }}" hint-placeholder-val="{{ true }}">
+          <pre ref="{{ cxLogDlgRef }}" style="margin:0;flex:1;min-height:0;overflow:auto;padding:12px 16px;background:var(--panel);font:400 var(--fs-115,11.5px)/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word">{{ cxLogText }}</pre>
+        </sc-if>
       </div>
     </div>
   </sc-if>

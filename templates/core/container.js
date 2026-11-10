@@ -360,6 +360,8 @@ Object.assign(Component.prototype, {
       cxLogRef: el => { this._ctLogEl = el; }, cxLogRefresh: () => { if (curLog) this.loadContainerLog(curLog); },
       // The viewer the Logs buttons open
       cxLogOpen: !!s.cxLogOpen, cxLogClose: () => this.setState({ cxLogOpen: false }),
+      cxLogLoading: !!(log && log.loading), cxLogLoaded: !!(log && !log.loading),
+      cxLogWait: 'Reading ' + ((logSrcs.find(([k]) => 'ct:' + s.ctName + ':' + k === curLog) || [])[1] || 'the log') + ' from the server. This takes two or three seconds.',
       cxLogTitle: ((logSrcs.find(([k]) => 'ct:' + s.ctName + ':' + k === curLog) || [])[1] || 'Logs') + ' · ' + (s.ctName || ''),
       cxLogMeta: !log || log.loading ? 'Reading the last 300 lines from the server…' : log.error ? '' : (log.text ? log.text.split('\n').length + ' lines, newest last · your local time' : ''),
       cxLogDlgRef: el => { this._ctLogDlgEl = el; },
