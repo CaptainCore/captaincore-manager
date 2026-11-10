@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 72;
+    const REQUIRED_VERSION = 73;
 
     private static function _table() {
         global $wpdb;
@@ -1694,6 +1694,36 @@ class DB {
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v73: servers CaptainCore runs itself (hosting nodes), as opposed to
+        // sites at a host. provider_id is the connection the box is rented
+        // through (0 = none, e.g. our own hardware) and provider_server_id
+        // that provider's name for it. specs (cpu, ram_gb, disk) are typed
+        // in; details is written by health checks (os, kernel, last_seen).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_servers` (
+            server_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL DEFAULT '',
+            provider_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            provider_server_id varchar(255) NOT NULL DEFAULT '',
+            role varchar(20) NOT NULL DEFAULT 'node',
+            status varchar(20) NOT NULL DEFAULT 'provisioning',
+            address varchar(64) NOT NULL DEFAULT '',
+            address_v6 varchar(64) NOT NULL DEFAULT '',
+            ssh_port int(10) UNSIGNED NOT NULL DEFAULT 22,
+            ssh_user varchar(64) NOT NULL DEFAULT 'root',
+            location varchar(255) NOT NULL DEFAULT '',
+            specs longtext,
+            max_sites int(10) UNSIGNED NOT NULL DEFAULT 0,
+            monthly_cost decimal(10,2) NOT NULL DEFAULT 0,
+            details longtext,
+            notes text,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (server_id),
+        KEY provider_id (provider_id)
         ) $charset_collate;";
 
         dbDelta($sql);

@@ -230,6 +230,7 @@ return array(
     'CaptainCore\\SecurityPatches' => $baseDir . '/app/SecurityPatches.php',
     'CaptainCore\\SecurityThreatTracking' => $baseDir . '/app/SecurityThreatTracking.php',
     'CaptainCore\\SecurityThreats' => $baseDir . '/app/SecurityThreats.php',
+    'CaptainCore\\Servers' => $baseDir . '/app/Servers.php',
     'CaptainCore\\SessionAlertsCLI' => $baseDir . '/app/SessionAlertsCLI.php',
     'CaptainCore\\SessionAnomalyDetector' => $baseDir . '/app/SessionAnomalyDetector.php',
     'CaptainCore\\SessionSnapshots' => $baseDir . '/app/SessionSnapshots.php',

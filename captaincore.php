@@ -6822,6 +6822,60 @@ HEREDOC;
 	exit;
 }
 
+function captaincore_servers_func( $request ) {
+	return CaptainCore\Servers::list_all();
+}
+
+function captaincore_servers_get_func( $request ) {
+	$row = CaptainCore\Servers::get( (int) $request['id'] );
+	if ( ! $row ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	return CaptainCore\Servers::present( $row );
+}
+
+function captaincore_servers_create_func( $request ) {
+	$params = $request->get_json_params();
+	$data   = CaptainCore\Servers::sanitize( $params['server'] ?? $params ?? [] );
+	if ( is_wp_error( $data ) ) {
+		return $data;
+	}
+	$now                = current_time( 'mysql' );
+	$data['details']    = wp_json_encode( (object) [] );
+	$data['created_at'] = $now;
+	$data['updated_at'] = $now;
+	$id = CaptainCore\Servers::insert( $data );
+	if ( ! $id ) {
+		return new WP_Error( 'db_error', 'Could not save the server.', [ 'status' => 500 ] );
+	}
+	return CaptainCore\Servers::present( CaptainCore\Servers::get( $id ) );
+}
+
+function captaincore_servers_update_func( $request ) {
+	$id       = (int) $request['id'];
+	$existing = CaptainCore\Servers::get( $id );
+	if ( ! $existing ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$params = $request->get_json_params();
+	$data   = CaptainCore\Servers::sanitize( $params['server'] ?? $params ?? [], $existing );
+	if ( is_wp_error( $data ) ) {
+		return $data;
+	}
+	$data['updated_at'] = current_time( 'mysql' );
+	CaptainCore\Servers::update( $data, [ 'server_id' => $id ] );
+	return CaptainCore\Servers::present( CaptainCore\Servers::get( $id ) );
+}
+
+function captaincore_servers_delete_func( $request ) {
+	$id = (int) $request['id'];
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	CaptainCore\Servers::delete( $id );
+	return [ 'deleted' => $id ];
+}
+
 function captaincore_keys_func( $request ) {
 
 	$current_user = wp_get_current_user();
@@ -11844,6 +11898,42 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_keys_set_primary_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	// Servers CaptainCore runs itself (hosting nodes) — admin only.
+	register_rest_route(
+		'captaincore/v1', '/servers', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_servers_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_servers_create_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_servers_get_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'PUT',
+				'callback'            => 'captaincore_servers_update_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => 'captaincore_servers_delete_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 		]
 	);
 

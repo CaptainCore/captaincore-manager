@@ -258,7 +258,7 @@ Object.assign(Component.prototype, {
 
   PROVIDER_TYPES: [
     ['kinsta', 'Hosting - Kinsta'], ['wpengine', 'Hosting - WP Engine'], ['rocketdotnet', 'Hosting - Rocket.net'],
-    ['gridpane', 'Hosting - GridPane'], ['constellix', 'DNS - Constellix'], ['hoverdotcom', 'Domain - Hover.com'],
+    ['gridpane', 'Hosting - GridPane'], ['ovh', 'Servers - OVHcloud'], ['vultr', 'Servers - Vultr'], ['constellix', 'DNS - Constellix'], ['hoverdotcom', 'Domain - Hover.com'],
     ['spaceship', 'Domain - Spaceship'], ['mailgun', 'Email - Mailgun'], ['forwardemail', 'Email - Forward Email'],
     ['fathom', 'Analytics - Fathom'], ['intercom', 'Live chat - Intercom'], ['envato', 'Marketplace - Envato']
   ],

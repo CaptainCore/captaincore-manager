@@ -4328,6 +4328,81 @@ button.ccc-edited:hover{color:var(--ink)}
         </div>
       </sc-if>
 
+      <sc-if value="{{ showServers }}" hint-placeholder-val="{{ false }}">
+        <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">{{ srvSummary }}</span>
+            <div style="flex:1"></div>
+            <button onClick="{{ addServer }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Add server</button>
+          </div>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ srvRows }}" as="sv" hint-placeholder-count="2">
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex:none"></span>
+                  <span style="font:600 var(--fs-15) var(--mono)">{{ sv.name }}</span>
+                  <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);border:1px solid var(--rule);border-radius:999px;padding:1px 9px">{{ sv.roleLabel }}</span>
+                  <span style="font:500 var(--fs-12) var(--sans);color:{{ sv.dot }}">{{ sv.statusLabel }}</span>
+                  <div style="flex:1"></div>
+                  <span style="font:500 var(--fs-13) var(--sans)">{{ sv.cost }}</span>
+                  <span onClick="{{ sv.edit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--brand)">Edit</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 24px">
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em">Where</span>
+                    <span style="font:400 var(--fs-13) var(--sans)">{{ sv.where }}</span>
+                    <sc-if value="{{ sv.hasProviderRef }}" hint-placeholder-val="{{ true }}">
+                      <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sv.providerRef }}</span>
+                    </sc-if>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em">Address</span>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                      <span style="font:500 var(--fs-13) var(--mono)">{{ sv.address }}</span>
+                      <sc-if value="{{ sv.hasSsh }}" hint-placeholder-val="{{ true }}">
+                        <span onClick="{{ sv.copySsh }}" style="font:500 var(--fs-115) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sv.sshLabel }}</span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ sv.hasV6 }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sv.v6 }}</span>
+                    </sc-if>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em">Hardware</span>
+                    <span style="font:400 var(--fs-13) var(--sans)">{{ sv.specs }}</span>
+                    <sc-if value="{{ sv.hasOs }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sv.os }}</span>
+                    </sc-if>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                    <span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em">Sites</span>
+                    <span style="font:400 var(--fs-13) var(--sans)">{{ sv.sitesLabel }}</span>
+                    <sc-if value="{{ sv.barShow }}" hint-placeholder-val="{{ true }}">
+                      <div style="height:6px;border-radius:4px;background:var(--panel-2);overflow:hidden;max-width:220px"><div style="height:100%;width:{{ sv.barW }};background:var(--brand);border-radius:4px"></div></div>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule);padding-top:9px">
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sv.seen }}</span>
+                  <sc-if value="{{ sv.hasNotes }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">· {{ sv.notes }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ srvLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:18px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13) var(--sans);color:var(--ink-dim);text-align:center">Loading servers…</div>
+            </sc-if>
+            <sc-if value="{{ srvFailed }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:18px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13) var(--sans);color:var(--bad);text-align:center">Could not load servers.</div>
+            </sc-if>
+            <sc-if value="{{ srvEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:22px;border:1px dashed var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim);text-align:center">No servers yet. Add a hosting node you run, rented or your own, to track where its sites live.</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:16px;flex-wrap:wrap">
@@ -6887,6 +6962,45 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="flex:1"></div>
           <span onClick="{{ closeProvider }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveProvider }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save provider</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Server add/edit dialog (servers.js) ══ -->
+  <sc-if value="{{ srvDlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeServer }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:620px;max-width:calc(100vw - 40px);max-height:88vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper);z-index:1">
+          <span style="font:600 var(--fs-15) var(--sans)">{{ srvDlgTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeServer }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Name</span><input value="{{ srvF_name }}" onInput="{{ srvOn_name }}" placeholder="cc-vin1" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Role</span><div style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><sc-for list="{{ srvRoleChips }}" as="ch" hint-placeholder-count="3"><span onClick="{{ ch.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ ch.fg }};background:{{ ch.bg }};border:1px solid {{ ch.bd }}">{{ ch.label }}</span></sc-for></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Status</span><div style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><sc-for list="{{ srvStatusChips }}" as="ch" hint-placeholder-count="3"><span onClick="{{ ch.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ ch.fg }};background:{{ ch.bg }};border:1px solid {{ ch.bd }}">{{ ch.label }}</span></sc-for></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Rented from</span><div style="display:flex;gap:6px;flex-wrap:wrap;flex:1"><sc-for list="{{ srvProviderChips }}" as="ch" hint-placeholder-count="3"><span onClick="{{ ch.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ ch.fg }};background:{{ ch.bg }};border:1px solid {{ ch.bd }}">{{ ch.label }}</span></sc-for></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Provider's ID</span><input value="{{ srvF_provider_server_id }}" onInput="{{ srvOn_provider_server_id }}" placeholder="ns1005242.ip-147-135-9.us" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Location</span><input value="{{ srvF_location }}" onInput="{{ srvOn_location }}" placeholder="Vint Hill, VA" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">IPv4</span><input value="{{ srvF_address }}" onInput="{{ srvOn_address }}" placeholder="147.135.9.32" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">IPv6</span><input value="{{ srvF_address_v6 }}" onInput="{{ srvOn_address_v6 }}" placeholder="2604:2dc0:100:920::/64" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">SSH</span><input value="{{ srvF_ssh_user }}" onInput="{{ srvOn_ssh_user }}" placeholder="root" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"><input value="{{ srvF_ssh_port }}" onInput="{{ srvOn_ssh_port }}" placeholder="22" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:80px;flex:none"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">CPU</span><input value="{{ srvF_cpu }}" onInput="{{ srvOn_cpu }}" placeholder="AMD Ryzen 7 3800X 8c/16t" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">RAM (GB)</span><input value="{{ srvF_ram_gb }}" onInput="{{ srvOn_ram_gb }}" placeholder="64" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px;flex:none"><span style="width:70px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim);text-align:right">Disk</span><input value="{{ srvF_disk }}" onInput="{{ srvOn_disk }}" placeholder="2x960 GB NVMe" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Max sites</span><input value="{{ srvF_max_sites }}" onInput="{{ srvOn_max_sites }}" placeholder="76" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px;flex:none"><span style="width:70px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim);text-align:right">$ / month</span><input value="{{ srvF_monthly_cost }}" onInput="{{ srvOn_monthly_cost }}" placeholder="66" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:110px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Notes</span><input value="{{ srvF_notes }}" onInput="{{ srvOn_notes }}" placeholder="What this box is for" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 9px;outline:none;min-width:0;flex:1"></div>
+          <sc-if value="{{ srvNoHostProviders }}" hint-placeholder-val="{{ false }}">
+            <div style="font:400 var(--fs-12)/1.5 var(--sans);color:var(--ink-dim)">To link a server to its provider, add an OVHcloud or Vultr connection under Settings → Providers.</div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);position:sticky;bottom:0;background:var(--paper)">
+          <sc-if value="{{ srvDlgEditing }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ deleteServer }}" style="font:500 var(--fs-125) var(--sans);color:var(--bad);cursor:pointer">Remove</span>
+          </sc-if>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeServer }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+          <button onClick="{{ saveServer }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save server</button>
         </div>
       </div>
     </div>

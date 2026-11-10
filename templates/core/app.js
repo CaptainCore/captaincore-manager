@@ -2867,7 +2867,8 @@ class Component extends DCLogic {
     search: 'M11 4a7 7 0 100 14 7 7 0 000-14zm10 17-5.2-5.2',
     support: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 14v.01M9.5 9a2.5 2.5 0 115 0c0 1.5-2.5 2-2.5 3.5',
     site: 'M4 5h16v14H4zM4 9h16M7 7h.01',
-    quicksave: 'M12 8v4l3 3M12 3a9 9 0 100 18 9 9 0 000-18z'
+    quicksave: 'M12 8v4l3 3M12 3a9 9 0 100 18 9 9 0 000-18z',
+    servers: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01'
   };
 
   CONSOLE_SCRIPT = [
@@ -3343,7 +3344,7 @@ class Component extends DCLogic {
     const supportOn = !isOp && window.CC_BOOT && window.CC_BOOT.chat && window.CC_BOOT.chat.enabled && !window.CC_BOOT.chat.operator;
     if (supportOn) primary.push(this.navItem('support', 'Support', 'chat'));
     const chatNav = isOp && window.CC_BOOT && window.CC_BOOT.chat && window.CC_BOOT.chat.enabled ? [this.navItem('chat', 'Chat')] : [];
-    const operate = [...chatNav, this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives')];
+    const operate = [...chatNav, this.navItem('security', 'Security'), this.navItem('audits', 'Site Audits', 'audits'), this.navItem('activity', 'Activity'), this.navItem('reports', 'Reports'), this.navItem('archives', 'Archives'), this.navItem('servers', 'Servers')];
 
     // When booted (real app), never show design sample counts — '…' until
     // hydration lands, then real numbers. Samples remain for the DC editor.
@@ -3470,6 +3471,7 @@ class Component extends DCLogic {
     const auditsVals = this.computeAudits(s);
     const reportsVals = this.computeReports(s, isOp);
     const archivesVals = this.computeArchives(s);
+    const serversVals = isOp ? this.computeServers(s) : {};
     const settingsVals = this.computeSettings(s);
     const profileVals = this.computeProfile(s);
 
@@ -3512,7 +3514,7 @@ class Component extends DCLogic {
       fleetGlance: this._hydrated ? this.realFleetGlance() : [],
       fgShow: this._hydrated && this.realFleetGlance().length > 0,
       nav: primary, navOperate: operate.map(n => n), navBottom: isOp ? [this.navItem('users', 'Users', 'accounts'), this.navItem('settings', 'Settings')] : [this.navItem('settings', 'Settings')],
-      screenTitle: ({ home: 'Home', chat: 'Chat', support: 'Support', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
+      screenTitle: ({ home: 'Home', chat: 'Chat', support: 'Support', sites: 'Sites', site: 'Sites', domains: 'Domains', domain: 'Domains', accounts: 'Accounts', account: 'Accounts', billing: 'Billing', invoice: 'Billing', security: 'Security', audits: 'Site Audits', activity: 'Activity', reports: 'Reports', users: 'Users', archives: 'Archives', servers: 'Servers', settings: 'Settings', profile: 'Profile' })[s.route] || stub[0],
       userRole: isOp ? 'Operator' : 'Customer',
       showMinnAdmin: !!(window.CC_BOOT && window.CC_BOOT.minnAdminUrl),
       minnAdminUrl: (window.CC_BOOT && window.CC_BOOT.minnAdminUrl) || '#',
@@ -3561,8 +3563,8 @@ class Component extends DCLogic {
       showDomains: s.route === 'domains', showDomain: s.route === 'domain',
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports', showSupport: s.route === 'support' && !!supportOn,
-      showArchives: s.route === 'archives', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'chat', 'support', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'settings', 'profile', 'users'].includes(s.route),
+      showArchives: s.route === 'archives', showServers: isOp && s.route === 'servers', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
+      showStub: !['home', 'chat', 'support', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'servers', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',
@@ -3572,7 +3574,7 @@ class Component extends DCLogic {
       toggleDockJobs: () => this.setState(st => ({ dockJobsAll: !st.dockJobsAll })),
       ...listVals, ...detailVals, ...domainsVals, ...domainVals,
       ...accountsVals, ...accountVals, ...billingVals,
-      ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...settingsVals, ...profileVals,
+      ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...serversVals, ...settingsVals, ...profileVals,
       ...this.relayVals(s),
       ...(this.chatVals ? this.chatVals(s) : {}),
       goProfile: this.go('profile'),
