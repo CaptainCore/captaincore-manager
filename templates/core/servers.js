@@ -112,11 +112,48 @@ Object.assign(Component.prototype, {
     ];
   },
 
-  // Placing a site on a node needs the provisioning the first site is
-  // being built with by hand (container, volumes, edge route). Until that
-  // is scripted this says so instead of pretending.
+  // Add site…: POST /servers/{id}/sites makes the site (a temporary domain,
+  // the next free container slot, hosting revision 1); the job it returns
+  // builds the container (`captaincore host site create <id>`).
   addSiteToServer(r) {
-    this.toast('Adding a site to ' + r.name + ' is the next slice: it will run the same steps the first site is set up with by hand.', { kind: 'info', timeout: 7000 });
+    this.setState({ asOpen: true, asServerId: r.server_id, asServerName: r.name, asName: '', asStart: 'wordpress', asAccQ: '', asAccId: '' });
+  },
+
+  submitAddSite() {
+    const s = this.state, name = (s.asName || '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{2,40}$/.test(name)) { this.toast('Give the site a name of 3 to 40 letters or digits', { kind: 'error' }); return; }
+    const tid = this.toast('Creating ' + name + '…', { kind: 'loading' });
+    this.api('/servers/' + s.asServerId + '/sites', { method: 'POST', body: { name, start: s.asStart, account_id: Number(s.asAccId) || 0 } }).then(res => {
+      if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not create the site', { kind: 'error', timeout: 8000 }); return; }
+      this.updateToast(tid, (res.domain || name) + ' created; building its container on ' + s.asServerName, { kind: 'success', timeout: 6000 });
+      this.setState({ asOpen: false });
+      this.startJob({ label: 'create', target: name + ' on ' + s.asServerName, command: 'host site create', siteId: res.site_id, environment: 'Production',
+        dispatch: () => Promise.resolve(res), onFinish: () => { this.loadServers(true); if (this.state.route === 'server') this.loadServerStats(); } });
+    }).catch(e => this.updateToast(tid, (e && e.message) || 'Could not create the site', { kind: 'error' }));
+  },
+
+  addSiteVals(s) {
+    if (!s.asOpen) return { asOpen: false };
+    const q = (s.asAccQ || '').trim().toLowerCase();
+    const accs = this.ACCOUNTS || [];
+    const picked = accs.find(a => String(a.id) === String(s.asAccId));
+    const matches = q ? accs.filter(a => String(a.name || '').toLowerCase().includes(q)).slice(0, 6) : [];
+    const slug = (s.asName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return {
+      asOpen: true, asTitle: 'Add a site to ' + (s.asServerName || 'this server'), asIllo: this.illo('container'),
+      asName: s.asName || '', onAsName: e => this.setState({ asName: e.target.value }),
+      asSlugHint: slug ? 'Gets a temporary address like ' + slug.slice(0, 20) + '-xxxx.anchorhost.xyz, its own container, SSH port and database.' : 'A name for the site (you can add its real domain later).',
+      asStarts: [['wordpress', 'Fresh WordPress', 'Installed and ready to log in.'], ['empty', 'Empty', 'A placeholder page, for a copy or migration.']].map(([v, l, d]) => ({ label: l, desc: d,
+        bd: s.asStart === v ? 'var(--brand)' : 'var(--rule)', bg: s.asStart === v ? 'var(--brand-soft)' : 'var(--paper)', mark: s.asStart === v ? '✓' : '',
+        pick: () => this.setState({ asStart: v }) })),
+      asAccQ: s.asAccQ || '', onAsAccQ: e => this.setState({ asAccQ: e.target.value }),
+      asAccPicked: picked ? picked.name : 'No account yet', asAccHas: !!picked,
+      asAccClear: () => this.setState({ asAccId: '' }),
+      asAccMatches: matches.map(a => ({ name: a.name, pick: () => this.setState({ asAccId: a.id, asAccQ: '' }) })),
+      asAccShowMatches: matches.length > 0,
+      asClose: () => this.setState({ asOpen: false }),
+      asSubmit: () => this.submitAddSite()
+    };
   },
 
   // ── Team SSH keys: replicated by `captaincore ssh-keys deploy` into a
@@ -251,7 +288,8 @@ Object.assign(Component.prototype, {
       srvNoHostProviders: providers.length === 0,
       closeServer: () => this.setState({ srvDlgOpen: false }),
       saveServer: () => this.saveServer(),
-      deleteServer: () => this.deleteServer()
+      deleteServer: () => this.deleteServer(),
+      ...this.addSiteVals(s)
     };
     ['name', 'provider_server_id', 'address', 'address_v6', 'ssh_user', 'ssh_port', 'location', 'cpu', 'ram_gb', 'disk', 'max_sites', 'monthly_cost', 'notes'].forEach(k => {
       const fl = field(k);

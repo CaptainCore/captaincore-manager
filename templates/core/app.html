@@ -2049,6 +2049,9 @@ button.ccc-edited:hover{color:var(--ink)}
                   <span onClick="{{ hostOpenCt }}" class="cc-btn" style="color:var(--brand-ink)">Open container<span class="i" ref="{{ hostIcoArrow }}"></span></span>
                 </div>
               </sc-if>
+              <sc-if value="{{ hostIsSuspended }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:12px;padding:11px 16px;border:1px solid color-mix(in srgb,var(--bad) 40%,var(--rule));border-radius:12px;background:var(--bad-soft);font:500 var(--fs-13) var(--sans);color:var(--bad)">This site is suspended: visitors get a "temporarily unavailable" page. Turn it off under Tools.</div>
+              </sc-if>
               <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--panel)">
                 <span style="font:600 var(--fs-13) var(--sans)">{{ hostRev }}</span>
                 <span style="font:600 var(--fs-12) var(--sans);color:{{ hostStatusFg }}">{{ hostStatus }}</span>
@@ -2174,6 +2177,10 @@ button.ccc-edited:hover{color:var(--ink)}
                   <span onClick="{{ toggleHostNoindex }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostNoindexMark }}</span>Hide from search engines</span>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Sends X-Robots-Tag: noindex on every response and keeps WordPress's search engine visibility off. On for new sites and always on for staging; turn it off when the site goes live. Turning it off leaves WordPress's own setting as it is.</span>
                 </div>
+                <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule)">
+                  <span onClick="{{ toggleHostSuspend }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--bad);flex:none">{{ hostSuspendMark }}</span>Suspend site</span>
+                  <span class="cc-meta">The edge answers every request, apps included, with a "temporarily unavailable" page (503). Nothing is deleted; turn it off to bring the site back.</span>
+                </div>
               </div>
 
               <div class="cc-card" style="margin-top:14px">
@@ -2249,6 +2256,13 @@ button.ccc-edited:hover{color:var(--ink)}
                 <sc-if value="{{ hostHistEmpty }}" hint-placeholder-val="{{ false }}">
                   <div style="padding:14px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">No revisions yet. The settings above are the defaults until you save.</div>
                 </sc-if>
+              </div>
+              <div class="cc-card" style="margin-top:14px;border-color:color-mix(in srgb,var(--bad) 30%,var(--rule))">
+                <div class="cc-card-h"><span class="cc-chip" style="--h:var(--bad)"><span ref="{{ hostRemoveIco }}"></span></span><h2>Remove from this server</h2><span class="cc-meta">Takes a last local backup, stops the container and takes the site offline. The container is kept for 7 days, then deleted with its backups on this server. Off-site backups stay.</span></div>
+                <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <input value="{{ hostRemoveName }}" onInput="{{ onHostRemoveName }}" placeholder="Type {{ hostRemoveWho }} to confirm" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none;width:300px;max-width:100%">
+                  <sc-if value="{{ hostRemoveReady }}" hint-placeholder-val="{{ false }}"><span onClick="{{ hostRemove }}" class="cc-btn danger" style="color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--rule))">Remove environment</span></sc-if>
+                </div>
               </div>
             </sc-if>
           </sc-if>
@@ -7650,6 +7664,55 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="flex:1"></div>
           <span onClick="{{ closeServer }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveServer }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save server</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Add site to a server (servers.js addSiteVals) ══ -->
+  <sc-if value="{{ asOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ asClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule);background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 7%,var(--paper)),var(--paper) 70%)">
+          <div ref="{{ asIllo }}" style="width:64px;height:48px"></div>
+          <span style="font:600 var(--fs-15) var(--sans)">{{ asTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ asClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <label style="display:flex;flex-direction:column;gap:6px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Site name
+            <input value="{{ asName }}" onInput="{{ onAsName }}" placeholder="Acme Bakery" style="height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:0 11px;outline:none">
+            <span class="cc-meta" style="font-weight:400">{{ asSlugHint }}</span></label>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Start with</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+              <sc-for list="{{ asStarts }}" as="st" hint-placeholder-count="2">
+                <div onClick="{{ st.pick }}" style="cursor:pointer;border:1px solid {{ st.bd }};background:{{ st.bg }};border-radius:11px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+                  <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);flex:none;margin-top:2px;background:var(--paper)">{{ st.mark }}</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 var(--fs-13) var(--sans)">{{ st.label }}</span><span class="cc-meta">{{ st.desc }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Account <span style="font-weight:400">(optional)</span></span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font:500 var(--fs-13) var(--sans)">{{ asAccPicked }}</span>
+              <sc-if value="{{ asAccHas }}" hint-placeholder-val="{{ false }}"><span onClick="{{ asAccClear }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Clear</span></sc-if>
+            </div>
+            <input value="{{ asAccQ }}" onInput="{{ onAsAccQ }}" placeholder="Search accounts" style="height:34px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
+            <sc-if value="{{ asAccShowMatches }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--rule);border-radius:9px;overflow:hidden">
+                <sc-for list="{{ asAccMatches }}" as="am" hint-placeholder-count="0"><div onClick="{{ am.pick }}" style="padding:7px 11px;font:400 var(--fs-13) var(--sans);cursor:pointer;border-top:1px solid var(--rule)" style-hover="background:var(--panel-2)">{{ am.name }}</div></sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <span class="cc-meta">Takes about a minute; it shows in the jobs dock.</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ asClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <span onClick="{{ asSubmit }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px">Create site</span>
         </div>
       </div>
     </div>

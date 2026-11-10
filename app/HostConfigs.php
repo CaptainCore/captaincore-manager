@@ -62,6 +62,7 @@ class HostConfigs extends DB {
 			'debug'               => false,
 			'noindex'             => true,
 			'mail'                => 'relay',
+			'suspended'           => false,
 			'apps'                => [],
 		];
 	}
@@ -263,6 +264,8 @@ class HostConfigs extends DB {
 		// Outgoing mail through the server's relay (Mailgun, mg.<hosting zone>),
 		// or off: the relay refuses mail from this site's container.
 		$out['mail']             = ( $in['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
+		// Suspended: the edge answers every request with a holding page (503).
+		$out['suspended']        = ! empty( $in['suspended'] );
 
 		// Apps: long-running programs beside the site (a chat or realtime
 		// server), each a systemd service in the container that runs as the
@@ -342,6 +345,7 @@ class HostConfigs extends DB {
 		$config['debug']     = ! empty( $config['debug'] );
 		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
 		$config['mail']      = ( $config['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
+		$config['suspended'] = ! empty( $config['suspended'] );
 		$config['apps']      = $config['apps'] ?? [];
 		return $config;
 	}
@@ -446,6 +450,52 @@ class HostConfigs extends DB {
 		}
 		$domain = $id ? Domains::get( $id ) : null;
 		return ( $domain && $domain->remote_id ) ? $domain : null;
+	}
+
+	/**
+	 * After the node parked an environment's container: drop its records in
+	 * the hosting zone (temporary domains and app hostnames there), clear its
+	 * server, keep the parked name, and retire it (production: the site goes
+	 * inactive; staging: the environment row goes).
+	 */
+	public static function remove_environment( $environment, $parked ) {
+		$config  = self::current( $environment );
+		$zone    = self::temporary_zone();
+		$dropped = [];
+		if ( $zone ) {
+			$labels = [];
+			foreach ( self::hostnames( $config ) as $host ) {
+				if ( substr( $host, -strlen( '.' . $zone->name ) ) === '.' . $zone->name ) {
+					$labels[ strtolower( substr( $host, 0, -strlen( '.' . $zone->name ) ) ) ] = true;
+				}
+			}
+			if ( $labels ) {
+				$page = 1;
+				do {
+					$res = Remote\Constellix::get( "domains/{$zone->remote_id}/records", [ 'perPage' => 100, 'page' => $page ] );
+					foreach ( (array) ( $res->data ?? [] ) as $r ) {
+						if ( isset( $labels[ strtolower( $r->name ) ] ) && in_array( strtolower( $r->type ), [ 'cname', 'a' ], true ) ) {
+							Remote\Constellix::delete( "domains/{$zone->remote_id}/records/{$r->id}" );
+							$dropped[] = $r->name . '.' . $zone->name;
+						}
+					}
+					$page++;
+				} while ( ! empty( $res->data ) && count( $res->data ) === 100 && $page < 30 );
+			}
+		}
+		$details = json_decode( (string) $environment->details ) ?: new \stdClass();
+		$details->removed_container = sanitize_text_field( (string) $parked );
+		$details->removed_at        = current_time( 'mysql' );
+		unset( $details->container );
+		Environments::update( [ 'server_id' => 0, 'details' => wp_json_encode( $details ) ], [ 'environment_id' => (int) $environment->environment_id ] );
+		$site = Sites::get( (int) $environment->site_id );
+		if ( strtolower( $environment->environment ) === 'production' ) {
+			( new Site( (int) $environment->site_id ) )->mark_inactive();
+		} else {
+			Environments::delete( (int) $environment->environment_id );
+		}
+		ProcessLog::insert( 'Removed ' . $environment->environment . ' from its server (container kept 7 days as ' . sanitize_text_field( (string) $parked ) . ')', (int) $environment->site_id );
+		return [ 'dns_removed' => $dropped, 'site' => $site ? $site->name : '' ];
 	}
 
 	/** The relay's Mailgun sending domain: mg.<hosting zone> (mg.anchorhost.xyz). */
@@ -565,7 +615,7 @@ class HostConfigs extends DB {
 			'name' => $host, 'site' => $slug, 'account_id' => (int) $account_id, 'customer_id' => 0,
 			'provider' => 'captaincore', 'key' => '', 'environment_vars' => [], 'remote_key' => '',
 			'environments' => [ [ 'environment' => 'Production', 'address' => $server->address, 'username' => 'site', 'password' => '',
-				'protocol' => 'sftp', 'port' => (string) $slot['port'], 'home_directory' => '/srv/site/public', 'database_password' => '',
+				'protocol' => 'sftp', 'port' => (string) $slot['port'], 'home_directory' => '/srv/site/public', 'database_username' => '', 'database_password' => '',
 				'monitor_enabled' => 0, 'updates_enabled' => 0 ] ],
 		] );
 		if ( empty( $created['site_id'] ) ) {

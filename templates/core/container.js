@@ -142,6 +142,7 @@ Object.assign(Component.prototype, {
       domains.length + (domains.length === 1 ? ' domain' : ' domains') + (primary ? ' · ' + primary : ''),
       'TLS' + (cfg.force_https ? ' · HTTPS forced' : ''),
       cfg.redirect_to_primary && domains.length > 1 ? 'Other domains → primary' : '',
+      cfg.suspended ? 'Suspended: holding page (503)' : '',
       cfg.noindex !== false ? 'Hidden from search engines' : '',
       (cfg.ip_deny || []).length ? (cfg.ip_deny || []).length + ' IPs denied' : '',
       (cfg.redirects || []).length ? (cfg.redirects || []).length + ' redirects' : '',

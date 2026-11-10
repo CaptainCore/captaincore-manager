@@ -267,6 +267,28 @@ Object.assign(Component.prototype, {
       // Tools
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
       hostNoindexMark: c.noindex !== false ? '✓' : '', toggleHostNoindex: () => set(cc => { cc.noindex = cc.noindex === false; }),
+      hostSuspendMark: c.suspended ? '✓' : '', toggleHostSuspend: () => set(cc => { cc.suspended = !cc.suspended; }),
+      hostIsSuspended: !!(d.config && d.config.suspended),
+      hostRemoveIco: this.icon('restart'),
+      hostRemoveName: s.hostRemoveName || '', onHostRemoveName: e => this.setState({ hostRemoveName: e.target.value }),
+      hostRemoveWho: ((this._detail && this._detail.site && this._detail.site.name) || '') ,
+      hostRemoveReady: !!(this._detail && this._detail.site) && ['name', 'site'].some(k => String((this._detail.site || {})[k] || '').toLowerCase() === String(s.hostRemoveName || '').trim().toLowerCase()),
+      hostRemove: () => {
+        const site = (this._detail && this._detail.site) || {};
+        const [siteId, env] = this.hostingKey().split('|');
+        if (!['name', 'site'].some(k => String(site[k] || '').toLowerCase() === String(this.state.hostRemoveName || '').trim().toLowerCase())) { this.toast('Type the site name to confirm', { kind: 'error' }); return; }
+        this.setState({ hostRemoveName: '' });
+        this.startJob({ label: 'remove', target: (site.name || '') + ' · ' + env, command: 'host site remove', siteId, environment: env,
+          dispatch: () => this.api('/sites/' + siteId + '/hosting/remove', { method: 'POST', body: { environment: env, confirm: site.name } }),
+          // The site is gone from this server (and inactive in the fleet):
+          // leave its page for the Servers screen and refresh both lists.
+          onFinish: () => {
+            this._host = null;
+            this.FLEET = this.FLEET.filter(f => String(f.id) !== String(siteId) || String(env).toLowerCase() !== 'production');
+            this.toast((site.name || 'The site') + ' is off its server. The container is kept for 7 days.', { kind: 'success', timeout: 8000 });
+            this.go('servers')(); this.loadServers(true); this.hydrate();
+          } });
+      },
       // Local backups
       ...this.hostBackupVals(), ...this.hostMailVals(c, set),
       // History

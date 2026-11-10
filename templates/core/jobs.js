@@ -109,7 +109,8 @@ Object.assign(Component.prototype, {
   JOB_VERBS: { 'sync-data': 'Sync', 'update-wp': 'Update', backup: 'Backup', quicksave: 'Quicksave', 'new-site': 'Provision site',
     'create-user': 'Create user', 'delete-user': 'Delete user',
     activate: 'Activate', deactivate: 'Deactivate', 'push-staging': 'Push to production',
-    'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy' },
+    'pull-staging': 'Pull to staging', restore: 'Restore', rollback: 'Rollback', deploy: 'Deploy',
+    create: 'Build site', remove: 'Remove from server' },
 
   // Cancel a running job — v1's killCommand (core-legacy.php:25227): tell the
   // daemon to kill the process over the job's own socket ({token, action:

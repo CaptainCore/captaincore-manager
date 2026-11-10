@@ -1312,6 +1312,17 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$info = CaptainCore\HostConfigs::site_build_info( (int) $current_site->site_id );
 		return is_wp_error( $info ) ? $info : [ 'response' => 'ok' ] + $info;
 	}
+	if ( $command === 'host-site-removed' ) {
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'host-site-removed requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$parked = (string) ( $post->parked ?? '' );
+		if ( ! preg_match( '/^[a-z0-9][a-z0-9-]*-removed-\d{8}$/', $parked ) ) {
+			return new WP_Error( 'invalid', 'host-site-removed needs the parked container name.', [ 'status' => 400 ] );
+		}
+		$done = CaptainCore\HostConfigs::remove_environment( CaptainCore\Environments::get( (int) $environment_id ), $parked );
+		return [ 'response' => 'Removed' ] + $done;
+	}
 	if ( $command === 'host-staging-prepare' ) {
 		if ( empty( $current_site ) ) {
 			return new WP_Error( 'site_required', 'host-staging-prepare requires a site_id.', [ 'status' => 400 ] );
@@ -7021,6 +7032,22 @@ function captaincore_site_hosting_mail_func( $request ) {
 	return $out;
 }
 
+// Remove an environment from its server. The caller types the site's name to
+// confirm; the CLI takes a last local backup, parks the container (kept seven
+// days) and reports back through /api host-site-removed.
+function captaincore_site_hosting_remove_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$site    = CaptainCore\Sites::get( (int) $env->site_id );
+	$confirm = strtolower( trim( (string) ( $request->get_json_params()['confirm'] ?? '' ) ) );
+	if ( ! $site || ( $confirm !== strtolower( $site->name ) && $confirm !== strtolower( $site->site ) ) ) {
+		return new WP_Error( 'confirm', 'Type the site name to confirm.', [ 'status' => 400 ] );
+	}
+	return [ 'token' => CaptainCore\Run::task( [ 'host', 'site', 'remove', captaincore_hosting_target( $env ) ] ) ];
+}
+
 // <site>[-env] for CLI commands about a hosting environment.
 function captaincore_hosting_target( $env ) {
 	$site = CaptainCore\Sites::get( (int) $env->site_id );
@@ -12493,6 +12520,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/(?P<action>staging|deploy)', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_deploy_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/remove', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_hosting_remove_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
