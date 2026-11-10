@@ -88,6 +88,34 @@ Object.assign(Component.prototype, {
       .catch(() => this.updateToast(tid, 'Could not remove the server', { kind: 'error' }));
   },
 
+  // Right-click (or ⋯) menu on a server card.
+  serverCtxEntries(r, ssh) {
+    const setStatus = status => {
+      const tid = this.toast('Marking ' + r.name + ' ' + status + '…', { kind: 'loading' });
+      this.api('/servers/' + r.server_id, { method: 'PUT', body: { server: { status } } })
+        .then(res => { if (!res || res.code) throw new Error((res && res.message) || 'failed');
+          this.updateToast(tid, r.name + ' is ' + status, { kind: 'success' }); this.loadServers(true); })
+        .catch(e => this.updateToast(tid, (e && e.message) || 'Could not change the status', { kind: 'error' }));
+    };
+    const statusEntries = this.SRV_STATUSES.filter(([v]) => v !== r.status && v !== 'retired')
+      .map(([v, label]) => ({ label: 'Mark ' + label.toLowerCase(), act: () => setStatus(v) }));
+    return [
+      { label: 'Add site…', act: () => this.addSiteToServer(r) },
+      { label: 'Edit server…', act: () => this.openServerDialog(r) },
+      ...(ssh ? [{ label: 'Copy SSH command', act: () => this.ctxCopy(ssh, 'SSH command') }] : []),
+      ...(r.address ? [{ label: 'Copy IPv4', act: () => this.ctxCopy(r.address, 'IPv4') }] : []),
+      ...statusEntries,
+      { label: 'Remove server…', danger: true, act: () => { this.openServerDialog(r); setTimeout(() => this.deleteServer(), 0); } }
+    ];
+  },
+
+  // Placing a site on a node needs the provisioning the first site is
+  // being built with by hand (container, volumes, edge route). Until that
+  // is scripted this says so instead of pretending.
+  addSiteToServer(r) {
+    this.toast('Adding a site to ' + r.name + ' is the next slice: it will run the same steps the first site is set up with by hand.', { kind: 'info', timeout: 7000 });
+  },
+
   computeServers(s) {
     if (s.route === 'servers' && !this._srv && !this._srvLoading) setTimeout(() => this.loadServers(), 0);
     const srv = this._srv;
@@ -122,7 +150,8 @@ Object.assign(Component.prototype, {
         notes: r.notes || '', hasNotes: !!r.notes,
         sshLabel: s.copied === 'srv-ssh-' + r.server_id ? 'Copied ✓' : 'Copy SSH', hasSsh: !!ssh,
         copySsh: () => copy(ssh, 'srv-ssh-' + r.server_id),
-        edit: () => this.openServerDialog(r)
+        edit: () => this.openServerDialog(r),
+        ctx: e => this.openCtxMenu(e, this.serverCtxEntries(r, ssh))
       };
     });
     const summary = srv ? [list.length === 1 ? '1 server' : list.length + ' servers',

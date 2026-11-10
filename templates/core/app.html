@@ -4337,7 +4337,7 @@ button.ccc-edited:hover{color:var(--ink)}
           </div>
           <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
             <sc-for list="{{ srvRows }}" as="sv" hint-placeholder-count="2">
-              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+              <div onContextMenu="{{ sv.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                   <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex:none"></span>
                   <span style="font:600 var(--fs-15) var(--mono)">{{ sv.name }}</span>
@@ -4346,6 +4346,7 @@ button.ccc-edited:hover{color:var(--ink)}
                   <div style="flex:1"></div>
                   <span style="font:500 var(--fs-13) var(--sans)">{{ sv.cost }}</span>
                   <span onClick="{{ sv.edit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--brand)">Edit</span>
+                  <span onClick="{{ sv.ctx }}" title="More actions" style="font:600 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:0 8px;line-height:22px" style-hover="border-color:var(--brand);color:var(--ink)">⋯</span>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 24px">
                   <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
