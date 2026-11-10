@@ -105,10 +105,27 @@ class Servers extends DB {
 		$row->details      = json_decode( (string) $row->details ) ?: (object) [];
 		$provider          = $row->provider_id ? ( $providers[ $row->provider_id ] ?? Providers::get( $row->provider_id ) ) : null;
 		$row->provider     = $provider ? [ 'provider_id' => (int) $provider->provider_id, 'name' => $provider->name, 'provider' => $provider->provider ] : null;
-		// No environment points at a server yet; sites placed on a node come
-		// with the provider for our own nodes.
-		$row->sites        = 0;
+		$row->sites        = self::site_count( $row->server_id );
 		return $row;
+	}
+
+	/** Active sites with an environment on this server. */
+	public static function site_count( $server_id ) {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT( DISTINCT e.site_id ) FROM {$wpdb->base_prefix}captaincore_environments e
+			 JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id
+			 WHERE e.server_id = %d AND s.status = 'active'", (int) $server_id ) );
+	}
+
+	/** The sites on this server, for the card and the CLI. */
+	public static function sites_on( $server_id ) {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT s.site_id, s.site, s.name, e.environment_id, e.environment, e.address, e.port, e.username, e.home_url
+			 FROM {$wpdb->base_prefix}captaincore_environments e
+			 JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id
+			 WHERE e.server_id = %d AND s.status = 'active' ORDER BY s.name", (int) $server_id ) );
 	}
 
 	public static function list_all() {

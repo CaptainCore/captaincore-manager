@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 73;
+    const REQUIRED_VERSION = 74;
 
     private static function _table() {
         global $wpdb;
@@ -794,7 +794,9 @@ class DB {
             updates_enabled boolean,
             updates_exclude_themes longtext,
             updates_exclude_plugins longtext,
-        PRIMARY KEY  (environment_id)
+            server_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY  (environment_id),
+        KEY server_id (server_id)
         ) $charset_collate;";
         
         dbDelta($sql);
@@ -1698,6 +1700,8 @@ class DB {
 
         dbDelta($sql);
 
+        // v74: environments.server_id (in the environments table above) links
+        // an environment to the server it runs on (0 = at a provider).
         // v73: servers CaptainCore runs itself (hosting nodes), as opposed to
         // sites at a host. provider_id is the connection the box is rented
         // through (0 = none, e.g. our own hardware) and provider_server_id
