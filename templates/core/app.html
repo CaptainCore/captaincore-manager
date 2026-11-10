@@ -7703,6 +7703,27 @@ button.ccc-edited:hover{color:var(--ink)}
     </div>
   </sc-if>
 
+  <!-- ══ Container log viewer (container.js openContainerLog) ══ -->
+  <sc-if value="{{ cxLogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cxLogClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:5vh 20px">
+      <div onClick="{{ stopProp }}" style="width:1080px;max-width:calc(100vw - 40px);height:86vh;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);animation:ccfade .15s ease;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+          <span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ cxIcoLogs }}"></span></span>
+          <span style="font:600 var(--fs-15) var(--sans)">{{ cxLogTitle }}</span>
+          <span class="cc-meta">{{ cxLogMeta }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ cxLogToggleRaw }}" class="cc-btn">{{ cxLogRawLabel }}</span>
+          <span onClick="{{ cxLogRefresh }}" class="cc-btn">Refresh</span>
+          <span onClick="{{ cxLogClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--rule)">
+          <sc-for list="{{ cxLogSrcs }}" as="ls" hint-placeholder-count="4"><span onClick="{{ ls.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 11px;border-radius:999px;cursor:pointer;color:{{ ls.fg }};background:{{ ls.bg }};border:1px solid {{ ls.bd }}">{{ ls.label }}</span></sc-for>
+        </div>
+        <pre ref="{{ cxLogDlgRef }}" style="margin:0;flex:1;min-height:0;overflow:auto;padding:12px 16px;background:var(--panel);font:400 var(--fs-115,11.5px)/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word">{{ cxLogText }}</pre>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ Add site to a server (servers.js addSiteVals) ══ -->
   <sc-if value="{{ asOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ asClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">

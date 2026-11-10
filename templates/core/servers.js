@@ -437,7 +437,7 @@ Object.assign(Component.prototype, {
     return {
       sdLogSrcs: sources.map(([v, l]) => ({ label: l, fg: cur === v ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: cur === v ? 'var(--brand-soft)' : 'transparent',
         bd: cur === v ? 'var(--brand)' : 'var(--rule)', pick: () => this.loadServerLog(v) })),
-      sdLogShow: !!log, sdLogText: log ? (log.loading ? 'Reading…' : log.text) : '',
+      sdLogShow: !!log, sdLogText: log ? (log.loading ? 'Reading…' : this.fmtLog(log.text)) : '',
       sdLogRef: el => { this._srvLogEl = el; },
       sdLogRefresh: () => { if (cur) this.loadServerLog(cur); },
       sdLogHint: !log

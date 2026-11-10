@@ -46,6 +46,39 @@ Object.assign(Component.prototype, {
     }).catch(() => this.updateToast(tid, 'Restart failed', { kind: 'error' }));
   },
 
+  // Journal lines as people read them: local time, then the message. The web
+  // server logs JSON, so those lines become "LEVEL message [logger] key=value".
+  // Anything that is not a journal line passes through untouched.
+  fmtLog(text) {
+    return String(text || '').split('\n').map(line => {
+      const m = line.match(/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\S*)\s+\S+\s+[^:\s]+?(?:\[\d+\])?:\s?(.*)$/);
+      if (!m) return line;
+      const at = new Date(m[1]);
+      if (isNaN(at)) return line;
+      const two = n => String(n).padStart(2, '0');
+      const when = two(at.getMonth() + 1) + '-' + two(at.getDate()) + ' ' + two(at.getHours()) + ':' + two(at.getMinutes()) + ':' + two(at.getSeconds());
+      let msg = m[2];
+      if (msg[0] === '{') {
+        try {
+          const j = JSON.parse(msg);
+          if (j && typeof j === 'object' && j.msg !== undefined) {
+            const { ts, level, logger, msg: text0, ...rest } = j;
+            const extra = Object.entries(rest).map(([k, v]) => k + '=' + (v !== null && typeof v === 'object' ? JSON.stringify(v) : v)).join(' ');
+            msg = (level ? String(level).toUpperCase().padEnd(5) + ' ' : '') + text0 + (logger ? '  [' + logger + ']' : '') + (extra ? '  ' + extra : '');
+          }
+        } catch (e) { /* not JSON after all */ }
+      }
+      return when + '  ' + msg;
+    }).join('\n');
+  },
+
+  // A Logs button on a program: the viewer opens at once (the node takes a
+  // couple of seconds to answer) instead of waiting, then jumping down the page.
+  openContainerLog(source) {
+    this.setState({ cxLogOpen: true });
+    this.loadContainerLog(source);
+  },
+
   loadContainerLog(source) {
     const id = this.state.serverId;
     this.setState({ ctLogSrc: source });
@@ -53,10 +86,11 @@ Object.assign(Component.prototype, {
     this.setState({});
     this.api('/servers/' + id + '/logs?source=' + encodeURIComponent(source) + '&lines=300').then(res => {
       if (!this._ctLog || this._ctLog.source !== source) return;
-      this._ctLog = { source, text: (!res || res.code) ? ((res && res.message) || 'Could not read the log') : (res.text || '(empty)') };
+      const bad = !res || res.code;
+      this._ctLog = { source, error: bad, text: bad ? ((res && res.message) || 'Could not read the log') : (res.text || ''), at: Date.now() };
       this.setState({});
-      const el = this._ctLogEl; if (el) setTimeout(() => { el.scrollTop = el.scrollHeight; el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 0);
-    }).catch(() => { this._ctLog = { source, text: 'Could not read the log' }; this.setState({}); });
+      setTimeout(() => { [this._ctLogEl, this._ctLogDlgEl].forEach(el => { if (el) el.scrollTop = el.scrollHeight; }); }, 0);
+    }).catch(() => { this._ctLog = { source, error: true, text: 'Could not read the log' }; this.setState({}); });
   },
 
   // Save the apps list as a new hosting revision (the rest of the config as is).
@@ -132,7 +166,7 @@ Object.assign(Component.prototype, {
     const fp = (versions.frankenphp || '').match(/FrankenPHP (v[\d.]+)/), cad = (versions.frankenphp || '').match(/Caddy (v[\d.]+)/);
     const maria = (versions.mariadb || '').match(/(\d+\.\d+\.\d+)-MariaDB/);
     const hostingOpen = () => { if (!site) return; clearTimeout(this._ctTimer); this.setState({ env: site.environment || 'Production' }); this.openSite(String(site.site_id)); this.goSiteTab('hosting'); };
-    const logBtn = src => () => this.loadContainerLog('ct:' + s.ctName + ':' + src);
+    const logBtn = src => () => this.openContainerLog('ct:' + s.ctName + ':' + src);
 
     // ── How a request is served ──
     const domains = cfg.domains || [];
@@ -321,8 +355,15 @@ Object.assign(Component.prototype, {
       cxLogSrcs: logSrcs.map(([k, l]) => { const src = 'ct:' + s.ctName + ':' + k; return { label: l,
         fg: curLog === src ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: curLog === src ? 'var(--brand-soft)' : 'transparent', bd: curLog === src ? 'var(--brand)' : 'var(--rule)',
         pick: () => this.loadContainerLog(src) }; }),
-      cxLogShow: !!log, cxLogHint: !log, cxLogText: log ? (log.loading ? 'Reading…' : log.text) : '',
-      cxLogRef: el => { this._ctLogEl = el; }, cxLogRefresh: () => { if (curLog) this.loadContainerLog(curLog); }
+      cxLogShow: !!log, cxLogHint: !log,
+      cxLogText: !log ? '' : log.loading ? 'Reading…' : log.error ? log.text : !log.text ? 'Nothing logged yet.' : (s.cxLogRaw ? log.text : this.fmtLog(log.text)),
+      cxLogRef: el => { this._ctLogEl = el; }, cxLogRefresh: () => { if (curLog) this.loadContainerLog(curLog); },
+      // The viewer the Logs buttons open
+      cxLogOpen: !!s.cxLogOpen, cxLogClose: () => this.setState({ cxLogOpen: false }),
+      cxLogTitle: ((logSrcs.find(([k]) => 'ct:' + s.ctName + ':' + k === curLog) || [])[1] || 'Logs') + ' · ' + (s.ctName || ''),
+      cxLogMeta: !log || log.loading ? 'Reading the last 300 lines from the server…' : log.error ? '' : (log.text ? log.text.split('\n').length + ' lines, newest last · your local time' : ''),
+      cxLogDlgRef: el => { this._ctLogDlgEl = el; },
+      cxLogRawLabel: s.cxLogRaw ? 'Readable' : 'Raw', cxLogToggleRaw: () => { this.setState({ cxLogRaw: !s.cxLogRaw }); setTimeout(() => { const el = this._ctLogDlgEl; if (el) el.scrollTop = el.scrollHeight; }, 0); }
     };
   }
 });
