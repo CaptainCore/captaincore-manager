@@ -4401,6 +4401,46 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="padding:22px;border:1px dashed var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim);text-align:center">No servers yet. Add a hosting node you run, rented or your own, to track where its sites live.</div>
             </sc-if>
           </div>
+          <div style="margin-top:28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <h2 style="margin:0;font:600 var(--fs-15) var(--sans)">Team SSH keys</h2>
+            <span style="font:400 var(--fs-13) var(--sans);color:{{ tkStatusFg }}">{{ tkStatus }}</span>
+            <div style="flex:1"></div>
+            <span onClick="{{ deployTeamKeys }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Deploy now</span>
+            <sc-if value="{{ tkClosed }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ openTk }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-13) var(--sans);padding:7px 13px;border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand)">Add key</button>
+            </sc-if>
+          </div>
+          <p style="margin:6px 0 0;font:400 var(--fs-13)/1.55 var(--sans);color:var(--ink-dim);max-width:760px">These public keys can SSH into every site on your servers. Adding or removing one updates each site's authorized_keys right away, and CaptainCore's own key is always kept.</p>
+          <sc-if value="{{ tkHasStale }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:6px;font:400 var(--fs-12) var(--sans);color:var(--warn)">{{ tkStale }}</div>
+          </sc-if>
+          <sc-if value="{{ tkOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+              <input value="{{ tkTitle }}" onInput="{{ onTkTitle }}" placeholder="Name, for example Austin laptop (optional, defaults to the key comment)" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);padding:0 9px;outline:none;min-width:0;font:400 var(--fs-13) var(--sans)">
+              <input value="{{ tkKey }}" onInput="{{ onTkKey }}" placeholder="ssh-ed25519 AAAA… you@machine" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);padding:0 9px;outline:none;min-width:0;font:400 var(--fs-12) var(--mono)">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Paste the contents of a .pub file. ed25519, ecdsa or RSA 2048+.</span>
+                <div style="flex:1"></div>
+                <span onClick="{{ closeTk }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                <button onClick="{{ addTeamKey }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Add key</button>
+              </div>
+            </div>
+          </sc-if>
+          <div style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <sc-for list="{{ tkRows }}" as="tk" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+                  <span style="font:500 var(--fs-13) var(--sans)">{{ tk.title }}</span>
+                  <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tk.type }} {{ tk.fp }}</span>
+                </div>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tk.meta }}</span>
+                <span onClick="{{ tk.remove }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ tkEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim);text-align:center">No team keys yet. Only CaptainCore's own key can log in.</div>
+            </sc-if>
+          </div>
         </div>
       </sc-if>
 

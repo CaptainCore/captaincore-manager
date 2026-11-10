@@ -325,6 +325,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Providers\\Mailgun' => __DIR__ . '/../..' . '/app/Providers/Mailgun.php',
         'CaptainCore\\Providers\\Rocketdotnet' => __DIR__ . '/../..' . '/app/Providers/Rocketdotnet.php',
         'CaptainCore\\Providers\\Spaceship' => __DIR__ . '/../..' . '/app/Providers/Spaceship.php',
+        'CaptainCore\\PublicKeys' => __DIR__ . '/../..' . '/app/PublicKeys.php',
         'CaptainCore\\PushSubscriptions' => __DIR__ . '/../..' . '/app/PushSubscriptions.php',
         'CaptainCore\\Quicksave' => __DIR__ . '/../..' . '/app/Quicksave.php',
         'CaptainCore\\Recipes' => __DIR__ . '/../..' . '/app/Recipes.php',

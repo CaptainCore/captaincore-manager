@@ -1273,6 +1273,26 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
+	// Operator SSH keys (CLI: `captaincore ssh-keys deploy`). The CLI fetches
+	// the managed lines for a site on our servers, writes them, and reports
+	// the hash back so the Servers screen can show which sites are current.
+	if ( $command === 'authorized-keys' ) {
+		if ( empty( $current_site ) || empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'authorized-keys requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$env   = CaptainCore\Environments::get( (int) $environment_id );
+		$lines = ( $env && (int) $env->server_id > 0 ) ? CaptainCore\PublicKeys::authorized_lines() : [];
+		return [ 'own_server' => $env && (int) $env->server_id > 0, 'keys' => $lines, 'hash' => CaptainCore\PublicKeys::lines_hash( $lines ) ];
+	}
+	if ( $command === 'authorized-keys-deployed' ) {
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'authorized-keys-deployed requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$d  = is_object( $data ) ? $data : (object) [];
+		$ok = CaptainCore\PublicKeys::record_deploy( $environment_id, $d->hash ?? '', $d->count ?? 0 );
+		return [ 'response' => $ok ? 'Recorded' : 'Environment not found' ];
+	}
+
 	// Uptime state after every `monitor run`: the records still failing (monitor.json) and the
 	// names the run checked. Keeps CaptainCore\MonitorIncidents current for agents; the
 	// monitor emails above are unchanged.
@@ -6822,6 +6842,50 @@ HEREDOC;
 	exit;
 }
 
+function captaincore_public_keys_response() {
+	$keys = [];
+	foreach ( ( new CaptainCore\PublicKeys )->all( 'public_key_id', 'ASC' ) as $key ) {
+		$user   = get_userdata( (int) $key->user_id );
+		$keys[] = [
+			'public_key_id' => (int) $key->public_key_id,
+			'title'         => $key->title,
+			'key_type'      => $key->key_type,
+			'fingerprint'   => $key->fingerprint,
+			'added_by'      => $user ? $user->display_name : '',
+			'created_at'    => $key->created_at,
+		];
+	}
+	return [ 'keys' => $keys, 'environments' => CaptainCore\PublicKeys::deploy_status() ];
+}
+
+function captaincore_public_keys_func( $request ) {
+	return captaincore_public_keys_response();
+}
+
+// Saving or removing a key redeploys every site on our servers right away;
+// the job token comes back so the UI can follow it.
+function captaincore_public_keys_create_func( $request ) {
+	$params = $request->get_json_params();
+	$key    = CaptainCore\PublicKeys::add( $params['title'] ?? '', $params['public_key'] ?? '', get_current_user_id() );
+	if ( is_wp_error( $key ) ) {
+		return $key;
+	}
+	return captaincore_public_keys_response() + [ 'token' => CaptainCore\PublicKeys::deploy_all() ];
+}
+
+function captaincore_public_keys_delete_func( $request ) {
+	$id = (int) $request['id'];
+	if ( ! CaptainCore\PublicKeys::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Key not found.', [ 'status' => 404 ] );
+	}
+	CaptainCore\PublicKeys::delete( $id );
+	return captaincore_public_keys_response() + [ 'token' => CaptainCore\PublicKeys::deploy_all() ];
+}
+
+function captaincore_public_keys_deploy_func( $request ) {
+	return [ 'token' => CaptainCore\PublicKeys::deploy_all() ];
+}
+
 function captaincore_servers_func( $request ) {
 	return CaptainCore\Servers::list_all();
 }
@@ -11934,6 +11998,38 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_delete_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	// Operator SSH public keys for sites on our own servers — admin only.
+	register_rest_route(
+		'captaincore/v1', '/public-keys', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_public_keys_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_public_keys_create_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/public-keys/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_public_keys_delete_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/public-keys/deploy', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_public_keys_deploy_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 

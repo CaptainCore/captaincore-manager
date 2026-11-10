@@ -199,6 +199,7 @@ return array(
     'CaptainCore\\Providers\\Mailgun' => $baseDir . '/app/Providers/Mailgun.php',
     'CaptainCore\\Providers\\Rocketdotnet' => $baseDir . '/app/Providers/Rocketdotnet.php',
     'CaptainCore\\Providers\\Spaceship' => $baseDir . '/app/Providers/Spaceship.php',
+    'CaptainCore\\PublicKeys' => $baseDir . '/app/PublicKeys.php',
     'CaptainCore\\PushSubscriptions' => $baseDir . '/app/PushSubscriptions.php',
     'CaptainCore\\Quicksave' => $baseDir . '/app/Quicksave.php',
     'CaptainCore\\Recipes' => $baseDir . '/app/Recipes.php',

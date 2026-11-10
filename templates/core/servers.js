@@ -17,11 +17,12 @@ Object.assign(Component.prototype, {
   loadServers(force) {
     if (this._srvLoading || (this._srv && !force)) return;
     this._srvLoading = true;
-    Promise.allSettled([this.api('/servers'), this.api('/providers')]).then(([srv, prov]) => {
+    Promise.allSettled([this.api('/servers'), this.api('/providers'), this.api('/public-keys')]).then(([srv, prov, keys]) => {
       this._srvLoading = false;
       this._srv = {
         list: srv.status === 'fulfilled' && Array.isArray(srv.value) ? srv.value : [],
         providers: prov.status === 'fulfilled' && Array.isArray(prov.value) ? prov.value : [],
+        keys: keys.status === 'fulfilled' && keys.value && Array.isArray(keys.value.keys) ? keys.value : { keys: [], environments: [] },
         failed: srv.status !== 'fulfilled' || !Array.isArray(srv.value)
       };
       this.setState({});
@@ -116,6 +117,62 @@ Object.assign(Component.prototype, {
     this.toast('Adding a site to ' + r.name + ' is the next slice: it will run the same steps the first site is set up with by hand.', { kind: 'info', timeout: 7000 });
   },
 
+  // ── Team SSH keys: replicated by `captaincore ssh-keys deploy` into a
+  // managed block of authorized_keys on every site on our servers. Adding
+  // or removing one redeploys right away (the Manager starts the job).
+  addTeamKey() {
+    const title = (this.state.tkTitle || '').trim();
+    const key = (this.state.tkKey || '').trim();
+    if (!key) { this.toast('Paste a public key (the .pub file)', { kind: 'error' }); return; }
+    const tid = this.toast('Adding key…', { kind: 'loading' });
+    this.api('/public-keys', { method: 'POST', body: { title, public_key: key } }).then(res => {
+      if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not add the key', { kind: 'error' }); return; }
+      this.updateToast(tid, res.token ? 'Key added, deploying to your servers' : 'Key added. The CLI server did not answer, so deploy later', { kind: res.token ? 'success' : 'info' });
+      this.setState({ tkTitle: '', tkKey: '', tkOpen: false });
+      this.loadServers(true); setTimeout(() => this.loadServers(true), 8000);
+    }).catch(e => this.updateToast(tid, (e && e.message) || 'Could not add the key', { kind: 'error' }));
+  },
+
+  async removeTeamKey(k) {
+    if (!(await this.uiConfirm('Remove ' + k.title + '? It is taken off every site on your servers.', { label: 'Remove key' }))) return;
+    const tid = this.toast('Removing key…', { kind: 'loading' });
+    this.api('/public-keys/' + k.public_key_id, { method: 'DELETE' })
+      .then(res => { if (!res || res.code) throw new Error((res && res.message) || 'failed');
+        this.updateToast(tid, 'Key removed, deploying to your servers', { kind: 'success' });
+        this.loadServers(true); setTimeout(() => this.loadServers(true), 8000); })
+      .catch(e => this.updateToast(tid, (e && e.message) || 'Could not remove the key', { kind: 'error' }));
+  },
+
+  deployTeamKeys() {
+    const tid = this.toast('Deploying keys…', { kind: 'loading' });
+    this.api('/public-keys/deploy', { method: 'POST' })
+      .then(res => { if (!res || !res.token) throw new Error('The CLI server did not answer');
+        this.updateToast(tid, 'Deploy started', { kind: 'success' }); setTimeout(() => this.loadServers(true), 8000); })
+      .catch(e => this.updateToast(tid, (e && e.message) || 'Could not start the deploy', { kind: 'error' }));
+  },
+
+  teamKeyVals(s) {
+    const data = (this._srv && this._srv.keys) || { keys: [], environments: [] };
+    const envs = data.environments || [];
+    const current = envs.filter(e => e.current).length;
+    const stale = envs.filter(e => !e.current);
+    return {
+      tkRows: data.keys.map(k => ({ title: k.title, fp: k.fingerprint, type: k.key_type,
+        meta: [k.added_by, k.created_at ? 'added ' + this.srvAgo(k.created_at) : ''].filter(Boolean).join(' · '),
+        remove: () => this.removeTeamKey(k) })),
+      tkEmpty: data.keys.length === 0,
+      tkStatus: envs.length ? 'Current on ' + current + ' of ' + envs.length + (envs.length === 1 ? ' site' : ' sites') : 'No sites on your servers yet',
+      tkStatusFg: envs.length && current < envs.length ? 'var(--warn)' : 'var(--ink-dim)',
+      tkStale: stale.length ? 'Waiting: ' + stale.slice(0, 6).map(e => e.site + (e.environment !== 'Production' ? '-' + e.environment.toLowerCase() : '')).join(', ') + (stale.length > 6 ? ' and ' + (stale.length - 6) + ' more' : '') : '',
+      tkHasStale: stale.length > 0,
+      tkOpen: !!s.tkOpen, tkClosed: !s.tkOpen,
+      openTk: () => this.setState({ tkOpen: true }), closeTk: () => this.setState({ tkOpen: false }),
+      tkTitle: s.tkTitle || '', onTkTitle: e => this.setState({ tkTitle: e.target.value }),
+      tkKey: s.tkKey || '', onTkKey: e => this.setState({ tkKey: e.target.value }),
+      addTeamKey: () => this.addTeamKey(), deployTeamKeys: () => this.deployTeamKeys()
+    };
+  },
+
   computeServers(s) {
     if (s.route === 'servers' && !this._srv && !this._srvLoading) setTimeout(() => this.loadServers(), 0);
     const srv = this._srv;
@@ -163,6 +220,7 @@ Object.assign(Component.prototype, {
       srvFailed: !!srv && srv.failed,
       srvLoading: !srv,
       addServer: () => this.openServerDialog(null),
+      ...this.teamKeyVals(s),
       ...this.serverDialogVals(s)
     };
   },
