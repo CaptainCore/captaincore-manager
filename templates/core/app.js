@@ -32,7 +32,7 @@ class Component extends DCLogic {
     // Sites view (Table/Cards/List) boots from the user's stored default
     // (right-click the view toggle to set it).
     view: (() => { try { const v = localStorage.getItem('cc-sites-view'); return ['table', 'cards', 'list'].includes(v) ? v : 'table'; } catch (e) { return 'table'; } })(),
-    q: '', fProv: 'Any', fHealth: 'All', sel: {},
+    q: '', fProv: 'Any', fServer: 'Any', fHealth: 'All', sel: {},
     fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS',
     fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', fOp: 'AND', labelsSel: {},
@@ -986,6 +986,7 @@ class Component extends DCLogic {
     if (s.fUnassigned) conds.push(x => !!x.unassigned);
     if (s.fRemoved) conds.push(x => !!x.removed);
     if (!inactive(s.fProv)) conds.push(x => x.provider === s.fProv);
+    if (!inactive(s.fServer)) conds.push(x => x.server === s.fServer);
     if (!inactive(s.fBackup)) conds.push(x => x.backup === s.fBackup);
     if (!inactive(s.fCore)) conds.push(x => x.core === s.fCore);
     // Network: multisite / Freighter host / tenant from /sites `network`;
@@ -1031,6 +1032,8 @@ class Component extends DCLogic {
     // as chips; the plugin chip opens a Version/Status popover (see app.html).
     const facetDefs = [
       { id: 'fProv', base: 'Provider', cur: s.fProv, opts: () => facetOpts(cntBy(x => x.provider), s.fProv, 'fProv') },
+      // Our own servers (operators; /sites `server`). Offered only when a site is on one.
+      ...(fleet.some(x => x.server) || !inactive(s.fServer) ? [{ id: 'fServer', base: 'Server', cur: s.fServer, opts: () => facetOpts(cntBy(x => x.server), s.fServer, 'fServer') }] : []),
       { id: 'fBackup', base: 'Backup', cur: s.fBackup, opts: () => facetOpts(cntBy(x => x.backup), s.fBackup, 'fBackup') },
       { id: 'fCore', base: 'Core', cur: s.fCore, opts: () => facetOpts(cntBy(x => x.core), s.fCore, 'fCore') },
       { id: 'fNet', base: 'Network', cur: s.fNet, opts: () => { const m = cntBy(x => x.netType || 'Standalone');
@@ -1198,7 +1201,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fServer: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       // Filter-to-console (legacy parity): hand the whole filtered set — every
       // page, not just the visible one — to the dock terminal as its target
       // list. Only offered while a filter narrows the fleet, so a stray click

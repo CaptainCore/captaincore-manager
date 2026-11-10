@@ -217,8 +217,23 @@ class Sites extends DB {
 
 		public function list() {
         $sites        = [];
+        // Operators: which of our own servers each site runs on (by name),
+        // for the Sites → Server filter. One query for the whole list.
+        $servers = [];
+        if ( ( new User )->is_admin() ) {
+            global $wpdb;
+            $rows = $wpdb->get_results(
+                "SELECT e.site_id, sv.name FROM {$wpdb->base_prefix}captaincore_environments e
+                 JOIN {$wpdb->base_prefix}captaincore_servers sv ON sv.server_id = e.server_id
+                 WHERE e.server_id > 0 AND e.environment = 'Production'"
+            );
+            foreach ( (array) $rows as $row ) {
+                $servers[ (int) $row->site_id ] = $row->name;
+            }
+        }
         foreach( $this->sites as $site_id ) {
             $site                    = self::get( $site_id );
+            $site->server            = $servers[ (int) $site_id ] ?? "";
             $details                 = json_decode( $site->details );
             $site->filtered          = true;
             $site->loading           = false;

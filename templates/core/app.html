@@ -4377,7 +4377,7 @@ button.ccc-edited:hover{color:var(--ink)}
                   </div>
                   <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
                     <span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em">Sites</span>
-                    <span style="font:400 var(--fs-13) var(--sans)">{{ sv.sitesLabel }}</span>
+                    <span onClick="{{ sv.openSites }}" title="{{ sv.sitesTitle }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="text-decoration-color:var(--brand)">{{ sv.sitesLabel }}</span>
                     <sc-if value="{{ sv.barShow }}" hint-placeholder-val="{{ true }}">
                       <div style="height:6px;border-radius:4px;background:var(--panel-2);overflow:hidden;max-width:220px"><div style="height:100%;width:{{ sv.barW }};background:var(--brand);border-radius:4px"></div></div>
                     </sc-if>

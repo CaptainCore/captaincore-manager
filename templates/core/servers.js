@@ -102,6 +102,7 @@ Object.assign(Component.prototype, {
       .map(([v, label]) => ({ label: 'Mark ' + label.toLowerCase(), act: () => setStatus(v) }));
     return [
       { label: 'Add site…', act: () => this.addSiteToServer(r) },
+      { label: 'Show sites', act: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); } },
       { label: 'Edit server…', act: () => this.openServerDialog(r) },
       ...(ssh ? [{ label: 'Copy SSH command', act: () => this.ctxCopy(ssh, 'SSH command') }] : []),
       ...(r.address ? [{ label: 'Copy IPv4', act: () => this.ctxCopy(r.address, 'IPv4') }] : []),
@@ -207,6 +208,9 @@ Object.assign(Component.prototype, {
         notes: r.notes || '', hasNotes: !!r.notes,
         sshLabel: s.copied === 'srv-ssh-' + r.server_id ? 'Copied ✓' : 'Copy SSH', hasSsh: !!ssh,
         copySsh: () => copy(ssh, 'srv-ssh-' + r.server_id),
+        // Opens Sites with only this server's sites (the Server filter).
+        openSites: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); },
+        sitesTitle: 'Show these sites in Sites',
         edit: () => this.openServerDialog(r),
         ctx: e => this.openCtxMenu(e, this.serverCtxEntries(r, ssh))
       };

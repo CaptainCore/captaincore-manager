@@ -153,6 +153,7 @@ Object.assign(Component.prototype, {
           removed: !!x.removed,
           plugins: {}, home_url: x.home_url, screenshot: x.screenshot,
           network: x.network || null,
+          server: x.server || '',
           netType: ({ multisite: 'Multisite', host: 'Freighter host', tenant: 'Freighter tenant' })[(x.network && x.network.type) || ''] || 'Standalone',
           environmentsRaw: x.environments || [] };
       });
