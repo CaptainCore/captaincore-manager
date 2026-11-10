@@ -1220,31 +1220,57 @@ Object.assign(Component.prototype, {
     const html = this.chatThreadHtml();
     if (el._cccHtml !== html) {
       el._cccHtml = html;
-      // A re-render (a new message, a reaction) must not stop a video
-      // someone is watching: note where each one was and carry it over.
-      const playing = {};
-      el.querySelectorAll('.ccc-vid video').forEach(v => {
-        if (v.currentTime > 0.2) playing[v.parentNode.dataset.aid] = { t: v.currentTime, paused: v.paused, muted: v.muted, volume: v.volume };
-      });
-      // Nor lose what someone is typing into the inline editor.
+      // Don't lose what someone is typing into the inline editor.
       const ta = el.querySelector('.ccc-edit-ta');
       const keep = ta ? { id: ta.parentNode.dataset.edit, v: ta.value, a: ta.selectionStart, b: ta.selectionEnd, f: document.activeElement === ta } : null;
-      el.innerHTML = '<div class="ccc-thread-in">' + html + '</div>';
+      // Patch, don't rebuild: a row whose HTML is unchanged stays the same
+      // node, so its videos don't reload (an edit or a reaction elsewhere
+      // used to re-embed every player in the thread) and an open "Original
+      // email" stays open. A changed row is rebuilt, but its live players
+      // move into the new row, still playing.
+      let inner = el.firstElementChild;
+      if (!inner || !inner.classList.contains('ccc-thread-in')) { el.innerHTML = '<div class="ccc-thread-in"></div>'; inner = el.firstElementChild; }
+      const tpl = document.createElement('template');
+      tpl.innerHTML = html;
+      const pool = new Map();
+      [...inner.children].forEach(n => { const k = n._cccSrc || ''; if (!pool.has(k)) pool.set(k, []); pool.get(k).push(n); });
+      const next = [...tpl.content.children].map(n => {
+        const src = n.outerHTML;
+        const same = pool.get(src);
+        if (same && same.length) return same.shift();
+        n._cccSrc = src;
+        n._cccNew = true;
+        return n;
+      });
+      const kept = new Set(next);
+      const live = {};
+      [...inner.children].forEach(n => {
+        if (kept.has(n)) return;
+        n.querySelectorAll('.ccc-vid[data-aid]').forEach(box => { live[box.dataset.aid + ' ' + box.dataset.url] = box; });
+        n.remove();
+      });
+      const added = next.filter(n => n._cccNew);
+      added.forEach(n => n.querySelectorAll('.ccc-vid[data-aid]').forEach(box => {
+        const old = live[box.dataset.aid + ' ' + box.dataset.url];
+        if (old) { box.replaceWith(old); delete live[box.dataset.aid + ' ' + box.dataset.url]; }
+      }));
+      next.forEach((n, i) => { if (inner.children[i] !== n) inner.insertBefore(n, inner.children[i] || null); });
       const nta = el.querySelector('.ccc-edit-ta');
       if (nta && keep && keep.id === nta.parentNode.dataset.edit) {
         nta.value = keep.v;
         if (keep.f) { nta.focus(); nta.setSelectionRange(keep.a, keep.b); }
       }
       if (nta) this.chatGrow(nta, 320);
-      el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
-      el.querySelectorAll('.ccc-vid').forEach(box => {
-        const v = box.querySelector('video');
-        const was = playing[box.dataset.aid];
-        v.addEventListener('loadedmetadata', () => {
-          if (c.nearBottom) el.scrollTop = el.scrollHeight;
-          if (was) { v.currentTime = was.t; v.muted = was.muted; v.volume = was.volume; if (!was.paused) v.play().catch(() => {}); }
-        }, { once: true });
-        v.addEventListener('error', () => { const t = box.querySelector('template'); if (t) box.replaceWith(t.content.cloneNode(true)); }, { once: true });
+      added.forEach(n => {
+        delete n._cccNew;
+        n.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }));
+        n.querySelectorAll('.ccc-vid').forEach(box => {
+          if (box._cccBound) return;
+          box._cccBound = true;
+          const v = box.querySelector('video');
+          v.addEventListener('loadedmetadata', () => { if (c.nearBottom) el.scrollTop = el.scrollHeight; }, { once: true });
+          v.addEventListener('error', () => { const t = box.querySelector('template'); if (t) box.replaceWith(t.content.cloneNode(true)); }, { once: true });
+        });
       });
       this.chatMakeThumbs();
       el.querySelectorAll('img.ccc-avimg').forEach(img => this.chatAvRef(img));
