@@ -78,7 +78,7 @@ Object.assign(Component.prototype, {
     const a = app || {};
     const env = a.env && typeof a.env === 'object' ? Object.keys(a.env).map(k => k + '=' + a.env[k]).join('\n') : '';
     return { name: a.name || '', command: a.command || '', port: String(a.port || ''), route: a.route || 'path',
-      path: a.path || '/', strip_prefix: !!a.strip_prefix, hostname: a.hostname || '', env, enabled: a.enabled !== false };
+      path: a.path || '/', strip_prefix: !!a.strip_prefix, hostname: a.hostname || '', env, enabled: a.enabled !== false, memory: String(a.memory_mb || 256) };
   },
 
   containerAppFromForm(f) {
@@ -86,7 +86,7 @@ Object.assign(Component.prototype, {
     String(f.env || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
       const i = l.indexOf('='); if (i > 0) env[l.slice(0, i).trim()] = l.slice(i + 1).trim();
     });
-    const app = { name: f.name.trim(), command: f.command.trim(), port: Number(f.port) || 0, route: f.route, enabled: f.enabled, env };
+    const app = { name: f.name.trim(), command: f.command.trim(), port: Number(f.port) || 0, route: f.route, enabled: f.enabled, env, memory_mb: Number(f.memory) || 256 };
     if (f.route === 'hostname') app.hostname = f.hostname.trim().toLowerCase();
     else { app.path = '/' + f.path.trim().replace(/^\/+|\/+$/g, ''); app.strip_prefix = !!f.strip_prefix; }
     return app;
@@ -96,7 +96,9 @@ Object.assign(Component.prototype, {
     if (s.route !== 'container') return { showContainer: false };
     const st = this._ct, range = s.ctRange || '1h';
     const base = {
-      showContainer: true, cxName: s.ctName,
+      showContainer: true, cxName: s.ctName, cxIllo: this.illo('container'),
+      cxIcoFlow: this.icon('route'), cxIcoProg: this.icon('apps'), cxIcoRules: this.icon('code'), cxIcoUsage: this.icon('cpu'), cxIcoLogs: this.icon('logs'),
+      cxIcoLogBtn: this.icon('logs'), cxIcoRestart: this.icon('restart'), cxIcoEdit: this.icon('edit'), cxIcoPlus: this.icon('plus'), cxIcoExt: this.icon('external'), cxIcoArrow: this.icon('arrow'),
       cxServerName: (st && st.data && st.data.server && st.data.server.name) || 'Server',
       cxBack: () => { clearTimeout(this._ctTimer); this.openServer(s.serverId); },
       cxRanges: [['1h', 'Hour'], ['24h', 'Day'], ['7d', 'Week']].map(([v, l]) => ({ label: l,
@@ -150,20 +152,20 @@ Object.assign(Component.prototype, {
     const wpUnit = unit('php'), dbUnit = unit('database');
     const flowRoutes = apps.filter(a => a.enabled !== false && a.route === 'path').map(a => {
       const u = appUnit(a.name), dt = dot(u);
-      return { match: a.path + (a.strip_prefix ? ' (prefix removed)' : ''), name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label, app: true };
+      return { match: a.path + (a.strip_prefix ? ' (prefix removed)' : ''), name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label, app: true, illo: this.illo(this.appIllo(a)) };
     });
     const wpDot = dot(wpUnit);
-    flowRoutes.push({ match: flowRoutes.length ? 'everything else' : '/*', name: 'WordPress', sub: 'FrankenPHP · :80 · ' + (php.workers || 2) + '–' + (php.max_workers || 4) + ' PHP threads', fg: wpDot.fg, label: wpDot.label, app: false });
+    flowRoutes.push({ match: flowRoutes.length ? 'everything else' : '/*', name: 'WordPress', sub: 'FrankenPHP · :80 · ' + (php.workers || 2) + '–' + (php.max_workers || 4) + ' PHP threads', fg: wpDot.fg, label: wpDot.label, app: false, illo: this.illo('wordpress') });
     const hostApps = apps.filter(a => a.enabled !== false && a.route === 'hostname').map(a => {
       const u = appUnit(a.name), dt = dot(u);
-      return { host: a.hostname, name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label };
+      return { host: a.hostname, name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label, illo: this.illo(this.appIllo(a)) };
     });
     const dbDot = dot(dbUnit);
 
     // ── Programs ──
     const editing = s.ctAppEdit;
     const programs = [];
-    programs.push({ title: 'WordPress', kind: 'FrankenPHP ' + (fp ? fp[1] : '') + ' · PHP ' + (versions.php || php.version || ''),
+    programs.push({ illo: this.illo('wordpress'), hue: 'var(--brand)', title: 'WordPress', kind: 'FrankenPHP ' + (fp ? fp[1] : '') + ' · PHP ' + (versions.php || php.version || ''),
       fg: wpDot.fg, label: wpDot.label, meta: [up(wpUnit), wpUnit && wpUnit.memory != null ? this.fmtBytes(wpUnit.memory) : '', restarts(wpUnit)].filter(Boolean).join(' · '),
       lines: [
         { k: 'PHP threads', v: (php.workers || 2) + ' to ' + (php.max_workers || 4) + ' · ' + (php.memory_limit || 256) + ' MB each' },
@@ -175,17 +177,18 @@ Object.assign(Component.prototype, {
     apps.forEach((a, i) => {
       const u = appUnit(a.name), dt = a.enabled === false ? { fg: 'var(--ink-dim)', label: 'Turned off' } : dot(u);
       const listens = listening.includes(String(a.port));
-      programs.push({ title: a.name, kind: 'App · ' + progName(a.command),
+      programs.push({ illo: this.illo(this.appIllo(a)), hue: 'var(--acc-domains)', title: a.name, kind: 'App · ' + progName(a.command),
         fg: dt.fg, label: dt.label, meta: [up(u), u && u.memory != null ? this.fmtBytes(u.memory) : '', restarts(u)].filter(Boolean).join(' · '),
         lines: [
           { k: 'Route', v: a.route === 'hostname' ? a.hostname + ' → :' + a.port : a.path + (a.path === '/' ? '' : '/*') + ' → :' + a.port + (a.strip_prefix ? ' (prefix removed)' : '') },
           { k: 'Command', v: a.command, mono: true },
-          { k: 'Port', v: a.enabled === false ? 'Off' : (listens ? ':' + a.port + ' listening' : ':' + a.port + ' not listening yet') }
+          { k: 'Port', v: a.enabled === false ? 'Off' : (listens ? ':' + a.port + ' listening' : ':' + a.port + ' not listening yet') },
+          { k: 'Memory', v: (u && u.memory != null ? this.fmtBytes(u.memory) : '—') + ' of a ' + (a.memory_mb || 256) + ' MB cap' }
         ],
         logs: logBtn('app-' + a.name), restart: () => this.uiConfirm('Restart ' + a.name + '? Its connections drop and reconnect.', { label: 'Restart' }).then(ok => ok && this.containerRestart('app-' + a.name, a.name)),
         canEdit: true, edit: () => { this._ctAppDraft = this.containerAppForm(a); this.setState({ ctAppEdit: i }); }, hasEditor: editing === i });
     });
-    programs.push({ title: 'MariaDB', kind: 'MariaDB ' + (maria ? maria[1] : ''),
+    programs.push({ illo: this.illo('database'), hue: 'var(--acc-reports)', title: 'MariaDB', kind: 'MariaDB ' + (maria ? maria[1] : ''),
       fg: dbDot.fg, label: dbDot.label, meta: [up(dbUnit), dbUnit && dbUnit.memory != null ? this.fmtBytes(dbUnit.memory) : '', restarts(dbUnit)].filter(Boolean).join(' · '),
       lines: [
         { k: 'Database', v: (d.db && d.db.bytes != null ? this.fmtBytes(d.db.bytes) : '—') + ' · wordpress' },
@@ -198,8 +201,8 @@ Object.assign(Component.prototype, {
 
     const sshU = unit('ssh'), timerU = unit('cron-timer'), cronU = unit('cron');
     const background = [
-      { k: 'SSH', v: (dot(sshU).label) + ' · as site on port ' + (c.ssh_port || '—'), fg: dot(sshU).fg, logs: logBtn('ssh') },
-      { k: 'WP-Cron', v: (timerU && timerU.active === 'active' ? 'Every minute' : 'Timer off') + (cronU && cronU.last_exit ? ' · last ran ' + (since(cronU.last_exit) < 60 ? 'just now' : this.fmtDuration(since(cronU.last_exit)) + ' ago') + (cronU.result && cronU.result !== 'success' ? ' (' + cronU.result + ')' : '') : ''), fg: dot(timerU).fg, logs: logBtn('cron') }
+      { k: 'SSH', ico: this.icon('key'), v: (dot(sshU).label) + ' · as site on port ' + (c.ssh_port || '—'), fg: dot(sshU).fg, logs: logBtn('ssh') },
+      { k: 'WP-Cron', ico: this.icon('clock'), v: (timerU && timerU.active === 'active' ? 'Every minute' : 'Timer off') + (cronU && cronU.last_exit ? ' · last ran ' + (since(cronU.last_exit) < 60 ? 'just now' : this.fmtDuration(since(cronU.last_exit)) + ' ago') + (cronU.result && cronU.result !== 'success' ? ' (' + cronU.result + ')' : '') : ''), fg: dot(timerU).fg, logs: logBtn('cron') }
     ];
 
     // ── App editor ──
@@ -217,6 +220,8 @@ Object.assign(Component.prototype, {
       cxEdPath: f.path, cxEdPathOn: e => setF('path', e.target.value),
       cxEdStripMark: f.strip_prefix ? '✓' : '', cxEdStrip: () => setF('strip_prefix', !f.strip_prefix),
       cxEdHost: f.hostname, cxEdHostOn: e => setF('hostname', e.target.value),
+      cxEdMem: f.memory, cxEdMemOn: e => setF('memory', e.target.value.replace(/[^0-9]/g, '')),
+      cxEdMemMax: 'Up to ' + Math.max(64, (cfg.memory_mb || 1024) - 512) + ' MB (the site has ' + (cfg.memory_mb || 1024) + ' MB; 512 MB stay for PHP and MariaDB)',
       cxEdEnvOn: e => { this._ctAppDraft = { ...this._ctAppDraft, env: e.target.value }; },
       cxEdEnvRef: el => { if (el && document.activeElement !== el && el.value !== f.env) el.value = f.env; },
       cxEdEnabledMark: f.enabled ? '✓' : '', cxEdEnabled: () => setF('enabled', !f.enabled),
@@ -232,6 +237,8 @@ Object.assign(Component.prototype, {
         if (!/^[a-z][a-z0-9-]{0,19}$/.test(app.name)) { this.toast('Name: lowercase letters, digits and dashes, starting with a letter', { kind: 'error' }); return; }
         if (!app.command) { this.toast('Enter the command that starts it', { kind: 'error' }); return; }
         if (!(app.port >= 3000 && app.port <= 3999)) { this.toast('Port must be between 3000 and 3999', { kind: 'error' }); return; }
+        const memMax = Math.max(64, (cfg.memory_mb || 1024) - 512);
+        if (!(app.memory_mb >= 32 && app.memory_mb <= memMax)) { this.toast('Memory must be between 32 and ' + memMax + ' MB', { kind: 'error' }); return; }
         const next = apps.map(x => ({ ...x }));
         if (isNew) next.push(app); else next[editing] = app;
         this.containerSaveApps(next, (isNew ? 'Added app ' : 'Changed app ') + app.name).then(saved => { if (saved) { this._ctAppDraft = null; this.setState({ ctAppEdit: null }); } });
@@ -280,15 +287,16 @@ Object.assign(Component.prototype, {
       cxHosting: hostingOpen,
       cxImage: [versions.os, fp ? 'FrankenPHP ' + fp[1] : '', cad ? 'Caddy ' + cad[1] : '', versions.php ? 'PHP ' + versions.php : '', maria ? 'MariaDB ' + maria[1] : ''].filter(Boolean).join(' · ') || c.image || '',
       cxFacts: [
-        { k: 'Memory', v: this.fmtBytes(c.mem) + ' of ' + (c.mem_limit ? gb(c.mem_limit) : '—') },
-        { k: 'Disk', v: this.fmtBytes(c.disk) + (c.disk_quota ? ' of ' + gb(c.disk_quota) : '') + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : '') },
-        { k: 'CPU', v: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%') + ' of the server' + (lim['limits.cpu'] ? ' · capped at ' + lim['limits.cpu'] + ' cores' : lim['limits.cpu.allowance'] ? ' · share ' + lim['limits.cpu.allowance'] : ' · no cap') },
-        { k: 'Isolation', v: [lim['security.idmap.isolated'] === 'true' ? 'own user IDs' : 'shared user IDs', lim['security.port_isolation'] === 'true' ? 'no container-to-container traffic' : 'containers can talk', lim['limits.processes'] ? lim['limits.processes'] + ' processes max' : 'no process limit'].join(' · ') }
+        { k: 'Memory', ico: this.icon('memory'), h: 'var(--brand)', pct: c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100).toFixed(0) + '%' : '0%', v: this.fmtBytes(c.mem) + ' of ' + (c.mem_limit ? gb(c.mem_limit) : '—') },
+        { k: 'Disk', ico: this.icon('disk'), h: 'var(--acc-reports)', pct: c.disk_quota ? Math.min(100, c.disk / c.disk_quota * 100).toFixed(0) + '%' : '0%', v: this.fmtBytes(c.disk) + (c.disk_quota ? ' of ' + gb(c.disk_quota) : '') + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : '') },
+        { k: 'CPU', ico: this.icon('cpu'), h: 'var(--acc-domains)', pct: c.cpu == null ? '0%' : Math.min(100, c.cpu * (lim['limits.cpu'] ? (c.host_cpus || 16) / Number(lim['limits.cpu']) : 1)).toFixed(0) + '%', v: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%') + ' of the server' + (lim['limits.cpu'] ? ' · capped at ' + lim['limits.cpu'] + ' cores' : lim['limits.cpu.allowance'] ? ' · share ' + lim['limits.cpu.allowance'] : ' · no cap') },
+        { k: 'Isolation', ico: this.icon('shield'), h: 'var(--acc-billing)', pct: Math.round([lim['security.idmap.isolated'] === 'true', lim['security.port_isolation'] === 'true', !!lim['limits.processes']].filter(Boolean).length / 3 * 100) + '%', v: [lim['security.idmap.isolated'] === 'true' ? 'own user IDs' : 'shared user IDs', lim['security.port_isolation'] === 'true' ? 'no container-to-container traffic' : 'containers can talk', lim['limits.processes'] ? lim['limits.processes'] + ' processes max' : 'no process limit'].join(' · ') }
       ],
       cxRestartPhp: () => this.uiConfirm('Restart PHP? Requests wait a second or two while FrankenPHP starts again.', { label: 'Restart' }).then(ok => ok && this.containerRestart('php', 'PHP')),
       cxRestartCt: () => this.uiConfirm('Restart the container? The site, its apps and its database are down for about ten seconds.', { label: 'Restart container', danger: true }).then(ok => ok && this.containerRestart('container', 'the container')),
       cxUpdated: 'Updated ' + new Date(st.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
       // Flow
+      cxVisitorIllo: this.illo('visitor'), cxEdgeIllo: this.illo('edge'), cxDbIllo: this.illo('database'),
       cxEdgeRules: edgeRules, cxEdgeHost: d.server ? 'Caddy on ' + d.server.name : 'Edge',
       cxFlowRoutes: flowRoutes, cxHostApps: hostApps, cxHasHostApps: hostApps.length > 0,
       cxDbFg: dbDot.fg, cxDbLabel: dbDot.label, cxDbSize: d.db && d.db.bytes != null ? this.fmtBytes(d.db.bytes) : '',

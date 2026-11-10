@@ -53,6 +53,42 @@
   --acc-terminal:#9aa3b5;
   --acc-reports:#e0a458;
 }
+/* Hosting illustrations (illustrations.js). --h is set per holder. */
+.illo{display:block;flex:none}
+.illo svg{display:block;width:100%;height:100%;overflow:visible}
+.illo .l{fill:none;stroke:color-mix(in srgb,var(--ink) 82%,transparent);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.illo .f{fill:var(--paper)}
+.illo .w{fill:color-mix(in srgb,var(--h) 12%,white)}
+.illo .t{fill:color-mix(in srgb,var(--h) 16%,var(--paper))}
+.illo .t2{fill:color-mix(in srgb,var(--h) 34%,var(--paper))}
+.illo .a{fill:var(--h)}
+.illo .d{fill:color-mix(in srgb,var(--ink) 22%,var(--paper))}
+.illo .ok{fill:var(--ok)}
+.illo .s{fill:color-mix(in srgb,var(--ink) 7%,transparent)}
+.illo .la{fill:none;stroke:var(--h);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.illo .f.l,.illo .t.l,.illo .t2.l,.illo .a.l,.illo .w.l{stroke:color-mix(in srgb,var(--ink) 82%,transparent);stroke-width:1.6;stroke-linejoin:round}
+.illo .f.l{fill:var(--paper)}.illo .t.l{fill:color-mix(in srgb,var(--h) 16%,var(--paper))}.illo .t2.l{fill:color-mix(in srgb,var(--h) 34%,var(--paper))}.illo .a.l{fill:var(--h)}.illo .w.l{fill:color-mix(in srgb,var(--h) 12%,white)}
+.cc-ico{display:inline-grid;place-items:center;flex:none}
+.cc-chip{width:28px;height:28px;border-radius:8px;display:inline-grid;place-items:center;flex:none;background:color-mix(in srgb,var(--h,var(--brand)) 12%,var(--paper));color:color-mix(in oklch,var(--h,var(--brand)) 78%,var(--ink))}
+.cc-chip > span{width:16px;height:16px}
+@media (max-width:640px){.cc-hide-sm{display:none!important}}
+/* Hosting screens: shared card, header, button and status pill. */
+.cc-card{border:1px solid var(--rule);border-radius:14px;background:var(--paper);overflow:hidden}
+.cc-card-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.cc-card-h h2{margin:0;font:600 var(--fs-14) var(--sans)}
+.cc-meta{font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.cc-btn{display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--sans);color:var(--ink);cursor:pointer;border:1px solid var(--rule);border-radius:8px;padding:5px 11px;background:var(--paper);transition:border-color .15s,background .15s;white-space:nowrap}
+.cc-btn:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 5%,var(--paper))}
+.cc-btn.danger:hover{border-color:var(--bad);color:var(--bad);background:color-mix(in srgb,var(--bad) 5%,var(--paper))}
+.cc-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.cc-btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
+.cc-btn .i{width:14px;height:14px;display:inline-block}
+.cc-pill{display:inline-flex;align-items:center;gap:6px;font:600 var(--fs-115) var(--sans);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.cc-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.cc-flow-arrow{display:flex;align-items:center;color:var(--ink-dim);padding:0 4px}
+.cc-flow-arrow span{width:22px;height:22px}
+.cc-db-row{padding-left:116px}
+@media (max-width:640px){.cc-db-row{padding-left:8px}}
 html,body{margin:0;padding:0;background:var(--canvas)}
 body{font-family:var(--sans);color:var(--ink);font-variant-numeric:tabular-nums}
 a{color:var(--brand-ink);text-decoration:none}
@@ -2001,7 +2037,17 @@ button.ccc-edited:hover{color:var(--ink)}
             </sc-if>
             <sc-if value="{{ hostReady }}" hint-placeholder-val="{{ false }}">
               <sc-if value="{{ hostHasCt }}" hint-placeholder-val="{{ false }}">
-                <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ hostRuns }} <span onClick="{{ hostOpenCt }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Open container →</span></div>
+                <div class="cc-card" style="margin-top:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 16px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 6%,var(--paper)),var(--paper) 70%)">
+                  <div ref="{{ hostCtIllo }}" class="cc-hide-sm" style="width:64px;height:48px"></div>
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                    <span style="font:600 var(--fs-13) var(--sans)">Runs in container <span style="font-family:var(--mono)">{{ hostCtName }}</span></span>
+                    <span class="cc-meta">on {{ hostCtServer }}</span>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
+                    <sc-for list="{{ hostRunsItems }}" as="ri" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);font:500 var(--fs-12) var(--sans)"><span ref="{{ ri.illo }}" style="width:28px;height:21px"></span>{{ ri.name }}</span></sc-for>
+                  </div>
+                  <span onClick="{{ hostOpenCt }}" class="cc-btn" style="color:var(--brand-ink)">Open container<span class="i" ref="{{ hostIcoArrow }}"></span></span>
+                </div>
               </sc-if>
               <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--panel)">
                 <span style="font:600 var(--fs-13) var(--sans)">{{ hostRev }}</span>
@@ -2024,7 +2070,7 @@ button.ccc-edited:hover{color:var(--ink)}
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Domains</h2>
+                  <span class="cc-chip" style="--h:var(--brand)"><span ref="{{ hostIcoDomains }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Domains</h2>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Point each domain's A record to <span style="font-family:var(--mono);color:var(--ink)">{{ hostIp }}</span>. SSL is issued automatically once it points here.</span>
                   <div style="flex:1"></div>
                   <sc-if value="{{ hostCanTemp }}" hint-placeholder-val="{{ false }}">
@@ -2063,7 +2109,7 @@ button.ccc-edited:hover{color:var(--ink)}
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">PHP</h2>
+                  <span class="cc-chip" style="--h:var(--acc-domains)"><span ref="{{ hostIcoPhp }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">PHP</h2>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Changes restart PHP for this site only; the edge holds requests for the few seconds it takes.</span>
                 </div>
                 <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
@@ -2080,7 +2126,7 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Redirects</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Handled at the edge before WordPress loads. End a path with * to match everything under it.</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-reports)"><span ref="{{ hostIcoRedirects }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Redirects</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Handled at the edge before WordPress loads. End a path with * to match everything under it.</span></div>
                 <sc-for list="{{ hostRedirRows }}" as="rd" hint-placeholder-count="2">
                   <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
                     <span style="font:400 var(--fs-13) var(--mono)">{{ rd.from }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">→</span>
@@ -2099,7 +2145,7 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Access</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Both are enforced at the edge. Denied addresses get a 403 before anything else.</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-billing)"><span ref="{{ hostIcoAccess }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Access</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Both are enforced at the edge. Denied addresses get a 403 before anything else.</span></div>
                 <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">
                   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                     <span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">IP deny</span>
@@ -2119,7 +2165,7 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Tools</h2></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ hostIcoTools }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Tools</h2></div>
                 <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                   <span onClick="{{ toggleHostDebug }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostDebugMark }}</span>WordPress debugging</span>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Turns on WP_DEBUG and WP_DEBUG_LOG (written to wp-content/debug.log, never shown to visitors).</span>
@@ -2132,7 +2178,7 @@ button.ccc-edited:hover{color:var(--ink)}
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Local backups</h2>
+                  <span class="cc-chip" style="--h:var(--brand)"><span ref="{{ hostIcoBackups }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Local backups</h2>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Snapshots of files and database together, on this server. Keeps the last 30 daily backups, and every backup taken before a deploy or restore for 30 days. Off-site backups are under History → Backups.</span>
                   <div style="flex:1"></div>
                   <span onClick="{{ hostBkRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Refresh</span>
@@ -2151,11 +2197,11 @@ button.ccc-edited:hover{color:var(--ink)}
                 </sc-for>
                 <sc-if value="{{ hostBkLoading }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Reading backups from the server…</div></sc-if>
                 <sc-if value="{{ hostBkHasErr }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;font:500 var(--fs-125) var(--sans);color:var(--bad)">{{ hostBkErr }}</div></sc-if>
-                <sc-if value="{{ hostBkEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">No local backups yet. The first daily one runs tonight.</div></sc-if>
+                <sc-if value="{{ hostBkEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:16px;display:flex;align-items:center;gap:14px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><div ref="{{ hostBkIllo }}" style="width:64px;height:48px"></div><span>No local backups yet. The first daily one runs tonight, or take one now.</span></div></sc-if>
               </div>
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">History</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Every save is a revision. Restoring saves an old one as new and applies it.</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ hostIcoHistory }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">History</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Every save is a revision. Restoring saves an old one as new and applies it.</span></div>
                 <sc-for list="{{ hostHist }}" as="hr" hint-placeholder-count="3">
                   <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
                     <span style="font:600 var(--fs-12) var(--mono);width:34px">{{ hr.rev }}</span>
@@ -4521,9 +4567,13 @@ button.ccc-edited:hover{color:var(--ink)}
           </div>
           <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
             <sc-for list="{{ srvRows }}" as="sv" hint-placeholder-count="2">
-              <div onContextMenu="{{ sv.ctx }}" style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+              <div onContextMenu="{{ sv.ctx }}" style="border:1px solid var(--rule);border-radius:14px;background:var(--paper);padding:16px 18px;display:flex;gap:18px;align-items:flex-start;box-shadow:var(--shadow-sm)">
+                <div onClick="{{ sv.open }}" class="cc-hide-sm" title="View server details" style="width:96px;flex:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0 2px;border-radius:12px;background:color-mix(in srgb,var(--acc-terminal) 6%,var(--paper))">
+                  <div ref="{{ sv.illo }}" style="width:84px;height:63px"></div>
+                </div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                  <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex:none"></span>
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ sv.dot }};flex:none;box-shadow:0 0 0 3px color-mix(in srgb,{{ sv.dot }} 18%,transparent)"></span>
                   <span onClick="{{ sv.open }}" title="View server details" style="font:600 var(--fs-15) var(--mono);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ sv.name }}</span>
                   <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);border:1px solid var(--rule);border-radius:999px;padding:1px 9px">{{ sv.roleLabel }}</span>
                   <span style="font:500 var(--fs-12) var(--sans);color:{{ sv.dot }}">{{ sv.statusLabel }}</span>
@@ -4574,6 +4624,7 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">· {{ sv.notes }}</span>
                   </sc-if>
                 </div>
+                </div>
               </div>
             </sc-for>
             <sc-if value="{{ srvLoading }}" hint-placeholder-val="{{ false }}">
@@ -4583,10 +4634,11 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="padding:18px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13) var(--sans);color:var(--bad);text-align:center">Could not load servers.</div>
             </sc-if>
             <sc-if value="{{ srvEmpty }}" hint-placeholder-val="{{ false }}">
-              <div style="padding:22px;border:1px dashed var(--rule);border-radius:13px;background:var(--paper);font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim);text-align:center">No servers yet. Add a hosting node you run, rented or your own, to track where its sites live.</div>
+              <div style="padding:28px 22px;border:1px dashed var(--rule);border-radius:14px;background:var(--paper);font:400 var(--fs-13)/1.6 var(--sans);color:var(--ink-dim);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px"><div ref="{{ srvRackIllo }}" style="width:128px;height:96px"></div><span style="font:600 var(--fs-14) var(--sans);color:var(--ink)">No servers yet</span><span>Add a hosting node you run, rented or your own, to track where its sites live.</span></div>
             </sc-if>
           </div>
           <div style="margin-top:28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ srvKeyIco }}"></span></span>
             <h2 style="margin:0;font:600 var(--fs-15) var(--sans)">Team SSH keys</h2>
             <span style="font:400 var(--fs-13) var(--sans);color:{{ tkStatusFg }}">{{ tkStatus }}</span>
             <div style="flex:1"></div>
@@ -4632,9 +4684,12 @@ button.ccc-edited:hover{color:var(--ink)}
       <sc-if value="{{ showServer }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <span onClick="{{ sdBack }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">← Servers</span>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-            <h1 style="margin:0;font:600 var(--fs-22,22px) var(--mono)">{{ sdName }}</h1>
-            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sdSub }}</span>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
+            <div ref="{{ sdIllo }}" class="cc-hide-sm" style="width:76px;height:57px"></div>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <h1 style="margin:0;font:600 var(--fs-22,22px) var(--mono)">{{ sdName }}</h1>
+              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sdSub }}</span>
+            </div>
             <div style="flex:1"></div>
             <sc-if value="{{ sdUpdating }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Updating…</span></sc-if>
             <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ sdUpdated }}</span>
@@ -4677,12 +4732,12 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Containers</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">One per site environment. CPU is the share of the whole server over the last minute. Open a container to see its programs, web server rules and logs.</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--brand)"><span ref="{{ sdIcoCt }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Containers</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">One per site environment. CPU is the share of the whole server over the last minute. Open a container to see its programs, web server rules and logs.</span></div>
               <div style="overflow-x:auto">
                 <div style="display:grid;grid-template-columns:minmax(200px,1.6fr) 90px 80px minmax(170px,1.2fr) minmax(150px,1fr) 110px 70px;min-width:900px">
                   <span style="padding:8px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Container</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Status</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">CPU</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Memory</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Disk</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">IP</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">SSH</span>
                   <sc-for list="{{ sdCts }}" as="ct" hint-placeholder-count="2">
-                    <div style="padding:10px 16px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:2px;min-width:0"><span onClick="{{ ct.openCt }}" style="font:600 var(--fs-13) var(--mono);cursor:pointer;color:var(--ink);align-self:flex-start" style-hover="color:var(--brand-ink);text-decoration:underline">{{ ct.name }} →</span><span onClick="{{ ct.open }}" style="font:400 var(--fs-12) var(--sans);color:{{ ct.siteFg }};cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ct.site }}</span></div>
+                    <div style="padding:10px 16px;border-top:1px solid var(--rule);display:flex;align-items:center;gap:10px;min-width:0"><div ref="{{ ct.illo }}" style="width:40px;height:30px"></div><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span onClick="{{ ct.openCt }}" style="font:600 var(--fs-13) var(--mono);cursor:pointer;color:var(--ink);align-self:flex-start" style-hover="color:var(--brand-ink);text-decoration:underline">{{ ct.name }} →</span><span onClick="{{ ct.open }}" style="font:400 var(--fs-12) var(--sans);color:{{ ct.siteFg }};cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ct.site }}</span></div></div>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:500 var(--fs-12) var(--sans);color:{{ ct.statusFg }}">{{ ct.status }}</span>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-13) var(--sans);font-variant-numeric:tabular-nums">{{ ct.cpu }}</span>
                     <div style="padding:10px 6px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:5px"><span style="font:400 var(--fs-12) var(--sans);font-variant-numeric:tabular-nums">{{ ct.mem }}</span><div style="height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden;max-width:160px"><div style="height:100%;width:{{ ct.memW }};background:{{ ct.memBar }};border-radius:3px"></div></div></div>
@@ -4695,6 +4750,7 @@ button.ccc-edited:hover{color:var(--ink)}
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
               <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                <span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ sdIcoLogs }}"></span></span>
                 <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Logs</h2>
                 <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">The last 300 lines. Each site's own access and PHP error logs are on its Activity → Logs.</span>
                 <div style="flex:1"></div>
@@ -4709,7 +4765,7 @@ button.ccc-edited:hover{color:var(--ink)}
               </sc-if>
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">System</h2></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ sdIcoSys }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">System</h2></div>
               <sc-for list="{{ sdSys }}" as="sy" hint-placeholder-count="6">
                 <div style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sy.k }}</span><span style="font:400 var(--fs-13) var(--sans);min-width:0">{{ sy.v }}</span></div>
               </sc-for>
@@ -4721,126 +4777,151 @@ button.ccc-edited:hover{color:var(--ink)}
       <sc-if value="{{ showContainer }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <span onClick="{{ cxBack }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">← {{ cxServerName }}</span>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-            <h1 style="margin:0;font:600 var(--fs-22,22px) var(--mono)">{{ cxName }}</h1>
-            <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}"><span style="font:600 var(--fs-12) var(--sans);color:{{ cxStatusFg }}">● {{ cxStatus }}</span><span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ cxSub }}</span></sc-if>
-            <div style="flex:1"></div>
-            <sc-if value="{{ cxUpdating }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Updating…</span></sc-if>
-            <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ cxUpdated }}</span></sc-if>
-            <span onClick="{{ cxRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Refresh</span>
+          <div class="cc-card" style="margin-top:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 7%,var(--paper)),var(--paper) 60%);box-shadow:var(--shadow-sm)">
+            <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:18px 20px">
+              <div ref="{{ cxIllo }}" class="cc-hide-sm" style="width:104px;height:78px"></div>
+              <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <h1 style="margin:0;font:600 var(--fs-22,22px) var(--mono)">{{ cxName }}</h1>
+                  <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}"><span class="cc-pill" style="color:{{ cxStatusFg }};background:color-mix(in srgb,{{ cxStatusFg }} 12%,transparent)">{{ cxStatus }}</span></sc-if>
+                </div>
+                <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <sc-if value="{{ cxHasSite }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxSiteOpen }}" style="font:600 var(--fs-14) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ cxSite }}</span></sc-if>
+                    <sc-if value="{{ cxNoSite }}" hint-placeholder-val="{{ false }}"><span class="cc-meta">{{ cxSite }}</span></sc-if>
+                    <sc-if value="{{ cxHasHome }}" hint-placeholder-val="{{ true }}"><a href="{{ cxHome }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Visit <span ref="{{ cxIcoExt }}" style="width:12px;height:12px;display:inline-block"></span></a></sc-if>
+                    <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ cxSub }}</span>
+                  </div>
+                  <span class="cc-meta">{{ cxImage }}</span>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <sc-if value="{{ cxUpdating }}" hint-placeholder-val="{{ false }}"><span class="cc-meta">Updating…</span></sc-if>
+                  <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}"><span class="cc-meta">{{ cxUpdated }}</span></sc-if>
+                  <span onClick="{{ cxRefresh }}" class="cc-btn">Refresh</span>
+                </div>
+                <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                    <span onClick="{{ cxRestartPhp }}" class="cc-btn"><span class="i" ref="{{ cxIcoRestart }}"></span>Restart PHP</span>
+                    <span onClick="{{ cxRestartCt }}" class="cc-btn danger"><span class="i" ref="{{ cxIcoRestart }}"></span>Restart container</span>
+                    <sc-if value="{{ cxHasSite }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxHosting }}" class="cc-btn" style="color:var(--brand-ink)">Hosting settings<span class="i" ref="{{ cxIcoArrow }}"></span></span></sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
           </div>
           <sc-if value="{{ cxLoading }}" hint-placeholder-val="{{ false }}"><div style="margin-top:22px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Reading the container…</div></sc-if>
           <sc-if value="{{ cxHasErr }}" hint-placeholder-val="{{ false }}"><div style="margin-top:22px;font:500 var(--fs-13) var(--sans);color:var(--bad)">{{ cxErr }}</div></sc-if>
           <sc-if value="{{ cxReady }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
-              <sc-if value="{{ cxHasSite }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxSiteOpen }}" style="font:500 var(--fs-14) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">{{ cxSite }}</span></sc-if>
-              <sc-if value="{{ cxNoSite }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ cxSite }}</span></sc-if>
-              <sc-if value="{{ cxHasHome }}" hint-placeholder-val="{{ true }}"><a href="{{ cxHome }}" target="_blank" rel="noopener" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Visit ↗</a></sc-if>
-              <div style="flex:1"></div>
-              <span onClick="{{ cxRestartPhp }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:5px 11px;background:var(--paper)" style-hover="border-color:var(--brand)">Restart PHP</span>
-              <span onClick="{{ cxRestartCt }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:5px 11px;background:var(--paper)" style-hover="border-color:var(--bad);color:var(--bad)">Restart container</span>
-              <sc-if value="{{ cxHasSite }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxHosting }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:7px;padding:5px 11px;background:var(--paper)" style-hover="border-color:var(--brand)">Hosting settings →</span></sc-if>
-            </div>
-            <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:8px">{{ cxImage }}</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:12px">
               <sc-for list="{{ cxFacts }}" as="fa" hint-placeholder-count="4">
-                <div style="border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:11px 14px;display:flex;flex-direction:column;gap:3px">
-                  <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ fa.k }}</span>
-                  <span style="font:500 var(--fs-13) var(--sans);font-variant-numeric:tabular-nums">{{ fa.v }}</span>
+                <div class="cc-card" style="padding:13px 15px;display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:center;gap:9px"><span class="cc-chip" style="--h:{{ fa.h }}"><span ref="{{ fa.ico }}"></span></span><span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ fa.k }}</span></div>
+                  <span style="font:500 var(--fs-13)/1.45 var(--sans);font-variant-numeric:tabular-nums">{{ fa.v }}</span>
+                  <div style="height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden"><div style="height:100%;width:{{ fa.pct }};background:{{ fa.h }};border-radius:3px"></div></div>
                 </div>
               </sc-for>
             </div>
 
-            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:14px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">How a request is served</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">From the visitor through the server's edge to the program that answers.</span></div>
-              <div style="display:flex;align-items:stretch;gap:0;padding:16px;flex-wrap:wrap;row-gap:12px">
-                <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:10px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);min-width:90px">
-                  <span style="font:600 var(--fs-13) var(--sans)">Visitor</span><span style="font:400 var(--fs-115,11.5px) var(--sans);color:var(--ink-dim)">HTTPS</span>
+            <div class="cc-card" style="margin-top:14px">
+              <div class="cc-card-h"><span class="cc-chip"><span ref="{{ cxIcoFlow }}"></span></span><h2>How a request is served</h2><span class="cc-meta">From the visitor through the server's edge to the program that answers.</span></div>
+              <div style="display:flex;align-items:center;gap:6px;padding:18px 16px;flex-wrap:wrap;row-gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:110px">
+                  <div ref="{{ cxVisitorIllo }}" style="width:84px;height:63px"></div>
+                  <span style="font:600 var(--fs-13) var(--sans)">Visitor</span><span class="cc-meta">HTTPS</span>
                 </div>
-                <div style="display:flex;align-items:center;padding:0 8px;color:var(--ink-dim);font:400 18px var(--sans)">→</div>
-                <div style="display:flex;flex-direction:column;gap:5px;padding:10px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);min-width:200px;max-width:280px">
-                  <span style="font:600 var(--fs-13) var(--sans)">Edge</span><span style="font:400 var(--fs-115,11.5px) var(--sans);color:var(--ink-dim)">{{ cxEdgeHost }}</span>
-                  <sc-for list="{{ cxEdgeRules }}" as="er" hint-placeholder-count="3"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink)">· {{ er.t }}</span></sc-for>
+                <div class="cc-flow-arrow"><span ref="{{ cxIcoArrow }}"></span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--rule);border-radius:12px;background:color-mix(in srgb,var(--acc-billing) 5%,var(--paper));min-width:230px;max-width:300px">
+                  <div ref="{{ cxEdgeIllo }}" style="width:64px;height:48px"></div>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font:600 var(--fs-13) var(--sans)">Edge</span><span class="cc-meta">{{ cxEdgeHost }}</span>
+                    <sc-for list="{{ cxEdgeRules }}" as="er" hint-placeholder-count="3"><span style="font:400 var(--fs-12)/1.4 var(--sans);color:var(--ink)">{{ er.t }}</span></sc-for>
+                  </div>
                 </div>
-                <div style="display:flex;align-items:center;padding:0 8px;color:var(--ink-dim);font:400 18px var(--sans)">→</div>
-                <div style="flex:1;min-width:300px;border:1px dashed var(--rule);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+                <div class="cc-flow-arrow"><span ref="{{ cxIcoArrow }}"></span></div>
+                <div style="flex:1;min-width:320px;border:1.5px dashed color-mix(in srgb,var(--brand) 35%,var(--rule));border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:color-mix(in srgb,var(--brand) 3%,var(--paper))">
                   <span style="font:600 var(--fs-12) var(--mono);color:var(--ink-dim)">container {{ cxName }}</span>
                   <sc-for list="{{ cxFlowRoutes }}" as="fr" hint-placeholder-count="2">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                      <span style="font:500 var(--fs-12) var(--mono);color:var(--ink-dim);min-width:110px">{{ fr.match }}</span>
+                      <span style="font:500 var(--fs-12) var(--mono);color:var(--ink);background:var(--panel-2);border-radius:6px;padding:2px 8px;min-width:96px;text-align:center">{{ fr.match }}</span>
                       <span style="color:var(--ink-dim)">→</span>
-                      <div style="display:flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);flex:1;min-width:200px">
-                        <span style="width:8px;height:8px;border-radius:50%;background:{{ fr.fg }};flex:none"></span>
-                        <span style="font:600 var(--fs-13) var(--sans)">{{ fr.name }}</span>
-                        <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ fr.sub }}</span>
+                      <div style="display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;border:1px solid var(--rule);border-radius:11px;background:var(--paper);flex:1;min-width:220px">
+                        <div ref="{{ fr.illo }}" style="width:48px;height:36px"></div>
+                        <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans)">{{ fr.name }}</span><span class="cc-meta">{{ fr.sub }}</span></div>
                         <div style="flex:1"></div>
-                        <span style="font:500 var(--fs-115,11.5px) var(--sans);color:{{ fr.fg }}">{{ fr.label }}</span>
+                        <span class="cc-pill" style="color:{{ fr.fg }};background:color-mix(in srgb,{{ fr.fg }} 12%,transparent)">{{ fr.label }}</span>
                       </div>
                     </div>
                   </sc-for>
-                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-left:120px">
+                  <div class="cc-db-row" style="display:flex;align-items:center;gap:10px">
                     <span style="color:var(--ink-dim)">↳</span>
-                    <div style="display:flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--rule);border-radius:9px;background:var(--paper)">
-                      <span style="width:8px;height:8px;border-radius:50%;background:{{ cxDbFg }};flex:none"></span>
-                      <span style="font:600 var(--fs-13) var(--sans)">MariaDB</span>
-                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">WordPress's database · {{ cxDbSize }}</span>
+                    <div style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:6px 12px 6px 6px;border:1px solid var(--rule);border-radius:11px;background:var(--paper);min-width:0">
+                      <div ref="{{ cxDbIllo }}" style="width:40px;height:30px"></div>
+                      <span style="font:600 var(--fs-13) var(--sans)">MariaDB</span><span class="cc-meta">WordPress's database · {{ cxDbSize }}</span>
+                      <span class="cc-pill" style="color:{{ cxDbFg }};background:color-mix(in srgb,{{ cxDbFg }} 12%,transparent)">{{ cxDbLabel }}</span>
                     </div>
                   </div>
                 </div>
               </div>
               <sc-if value="{{ cxHasHostApps }}" hint-placeholder-val="{{ false }}">
-                <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px">
+                <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:8px">
                   <sc-for list="{{ cxHostApps }}" as="ha" hint-placeholder-count="1">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:400 var(--fs-12) var(--sans)">
-                      <span style="font:500 var(--fs-12) var(--mono)">{{ ha.host }}</span><span style="color:var(--ink-dim)">→ edge →</span>
-                      <span style="width:8px;height:8px;border-radius:50%;background:{{ ha.fg }}"></span><b>{{ ha.name }}</b><span style="color:var(--ink-dim)">{{ ha.sub }} · {{ ha.label }}</span>
+                      <span style="font:500 var(--fs-12) var(--mono);background:var(--panel-2);border-radius:6px;padding:2px 8px">{{ ha.host }}</span><span style="color:var(--ink-dim)">→ edge →</span>
+                      <div ref="{{ ha.illo }}" style="width:36px;height:27px"></div><b>{{ ha.name }}</b><span class="cc-meta">{{ ha.sub }}</span>
+                      <span class="cc-pill" style="color:{{ ha.fg }};background:color-mix(in srgb,{{ ha.fg }} 12%,transparent)">{{ ha.label }}</span>
                     </div>
                   </sc-for>
                 </div>
               </sc-if>
             </div>
 
-            <div id="cx-programs" style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap">
+            <div id="cx-programs" style="display:flex;align-items:center;gap:10px;margin-top:22px;flex-wrap:wrap">
+              <span class="cc-chip" style="--h:var(--acc-domains)"><span ref="{{ cxIcoProg }}"></span></span>
               <h2 style="margin:0;font:600 var(--fs-16,16px) var(--sans)">Programs</h2>
-              <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Each runs as its own service in the container, as the site user. Apps restart on their own if they stop.</span>
+              <span class="cc-meta">Each runs as its own service in the container, as the site user. Apps restart on their own if they stop.</span>
               <div style="flex:1"></div>
-              <sc-if value="{{ cxCanAddApp }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxAddApp }}" style="font:600 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--brand);border-radius:7px;padding:5px 11px;background:var(--brand-soft)">+ Add app</span></sc-if>
+              <sc-if value="{{ cxCanAddApp }}" hint-placeholder-val="{{ true }}"><span onClick="{{ cxAddApp }}" class="cc-btn primary"><span class="i" ref="{{ cxIcoPlus }}"></span>Add app</span></sc-if>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:10px">
               <sc-for list="{{ cxPrograms }}" as="pg" hint-placeholder-count="3">
-                <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);display:flex;flex-direction:column;overflow:hidden">
-                  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px 4px">
-                    <span style="width:9px;height:9px;border-radius:50%;background:{{ pg.fg }};flex:none"></span>
-                    <span style="font:600 var(--fs-14) var(--sans)">{{ pg.title }}</span>
-                    <div style="flex:1"></div>
-                    <span style="font:500 var(--fs-12) var(--sans);color:{{ pg.fg }}">{{ pg.label }}</span>
+                <div class="cc-card" style="display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:color-mix(in srgb,{{ pg.hue }} 7%,var(--paper));border-bottom:1px solid var(--rule)">
+                    <div ref="{{ pg.illo }}" style="width:72px;height:54px"></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font:600 var(--fs-15) var(--sans)">{{ pg.title }}</span><span class="cc-pill" style="color:{{ pg.fg }};background:color-mix(in srgb,{{ pg.fg }} 12%,transparent)">{{ pg.label }}</span></div>
+                      <span class="cc-meta">{{ pg.kind }}</span>
+                      <sc-if value="{{ pg.hasMeta }}" hint-placeholder-val="{{ true }}"><span class="cc-meta" style="font-variant-numeric:tabular-nums">{{ pg.meta }}</span></sc-if>
+                    </div>
                   </div>
-                  <div style="padding:0 14px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ pg.kind }}</div>
-                  <sc-if value="{{ pg.hasMeta }}" hint-placeholder-val="{{ true }}"><div style="padding:2px 14px 0;font:400 var(--fs-12) var(--sans);color:var(--ink-dim);font-variant-numeric:tabular-nums">{{ pg.meta }}</div></sc-if>
-                  <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex:1">
+                  <div style="padding:12px 14px;display:flex;flex-direction:column;gap:7px;flex:1">
                     <sc-for list="{{ pg.lines }}" as="ln" hint-placeholder-count="3">
-                      <div style="display:flex;gap:10px"><span style="width:84px;flex:none;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ ln.k }}</span><span style="font:400 var(--fs-12) {{ ln.font }};min-width:0;word-break:break-all">{{ ln.v }}</span></div>
+                      <div style="display:flex;gap:10px"><span style="width:88px;flex:none;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ ln.k }}</span><span style="font:400 var(--fs-12)/1.45 {{ ln.font }};min-width:0;word-break:break-all">{{ ln.v }}</span></div>
                     </sc-for>
                   </div>
-                  <div style="display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--rule);background:var(--panel)">
-                    <span onClick="{{ pg.logs }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px;background:var(--paper)" style-hover="border-color:var(--brand)">Logs</span>
-                    <span onClick="{{ pg.restart }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px;background:var(--paper)" style-hover="border-color:var(--brand)">Restart</span>
-                    <sc-if value="{{ pg.canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ pg.edit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px;background:var(--paper)" style-hover="border-color:var(--brand)">Edit</span></sc-if>
+                  <div style="display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--rule)">
+                    <span onClick="{{ pg.logs }}" class="cc-btn"><span class="i" ref="{{ cxIcoLogBtn }}"></span>Logs</span>
+                    <span onClick="{{ pg.restart }}" class="cc-btn"><span class="i" ref="{{ cxIcoRestart }}"></span>Restart</span>
+                    <sc-if value="{{ pg.canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ pg.edit }}" class="cc-btn" style="color:var(--brand-ink)"><span class="i" ref="{{ cxIcoEdit }}"></span>Edit</span></sc-if>
                   </div>
                 </div>
               </sc-for>
             </div>
 
             <sc-if value="{{ cxEditing }}" hint-placeholder-val="{{ false }}">
-              <div style="border:1px solid var(--brand);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">{{ cxEdTitle }}</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Saving makes a new hosting revision and applies it.</span></div>
-                <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+              <div class="cc-card" style="border-color:var(--brand);margin-top:12px;box-shadow:0 0 0 3px var(--ring)">
+                <div class="cc-card-h"><span class="cc-chip" style="--h:var(--acc-domains)"><span ref="{{ cxIcoEdit }}"></span></span><h2>{{ cxEdTitle }}</h2><span class="cc-meta">Saving makes a new hosting revision and applies it.</span></div>
+                <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
                   <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Name
-                    <input value="{{ cxEdName }}" onInput="{{ cxEdNameOn }}" placeholder="chat" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none"></label>
+                    <input value="{{ cxEdName }}" onInput="{{ cxEdNameOn }}" placeholder="chat" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none"></label>
                   <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Port (3000–3999)
-                    <input value="{{ cxEdPort }}" onInput="{{ cxEdPortOn }}" placeholder="3001" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none"></label>
+                    <input value="{{ cxEdPort }}" onInput="{{ cxEdPortOn }}" placeholder="3001" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none"></label>
+                  <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Memory cap (MB)
+                    <input value="{{ cxEdMem }}" onInput="{{ cxEdMemOn }}" placeholder="256" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none">
+                    <span style="font-weight:400">{{ cxEdMemMax }}</span></label>
                   <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);grid-column:1/-1">Command <span style="font-weight:400">Runs from ~/apps/&lt;name&gt; as the site user. Listen on 0.0.0.0 and the port above ($PORT is set).</span>
-                    <input value="{{ cxEdCmd }}" onInput="{{ cxEdCmdOn }}" placeholder="./server -addr 0.0.0.0:3001" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none"></label>
+                    <input value="{{ cxEdCmd }}" onInput="{{ cxEdCmdOn }}" placeholder="./server -addr 0.0.0.0:3001" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none"></label>
                   <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1">
                     <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Reached at</span>
                     <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;align-self:flex-start">
@@ -4848,53 +4929,54 @@ button.ccc-edited:hover{color:var(--ink)}
                     </div>
                     <sc-if value="{{ cxEdIsPath }}" hint-placeholder-val="{{ true }}">
                       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-                        <input value="{{ cxEdPath }}" onInput="{{ cxEdPathOn }}" placeholder="/ws" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;width:200px">
+                        <input value="{{ cxEdPath }}" onInput="{{ cxEdPathOn }}" placeholder="/ws" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none;width:200px">
                         <span onClick="{{ cxEdStrip }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink)">{{ cxEdStripMark }}</span>Remove the path before passing it on</span>
                       </div>
                     </sc-if>
                     <sc-if value="{{ cxEdIsHost }}" hint-placeholder-val="{{ false }}">
-                      <input value="{{ cxEdHost }}" onInput="{{ cxEdHostOn }}" placeholder="chat.example.com" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;width:280px">
+                      <input value="{{ cxEdHost }}" onInput="{{ cxEdHostOn }}" placeholder="chat.example.com" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none;width:280px">
                     </sc-if>
-                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ cxEdHint }}</span>
+                    <span class="cc-meta">{{ cxEdHint }}</span>
                   </div>
                   <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);grid-column:1/-1">Environment variables <span style="font-weight:400">One KEY=value per line. Kept in /etc/captaincore/apps, readable by root only.</span>
-                    <textarea ref="{{ cxEdEnvRef }}" onInput="{{ cxEdEnvOn }}" rows="3" placeholder="LOG_LEVEL=info" style="border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13)/1.5 var(--mono);padding:7px 9px;outline:none;resize:vertical"></textarea></label>
+                    <textarea ref="{{ cxEdEnvRef }}" onInput="{{ cxEdEnvOn }}" rows="3" placeholder="LOG_LEVEL=info" style="border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13)/1.5 var(--mono);padding:7px 10px;outline:none;resize:vertical"></textarea></label>
                   <span onClick="{{ cxEdEnabled }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink)">{{ cxEdEnabledMark }}</span>Running</span>
                 </div>
                 <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--rule);background:var(--panel);align-items:center">
-                  <span onClick="{{ cxEdSave }}" style="font:600 var(--fs-13) var(--sans);color:#fff;background:var(--brand);border-radius:7px;padding:6px 14px;cursor:pointer">Save &amp; apply</span>
-                  <span onClick="{{ cxEdCancel }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer;padding:6px 10px">Cancel</span>
+                  <span onClick="{{ cxEdSave }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px">Save &amp; apply</span>
+                  <span onClick="{{ cxEdCancel }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
                   <div style="flex:1"></div>
-                  <sc-if value="{{ cxEdCanRemove }}" hint-placeholder-val="{{ false }}"><span onClick="{{ cxEdRemove }}" style="font:500 var(--fs-13) var(--sans);color:var(--bad);cursor:pointer;padding:6px 10px">Remove app</span></sc-if>
+                  <sc-if value="{{ cxEdCanRemove }}" hint-placeholder-val="{{ false }}"><span onClick="{{ cxEdRemove }}" class="cc-btn danger">Remove app</span></sc-if>
                 </div>
               </div>
             </sc-if>
 
-            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;padding:10px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--paper)">
-              <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">In the background</span>
+            <div class="cc-card" style="display:flex;gap:10px 22px;flex-wrap:wrap;align-items:center;margin-top:12px;padding:11px 14px">
+              <span class="cc-meta" style="font-weight:500">In the background</span>
               <sc-for list="{{ cxBackground }}" as="bg" hint-placeholder-count="2">
-                <span style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans)"><span style="width:7px;height:7px;border-radius:50%;background:{{ bg.fg }}"></span><b style="font-weight:600">{{ bg.k }}</b> {{ bg.v }} <span onClick="{{ bg.logs }}" style="color:var(--brand-ink);cursor:pointer">Logs</span></span>
+                <span style="display:flex;align-items:center;gap:8px;font:400 var(--fs-12) var(--sans)"><span class="cc-chip" style="--h:var(--acc-terminal);width:24px;height:24px"><span ref="{{ bg.ico }}" style="width:14px;height:14px"></span></span><span style="width:7px;height:7px;border-radius:50%;background:{{ bg.fg }}"></span><b style="font-weight:600">{{ bg.k }}</b> {{ bg.v }} <span onClick="{{ bg.logs }}" style="color:var(--brand-ink);cursor:pointer;font-weight:500">Logs</span></span>
               </sc-for>
             </div>
 
-            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:14px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Web server rules</h2>
+            <div class="cc-card" style="margin-top:14px">
+              <div class="cc-card-h">
+                <span class="cc-chip" style="--h:var(--acc-billing)"><span ref="{{ cxIcoRules }}"></span></span>
+                <h2>Web server rules</h2>
                 <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
                   <sc-for list="{{ cxRulesTabs }}" as="rt" hint-placeholder-count="2"><span onClick="{{ rt.go }}" style="padding:3px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-12) var(--sans);color:{{ rt.fg }};background:{{ rt.bg }}">{{ rt.label }}</span></sc-for>
                 </div>
               </div>
-              <div style="padding:10px 16px 0;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ cxRulesNote }}</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px 16px 10px">
+              <div style="padding:10px 16px 0" class="cc-meta">{{ cxRulesNote }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px 8px;padding:10px 16px 12px">
                 <sc-for list="{{ cxRulesWhere }}" as="rw" hint-placeholder-count="3">
-                  <span style="font:400 var(--fs-12) var(--sans)"><span style="font-family:var(--mono);color:var(--ink)">{{ rw.rule }}</span> <span style="color:var(--ink-dim)">→</span>
-                    <sc-if value="{{ rw.link }}" hint-placeholder-val="{{ true }}"><span onClick="{{ rw.go }}" style="color:var(--brand-ink);cursor:pointer">{{ rw.place }}</span></sc-if><sc-if value="{{ rw.plain }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink-dim)">{{ rw.place }}</span></sc-if></span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);border:1px solid var(--rule);border-radius:8px;padding:3px 9px;background:var(--panel)"><span style="font-family:var(--mono);color:var(--ink)">{{ rw.rule }}</span><span style="color:var(--ink-dim)">→</span><sc-if value="{{ rw.link }}" hint-placeholder-val="{{ true }}"><span onClick="{{ rw.go }}" style="color:var(--brand-ink);cursor:pointer;font-weight:500">{{ rw.place }}</span></sc-if><sc-if value="{{ rw.plain }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink-dim)">{{ rw.place }}</span></sc-if></span>
                 </sc-for>
               </div>
-              <pre style="margin:0;max-height:440px;overflow:auto;padding:12px 16px;border-top:1px solid var(--rule);background:var(--panel);font:400 var(--fs-115,11.5px)/1.6 var(--mono);color:var(--ink);white-space:pre;tab-size:4">{{ cxRulesText }}</pre>
+              <pre style="margin:0;max-height:440px;overflow:auto;padding:14px 18px;border-top:1px solid var(--rule);background:var(--panel);font:400 var(--fs-115,11.5px)/1.65 var(--mono);color:var(--ink);white-space:pre;tab-size:4">{{ cxRulesText }}</pre>
             </div>
 
-            <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:22px;flex-wrap:wrap">
+              <span class="cc-chip" style="--h:var(--chart-1)"><span ref="{{ cxIcoUsage }}"></span></span>
               <h2 style="margin:0;font:600 var(--fs-16,16px) var(--sans)">Usage</h2>
               <div style="flex:1"></div>
               <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
@@ -4902,27 +4984,28 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-top:10px">
-              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">CPU</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Share of the whole server</span></div>
+              <div class="cc-card">
+                <div class="cc-card-h"><h2>CPU</h2><span class="cc-meta">Share of the whole server</span></div>
                 <div ref="{{ cxChartCpu }}" style="padding:10px 14px 6px"></div>
               </div>
-              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Memory</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ cxMemNote }}</span></div>
+              <div class="cc-card">
+                <div class="cc-card-h"><h2>Memory</h2><span class="cc-meta">{{ cxMemNote }}</span></div>
                 <div ref="{{ cxChartMem }}" style="padding:10px 14px 6px"></div>
               </div>
             </div>
 
-            <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
-                <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Logs</h2>
-                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">The last 300 lines of each program's journal. Access and PHP error logs are on the site's Activity → Logs.</span>
+            <div class="cc-card" style="margin-top:12px">
+              <div class="cc-card-h">
+                <span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ cxIcoLogs }}"></span></span>
+                <h2>Logs</h2>
+                <span class="cc-meta">The last 300 lines of each program's journal. Access and PHP error logs are on the site's Activity → Logs.</span>
                 <div style="flex:1"></div>
-                <span onClick="{{ cxLogRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer">Refresh</span>
+                <span onClick="{{ cxLogRefresh }}" class="cc-btn">Refresh</span>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px">
-                <sc-for list="{{ cxLogSrcs }}" as="ls" hint-placeholder-count="4"><span onClick="{{ ls.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ ls.fg }};background:{{ ls.bg }};border:1px solid {{ ls.bd }}">{{ ls.label }}</span></sc-for>
+                <sc-for list="{{ cxLogSrcs }}" as="ls" hint-placeholder-count="4"><span onClick="{{ ls.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 11px;border-radius:999px;cursor:pointer;color:{{ ls.fg }};background:{{ ls.bg }};border:1px solid {{ ls.bd }}">{{ ls.label }}</span></sc-for>
               </div>
-              <sc-if value="{{ cxLogHint }}" hint-placeholder-val="{{ true }}"><div style="padding:0 16px 14px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Pick a log to read it.</div></sc-if>
+              <sc-if value="{{ cxLogHint }}" hint-placeholder-val="{{ true }}"><div style="padding:0 16px 14px" class="cc-meta">Pick a log to read it.</div></sc-if>
               <sc-if value="{{ cxLogShow }}" hint-placeholder-val="{{ false }}">
                 <pre ref="{{ cxLogRef }}" style="margin:0;max-height:420px;overflow:auto;padding:12px 16px;border-top:1px solid var(--rule);background:var(--panel);font:400 var(--fs-115,11.5px)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-all">{{ cxLogText }}</pre>
               </sc-if>

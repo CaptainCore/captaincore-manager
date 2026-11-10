@@ -279,7 +279,14 @@ class HostConfigs extends DB {
 				return new \WP_Error( 'invalid', "The {$name} app's port must be unique and between 3000 and 3999.", [ 'status' => 400 ] );
 			}
 			$route = ( $a['route'] ?? 'path' ) === 'hostname' ? 'hostname' : 'path';
-			$app   = [ 'name' => $name, 'command' => $command, 'port' => $port, 'route' => $route, 'enabled' => ! isset( $a['enabled'] ) || ! empty( $a['enabled'] ) ];
+			// Each app has a memory cap of its own inside the site's, so a leak
+			// stops at the app and leaves room for PHP and MariaDB (512 MB).
+			$mem_max = max( 64, (int) ( $out['memory_mb'] ?? 1024 ) - 512 );
+			$mem     = isset( $a['memory_mb'] ) && $a['memory_mb'] !== '' ? (int) $a['memory_mb'] : min( 256, $mem_max );
+			if ( $mem < 32 || $mem > $mem_max ) {
+				return new \WP_Error( 'invalid', "The {$name} app's memory must be between 32 and {$mem_max} MB (the site's memory less 512 MB for PHP and MariaDB).", [ 'status' => 400 ] );
+			}
+			$app   = [ 'name' => $name, 'command' => $command, 'port' => $port, 'route' => $route, 'memory_mb' => $mem, 'enabled' => ! isset( $a['enabled'] ) || ! empty( $a['enabled'] ) ];
 			if ( $route === 'path' ) {
 				$path = '/' . trim( (string) ( $a['path'] ?? '' ), '/' );
 				if ( $path === '/' || ! preg_match( '@^(/[A-Za-z0-9._~-]+)+$@', $path ) || preg_match( '@^/wp-@', $path ) ) {

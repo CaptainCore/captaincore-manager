@@ -210,6 +210,7 @@ Object.assign(Component.prototype, {
         sshLabel: s.copied === 'srv-ssh-' + r.server_id ? 'Copied ✓' : 'Copy SSH', hasSsh: !!ssh,
         copySsh: () => copy(ssh, 'srv-ssh-' + r.server_id),
         // Opens Sites with only this server's sites (the Server filter).
+        illo: this.illo('server'),
         openSites: () => { this.setState({ q: '', fProv: 'Any', fServer: r.name, fNet: 'Any', fCore: 'Any', fBackup: 'Any', fUnassigned: false, fRemoved: false }); this.go('sites')(); },
         sitesTitle: 'Show these sites in Sites',
         edit: () => this.openServerDialog(r),
@@ -220,7 +221,7 @@ Object.assign(Component.prototype, {
     const summary = srv ? [list.length === 1 ? '1 server' : list.length + ' servers',
       capacity ? sites + ' of ' + capacity + ' sites placed' : sites + ' sites placed', cost ? money(cost) + '/mo' : ''].filter(Boolean).join(' · ') : 'Loading…';
     return {
-      srvSummary: summary,
+      srvSummary: summary, srvRackIllo: this.illo('rack'), srvKeyIco: this.icon('key'),
       srvRows: rows,
       srvEmpty: !!srv && !srv.failed && list.length === 0,
       srvFailed: !!srv && srv.failed,
@@ -410,7 +411,7 @@ Object.assign(Component.prototype, {
     const st = this._srvStats, row = st && st.data ? st.data.server : ((this._srv && this._srv.list) || []).find(r => String(r.server_id) === String(s.serverId));
     const range = s.srvRange || '1h';
     const base = {
-      showServer: true,
+      showServer: true, sdIllo: this.illo('server'), sdIcoCt: this.icon('apps'), sdIcoLogs: this.icon('logs'), sdIcoSys: this.icon('cpu'),
       sdName: row ? row.name : 'Server', sdBack: () => { clearTimeout(this._srvStatsTimer); this.setState({ route: 'servers' }); this.loadServers(true); },
       sdRanges: [['1h', 'Hour'], ['24h', 'Day'], ['7d', 'Week']].map(([v, l]) => ({ label: l,
         fg: range === v ? 'var(--ink)' : 'var(--ink-dim)', bg: range === v ? 'var(--panel-2)' : 'transparent',
@@ -452,7 +453,7 @@ Object.assign(Component.prototype, {
       sdChartLoad: el => this.srvChart(el, { t, fmt: x => x.toFixed(x < 10 ? 2 : 0), series: [{ name: 'Load (1 min)', values: h.map(r => r.load), color: C1 }] }, v),
       sdCts: (d.containers || []).map(c => {
         const memPct = c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100) : 0;
-        return { name: c.name, openCt: () => this.openContainer(s.serverId, c.name), site: c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site',
+        return { name: c.name, illo: this.illo('container'), openCt: () => this.openContainer(s.serverId, c.name), site: c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site',
           siteFg: c.site ? 'var(--brand-ink)' : 'var(--ink-dim)', open: () => { if (c.site) { this.setState({ env: c.site.environment || 'Production' }); this.openSite(String(c.site.site_id)); } },
           status: c.status, statusFg: c.status === 'Running' ? 'var(--ok)' : 'var(--warn)',
           cpu: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%'),
