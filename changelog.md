@@ -26,6 +26,7 @@
 - After Mailgun sending is set up, the Sending tab loads DNS records, usage, and events immediately. The zone used to be created while the panel stayed empty until you left the tab and came back.
 - A first payment no longer fails for want of a billing address. Adding a card asks for the billing details the charge needs — name, address, city, state, ZIP, country and email — showing them as a summary once they are on file and as a form until then, with searchable country and state pickers. The address is saved before the card is created and travels with it to Stripe. Paying an invoice with a saved card asks for the same details first, the Billing address screen marks what is required, and the API refuses a card with an incomplete address instead of returning a bare gateway error.
 - A dashboard tab left open for more than half a day no longer fails silently. The REST nonce is refreshed in the background every 30 minutes and whenever the tab returns to the foreground, and a request that still hits an expired nonce fetches a fresh one and replays itself. When the login session itself has ended, the tab goes to the login page and returns to the same screen after sign-in.
+- Published reports show the site's icon in the browser tab. They are static pages and had no icon link, so tabs showed a blank page.
 
 ## **v1.1.1** - September 5, 2026
 

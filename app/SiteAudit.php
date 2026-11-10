@@ -531,6 +531,14 @@ class SiteAudit {
         $html .= "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
         $html .= "<meta name=\"robots\" content=\"noindex, nofollow\">\n";
         $html .= "<title>{$e_title} &middot; {$e_site}</title>\n";
+        // The site's own icon (Settings → General → Site Icon); reports are static files, so
+        // nothing else would add it.
+        foreach ( [ [ 'icon', 32 ], [ 'icon', 192 ], [ 'apple-touch-icon', 180 ] ] as [ $rel, $size ] ) {
+            $icon_url = get_site_icon_url( $size );
+            if ( $icon_url ) {
+                $html .= "<link rel=\"{$rel}\" sizes=\"{$size}x{$size}\" href=\"" . esc_url( $icon_url ) . "\">\n";
+            }
+        }
         $html .= "<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n";
         $html .= "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap\">\n";
         // Apply a saved theme before first paint so a dark preference never flashes light.
