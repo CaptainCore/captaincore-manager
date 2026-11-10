@@ -56,6 +56,10 @@ class HostConfigs extends DB {
 				'max_execution_time'  => 120,
 			],
 			'memory_mb'           => 1024,
+			'redirects'           => [],
+			'ip_deny'             => [],
+			'password_protect'    => [ 'enabled' => false, 'username' => '', 'password_hash' => '' ],
+			'debug'               => false,
 		];
 	}
 
@@ -182,7 +186,86 @@ class HostConfigs extends DB {
 			return $mem;
 		}
 		$out['memory_mb'] = $mem;
+
+		// Redirects: path (exact, or ending in * for a prefix) to a path or URL.
+		$out['redirects'] = [];
+		foreach ( (array) ( $in['redirects'] ?? [] ) as $r ) {
+			$from = trim( (string) ( $r['from'] ?? '' ) );
+			$to   = trim( (string) ( $r['to'] ?? '' ) );
+			$code = (int) ( $r['code'] ?? 301 );
+			if ( ! preg_match( '@^/[A-Za-z0-9._~%/+-]*\*?$@', $from ) ) {
+				return new \WP_Error( 'invalid', "Redirect from \"{$from}\" must be a path like /old-page or /blog/*.", [ 'status' => 400 ] );
+			}
+			if ( ! preg_match( '@^(/[A-Za-z0-9._~%/+?=&#-]*|https?://[A-Za-z0-9.-]+(:\d+)?(/[A-Za-z0-9._~%/+?=&#-]*)?)$@', $to ) ) {
+				return new \WP_Error( 'invalid', "Redirect to \"{$to}\" must be a path or an http(s) URL.", [ 'status' => 400 ] );
+			}
+			if ( ! in_array( $code, [ 301, 302, 307, 308 ], true ) ) {
+				return new \WP_Error( 'invalid', 'Redirect code must be 301, 302, 307 or 308.', [ 'status' => 400 ] );
+			}
+			$out['redirects'][] = [ 'from' => $from, 'to' => $to, 'code' => $code ];
+		}
+		if ( count( $out['redirects'] ) > 500 ) {
+			return new \WP_Error( 'invalid', 'At most 500 redirects.', [ 'status' => 400 ] );
+		}
+
+		// IP deny: addresses or CIDR ranges, answered with 403 at the edge.
+		$out['ip_deny'] = [];
+		foreach ( (array) ( $in['ip_deny'] ?? [] ) as $entry ) {
+			$entry = trim( (string) $entry );
+			if ( $entry === '' ) {
+				continue;
+			}
+			[ $addr, $bits ] = array_pad( explode( '/', $entry, 2 ), 2, null );
+			$v4 = filter_var( $addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 );
+			$v6 = filter_var( $addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 );
+			if ( ( ! $v4 && ! $v6 ) || ( $bits !== null && ( ! ctype_digit( $bits ) || (int) $bits > ( $v4 ? 32 : 128 ) ) ) ) {
+				return new \WP_Error( 'invalid', "\"{$entry}\" is not an IP address or CIDR range.", [ 'status' => 400 ] );
+			}
+			$out['ip_deny'][] = $entry;
+		}
+		$out['ip_deny'] = array_values( array_unique( $out['ip_deny'] ) );
+		if ( count( $out['ip_deny'] ) > 500 ) {
+			return new \WP_Error( 'invalid', 'At most 500 denied addresses.', [ 'status' => 400 ] );
+		}
+
+		// Password protection (HTTP basic auth at the edge). A new password
+		// arrives as `password` and is stored only as a bcrypt hash.
+		$pp       = (array) ( $in['password_protect'] ?? [] );
+		$previous = self::latest( $environment_id );
+		$prev_pp  = $previous ? ( json_decode( $previous->config, true )['password_protect'] ?? [] ) : [];
+		$enabled  = ! empty( $pp['enabled'] );
+		$user     = trim( (string) ( $pp['username'] ?? '' ) );
+		$hash     = (string) ( $pp['password_hash'] ?? '' );
+		if ( ! empty( $pp['password'] ) ) {
+			if ( strlen( (string) $pp['password'] ) < 8 ) {
+				return new \WP_Error( 'invalid', 'The password must be at least 8 characters.', [ 'status' => 400 ] );
+			}
+			$hash = password_hash( (string) $pp['password'], PASSWORD_BCRYPT );
+		} elseif ( $hash !== ( $prev_pp['password_hash'] ?? '' ) ) {
+			$hash = (string) ( $prev_pp['password_hash'] ?? '' ); // never accept a hash from the browser
+		}
+		if ( $enabled ) {
+			if ( ! preg_match( '/^[A-Za-z0-9._-]{1,64}$/', $user ) ) {
+				return new \WP_Error( 'invalid', 'The username may use letters, digits, dot, dash and underscore.', [ 'status' => 400 ] );
+			}
+			if ( $hash === '' ) {
+				return new \WP_Error( 'invalid', 'Set a password for password protection.', [ 'status' => 400 ] );
+			}
+		}
+		$out['password_protect'] = [ 'enabled' => $enabled, 'username' => $user, 'password_hash' => $hash ];
+		$out['debug']            = ! empty( $in['debug'] );
 		return $out;
+	}
+
+	/** The config as the browser sees it: the password hash is replaced by a flag. */
+	public static function for_browser( $config ) {
+		$config['password_protect'] = $config['password_protect'] ?? [ 'enabled' => false, 'username' => '', 'password_hash' => '' ];
+		$config['password_protect']['has_password'] = ! empty( $config['password_protect']['password_hash'] );
+		unset( $config['password_protect']['password_hash'] );
+		$config['redirects'] = $config['redirects'] ?? [];
+		$config['ip_deny']   = $config['ip_deny'] ?? [];
+		$config['debug']     = ! empty( $config['debug'] );
+		return $config;
 	}
 
 	/** Hostnames claimed by other environments on our servers => site name. */

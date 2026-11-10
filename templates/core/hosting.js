@@ -129,6 +129,41 @@ Object.assign(Component.prototype, {
         op: v.available ? '1' : '.5',
         pick: () => { if (!v.available) { this.toast('PHP ' + v.version + ' has no server image yet', { kind: 'info' }); return; } set(cc => { cc.php.version = v.version; }); } })),
       ...Object.fromEntries(Object.entries(fields).flatMap(([k, f]) => [['hostF_' + k, f.val], ['hostOn_' + k, f.on], ['hostLim_' + k, lim(k)]])),
+      // Redirects
+      hostRedirRows: (c.redirects || []).map((r, i) => ({ from: r.from, to: r.to, code: String(r.code),
+        remove: () => set(cc => { cc.redirects.splice(i, 1); }) })),
+      hostRedirEmpty: !(c.redirects || []).length,
+      hostRFrom: s.hostRFrom || '', onHostRFrom: e => this.setState({ hostRFrom: e.target.value }),
+      hostRTo: s.hostRTo || '', onHostRTo: e => this.setState({ hostRTo: e.target.value }),
+      hostRCodeChips: [301, 302].map(code => ({ label: String(code) + (code === 301 ? ' permanent' : ' temporary'),
+        fg: (s.hostRCode || 301) === code ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: (s.hostRCode || 301) === code ? 'var(--brand-soft)' : 'transparent',
+        bd: (s.hostRCode || 301) === code ? 'var(--brand)' : 'var(--rule)', pick: () => this.setState({ hostRCode: code }) })),
+      hostAddRedirect: () => {
+        const from = (this.state.hostRFrom || '').trim(), to = (this.state.hostRTo || '').trim();
+        if (!/^\/[A-Za-z0-9._~%\/+-]*\*?$/.test(from)) { this.toast('From must be a path like /old-page or /blog/*', { kind: 'error' }); return; }
+        if (!/^(\/\S*|https?:\/\/\S+)$/.test(to)) { this.toast('To must be a path or an http(s) URL', { kind: 'error' }); return; }
+        set(cc => { cc.redirects = cc.redirects || []; cc.redirects.push({ from, to, code: this.state.hostRCode || 301 }); });
+        this.setState({ hostRFrom: '', hostRTo: '' });
+      },
+      // Access: IP deny + password protection
+      hostDenyRows: (c.ip_deny || []).map((ipx, i) => ({ ip: ipx, remove: () => set(cc => { cc.ip_deny.splice(i, 1); }) })),
+      hostDenyEmpty: !(c.ip_deny || []).length,
+      hostDenyIn: s.hostDenyIn || '', onHostDenyIn: e => this.setState({ hostDenyIn: e.target.value }),
+      hostAddDeny: () => {
+        const v = (this.state.hostDenyIn || '').trim();
+        if (!/^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(v)) { this.toast('Enter an IP address or CIDR range', { kind: 'error' }); return; }
+        set(cc => { cc.ip_deny = cc.ip_deny || []; if (!cc.ip_deny.includes(v)) cc.ip_deny.push(v); });
+        this.setState({ hostDenyIn: '' });
+      },
+      hostPpOn: !!(c.password_protect && c.password_protect.enabled), hostPpMark: c.password_protect && c.password_protect.enabled ? '✓' : '',
+      toggleHostPp: () => set(cc => { cc.password_protect = cc.password_protect || {}; cc.password_protect.enabled = !cc.password_protect.enabled; }),
+      hostPpUser: (c.password_protect && c.password_protect.username) || '',
+      onHostPpUser: e => set(cc => { cc.password_protect.username = e.target.value; }),
+      hostPpPass: (c.password_protect && c.password_protect.password) || '',
+      onHostPpPass: e => set(cc => { cc.password_protect.password = e.target.value; }),
+      hostPpPassPh: c.password_protect && c.password_protect.has_password ? 'Password saved; type to change it' : 'Password (8+ characters)',
+      // Tools
+      hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
       // History
       hostHist: (d.history || []).map(r => ({ rev: 'r' + r.revision, note: r.note || '—', by: r.by, when: ago(r.created_at),
         status: (statusMap[r.status] || [r.status])[0], fg: (statusMap[r.status] || [0, 'var(--ink-dim)'])[1],

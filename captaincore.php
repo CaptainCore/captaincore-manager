@@ -6903,7 +6903,7 @@ function captaincore_site_hosting_response( $env ) {
 	}
 	return [
 		'environment_id' => (int) $env->environment_id,
-		'config'         => $config,
+		'config'         => CaptainCore\HostConfigs::for_browser( $config ),
 		'revision'       => $last ? (int) $last->revision : 0,
 		'status'         => $last ? $last->status : 'default',
 		'result'         => $last && $last->result ? json_decode( $last->result ) : null,

@@ -2075,6 +2075,53 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
 
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Redirects</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Handled at the edge before WordPress loads. End a path with * to match everything under it.</span></div>
+                <sc-for list="{{ hostRedirRows }}" as="rd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <span style="font:400 var(--fs-13) var(--mono)">{{ rd.from }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">→</span>
+                    <span style="font:400 var(--fs-13) var(--mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ rd.to }}</span>
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ rd.code }}</span>
+                    <span onClick="{{ rd.remove }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                  </div>
+                </sc-for>
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;flex-wrap:wrap">
+                  <input value="{{ hostRFrom }}" onInput="{{ onHostRFrom }}" placeholder="/old-page" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:200px">
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">→</span>
+                  <input value="{{ hostRTo }}" onInput="{{ onHostRTo }}" placeholder="/new-page or https://…" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:280px">
+                  <sc-for list="{{ hostRCodeChips }}" as="rc" hint-placeholder-count="2"><span onClick="{{ rc.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;color:{{ rc.fg }};background:{{ rc.bg }};border:1px solid {{ rc.bd }}">{{ rc.label }}</span></sc-for>
+                  <button onClick="{{ hostAddRedirect }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Add redirect</button>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Access</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Both are enforced at the edge. Denied addresses get a 403 before anything else.</span></div>
+                <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">IP deny</span>
+                    <sc-for list="{{ hostDenyRows }}" as="dn" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--mono);border:1px solid var(--rule);border-radius:999px;padding:2px 4px 2px 10px">{{ dn.ip }}<span onClick="{{ dn.remove }}" style="cursor:pointer;color:var(--ink-dim);padding:0 5px" style-hover="color:var(--bad)">✕</span></span></sc-for>
+                    <input value="{{ hostDenyIn }}" onInput="{{ onHostDenyIn }}" placeholder="203.0.113.7 or 198.51.100.0/24" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:240px">
+                    <button onClick="{{ hostAddDeny }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Deny</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Password protection</span>
+                    <span onClick="{{ toggleHostPp }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostPpMark }}</span>Require a password</span>
+                    <sc-if value="{{ hostPpOn }}" hint-placeholder-val="{{ false }}">
+                      <input value="{{ hostPpUser }}" onInput="{{ onHostPpUser }}" placeholder="username" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:150px">
+                      <input type="password" value="{{ hostPpPass }}" onInput="{{ onHostPpPass }}" placeholder="{{ hostPpPassPh }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:240px">
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Tools</h2></div>
+                <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span onClick="{{ toggleHostDebug }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostDebugMark }}</span>WordPress debugging</span>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Turns on WP_DEBUG and WP_DEBUG_LOG (written to wp-content/debug.log, never shown to visitors).</span>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">History</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Every save is a revision. Restoring saves an old one as new and applies it.</span></div>
                 <sc-for list="{{ hostHist }}" as="hr" hint-placeholder-count="3">
                   <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
