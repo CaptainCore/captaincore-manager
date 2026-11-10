@@ -1990,6 +1990,110 @@ button.ccc-edited:hover{color:var(--ink)}
             </sc-if>
           </sc-if>
 
+          <sc-if value="{{ tabHosting }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ hostLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Loading hosting configuration…</div>
+            </sc-if>
+            <sc-if value="{{ hostHasError }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;font:500 var(--fs-13) var(--sans);color:var(--bad)">{{ hostError }}</div>
+            </sc-if>
+            <sc-if value="{{ hostReady }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--rule);border-radius:11px;background:var(--panel)">
+                <span style="font:600 var(--fs-13) var(--sans)">{{ hostRev }}</span>
+                <span style="font:600 var(--fs-12) var(--sans);color:{{ hostStatusFg }}">{{ hostStatus }}</span>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ hostWhen }}</span>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">· {{ hostServer }}</span>
+                <div style="flex:1"></div>
+                <sc-if value="{{ hostClean }}" hint-placeholder-val="{{ true }}">
+                  <span onClick="{{ hostApply }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Apply again</span>
+                </sc-if>
+                <sc-if value="{{ hostDirty }}" hint-placeholder-val="{{ false }}">
+                  <input value="{{ hostNote }}" onInput="{{ onHostNote }}" placeholder="What changed and why (optional)" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;font-family:var(--sans);width:260px">
+                  <span onClick="{{ hostDiscard }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Discard</span>
+                  <button onClick="{{ hostSave }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">Save &amp; apply</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ hostHasErr }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px;font:500 var(--fs-125) var(--sans);color:var(--bad)">{{ hostErr }}</div>
+              </sc-if>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Domains</h2>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Point each domain's A record to <span style="font-family:var(--mono);color:var(--ink)">{{ hostIp }}</span>. SSL is issued automatically once it points here.</span>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ hostCanTemp }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ hostAddTemp }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Add temporary domain</span>
+                  </sc-if>
+                </div>
+                <sc-for list="{{ hostDomRows }}" as="hd" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span style="font:500 var(--fs-13) var(--mono)">{{ hd.name }}</span>
+                        <sc-if value="{{ hd.primary }}" hint-placeholder-val="{{ false }}"><span style="font:600 var(--fs-11) var(--sans);color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:1px 8px">Primary</span></sc-if>
+                        <sc-if value="{{ hd.temporary }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-11) var(--sans);color:var(--ink-dim);border:1px solid var(--rule);border-radius:999px;padding:0 8px">Temporary</span></sc-if>
+                        <sc-if value="{{ hd.hasWww }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ hd.www }}</span></sc-if>
+                      </div>
+                      <sc-if value="{{ hd.hasDnsHint }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ hd.dnsHint }}</span></sc-if>
+                    </div>
+                    <span style="font:500 var(--fs-12) var(--sans);color:{{ hd.dnsFg }}">{{ hd.dnsLabel }}</span>
+                    <sc-if value="{{ hd.certShow }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-12) var(--sans);color:{{ hd.certFg }}">{{ hd.certLabel }}</span></sc-if>
+                    <span onClick="{{ hd.toggleWww }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">www</span>
+                    <sc-if value="{{ hd.notPrimary }}" hint-placeholder-val="{{ true }}">
+                      <span onClick="{{ hd.makePrimary }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Make primary</span>
+                      <span onClick="{{ hd.remove }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;flex-wrap:wrap">
+                  <input value="{{ hostAddName }}" onInput="{{ onHostAddName }}" placeholder="example.com" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:260px">
+                  <span onClick="{{ toggleHostAddWww }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostAddWwwMark }}</span>Add www.</span>
+                  <button onClick="{{ hostAddDomain }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-12) var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Add domain</button>
+                  <div style="flex:1"></div>
+                  <span onClick="{{ toggleHostForce }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostForceMark }}</span>Force HTTPS</span>
+                  <span onClick="{{ toggleHostRedirect }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostRedirectMark }}</span>Redirect other domains to primary</span>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">PHP</h2>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Changes restart PHP for this site only; the edge holds requests for the few seconds it takes.</span>
+                </div>
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Version</span>
+                    <sc-for list="{{ hostPhpChips }}" as="pv" hint-placeholder-count="3"><span onClick="{{ pv.pick }}" style="font:500 var(--fs-12) var(--sans);padding:4px 11px;border-radius:999px;cursor:pointer;opacity:{{ pv.op }};color:{{ pv.fg }};background:{{ pv.bg }};border:1px solid {{ pv.bd }}">{{ pv.label }}</span></sc-for>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">PHP workers</span><input value="{{ hostF_workers }}" onInput="{{ hostOn_workers }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">threads · {{ hostLim_workers }}</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Burst workers</span><input value="{{ hostF_max_workers }}" onInput="{{ hostOn_max_workers }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">threads · {{ hostLim_max_workers }}</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Memory limit</span><input value="{{ hostF_memory_limit }}" onInput="{{ hostOn_memory_limit }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">MB per request · {{ hostLim_memory_limit }}</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Upload size</span><input value="{{ hostF_upload_max_filesize }}" onInput="{{ hostOn_upload_max_filesize }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">MB · {{ hostLim_upload_max_filesize }}</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Max execution time</span><input value="{{ hostF_max_execution_time }}" onInput="{{ hostOn_max_execution_time }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">seconds · {{ hostLim_max_execution_time }}</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="width:150px;flex:none;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Container memory</span><input value="{{ hostF_memory_mb }}" onInput="{{ hostOn_memory_mb }}" style="height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 9px;outline:none;min-width:0;width:90px"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">MB for PHP + database · {{ hostLim_memory_mb }}</span></div>
+                </div>
+              </div>
+
+              <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">History</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Every save is a revision. Restoring saves an old one as new and applies it.</span></div>
+                <sc-for list="{{ hostHist }}" as="hr" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <span style="font:600 var(--fs-12) var(--mono);width:34px">{{ hr.rev }}</span>
+                    <span style="font:400 var(--fs-13) var(--sans);flex:1;min-width:160px">{{ hr.note }}</span>
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ hr.by }} · {{ hr.when }}</span>
+                    <span style="font:500 var(--fs-12) var(--sans);color:{{ hr.fg }};width:80px">{{ hr.status }}</span>
+                    <sc-if value="{{ hr.canRestore }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ hr.restore }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Restore</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ hostHistEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">No revisions yet. The settings above are the defaults until you save.</div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </sc-if>
+
           <sc-if value="{{ tabTimeline }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Human notes on what happened and why — restores, installs, DNS changes.</span>

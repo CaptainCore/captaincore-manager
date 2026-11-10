@@ -286,6 +286,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Environments' => __DIR__ . '/../..' . '/app/Environments.php',
         'CaptainCore\\ErrorLogCLI' => __DIR__ . '/../..' . '/app/ErrorLogCLI.php',
         'CaptainCore\\GeoIP' => __DIR__ . '/../..' . '/app/GeoIP.php',
+        'CaptainCore\\HostConfigs' => __DIR__ . '/../..' . '/app/HostConfigs.php',
         'CaptainCore\\Invite' => __DIR__ . '/../..' . '/app/Invite.php',
         'CaptainCore\\Invites' => __DIR__ . '/../..' . '/app/Invites.php',
         'CaptainCore\\JobTokens' => __DIR__ . '/../..' . '/app/JobTokens.php',

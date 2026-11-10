@@ -2341,7 +2341,8 @@ class Component extends DCLogic {
     // only the chrome is grouped. A group with one leaf renders no segment row.
     const leaf = this.siteLeaf(s.siteTab);
     const group = this.siteGroupOf(leaf);
-    const tabs = this.SITE_TAB_GROUPS.map(g => ({ label: g.label,
+    const hostingVals = this.computeHosting ? this.computeHosting(real, s) : { hostShow: false };
+    const tabs = this.SITE_TAB_GROUPS.filter(g => g.id !== 'hosting' || hostingVals.hostShow).map(g => ({ label: g.label,
       fg: g.id === group.id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: g.id === group.id ? 'var(--panel-2)' : 'transparent',
       // Entering a group lands on its first leaf, unless the current leaf
@@ -2538,6 +2539,8 @@ class Component extends DCLogic {
       tabRegistry: leaf === 'registry', tabScheduled: leaf === 'scheduled',
       tabFiles: leaf === 'files',
       tabSiteDomains: leaf === 'sitedomains',
+      tabHosting: leaf === 'hosting' && !!hostingVals.hostShow,
+      ...hostingVals,
       ...(this.computeNetwork ? this.computeNetwork(real, s) : { netShow: false, netTenantShow: false, netRows: [], netFilterShow: false }),
       ...this.envDomainsVals(real, s),
       credRows,
@@ -3094,7 +3097,9 @@ class Component extends DCLogic {
     { id: 'history',   label: 'History',   leaves: [['versions', 'Versions'], ['backups', 'Backups'], ['snapshots', 'Snapshots'], ['captures', 'Captures']] },
     // Timeline leads: it renders from already-loaded data, while Logs needs a
     // slow ssh fetch — defaulting the Activity group to Logs felt broken.
-    { id: 'activity',  label: 'Activity',  leaves: [['timeline', 'Timeline'], ['logs', 'Logs'], ['scheduled', 'Scheduled']] }
+    { id: 'activity',  label: 'Activity',  leaves: [['timeline', 'Timeline'], ['logs', 'Logs'], ['scheduled', 'Scheduled']] },
+    // Sites on our own servers only (hosting.js decides; hidden otherwise).
+    { id: 'hosting',   label: 'Hosting',   leaves: [['hosting', 'Hosting']] }
   ];
   // 'addons' was the pre-grouping name for the plugins/themes pair — keep the
   // alias so links minted before the reorg still land somewhere sensible.
@@ -3120,7 +3125,7 @@ class Component extends DCLogic {
     if (!this._detail) return;
     const load = { logs: 'loadLogs', registry: 'loadRegistry', stats: 'loadStats',
       versions: 'loadQuicksaves', backups: 'loadBackups', snapshots: 'loadSnapshots',
-      captures: 'loadCaptures', timeline: 'loadTimeline', files: 'loadFiles' }[leaf];
+      captures: 'loadCaptures', timeline: 'loadTimeline', files: 'loadFiles', hosting: 'loadHosting' }[leaf];
     if (load && this[load]) this[load]();
   }
 

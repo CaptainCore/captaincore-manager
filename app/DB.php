@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 75;
+    const REQUIRED_VERSION = 76;
 
     private static function _table() {
         global $wpdb;
@@ -1696,6 +1696,28 @@ class DB {
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v76: hosting configuration revisions for environments on our own
+        // servers (HostConfigs). Append-only; the latest revision is in force,
+        // status pending → applied | failed | superseded, result = the CLI's
+        // apply report (changes, health, certificates).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_host_configs` (
+            host_config_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            revision int(10) UNSIGNED NOT NULL DEFAULT 1,
+            config longtext NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            agent varchar(20) NOT NULL DEFAULT '',
+            note varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            result longtext,
+            created_at datetime NOT NULL,
+            applied_at datetime DEFAULT NULL,
+        PRIMARY KEY  (host_config_id),
+        UNIQUE KEY environment_revision (environment_id,revision)
         ) $charset_collate;";
 
         dbDelta($sql);

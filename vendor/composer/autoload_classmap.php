@@ -160,6 +160,7 @@ return array(
     'CaptainCore\\Environments' => $baseDir . '/app/Environments.php',
     'CaptainCore\\ErrorLogCLI' => $baseDir . '/app/ErrorLogCLI.php',
     'CaptainCore\\GeoIP' => $baseDir . '/app/GeoIP.php',
+    'CaptainCore\\HostConfigs' => $baseDir . '/app/HostConfigs.php',
     'CaptainCore\\Invite' => $baseDir . '/app/Invite.php',
     'CaptainCore\\Invites' => $baseDir . '/app/Invites.php',
     'CaptainCore\\JobTokens' => $baseDir . '/app/JobTokens.php',

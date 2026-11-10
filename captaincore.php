@@ -1273,6 +1273,42 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
+	// Hosting configuration (CLI: `captaincore host apply`). host-config hands
+	// the CLI the latest revision plus where it runs; host-config-applied
+	// records the outcome on that revision.
+	if ( $command === 'host-config' ) {
+		if ( empty( $current_site ) || empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'host-config requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$env    = CaptainCore\Environments::get( (int) $environment_id );
+		$server = ( $env && (int) $env->server_id ) ? CaptainCore\Servers::get( (int) $env->server_id ) : null;
+		if ( ! $server ) {
+			return [ 'own_server' => false ];
+		}
+		$last    = CaptainCore\HostConfigs::latest( $env->environment_id );
+		$config  = CaptainCore\HostConfigs::current( $env );
+		$details = json_decode( (string) $env->details ) ?: new stdClass();
+		return [
+			'own_server' => true,
+			'revision'   => $last ? (int) $last->revision : 0,
+			'config'     => $config,
+			'hostnames'  => CaptainCore\HostConfigs::hostnames( $config ),
+			'primary'    => array_values( array_filter( $config['domains'], function ( $d ) { return ! empty( $d['primary'] ); } ) )[0]['name'] ?? '',
+			'image'      => CaptainCore\HostConfigs::PHP_IMAGES[ $config['php']['version'] ] ?? '',
+			'container'  => (string) ( $details->container ?? '' ),
+			'ip'         => (string) ( $details->container_ip ?? '' ),
+			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
+		];
+	}
+	if ( $command === 'host-config-applied' ) {
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'host-config-applied requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$d  = is_object( $data ) ? $data : (object) [];
+		$ok = CaptainCore\HostConfigs::record_apply( $environment_id, (int) ( $d->revision ?? 0 ), (string) ( $d->status ?? '' ), $d->result ?? null );
+		return [ 'response' => $ok ? 'Recorded' : 'Revision not found' ];
+	}
+
 	// Operator SSH keys (CLI: `captaincore ssh-keys deploy`). The CLI fetches
 	// the managed lines for a site on our servers, writes them, and reports
 	// the hash back so the Servers screen can show which sites are current.
@@ -6842,6 +6878,89 @@ HEREDOC;
 	exit;
 }
 
+// The environment a hosting request is about: must run on one of our servers.
+function captaincore_hosting_environment( $request ) {
+	$site_id = (int) $request['id'];
+	$name    = ucfirst( strtolower( (string) ( $request['environment'] ?? 'Production' ) ) );
+	$envs    = CaptainCore\Environments::where( [ 'site_id' => $site_id, 'environment' => $name ] );
+	$env     = $envs ? $envs[0] : null;
+	if ( ! $env ) {
+		return new WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
+	}
+	if ( (int) $env->server_id === 0 ) {
+		return new WP_Error( 'not_own_server', 'This environment is not on one of our servers.', [ 'status' => 400 ] );
+	}
+	return $env;
+}
+
+function captaincore_site_hosting_response( $env ) {
+	$server = CaptainCore\Servers::get( (int) $env->server_id );
+	$last   = CaptainCore\HostConfigs::latest( $env->environment_id );
+	$config = CaptainCore\HostConfigs::current( $env );
+	$versions = [];
+	foreach ( CaptainCore\HostConfigs::PHP_IMAGES as $v => $image ) {
+		$versions[] = [ 'version' => $v, 'available' => $image !== '' ];
+	}
+	return [
+		'environment_id' => (int) $env->environment_id,
+		'config'         => $config,
+		'revision'       => $last ? (int) $last->revision : 0,
+		'status'         => $last ? $last->status : 'default',
+		'result'         => $last && $last->result ? json_decode( $last->result ) : null,
+		'applied_at'     => $last ? $last->applied_at : null,
+		'history'        => CaptainCore\HostConfigs::history( $env->environment_id ),
+		'server'         => $server ? [ 'server_id' => (int) $server->server_id, 'name' => $server->name, 'address' => $server->address, 'address_v6' => $server->address_v6 ] : null,
+		'php_versions'   => $versions,
+		'limits'         => CaptainCore\HostConfigs::LIMITS,
+		'dns'            => CaptainCore\HostConfigs::dns_status( $config, $server ? $server->address : '' ),
+	];
+}
+
+function captaincore_site_hosting_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	return is_wp_error( $env ) ? $env : captaincore_site_hosting_response( $env );
+}
+
+// Saving makes a new revision and starts `host apply` right away.
+function captaincore_site_hosting_update_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$params = $request->get_json_params();
+	$row    = CaptainCore\HostConfigs::save( $env, $params['config'] ?? [], get_current_user_id(), $params['note'] ?? '', $params['agent'] ?? '' );
+	if ( is_wp_error( $row ) ) {
+		return $row;
+	}
+	return captaincore_site_hosting_response( $env ) + [ 'token' => CaptainCore\HostConfigs::apply( $env ) ];
+}
+
+function captaincore_site_hosting_action_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	if ( $request['action'] === 'temporary-domain' ) {
+		$params = $request->get_json_params();
+		$host   = CaptainCore\HostConfigs::add_temporary_domain( $env, get_current_user_id(), ! empty( $params['primary'] ) );
+		if ( is_wp_error( $host ) ) {
+			return $host;
+		}
+	}
+	if ( $request['action'] === 'restore' ) {
+		$params = $request->get_json_params();
+		$old    = CaptainCore\HostConfigs::revision( $env->environment_id, (int) ( $params['revision'] ?? 0 ) );
+		if ( ! $old ) {
+			return new WP_Error( 'not_found', 'Revision not found.', [ 'status' => 404 ] );
+		}
+		$row = CaptainCore\HostConfigs::save( $env, json_decode( $old->config, true ), get_current_user_id(), 'Restored revision ' . (int) $old->revision, $params['agent'] ?? '' );
+		if ( is_wp_error( $row ) ) {
+			return $row;
+		}
+	}
+	return captaincore_site_hosting_response( $env ) + [ 'token' => CaptainCore\HostConfigs::apply( $env ) ];
+}
+
 function captaincore_public_keys_response() {
 	$keys = [];
 	foreach ( ( new CaptainCore\PublicKeys )->all( 'public_key_id', 'ASC' ) as $key ) {
@@ -11998,6 +12117,30 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_delete_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	// Hosting configuration for sites on our own servers — admin only.
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_site_hosting_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+			[
+				'methods'             => 'PUT',
+				'callback'            => 'captaincore_site_hosting_update_func',
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/(?P<action>restore|apply|temporary-domain)', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_hosting_action_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 
