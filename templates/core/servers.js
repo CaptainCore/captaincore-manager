@@ -452,11 +452,11 @@ Object.assign(Component.prototype, {
       sdChartLoad: el => this.srvChart(el, { t, fmt: x => x.toFixed(x < 10 ? 2 : 0), series: [{ name: 'Load (1 min)', values: h.map(r => r.load), color: C1 }] }, v),
       sdCts: (d.containers || []).map(c => {
         const memPct = c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100) : 0;
-        return { name: c.name, site: c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site',
+        return { name: c.name, openCt: () => this.openContainer(s.serverId, c.name), site: c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site',
           siteFg: c.site ? 'var(--brand-ink)' : 'var(--ink-dim)', open: () => { if (c.site) { this.setState({ env: c.site.environment || 'Production' }); this.openSite(String(c.site.site_id)); } },
           status: c.status, statusFg: c.status === 'Running' ? 'var(--ok)' : 'var(--warn)',
           cpu: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%'),
-          mem: this.fmtBytes(c.mem) + (c.mem_limit ? ' / ' + this.fmtBytes(c.mem_limit, 0) : ''), memW: memPct.toFixed(0) + '%',
+          mem: this.fmtBytes(c.mem) + (c.mem_limit ? ' / ' + (Math.round(c.mem_limit / 107374182.4) / 10) + ' GB' : ''), memW: memPct.toFixed(0) + '%',
           memBar: memPct > 85 ? 'var(--warn)' : C1,
           disk: this.fmtBytes(c.disk) + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : ''),
           ip: c.ip || '—', ssh: c.ssh_port || '—' };

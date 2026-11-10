@@ -1305,6 +1305,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		return $sv ? [ 'server_id' => (int) $sv->server_id, 'name' => $sv->name, 'address' => $sv->address, 'ssh_port' => (int) $sv->ssh_port, 'ssh_user' => $sv->ssh_user ]
 			: new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
 	}
+	if ( $command === 'host-site-prepare' ) {
+		if ( empty( $current_site ) ) {
+			return new WP_Error( 'site_required', 'host-site-prepare requires a site_id.', [ 'status' => 400 ] );
+		}
+		$info = CaptainCore\HostConfigs::site_build_info( (int) $current_site->site_id );
+		return is_wp_error( $info ) ? $info : [ 'response' => 'ok' ] + $info;
+	}
 	if ( $command === 'host-staging-prepare' ) {
 		if ( empty( $current_site ) ) {
 			return new WP_Error( 'site_required', 'host-staging-prepare requires a site_id.', [ 'status' => 400 ] );
@@ -6915,6 +6922,7 @@ function captaincore_site_hosting_response( $env ) {
 	}
 	return [
 		'environment_id' => (int) $env->environment_id,
+		'container'      => (string) ( ( json_decode( (string) $env->details ) ?: new stdClass() )->container ?? '' ),
 		'config'         => CaptainCore\HostConfigs::for_browser( $config ),
 		'revision'       => $last ? (int) $last->revision : 0,
 		'status'         => $last ? $last->status : 'default',
@@ -7144,6 +7152,105 @@ function captaincore_servers_stats_func( $request ) {
 	return $data;
 }
 
+// Servers → Add site…: creates the site, then the CLI builds its container
+// (`host site create`) as a job the dashboard streams.
+function captaincore_servers_add_site_func( $request ) {
+	$server = CaptainCore\Servers::get( (int) $request['id'] );
+	if ( ! $server ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$params  = $request->get_json_params();
+	$created = CaptainCore\HostConfigs::create_site( $server, $params['name'] ?? '', ( $params['start'] ?? '' ) === 'empty' ? 'empty' : 'wordpress', get_current_user_id(), (int) ( $params['account_id'] ?? 0 ) );
+	if ( is_wp_error( $created ) ) {
+		return $created;
+	}
+	CaptainCore\ProcessLog::insert( 'Created on ' . $server->name, $created['site_id'] );
+	return $created + [ 'token' => CaptainCore\Run::task( [ 'host', 'site', 'create', (string) $created['site_id'] ] ) ];
+}
+
+// One container's page: its programs, traffic, both Caddyfiles and metrics
+// from the node (CLI `node container`), plus the environment it hosts and
+// that environment's hosting configuration.
+function captaincore_server_container_env( $server_id, $ct ) {
+	global $wpdb;
+	foreach ( $wpdb->get_results( $wpdb->prepare(
+		"SELECT environment_id, details FROM {$wpdb->base_prefix}captaincore_environments WHERE server_id = %d", $server_id ) ) as $row ) {
+		$d = json_decode( (string) $row->details );
+		if ( ! empty( $d->container ) && $d->container === $ct ) {
+			return CaptainCore\Environments::get( (int) $row->environment_id );
+		}
+	}
+	return null;
+}
+
+function captaincore_servers_container_func( $request ) {
+	$id     = (int) $request['id'];
+	$ct     = (string) $request['ct'];
+	$server = CaptainCore\Servers::get( $id );
+	if ( ! $server ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$range = in_array( $request['range'], [ '1h', '24h', '7d' ], true ) ? $request['range'] : '1h';
+	$res   = CaptainCore\Run::execute( [ 'node', 'container', (string) $id, $ct, '--range=' . $range ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		$msg = $data->error ?? substr( (string) ( $res['response'] ?? '' ), 0, 300 );
+		return new WP_Error( 'container_unavailable', 'Could not read the container: ' . $msg, [ 'status' => 502 ] );
+	}
+	unset( $data->status );
+	$data->server = CaptainCore\Servers::present( $server );
+	$data->site   = null;
+	$data->hosting = null;
+	$env = captaincore_server_container_env( $id, $ct );
+	if ( $env ) {
+		$site = CaptainCore\Sites::get( (int) $env->site_id );
+		$last = CaptainCore\HostConfigs::latest( $env->environment_id );
+		$data->site = [ 'site_id' => (int) $env->site_id, 'name' => $site ? $site->name : '', 'site' => $site ? $site->site : '',
+			'environment' => $env->environment, 'home_url' => $env->home_url ];
+		$data->hosting = [
+			'config'     => CaptainCore\HostConfigs::for_browser( CaptainCore\HostConfigs::current( $env ) ),
+			'revision'   => $last ? (int) $last->revision : 0,
+			'status'     => $last ? $last->status : 'default',
+			'applied_at' => $last ? $last->applied_at : null,
+			'result'     => $last && $last->result ? json_decode( $last->result ) : null,
+		];
+	}
+	return $data;
+}
+
+// Restart one program in a container (php, database, cron, app-<name>) or
+// the whole container. Synchronous: a few seconds, then the site's health.
+function captaincore_servers_container_restart_func( $request ) {
+	$id = (int) $request['id'];
+	$ct = (string) $request['ct'];
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	$what = (string) ( $request->get_json_params()['what'] ?? '' );
+	if ( ! preg_match( '/^(php|database|cron|container|app-[a-z][a-z0-9-]{0,19})$/', $what ) ) {
+		return new WP_Error( 'invalid', 'Restart php, database, cron, an app or the container.', [ 'status' => 400 ] );
+	}
+	$res = CaptainCore\Run::execute( [ 'node', 'restart', (string) $id, $ct, $what ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'restart_failed', 'Restart failed: ' . ( $data->error ?? substr( (string) ( $res['response'] ?? '' ), 0, 300 ) ), [ 'status' => 502 ] );
+	}
+	$env = captaincore_server_container_env( $id, $ct );
+	if ( $env ) {
+		$labels = [ 'php' => 'PHP', 'database' => 'MariaDB', 'cron' => 'WP-Cron', 'container' => 'the container' ];
+		CaptainCore\ProcessLog::insert( 'Restarted ' . ( $labels[ $what ] ?? substr( $what, 4 ) ) . ' on ' . $ct, (int) $env->site_id );
+	}
+	return [ 'restarted' => $what, 'health' => (string) ( $data->health ?? '' ) ];
+}
+
 // Recent lines from a fixed list of server log sources (CLI `node logs`).
 function captaincore_servers_logs_func( $request ) {
 	$id     = (int) $request['id'];
@@ -7152,7 +7259,7 @@ function captaincore_servers_logs_func( $request ) {
 	if ( ! CaptainCore\Servers::get( $id ) ) {
 		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
 	}
-	if ( ! preg_match( '/^(edge|ssh|backups|kernel|incus|updates|ct:[a-z0-9][a-z0-9-]{0,62}:(php|database|ssh|cron))$/', $source ) ) {
+	if ( ! preg_match( '/^(edge|ssh|backups|kernel|incus|updates|ct:[a-z0-9][a-z0-9-]{0,62}:(php|database|ssh|cron|app-[a-z][a-z0-9-]{0,19}))$/', $source ) ) {
 		return new WP_Error( 'invalid', 'Unknown log source.', [ 'status' => 400 ] );
 	}
 	$res = CaptainCore\Run::execute( [ 'node', 'logs', (string) $id, $source, '--lines=' . $lines ] );
@@ -12255,6 +12362,30 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_create_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/sites', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_add_site_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_servers_container_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/restart', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_container_restart_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 

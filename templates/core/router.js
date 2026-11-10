@@ -21,7 +21,7 @@ Object.assign(Component.prototype, {
   // state.route → the path segment(s) after the base.
   ROUTE_SEG: { home: '', chat: 'chat', support: 'support', sites: 'sites', site: 'sites', relay: 'ai-relay', domains: 'domains', domain: 'domains',
     accounts: 'accounts', account: 'accounts', billing: 'billing', invoice: 'billing', security: 'security',
-    audits: 'site-audits', activity: 'activity', reports: 'reports', archives: 'archives', servers: 'servers', server: 'servers', settings: 'settings',
+    audits: 'site-audits', activity: 'activity', reports: 'reports', archives: 'archives', servers: 'servers', server: 'servers', container: 'servers', settings: 'settings',
     profile: 'profile', users: 'users' },
   SEG_ROUTE: { '': 'home', chat: 'chat', support: 'support', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
     security: 'security', 'site-audits': 'audits', activity: 'activity', reports: 'reports', archives: 'archives', servers: 'servers',
@@ -40,6 +40,7 @@ Object.assign(Component.prototype, {
     else if (s.route === 'account' && s.accountId) { path += '/' + s.accountId; }
     else if (s.route === 'invoice' && s.invoiceId) { path += '/' + s.invoiceId; }
     else if (s.route === 'server' && s.serverId) { path += '/' + s.serverId; }
+    else if (s.route === 'container' && s.serverId && s.ctName) { path += '/' + s.serverId + '/' + s.ctName; }
     else if (s.route === 'billing' && s.billTab === 'renewals') { path += '/renewals'; }
     else if (s.route === 'security' && s.secTab && s.secTab !== 'vulns') { path += '/' + s.secTab; }
     return path;
@@ -70,6 +71,8 @@ Object.assign(Component.prototype, {
       this.openRelay(parts[1]);
     } else if (head === 'domains' && parts[1]) {
       this.openDomain(parts[1]);
+    } else if (head === 'servers' && parts[1] && parts[2]) {
+      this.openContainer(parts[1], parts[2]);
     } else if (head === 'servers' && parts[1]) {
       this.openServer(parts[1]);
     } else if (head === 'accounts' && parts[1]) {

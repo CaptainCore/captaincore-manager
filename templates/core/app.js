@@ -3275,7 +3275,7 @@ class Component extends DCLogic {
   go(route) { return () => this.setState({ route, paletteOpen: false, ctxMenu: null, ...(this.isMobile() ? { navHidden: true } : {}) }); }
 
   navItem(id, label, icon) {
-    const active = this.state.route === id || (id === 'servers' && this.state.route === 'server');
+    const active = this.state.route === id || (id === 'servers' && (this.state.route === 'server' || this.state.route === 'container'));
     const count = id === 'chat' ? (this._chat && this._chat.counts ? this._chat.counts.waiting : 0)
       : id === 'support' ? (this._chat ? this._chat.list.reduce((n, x) => n + (x.unread || 0), 0) : 0)
       : this._hydrated ? (id === 'sites' ? this.FLEET.length : id === 'domains' ? this.DOMAINS.length : 0) : 0;
@@ -3479,7 +3479,7 @@ class Component extends DCLogic {
     const auditsVals = this.computeAudits(s);
     const reportsVals = this.computeReports(s, isOp);
     const archivesVals = this.computeArchives(s);
-    const serversVals = isOp ? { ...this.computeServers(s), ...this.computeServerDetail(s) } : {};
+    const serversVals = isOp ? { ...this.computeServers(s), ...this.computeServerDetail(s), ...this.computeContainer(s) } : {};
     const settingsVals = this.computeSettings(s);
     const profileVals = this.computeProfile(s);
 
@@ -3572,7 +3572,7 @@ class Component extends DCLogic {
       showAccounts: s.route === 'accounts', showAccount: s.route === 'account', showBilling: s.route === 'billing', showInvoice: s.route === 'invoice',
       showSecurity: s.route === 'security', showAudits: s.route === 'audits', showReports: s.route === 'reports', showSupport: s.route === 'support' && !!supportOn,
       showArchives: s.route === 'archives', showServers: isOp && s.route === 'servers', showSettings: s.route === 'settings', showProfile: s.route === 'profile',
-      showStub: !['home', 'chat', 'support', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'servers', 'server', 'settings', 'profile', 'users'].includes(s.route),
+      showStub: !['home', 'chat', 'support', 'sites', 'site', 'relay', 'domains', 'domain', 'accounts', 'account', 'billing', 'invoice', 'security', 'audits', 'activity', 'reports', 'archives', 'servers', 'server', 'container', 'settings', 'profile', 'users'].includes(s.route),
       stubTitle: stub[0], stubDesc: stub[1], stubIcon: this.ICONS[stub[2]],
       launcher, attention, attentionCount: attention.filter(a => !a.clear).length,
       jobs, activity, pinned, pinnedTitle: isOp ? 'Pinned sites' : 'Your sites',

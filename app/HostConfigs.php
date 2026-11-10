@@ -60,6 +60,8 @@ class HostConfigs extends DB {
 			'ip_deny'             => [],
 			'password_protect'    => [ 'enabled' => false, 'username' => '', 'password_hash' => '' ],
 			'debug'               => false,
+			'noindex'             => true,
+			'apps'                => [],
 		];
 	}
 
@@ -254,6 +256,68 @@ class HostConfigs extends DB {
 		}
 		$out['password_protect'] = [ 'enabled' => $enabled, 'username' => $user, 'password_hash' => $hash ];
 		$out['debug']            = ! empty( $in['debug'] );
+		// Hidden from search engines unless turned off (new sites start on a
+		// temporary domain): X-Robots-Tag at the edge + blog_public 0.
+		$out['noindex']          = ! array_key_exists( 'noindex', $in ) || ! empty( $in['noindex'] );
+
+		// Apps: long-running programs beside the site (a chat or realtime
+		// server), each a systemd service in the container that runs as the
+		// site user, reached at a path of the site or a hostname of its own.
+		$out['apps'] = [];
+		$names = $ports = [];
+		foreach ( (array) ( $in['apps'] ?? [] ) as $a ) {
+			$name = strtolower( trim( (string) ( $a['name'] ?? '' ) ) );
+			if ( ! preg_match( '/^[a-z][a-z0-9-]{0,19}$/', $name ) || isset( $names[ $name ] ) ) {
+				return new \WP_Error( 'invalid', "App name \"{$name}\" must be unique, start with a letter and use a-z, 0-9 and dashes (20 at most).", [ 'status' => 400 ] );
+			}
+			$command = trim( (string) ( $a['command'] ?? '' ) );
+			if ( $command === '' || strlen( $command ) > 500 || preg_match( '/[\x00-\x1f\x7f]/', $command ) ) {
+				return new \WP_Error( 'invalid', "The {$name} app needs a start command on one line (500 characters at most).", [ 'status' => 400 ] );
+			}
+			$port = (int) ( $a['port'] ?? 0 );
+			if ( $port < 3000 || $port > 3999 || isset( $ports[ $port ] ) ) {
+				return new \WP_Error( 'invalid', "The {$name} app's port must be unique and between 3000 and 3999.", [ 'status' => 400 ] );
+			}
+			$route = ( $a['route'] ?? 'path' ) === 'hostname' ? 'hostname' : 'path';
+			$app   = [ 'name' => $name, 'command' => $command, 'port' => $port, 'route' => $route, 'enabled' => ! isset( $a['enabled'] ) || ! empty( $a['enabled'] ) ];
+			if ( $route === 'path' ) {
+				$path = '/' . trim( (string) ( $a['path'] ?? '' ), '/' );
+				if ( $path === '/' || ! preg_match( '@^(/[A-Za-z0-9._~-]+)+$@', $path ) || preg_match( '@^/wp-@', $path ) ) {
+					return new \WP_Error( 'invalid', "The {$name} app needs a path like /ws or /chat (not / or /wp-…).", [ 'status' => 400 ] );
+				}
+				$app['path']         = $path;
+				$app['strip_prefix'] = ! empty( $a['strip_prefix'] );
+			} else {
+				$host = self::hostname( $a['hostname'] ?? '' );
+				if ( $host === '' || isset( $seen[ $host ] ) ) {
+					return new \WP_Error( 'invalid', "The {$name} app needs a hostname of its own, not one of the site's domains.", [ 'status' => 400 ] );
+				}
+				if ( isset( $taken[ $host ] ) ) {
+					return new \WP_Error( 'invalid', "{$host} is already used by {$taken[ $host ]}.", [ 'status' => 409 ] );
+				}
+				$seen[ $host ]   = true;
+				$app['hostname'] = $host;
+			}
+			$env = [];
+			foreach ( (array) ( $a['env'] ?? [] ) as $k => $v ) {
+				$k = (string) $k;
+				$v = (string) $v;
+				if ( ! preg_match( '/^[A-Z_][A-Z0-9_]{0,63}$/', $k ) || preg_match( '/[\x00-\x1f]/', $v ) || strlen( $v ) > 1000 ) {
+					return new \WP_Error( 'invalid', "The {$name} app's variable {$k} needs an UPPER_CASE name and a one-line value.", [ 'status' => 400 ] );
+				}
+				$env[ $k ] = $v;
+			}
+			if ( count( $env ) > 30 ) {
+				return new \WP_Error( 'invalid', "The {$name} app has more than 30 variables.", [ 'status' => 400 ] );
+			}
+			$app['env']      = (object) $env;
+			$names[ $name ]  = true;
+			$ports[ $port ]  = true;
+			$out['apps'][]   = $app;
+		}
+		if ( count( $out['apps'] ) > 5 ) {
+			return new \WP_Error( 'invalid', 'A site can run at most 5 apps.', [ 'status' => 400 ] );
+		}
 		return $out;
 	}
 
@@ -265,6 +329,8 @@ class HostConfigs extends DB {
 		$config['redirects'] = $config['redirects'] ?? [];
 		$config['ip_deny']   = $config['ip_deny'] ?? [];
 		$config['debug']     = ! empty( $config['debug'] );
+		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
+		$config['apps']      = $config['apps'] ?? [];
 		return $config;
 	}
 
@@ -296,6 +362,11 @@ class HostConfigs extends DB {
 				$out[] = 'www.' . $d['name'];
 			}
 		}
+		foreach ( (array) ( $config['apps'] ?? [] ) as $a ) {
+			if ( ( $a['route'] ?? '' ) === 'hostname' && ! empty( $a['hostname'] ) ) {
+				$out[] = $a['hostname'];
+			}
+		}
 		return $out;
 	}
 
@@ -306,7 +377,7 @@ class HostConfigs extends DB {
 			return $clean;
 		}
 		$last = self::latest( $environment->environment_id );
-		if ( $last && json_decode( $last->config, true ) == $clean && $last->status === 'applied' ) {
+		if ( $last && json_decode( $last->config, true ) == json_decode( wp_json_encode( $clean ), true ) && $last->status === 'applied' ) {
 			return new \WP_Error( 'unchanged', 'Nothing changed.', [ 'status' => 400 ] );
 		}
 		global $wpdb;
@@ -448,6 +519,86 @@ class HostConfigs extends DB {
 	}
 
 	/**
+	 * A new site on one of our servers (Servers → Add site…): a CaptainCore
+	 * site whose Production environment runs in container s<site_id> on the
+	 * server, with the next free IP and SSH port, a temporary domain and
+	 * revision 1 of its hosting config. The CLI (`host site create`) builds
+	 * the container. $start is 'wordpress' (a fresh install) or 'empty'.
+	 */
+	public static function create_site( $server, $label, $start, $user_id, $account_id = 0 ) {
+		$slug = substr( preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $label ) ), 0, 30 );
+		if ( strlen( $slug ) < 3 ) {
+			return new \WP_Error( 'invalid', 'Give the site a name of at least 3 letters or digits.', [ 'status' => 400 ] );
+		}
+		$base = $slug;
+		for ( $i = 2; Sites::where( [ 'site' => $slug ] ); $i++ ) {
+			$slug = $base . $i;
+		}
+		$slot = Servers::allocate( $server->server_id );
+		if ( is_wp_error( $slot ) ) {
+			return $slot;
+		}
+		$host = self::temporary_dns( (object) [ 'site' => $slug ], $server, $slug );
+		if ( is_wp_error( $host ) ) {
+			return $host;
+		}
+		$user    = get_userdata( (int) $user_id );
+		$created = ( new Site )->create( [
+			'name' => $host, 'site' => $slug, 'account_id' => (int) $account_id, 'customer_id' => 0,
+			'provider' => 'captaincore', 'key' => '', 'environment_vars' => [], 'remote_key' => '',
+			'environments' => [ [ 'environment' => 'Production', 'address' => $server->address, 'username' => 'site', 'password' => '',
+				'protocol' => 'sftp', 'port' => (string) $slot['port'], 'home_directory' => '/srv/site/public', 'database_password' => '',
+				'monitor_enabled' => 0, 'updates_enabled' => 0 ] ],
+		] );
+		if ( empty( $created['site_id'] ) ) {
+			return new \WP_Error( 'site_create', 'Could not create the site: ' . implode( ' ', (array) ( $created['errors'] ?? [] ) ), [ 'status' => 400 ] );
+		}
+		$site_id = (int) $created['site_id'];
+		$env     = Environments::where( [ 'site_id' => $site_id, 'environment' => 'Production' ] )[0];
+		Environments::update( [
+			'server_id' => (int) $server->server_id,
+			'home_url'  => "https://{$host}",
+			'details'   => wp_json_encode( [
+				'container' => 's' . $site_id, 'container_ip' => $slot['ip'],
+				'start'     => $start === 'empty' ? 'empty' : 'wordpress',
+				'wp_admin'  => [ 'user' => $user ? $user->user_login : 'admin', 'email' => $user ? $user->user_email : get_option( 'admin_email' ) ],
+			] ),
+		], [ 'environment_id' => (int) $env->environment_id ] );
+		$env    = Environments::get( (int) $env->environment_id );
+		$config = self::default_for( $env );
+		$config['domains'] = [ [ 'name' => $host, 'primary' => true, 'www' => false, 'temporary' => true ] ];
+		$row = self::save( $env, $config, $user_id, 'Site created on ' . $server->name );
+		if ( is_wp_error( $row ) ) {
+			return $row;
+		}
+		return [ 'site_id' => $site_id, 'site' => $slug, 'domain' => $host, 'environment_id' => (int) $env->environment_id ];
+	}
+
+	/** What the CLI needs to build a new site's container (`host-site-prepare`). */
+	public static function site_build_info( $site_id ) {
+		$env = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Production' ] );
+		$env = $env ? $env[0] : null;
+		if ( ! $env || ! (int) $env->server_id ) {
+			return new \WP_Error( 'not_own_server', 'Production is not on one of our servers.', [ 'status' => 400 ] );
+		}
+		$d      = json_decode( (string) $env->details ) ?: new \stdClass();
+		$config = self::current( $env );
+		$primary = '';
+		foreach ( $config['domains'] as $dm ) {
+			if ( ! empty( $dm['primary'] ) ) {
+				$primary = $dm['name'];
+			}
+		}
+		$site = Sites::get( (int) $site_id );
+		return [
+			'container' => $d->container ?? '', 'ip' => $d->container_ip ?? '', 'ssh_port' => (int) $env->port,
+			'image'     => self::PHP_IMAGES[ $config['php']['version'] ] ?? '', 'memory_mib' => (int) $config['memory_mb'], 'disk_gib' => 10,
+			'primary'   => $primary, 'start' => $d->start ?? 'wordpress', 'title' => $site ? $site->site : 'New site',
+			'admin_user' => $d->wp_admin->user ?? 'admin', 'admin_email' => $d->wp_admin->email ?? '',
+		];
+	}
+
+	/**
 	 * The Staging environment for a site on our servers, created if missing:
 	 * environment row on production's server (next free container IP and SSH
 	 * port), a temporary domain, and revision 1 of its hosting config copied
@@ -500,6 +651,7 @@ class HostConfigs extends DB {
 			$config['redirects']        = [];
 			$config['password_protect'] = [ 'enabled' => false, 'username' => '', 'password_hash' => '' ];
 			$config['debug']            = false;
+			$config['noindex']          = true;
 			$row = self::save( $stag, $config, $user_id, 'Staging created from production' );
 			if ( is_wp_error( $row ) ) {
 				return $row;

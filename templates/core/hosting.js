@@ -142,8 +142,12 @@ Object.assign(Component.prototype, {
     const [stLabel, stFg] = statusMap[d.status] || [d.status, 'var(--ink-dim)'];
     const err = d.status === 'failed' && d.result && d.result.error ? d.result.error : '';
 
+    const appNames = (c.apps || []).filter(a => a.enabled !== false).map(a => a.name);
     return { ...vals,
       hostReady: true,
+      hostRuns: 'Runs WordPress' + (appNames.length ? ' + ' + appNames.join(', ') : '') + ' in container ' + (d.container || '—'),
+      hostHasCt: !!(d.container && d.server),
+      hostOpenCt: () => { if (d.container && d.server) this.openContainer(d.server.server_id, d.container); },
       hostServer: d.server ? d.server.name + ' · ' + d.server.address : '',
       hostRev: d.revision ? 'Revision ' + d.revision : 'Defaults (no revision yet)',
       hostStatus: stLabel, hostStatusFg: stFg,
@@ -215,6 +219,7 @@ Object.assign(Component.prototype, {
       hostPpPassPh: c.password_protect && c.password_protect.has_password ? 'Password saved; type to change it' : 'Password (8+ characters)',
       // Tools
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
+      hostNoindexMark: c.noindex !== false ? '✓' : '', toggleHostNoindex: () => set(cc => { cc.noindex = cc.noindex === false; }),
       // Local backups
       ...this.hostBackupVals(),
       // History
