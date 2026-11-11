@@ -2544,6 +2544,7 @@ class Component extends DCLogic {
       ...(this.computeNetwork ? this.computeNetwork(real, s) : { netShow: false, netTenantShow: false, netRows: [], netFilterShow: false }),
       ...this.envDomainsVals(real, s),
       credRows,
+      ...this.sftpCopyVals(real, s),
       statTiles: [
         { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
         // Counts come from the overview prefetch (loadOverviewCounts). Until it

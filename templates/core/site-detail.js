@@ -126,6 +126,21 @@ Object.assign(Component.prototype, {
     return pairs.filter(([, v]) => v !== undefined && v !== null && String(v) !== '');
   },
 
+  // "Copy SFTP info" on the Credentials card: the legacy UI's block, one
+  // field per line, ready to paste into a client or a message.
+  sftpCopyVals(real, s) {
+    const e = real ? this.currentEnv(real, s) : null;
+    if (!e || !e.address || !e.username) return { credSftpShow: false };
+    const text = [
+      'Address: ' + e.address,
+      'Username: ' + e.username,
+      'Password: ' + (e.password || ''),
+      'Protocol: ' + (e.protocol || 'sftp'),
+      'Port: ' + (e.port || '')
+    ].join('\n');
+    return { credSftpShow: true, credCopySftp: () => this.ctxCopy(text, 'SFTP info') };
+  },
+
   realEnvRows(real, s) {
     const e = this.currentEnv(real, s);
     if (!e) return [['Loading', '…']];
