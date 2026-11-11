@@ -332,7 +332,7 @@ class Mailer {
      * Gmail and Missive ignore it and darken the email themselves, which is
      * why the logo is built from a mark and live text (see logo_html()).
      */
-    private static function dark_mode_css( $brand_color, $accent, $has_dark_logo = false ) {
+    private static function dark_mode_css( $brand_color, $accent, $has_dark_logo = false, $has_dark_mark = false ) {
         $brand  = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $brand_color ) ? $brand_color : '#123E8C';
         $accent = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $accent ) ? $accent : '#5C97F7';
         $text   = fn( $hex ) => "[style*='color: {$hex}' i]:not([style*='background-color: {$hex}' i]), [style*='color:{$hex}' i]:not([style*='background-color:{$hex}' i]):not([style*='background:{$hex}' i])";
@@ -340,6 +340,9 @@ class Mailer {
         $logo_swap = $has_dark_logo ? "
                 .cc-logo-light { display: none !important; }
                 .cc-logo-dark { display: inline-block !important; }" : '';
+        $logo_swap .= $has_dark_mark ? "
+                .cc-mark-light { display: none !important; }
+                .cc-mark-dark { display: block !important; }" : '';
         return "<style>
             :root { color-scheme: light dark; supported-color-schemes: light dark; }
             @media (prefers-color-scheme: dark) {
@@ -372,8 +375,9 @@ class Mailer {
      * swapped for it in apps that follow dark mode. Without one, a wordmark
      * baked into an image can't follow dark mode at all: Gmail and Missive
      * darken the email themselves and leave the dark lettering on a dark
-     * background. So the header is built from the square mark (the dashboard
-     * logo) and the site name as live text, which every app recolours.
+     * background. So the header is built from the brand mark (email_mark,
+     * else the dashboard logo) and the site name as live text, which every
+     * app recolours.
      */
     private static function logo_html( $config, $site_url, $site_name ) {
         $logo_dark = esc_url( $config->email_logo_dark ?? '' );
@@ -382,16 +386,28 @@ class Mailer {
             return "<a href='{$site_url}' target='_blank' class='cc-logo-light' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>"
                 . "<a href='{$site_url}' target='_blank' class='cc-logo-dark' style='display: none; mso-hide: all; text-decoration: none;'><img src='{$logo_dark}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>";
         }
-        $mark = (string) ( $config->logo ?? '' );
-        if ( $mark !== '' && ! preg_match( '#^https?://#i', $mark ) ) {
-            $mark = home_url( $mark ); // The default logo is a site-relative path.
+        $url = function ( $src ) {
+            $src = (string) $src;
+            if ( $src !== '' && ! preg_match( '#^https?://#i', $src ) ) {
+                $src = home_url( $src ); // The default logo is a site-relative path.
+            }
+            return esc_url( $src );
+        };
+        // email_mark is the bare symbol from the wordmark (no app tile), with
+        // an optional email_mark_dark for apps that follow dark mode.
+        $mark      = $url( $config->email_mark ?? $config->logo ?? '' );
+        $mark_dark = $url( $config->email_mark_dark ?? '' );
+        $img       = fn( $src, $class, $style = '' ) => "<img src='{$src}' alt='' width='34' height='34' class='{$class}' style='{$style}width: 34px; height: 34px; border: 0;'>";
+        $mark_html = '';
+        if ( $mark !== '' ) {
+            $mark_html = $img( $mark, 'cc-mark-light', 'display: block; ' );
+            if ( $mark_dark !== '' ) {
+                $mark_html .= $img( $mark_dark, 'cc-mark-dark', 'display: none; mso-hide: all; ' );
+            }
+            $mark_html = "<td style='padding: 0 11px 0 0; vertical-align: middle;'><a href='{$site_url}' target='_blank' style='text-decoration: none;'>{$mark_html}</a></td>";
         }
-        $mark = esc_url( $mark );
-        $mark_html = $mark !== ''
-            ? "<td style='padding: 0 12px 0 0; vertical-align: middle;'><a href='{$site_url}' target='_blank' style='text-decoration: none;'><img src='{$mark}' alt='' width='36' height='36' style='display: block; width: 36px; height: 36px; border: 0;'></a></td>"
-            : '';
         return "<table role='presentation' border='0' cellpadding='0' cellspacing='0' align='center' style='margin: 0 auto;'><tr>{$mark_html}"
-            . "<td style='vertical-align: middle;'><a href='{$site_url}' target='_blank' class='cc-brand-name' style='font-size: 21px; font-weight: 800; letter-spacing: -0.4px; color: #15181D; text-decoration: none;'>{$site_name}</a></td>"
+            . "<td style='vertical-align: middle;'><a href='{$site_url}' target='_blank' class='cc-brand-name' style='font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 23px; font-weight: 600; letter-spacing: -0.3px; color: #15181D; text-decoration: none;'>{$site_name}</a></td>"
             . "</tr></table>";
     }
 
@@ -416,7 +432,7 @@ class Mailer {
         $site_url    = esc_url( home_url() );
         $site_name   = esc_html( get_bloginfo( 'name' ) );
         $logo_dark   = esc_url( $config->email_logo_dark ?? '' );
-        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7', $logo_dark !== '' );
+        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7', $logo_dark !== '', $logo_dark === '' && ! empty( $config->email_mark_dark ) );
         $logo_html   = self::logo_html( $config, $site_url, $site_name );
 
         // Build unsubscribe link if provided
@@ -449,6 +465,7 @@ class Mailer {
             <meta name='color-scheme' content='light dark'>
             <meta name='supported-color-schemes' content='light dark'>
             <title>{$subject_html}</title>
+            <link href='https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap' rel='stylesheet'>
             {$dark_css}
         </head>
         <body class='cc-body' style='margin: 0; padding: 0; background-color: #F5F7FA; font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #565C66;'>
