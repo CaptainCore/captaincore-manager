@@ -327,12 +327,19 @@ class Mailer {
      * match those inline colours and swap each for its dark counterpart. No
      * caller needs dark mode classes, and a colour outside the palette (the
      * tinted status badges) keeps its light look, which still reads on dark.
-     * Gmail ignores it and shows the light email, or inverts it on phones.
+     * Blog posts also carry Anchor Blocks' email markup, whose inline colours
+     * are written without a space (color:#1a2744), so both spellings match.
+     * Gmail and Missive ignore it and darken the email themselves, which is
+     * why the logo is built from a mark and live text (see logo_html()).
      */
-    private static function dark_mode_css( $brand_color, $accent ) {
+    private static function dark_mode_css( $brand_color, $accent, $has_dark_logo = false ) {
         $brand  = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $brand_color ) ? $brand_color : '#123E8C';
         $accent = preg_match( '/^#[0-9a-f]{3,8}$/i', (string) $accent ) ? $accent : '#5C97F7';
-        $text   = fn( $hex ) => "[style*='color: {$hex}' i]:not([style*='background-color: {$hex}' i])";
+        $text   = fn( $hex ) => "[style*='color: {$hex}' i]:not([style*='background-color: {$hex}' i]), [style*='color:{$hex}' i]:not([style*='background-color:{$hex}' i]):not([style*='background:{$hex}' i])";
+        // Only swap logos when there is a dark one to swap in, or the header goes blank.
+        $logo_swap = $has_dark_logo ? "
+                .cc-logo-light { display: none !important; }
+                .cc-logo-dark { display: inline-block !important; }" : '';
         return "<style>
             :root { color-scheme: light dark; supported-color-schemes: light dark; }
             @media (prefers-color-scheme: dark) {
@@ -347,10 +354,45 @@ class Mailer {
                 {$text('#666D7A')} { color: #A9B0BB !important; }
                 {$text($brand)}, {$text('#123E8C')} { color: {$accent} !important; }
                 .cc-card a:not([style*='background' i]) { color: {$accent} !important; }
-                .cc-logo-light { display: none !important; }
-                .cc-logo-dark { display: inline-block !important; }
+                .cc-card [style*='background:#fff;' i], .cc-card [style$='background:#fff' i], .cc-card [style*='background:#ffffff' i],
+                .cc-card [style*='background:#f8fafc' i] { background: #262A32 !important; }
+                .cc-card [style*='#e4e9f0' i] { border-color: #2E333B !important; }
+                {$text('#1a2744')} { color: #F1F3F6 !important; }
+                {$text('#2d3f52')}, {$text('#3d5166')} { color: #C9CED6 !important; }
+                {$text('#6b7f94')} { color: #A9B0BB !important; }
+                .cc-brand-name { color: #F1F3F6 !important; }{$logo_swap}
             }
         </style>";
+    }
+
+    /**
+     * The logo above the card.
+     *
+     * With a dark version configured (email_logo_dark), the email logo image is
+     * swapped for it in apps that follow dark mode. Without one, a wordmark
+     * baked into an image can't follow dark mode at all: Gmail and Missive
+     * darken the email themselves and leave the dark lettering on a dark
+     * background. So the header is built from the square mark (the dashboard
+     * logo) and the site name as live text, which every app recolours.
+     */
+    private static function logo_html( $config, $site_url, $site_name ) {
+        $logo_dark = esc_url( $config->email_logo_dark ?? '' );
+        if ( $logo_dark !== '' ) {
+            $logo_url = esc_url( $config->email_logo ?? $config->logo ?? '' );
+            return "<a href='{$site_url}' target='_blank' class='cc-logo-light' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>"
+                . "<a href='{$site_url}' target='_blank' class='cc-logo-dark' style='display: none; mso-hide: all; text-decoration: none;'><img src='{$logo_dark}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>";
+        }
+        $mark = (string) ( $config->logo ?? '' );
+        if ( $mark !== '' && ! preg_match( '#^https?://#i', $mark ) ) {
+            $mark = home_url( $mark ); // The default logo is a site-relative path.
+        }
+        $mark = esc_url( $mark );
+        $mark_html = $mark !== ''
+            ? "<td style='padding: 0 12px 0 0; vertical-align: middle;'><a href='{$site_url}' target='_blank' style='text-decoration: none;'><img src='{$mark}' alt='' width='36' height='36' style='display: block; width: 36px; height: 36px; border: 0;'></a></td>"
+            : '';
+        return "<table role='presentation' border='0' cellpadding='0' cellspacing='0' align='center' style='margin: 0 auto;'><tr>{$mark_html}"
+            . "<td style='vertical-align: middle;'><a href='{$site_url}' target='_blank' class='cc-brand-name' style='font-size: 21px; font-weight: 800; letter-spacing: -0.4px; color: #15181D; text-decoration: none;'>{$site_name}</a></td>"
+            . "</tr></table>";
     }
 
     /* -------------------------------------------------------------------------
@@ -372,16 +414,10 @@ class Mailer {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_url    = esc_url( home_url() );
-        $logo_url    = esc_url( $config->email_logo ?? $config->logo ?? '' );
-        $logo_dark   = esc_url( $config->email_logo_dark ?? '' );
         $site_name   = esc_html( get_bloginfo( 'name' ) );
-        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7' );
-        // A logo for dark backgrounds, shown in place of the regular one when the
-        // reader's mail app is in dark mode. Hidden inline so apps that ignore the
-        // dark mode styles (Gmail) only ever show the regular logo.
-        $logo_dark_html = $logo_dark !== ''
-            ? "<a href='{$site_url}' target='_blank' class='cc-logo-dark' style='display: none; mso-hide: all; text-decoration: none;'><img src='{$logo_dark}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>"
-            : '';
+        $logo_dark   = esc_url( $config->email_logo_dark ?? '' );
+        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7', $logo_dark !== '' );
+        $logo_html   = self::logo_html( $config, $site_url, $site_name );
 
         // Build unsubscribe link if provided
         $unsubscribe_html = '';
@@ -421,7 +457,7 @@ class Mailer {
                     <td style='padding: 40px 20px; text-align: center;'>
 
                         <div style='margin-bottom: 30px;'>
-                            <a href='{$site_url}' target='_blank' class='cc-logo-light' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>{$logo_dark_html}
+                            {$logo_html}
                         </div>
 
                         <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' class='cc-card' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 14px; box-shadow: 0 1px 4px rgba(18, 25, 40, 0.07); overflow: hidden;'>
