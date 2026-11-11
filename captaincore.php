@@ -9028,6 +9028,56 @@ function captaincore_domain_mailgun_events_func( $request ) {
 }
 
 /**
+ * Stored copy of one sent message (Mailgun keeps these for a few days), for
+ * the email log viewer. Only the parts the viewer shows are returned:
+ * attachments are listed by name, never downloaded.
+ */
+function captaincore_domain_mailgun_message_func( $request ) {
+    $domain_id = $request['id'];
+
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain  = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    $message = CaptainCore\Remote\Mailgun::stored_message( $details->mailgun_zone, (string) $request->get_param( 'url' ) );
+    if ( is_wp_error( $message ) ) {
+        return $message;
+    }
+
+    $headers = [];
+    foreach ( (array) ( $message['message-headers'] ?? [] ) as $pair ) {
+        if ( is_array( $pair ) && count( $pair ) === 2 ) {
+            $headers[] = [ (string) $pair[0], (string) $pair[1] ];
+        }
+    }
+    $attachments = [];
+    foreach ( (array) ( $message['attachments'] ?? [] ) as $file ) {
+        $attachments[] = [
+            'name' => (string) ( $file['name'] ?? $file['filename'] ?? '' ),
+            'type' => (string) ( $file['content-type'] ?? '' ),
+            'size' => (int) ( $file['size'] ?? 0 ),
+        ];
+    }
+
+    return [
+        'subject'     => (string) ( $message['subject'] ?? $message['Subject'] ?? '' ),
+        'from'        => (string) ( $message['from'] ?? $message['From'] ?? '' ),
+        'recipients'  => (string) ( $message['recipients'] ?? $message['To'] ?? '' ),
+        'html'        => (string) ( $message['body-html'] ?? '' ),
+        'text'        => (string) ( $message['body-plain'] ?? '' ),
+        'headers'     => $headers,
+        'attachments' => $attachments,
+    ];
+}
+
+/**
  * Normalizes Mailgun sending usage for a zone into a chartable series.
  *
  * Mailgun's stats/total endpoint resolves to hour, day or month and retains 24 months
@@ -10344,6 +10394,12 @@ function captaincore_register_rest_endpoints() {
 	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/events', [
         'methods'  => 'GET',
         'callback' => 'captaincore_domain_mailgun_events_func',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/message', [
+        'methods'  => 'GET',
+        'callback' => 'captaincore_domain_mailgun_message_func',
         'permission_callback' => 'captaincore_permission_check',
     ] );
 

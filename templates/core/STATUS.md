@@ -15,6 +15,44 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Sending → Email log viewer (2026-11-11)
+
+"View all logs →" on a domain's Sending tab was an inert span. It now opens
+an Email log dialog (`mgLogOpen`, Escape closes it):
+
+- **List.** Newest first, 100 a page from `GET /domain/{id}/mailgun/events`
+  (`limit`, `event`), with Load older events following Mailgun's `paging.next`
+  through the existing `page_url` param (which `Remote\Mailgun::page()` already
+  pins to this zone's event feed). A short page ends the log. Filters: All,
+  Delivered, Failed, Accepted, Rejected, Spam reports (server side); the text
+  box filters loaded rows by subject, address, event, SMTP message or reason.
+  Temporary failures read "retrying". Dates show unless the event is today;
+  the Recent events rows on the tab do the same and each opens its event.
+- **Detail.** A plain-English summary (delivered to which MX and how fast,
+  permanent vs retrying, suppression reasons with what to do), then When,
+  From, To, Subject, SMTP response, Reason, receiving server, TLS, recipient
+  provider, attempt, sending IP, DKIM, size, attachments, tags, test mode,
+  message and event ids. Message history is every event for the same
+  message-id (`events?message-id=`; note `ascending=yes` without `begin`
+  returns nothing from Mailgun, so the trail is sorted in the browser).
+  Raw event shows the JSON.
+- **View message.** New `GET /domain/{id}/mailgun/message?url=<storage.url>`
+  (`captaincore_domain_mailgun_message_func`, `Domains::verify` like the
+  other domain routes) → `Remote\Mailgun::stored_message()`, which accepts
+  only `https://storage[-region].api.mailgun.net/v3/domains/<this zone>/messages/<key>`
+  (no query, port or userinfo) since the request carries the account API key.
+  Returns subject, from, recipients, HTML, plain text, headers and attachment
+  names (never their contents). HTML renders in a `sandbox=""` srcdoc iframe.
+  Mailgun keeps stored copies a few days; past that the route answers
+  `message_expired` (404) and the dialog says so.
+
+Verified via Playwright as a local administrator against a real zone: list,
+Failed filter (33 events, no Load older), delivered detail with history
+accepted → delivered, failed detail (No MX), stored message HTML/headers for
+today's mail, expired notice for a 5 day old one, Recent events row opens its
+event, Escape closes, no page errors. URL guard checked with `wp eval`: other
+host, look-alike host, another zone, `..`, query string all refused.
+
 ## Servers (2026-11-09)
 
 Operate → Servers (`servers.js` mixin, `/account/servers`, operators only) lists the servers CaptainCore runs itself: the hosting nodes of the self-hosted tier, not sites at a host. Each card shows status, role, the provider it is rented from plus location and the provider's own server name, IPv4 (Copy SSH builds `ssh <user>@<ip> [-p port]`) and IPv6, hardware, sites against `max_sites`, monthly cost, the last health check and notes. The header sums servers, sites placed and monthly cost over everything not retired. Add server / Edit open one dialog (`serverDialogVals`): role and status as chips, "Rented from" chips list only hosting-type provider connections (`SRV_PROVIDER_TYPES`), Remove asks first and never touches the machine. Right-click a card (or its ⋯ button) for Add site…, Edit server…, Copy SSH command, Copy IPv4, Mark <status> (one-click PUT) and Remove server…; Add site… only says it is the next slice until node provisioning is scripted (`addSiteToServer`). Settings → Providers gained OVHcloud and Vultr types.
@@ -1814,8 +1852,9 @@ unauthenticated PUT → 401. Activity log carries both new entry types.
 - **Branding**: logo upload (drop-zone), DNS-copy-labels edit.
 - **Site detail**: "Delete site…". (Edit site + per-environment connection
   editing are DONE — see the Edit-site section above.)
-- **Domains**: Mailgun "View all logs →" pager. (Deploy-to-site and suppressions
-  are DONE — see the Sending-tab parity section below.)
+- **Domains**: none. ("View all logs →" became the Email log viewer on
+  2026-11-11; deploy-to-site and suppressions are DONE, see the Sending-tab
+  parity section below.)
 - Gated-off-on-real: "Access as" (User Switching plugin — no per-user REST route),
   provider Import wizard, archive Delete (no v1 route).
 

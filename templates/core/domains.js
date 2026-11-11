@@ -719,6 +719,69 @@ Object.assign(Component.prototype, {
     }).catch(() => { if (this._domain === dom) { dom.suppLoading = false; dom.suppErr = 'Could not load suppressions.'; this.setState({}); } });
   },
 
+  // Email log viewer ("View all logs →"). Mailgun returns newest first, 100 a
+  // page; `next` is Mailgun's own paging URL (the events route re-checks it is
+  // this zone's feed) and an empty page means the end of the retention window.
+  loadMailgunLog(filter, more) {
+    const dom = this._domain;
+    if (!dom || (more && (dom.logLoading || dom.logDone || !dom.logNext))) return;
+    if (!more) {
+      dom.logFilter = filter || '';
+      dom.logItems = []; dom.logNext = ''; dom.logDone = false;
+    }
+    const f = dom.logFilter;
+    dom.logLoading = true; dom.logErr = '';
+    this.setState({});
+    const q = more ? 'page_url=' + encodeURIComponent(dom.logNext)
+      : 'limit=100' + (f ? '&event=' + encodeURIComponent(f) : '');
+    this.api('/domain/' + dom.domainId + '/mailgun/events?' + q).then(res => {
+      if (this._domain !== dom || dom.logFilter !== f) return;
+      dom.logLoading = false;
+      if (!res || res.code || !Array.isArray(res.items)) {
+        dom.logErr = (res && res.message) || 'Could not load the email log.';
+        this.setState({}); return;
+      }
+      dom.logItems = dom.logItems.concat(res.items);
+      dom.logNext = (res.paging && res.paging.next) || '';
+      // A short page is the last one (Mailgun still hands back a next URL).
+      dom.logDone = res.items.length < 100 || !dom.logNext;
+      this.setState({});
+    }).catch(() => { if (this._domain === dom) { dom.logLoading = false; dom.logErr = 'Could not load the email log.'; this.setState({}); } });
+  },
+
+  // Opens one event. Its whole message history (accepted → retries →
+  // delivered/failed) comes from Mailgun by message-id, since the loaded page
+  // may be filtered or cut off mid-history.
+  openMailgunLogEvent(ev) {
+    const dom = this._domain;
+    if (!dom || !ev) return;
+    const mid = ev.message && ev.message.headers && ev.message.headers['message-id'];
+    dom.logSel = ev; dom.logTrail = null; dom.logMsg = null;
+    this.setState({ mgLogRaw: false, mgLogMsgTab: '' });
+    if (!mid) return;
+    this.api('/domain/' + dom.domainId + '/mailgun/events?limit=50&message-id=' + encodeURIComponent(mid)).then(res => {
+      if (this._domain !== dom || dom.logSel !== ev) return;
+      dom.logTrail = (res && Array.isArray(res.items)) ? res.items : [];
+      this.setState({});
+    }).catch(() => { if (this._domain === dom && dom.logSel === ev) { dom.logTrail = []; this.setState({}); } });
+  },
+
+  // The stored copy of the message (body, headers, attachment names). Mailgun
+  // keeps these for a few days; past that the route answers message_expired.
+  loadMailgunStoredMessage(ev) {
+    const dom = this._domain;
+    const url = ev && ev.storage && ev.storage.url;
+    if (!dom || !url) return;
+    dom.logMsg = { loading: true, err: '', data: null };
+    this.setState({});
+    this.api('/domain/' + dom.domainId + '/mailgun/message?url=' + encodeURIComponent(url)).then(res => {
+      if (this._domain !== dom || dom.logSel !== ev) return;
+      if (!res || res.code) dom.logMsg = { loading: false, err: (res && res.message) || 'Could not load the message.', data: null };
+      else dom.logMsg = { loading: false, err: '', data: res };
+      this.setState({ mgLogMsgTab: res && res.html ? 'html' : 'text' });
+    }).catch(() => { if (this._domain === dom && dom.logSel === ev) { dom.logMsg = { loading: false, err: 'Could not load the message.', data: null }; this.setState({}); } });
+  },
+
   async deleteMailgunSuppression(item) {
     const dom = this._domain;
     if (!dom) return;
@@ -948,10 +1011,109 @@ Object.assign(Component.prototype, {
     const rotResults = (s.mgRotResults || []).map(r => ({ site: r.site,
       status: r.success ? (r.updated + ' updated') : (r.message || 'Failed'),
       fg: r.success ? 'var(--ok)' : 'var(--bad)' }));
+    // ── Email log (Mailgun events) ──
+    const evWhen = (ev, full) => {
+      if (!ev || !ev.timestamp) return '';
+      const dt = new Date(ev.timestamp * 1000);
+      if (full) return dt.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
+      const time = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return dt.toDateString() === new Date().toDateString() ? time
+        : dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
+    };
+    const evHdr = ev => (ev && ev.message && ev.message.headers) || {};
+    const evDs = ev => (ev && ev['delivery-status']) || {};
+    const evTemp = ev => ev && ev.event === 'failed' && ev.severity === 'temporary';
+    const evBadge = ev => {
+      const e = (ev && ev.event) || '';
+      const label = evTemp(ev) ? 'retrying' : e === 'complained' ? 'spam report' : (e || 'event');
+      const tone = e === 'delivered' ? 'ok' : (evTemp(ev) || e === 'complained') ? 'warn'
+        : (e === 'failed' || e === 'rejected') ? 'bad' : (e === 'accepted' || e === 'stored') ? '' : 'brand';
+      return { label, fg: tone ? 'var(--' + (tone === 'brand' ? 'brand-ink' : tone) + ')' : 'var(--ink-dim)',
+        bg: tone ? 'var(--' + tone + '-soft)' : 'var(--panel-2)' };
+    };
+    const reasonText = {
+      'suppress-bounce': 'Not sent. This address is on the bounce list from an earlier hard bounce, so Mailgun skips it. Remove it under Suppressions to send to it again.',
+      'suppress-unsubscribe': 'Not sent. The recipient unsubscribed from this domain’s mail.',
+      'suppress-complaint': 'Not sent. The recipient reported earlier mail from this domain as spam.',
+      'old': 'Mailgun kept retrying and gave up once the message was too old to deliver.',
+      'espblock': 'The recipient’s email provider blocked the message.',
+      'hardfail': 'The recipient address is not valid.'
+    };
+    const evSummary = ev => {
+      const ds = evDs(ev), e = ev && ev.event;
+      const smtp = [ds.code, ds['enhanced-code']].filter(Boolean).join(' ');
+      if (e === 'delivered') return 'Delivered' + (ds['mx-host'] ? ' to ' + ds['mx-host'] : '') + (ds['session-seconds'] ? ' in ' + ds['session-seconds'] + 's' : '') + '. The receiving server accepted it' + (smtp ? ' with ' + smtp : '') + '.';
+      if (e === 'accepted') return 'Mailgun accepted the message from the sending site and queued it for delivery.';
+      if (e === 'rejected') return 'Mailgun refused the message before sending it' + ((ev.reject && ev.reject.reason) ? ': ' + ev.reject.reason : '.');
+      if (e === 'complained') return 'The recipient marked this message as spam. Mailgun adds them to the complaints list and will not send to them again.';
+      if (e === 'failed') {
+        if (reasonText[ev.reason]) return reasonText[ev.reason];
+        if (evTemp(ev)) return 'Temporary failure on attempt ' + (ds['attempt-no'] || 1) + '. Mailgun will retry automatically.';
+        return 'Permanent failure, so Mailgun will not retry. The SMTP response below is what the receiving side reported.';
+      }
+      if (e === 'opened') return 'The recipient opened the message.';
+      if (e === 'clicked') return 'The recipient clicked a link' + (ev.url ? ': ' + ev.url : '.');
+      if (e === 'unsubscribed') return 'The recipient unsubscribed.';
+      return '';
+    };
+    const evText = ev => (evHdr(ev).subject || '(no subject)') + (ev.recipient ? ' → ' + ev.recipient : '');
     const mgEvents = (dom.mgEvents || []).map(ev => ({
-      t: ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '',
-      text: (ev.event || '') + (ev.message && ev.message.headers && ev.message.headers.subject ? ' · ' + ev.message.headers.subject : '')
-        + (ev.recipient ? ' → ' + ev.recipient : '') }));
+      t: evWhen(ev),
+      text: (ev.event || '') + ' · ' + evText(ev),
+      open: () => { this.setState({ mgLogOpen: true, mgLogQ: '' }); this.loadMailgunLog(''); this.openMailgunLogEvent(ev); } }));
+    const logQ = (s.mgLogQ || '').trim().toLowerCase();
+    const logRows = (dom.logItems || [])
+      .filter(ev => !logQ || [evHdr(ev).subject, evHdr(ev).from, ev.recipient, ev.event, evDs(ev).message, ev.reason]
+        .filter(Boolean).join(' ').toLowerCase().includes(logQ))
+      .map(ev => { const b = evBadge(ev);
+        return { when: evWhen(ev), badge: b.label, badgeFg: b.fg, badgeBg: b.bg,
+          subject: evHdr(ev).subject || '(no subject)', to: ev.recipient || '',
+          open: () => this.openMailgunLogEvent(ev) }; });
+    const logFilters = [['', 'All'], ['delivered', 'Delivered'], ['failed', 'Failed'], ['accepted', 'Accepted'], ['rejected', 'Rejected'], ['complained', 'Spam reports']]
+      .map(([id, label]) => ({ label,
+        fg: (dom.logFilter || '') === id ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: (dom.logFilter || '') === id ? 'var(--panel-2)' : 'transparent',
+        go: () => { dom.logSel = null; this.loadMailgunLog(id); } }));
+    const logNote = dom.logErr ? dom.logErr
+      : (!dom.logLoading && dom.logItems && !dom.logItems.length) ? 'No ' + (dom.logFilter ? dom.logFilter + ' ' : '') + 'events in Mailgun’s log for this domain.'
+      : (logQ && !logRows.length && (dom.logItems || []).length) ? 'No loaded events match “' + s.mgLogQ.trim() + '”.' : '';
+    const sel = dom.logSel;
+    const selDs = evDs(sel), selHdr = evHdr(sel), selBadge = evBadge(sel);
+    const selEnv = (sel && sel.envelope) || {}, selMsg = (sel && sel.message) || {}, selFlags = (sel && sel.flags) || {};
+    const yn = v => v === true ? 'yes' : v === false ? 'no' : '';
+    const logFields = sel ? [
+      ['When', evWhen(sel, true)],
+      ['From', selHdr.from || selEnv.sender],
+      ['To', sel.recipient || selHdr.to],
+      ['Subject', selHdr.subject],
+      ['SMTP response', [[selDs.code, selDs['enhanced-code']].filter(Boolean).join(' '), selDs.message].filter(Boolean).join(' · '), true],
+      ['Details', selDs.description],
+      ['Reason', [sel.severity, sel.reason, selDs['bounce-type'] ? selDs['bounce-type'] + ' bounce' : ''].filter(Boolean).join(' · ')],
+      ['Receiving server', [selDs['mx-host'], selDs['mx-host-ip'] ? '(' + selDs['mx-host-ip'] + ')' : ''].filter(Boolean).join(' '), true],
+      ['Encryption', selDs.tls !== undefined ? 'TLS ' + yn(selDs.tls) + (selDs['certificate-verified'] !== undefined ? ' · certificate verified ' + yn(selDs['certificate-verified']) : '') : ''],
+      ['Recipient provider', sel['recipient-provider']],
+      ['Attempt', selDs['attempt-no'] ? String(selDs['attempt-no']) + (selDs['session-seconds'] ? ' · ' + selDs['session-seconds'] + 's session' : '') : ''],
+      ['Sending IP', selEnv['sending-ip'], true],
+      ['Signed with', sel['primary-dkim'], true],
+      ['Size', selMsg.size ? (selMsg.size >= 1048576 ? (selMsg.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(selMsg.size / 1024)) + ' KB') : ''],
+      ['Attachments', (selMsg.attachments || []).map(a => a.filename || a.name).filter(Boolean).join(', ')],
+      ['Tags', (sel.tags || []).join(', ')],
+      ['Test mode', selFlags['is-test-mode'] ? 'yes, Mailgun did not really send it' : ''],
+      ['Message ID', selHdr['message-id'], true],
+      ['Event ID', sel.id, true]
+    ].filter(f => f[1]).map(([k, v, mono]) => ({ k, v: String(v), font: mono ? '400 var(--fs-12)/1.5 var(--mono)' : '400 var(--fs-13)/1.5 var(--sans)' })) : [];
+    const logTrail = (dom.logTrail || []).slice().sort((a, b) => a.timestamp - b.timestamp).map(t => { const b = evBadge(t), ds = evDs(t);
+      return { when: new Date(t.timestamp * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }),
+        badge: b.label, badgeFg: b.fg, badgeBg: b.bg,
+        line: [t.recipient, ds.message || (ds['mx-host'] ? 'via ' + ds['mx-host'] : '')].filter(Boolean).join(' · '),
+        rowBg: sel && t.id === sel.id ? 'var(--panel-2)' : 'transparent',
+        open: () => { dom.logSel = t; dom.logMsg = null; this.setState({ mgLogRaw: false }); } }; });
+    const lm = dom.logMsg, lmd = lm && lm.data;
+    const msgTab = s.mgLogMsgTab || (lmd && lmd.html ? 'html' : 'text');
+    const logMsgTabs = lmd ? [['html', 'HTML', !!lmd.html], ['text', 'Plain text', !!lmd.text], ['headers', 'Headers', true]]
+      .filter(t => t[2]).map(([id, label]) => ({ label,
+        fg: msgTab === id ? 'var(--ink)' : 'var(--ink-dim)', bg: msgTab === id ? 'var(--panel-2)' : 'transparent',
+        go: () => this.setState({ mgLogMsgTab: id }) })) : [];
     const accs = (info.accounts || []).filter(a => a && (a.account_id || a.name));
     // Operator-only account assignment (legacy Edit Domain parity): the ✕ on
     // a chip unassigns, the Assign… link opens a searchable account picker.
@@ -1240,7 +1402,39 @@ Object.assign(Component.prototype, {
       mgRotNoResults: !!s.mgRotDone && rotResults.length === 0,
       mgRotCanRetry: !!s.mgRotDone && (s.mgRotResults || []).some(r => !r.success),
       mgRotRetry: () => this.rotateMailgunReal(true),
-      mgRotRetryLabel: s.mgRotBusy ? 'Deploying…' : 'Retry deploy'
+      mgRotRetryLabel: s.mgRotBusy ? 'Deploying…' : 'Retry deploy',
+      // Email log viewer ("View all logs →")
+      mgOpenLog: () => { dom.logSel = null; this.setState({ mgLogOpen: true, mgLogQ: '' }); this.loadMailgunLog(dom.logFilter || ''); },
+      closeMgLog: () => this.setState({ mgLogOpen: false }),
+      mgLogOpen: !!s.mgLogOpen,
+      mgLogList: !sel, mgLogDetail: !!sel,
+      mgLogQ: s.mgLogQ || '', onMgLogQ: e => this.setState({ mgLogQ: e.target.value }),
+      mgLogFilters: logFilters,
+      mgLogRefresh: () => { if (sel) this.openMailgunLogEvent(sel); else this.loadMailgunLog(dom.logFilter || ''); },
+      mgLogRows: logRows, mgLogHasRows: logRows.length > 0,
+      mgLogNotice: !!logNote, mgLogNoticeText: logNote,
+      mgLogLoading: !!dom.logLoading,
+      mgLogCanMore: !dom.logLoading && !dom.logDone && !!dom.logNext && !logQ,
+      mgLogMore: () => this.loadMailgunLog(dom.logFilter, true),
+      mgLogCount: (dom.logItems || []).length ? (logQ ? logRows.length + ' of ' : '') + dom.logItems.length + ' events loaded' + (dom.logDone ? ', end of Mailgun’s log' : '') : '',
+      mgLogBack: () => { dom.logSel = null; dom.logMsg = null; this.setState({}); },
+      mgLogSelBadge: selBadge.label, mgLogSelFg: selBadge.fg, mgLogSelBg: selBadge.bg,
+      mgLogSelSubject: sel ? (selHdr.subject || '(no subject)') : '',
+      mgLogSelSummary: sel ? evSummary(sel) : '',
+      mgLogFields: logFields,
+      mgLogTrail: logTrail, mgLogHasTrail: logTrail.length > 1,
+      mgLogTrailLoading: !!sel && dom.logTrail === null && !!selHdr['message-id'],
+      mgLogCanMsg: !!(sel && sel.storage && sel.storage.url) && !lm,
+      mgLogLoadMsg: () => this.loadMailgunStoredMessage(sel),
+      mgLogMsgNotice: !!(lm && (lm.loading || lm.err)), mgLogMsgNoticeText: lm ? (lm.loading ? 'Loading the stored message…' : lm.err) : '',
+      mgLogHasMsg: !!lmd, mgLogMsgTabs: logMsgTabs,
+      mgLogMsgHtml: !!lmd && msgTab === 'html', mgLogMsgText: !!lmd && msgTab === 'text', mgLogMsgHeaders: !!lmd && msgTab === 'headers',
+      mgLogMsgHtmlDoc: lmd ? lmd.html : '', mgLogMsgPlain: lmd ? lmd.text : '',
+      mgLogMsgHeaderRows: lmd ? (lmd.headers || []).map(([k, v]) => ({ k, v })) : [],
+      mgLogMsgFiles: lmd && (lmd.attachments || []).length ? 'Attachments: ' + lmd.attachments.map(a => a.name + (a.size ? ' (' + Math.max(1, Math.round(a.size / 1024)) + ' KB)' : '')).join(', ') : '',
+      mgLogRaw: !!s.mgLogRaw, mgLogRawLabel: s.mgLogRaw ? 'Hide raw event' : 'Raw event',
+      mgLogToggleRaw: () => this.setState({ mgLogRaw: !s.mgLogRaw }),
+      mgLogRawText: sel && s.mgLogRaw ? JSON.stringify(sel, null, 2) : ''
     };
   }
 

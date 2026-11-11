@@ -3153,10 +3153,10 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="padding:6px 16px 12px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ mgUsageRange }}</div>
             </div>
             <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Recent events</h2><span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">View all logs →</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Recent events</h2><span onClick="{{ mgOpenLog }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">View all logs →</span></div>
               <sc-for list="{{ mgEvents }}" as="ev" hint-placeholder-count="4">
-                <div style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);align-items:baseline">
-                  <span style="flex:none;width:70px;font:500 var(--fs-115) var(--mono);color:var(--ink-dim);text-align:right">{{ ev.t }}</span>
+                <div onClick="{{ ev.open }}" style="display:flex;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);align-items:baseline;cursor:pointer" style-hover="background:var(--panel-2)">
+                  <span style="flex:none;width:118px;font:500 var(--fs-115) var(--mono);color:var(--ink-dim);text-align:right;white-space:nowrap">{{ ev.t }}</span>
                   <span style="font:400 var(--fs-13)/1.5 var(--sans)">{{ ev.text }}</span>
                 </div>
               </sc-for>
@@ -8079,6 +8079,141 @@ button.ccc-edited:hover{color:var(--ink)}
             </div>
           </sc-if>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Mailgun email log dialog ══ -->
+  <sc-if value="{{ mgLogOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMgLog }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:920px;max-width:100%;height:86vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <sc-if value="{{ mgLogDetail }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ mgLogBack }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">← All events</span>
+          </sc-if>
+          <sc-if value="{{ mgLogList }}" hint-placeholder-val="{{ true }}">
+            <span style="font:600 var(--fs-15) var(--sans)">Email log</span>
+          </sc-if>
+          <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ mgHost }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ mgLogRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">Refresh</span>
+          <span onClick="{{ closeMgLog }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <sc-if value="{{ mgLogList }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px 0">
+            <div style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:3px;flex-wrap:wrap">
+              <sc-for list="{{ mgLogFilters }}" as="t" hint-placeholder-count="6">
+                <span onClick="{{ t.go }}" style="padding:4px 11px;border-radius:6px;cursor:pointer;font:500 var(--fs-12) var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              </sc-for>
+            </div>
+            <div style="flex:1"></div>
+            <input value="{{ mgLogQ }}" onInput="{{ onMgLogQ }}" placeholder="Filter by subject, address, error…" style="width:250px;max-width:100%;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 18px 16px">
+            <sc-if value="{{ mgLogNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 2px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ mgLogNoticeText }}</div>
+            </sc-if>
+            <sc-if value="{{ mgLogHasRows }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ mgLogRows }}" as="lr" hint-placeholder-count="10">
+                  <div onClick="{{ lr.open }}" style="display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                    <span style="flex:none;width:112px;font:500 var(--fs-115) var(--mono);color:var(--ink-dim);white-space:nowrap">{{ lr.when }}</span>
+                    <span style="flex:none;width:84px;text-align:center;font:600 var(--fs-11) var(--sans);color:{{ lr.badgeFg }};background:{{ lr.badgeBg }};border-radius:6px;padding:3px 0;white-space:nowrap">{{ lr.badge }}</span>
+                    <span style="flex:1;min-width:0;font:400 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lr.subject }}</span>
+                    <span style="flex:none;max-width:240px;font:400 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lr.to }}</span>
+                    <span style="flex:none;color:var(--ink-dim);font:400 var(--fs-13) var(--sans)">›</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mgLogLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px 2px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading events…</div>
+            </sc-if>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid var(--rule)">
+            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ mgLogCount }}</span>
+            <div style="flex:1"></div>
+            <sc-if value="{{ mgLogCanMore }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ mgLogMore }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 14px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">Load older events</button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mgLogDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;overflow-y:auto">
+          <div style="padding:16px 18px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="flex:none;font:600 var(--fs-11) var(--sans);color:{{ mgLogSelFg }};background:{{ mgLogSelBg }};border-radius:6px;padding:3px 9px">{{ mgLogSelBadge }}</span>
+              <span style="font:600 var(--fs-15) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mgLogSelSubject }}</span>
+            </div>
+            <div style="border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px 14px;font:400 var(--fs-13)/1.55 var(--sans)">{{ mgLogSelSummary }}</div>
+            <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+              <sc-for list="{{ mgLogFields }}" as="lf" hint-placeholder-count="8">
+                <div style="display:flex;gap:14px;padding:7px 14px;border-bottom:1px solid var(--rule);align-items:baseline">
+                  <span style="flex:none;width:140px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ lf.k }}</span>
+                  <span style="flex:1;min-width:0;font:{{ lf.font }};word-break:break-word">{{ lf.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ mgLogTrailLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading this message's history…</div>
+            </sc-if>
+            <sc-if value="{{ mgLogHasTrail }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="font:600 var(--fs-115) var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px">Message history</div>
+                <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                  <sc-for list="{{ mgLogTrail }}" as="tr" hint-placeholder-count="3">
+                    <div onClick="{{ tr.open }}" style="display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid var(--rule);cursor:pointer;background:{{ tr.rowBg }}" style-hover="background:var(--panel-2)">
+                      <span style="flex:none;width:150px;font:500 var(--fs-115) var(--mono);color:var(--ink-dim);white-space:nowrap">{{ tr.when }}</span>
+                      <span style="flex:none;width:84px;text-align:center;font:600 var(--fs-11) var(--sans);color:{{ tr.badgeFg }};background:{{ tr.badgeBg }};border-radius:6px;padding:3px 0;white-space:nowrap">{{ tr.badge }}</span>
+                      <span style="flex:1;min-width:0;font:400 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tr.line }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <sc-if value="{{ mgLogCanMsg }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ mgLogLoadMsg }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:6px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">View message</button>
+              </sc-if>
+              <button onClick="{{ mgLogToggleRaw }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-125) var(--sans);padding:6px 13px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">{{ mgLogRawLabel }}</button>
+            </div>
+            <sc-if value="{{ mgLogMsgNotice }}" hint-placeholder-val="{{ false }}">
+              <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ mgLogMsgNoticeText }}</div>
+            </sc-if>
+            <sc-if value="{{ mgLogHasMsg }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--rule);background:var(--panel)">
+                  <div style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:2px">
+                    <sc-for list="{{ mgLogMsgTabs }}" as="mt" hint-placeholder-count="3">
+                      <span onClick="{{ mt.go }}" style="padding:3px 10px;border-radius:6px;cursor:pointer;font:500 var(--fs-12) var(--sans);color:{{ mt.fg }};background:{{ mt.bg }}" style-hover="color:var(--ink)">{{ mt.label }}</span>
+                    </sc-for>
+                  </div>
+                  <span style="flex:1;min-width:0;font:400 var(--fs-12) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mgLogMsgFiles }}</span>
+                </div>
+                <sc-if value="{{ mgLogMsgHtml }}" hint-placeholder-val="{{ false }}">
+                  <iframe srcdoc="{{ mgLogMsgHtmlDoc }}" sandbox="" style="width:100%;height:520px;border:none;background:white"></iframe>
+                </sc-if>
+                <sc-if value="{{ mgLogMsgText }}" hint-placeholder-val="{{ false }}">
+                  <pre style="margin:0;max-height:520px;overflow:auto;padding:12px 14px;font:400 var(--fs-12)/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word">{{ mgLogMsgPlain }}</pre>
+                </sc-if>
+                <sc-if value="{{ mgLogMsgHeaders }}" hint-placeholder-val="{{ false }}">
+                  <div style="max-height:520px;overflow:auto">
+                    <sc-for list="{{ mgLogMsgHeaderRows }}" as="mh" hint-placeholder-count="6">
+                      <div style="display:flex;gap:12px;padding:5px 14px;border-bottom:1px solid var(--rule);align-items:baseline">
+                        <span style="flex:none;width:190px;font:500 var(--fs-12) var(--mono);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ mh.k }}</span>
+                        <span style="flex:1;min-width:0;font:400 var(--fs-12)/1.5 var(--mono);word-break:break-all">{{ mh.v }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mgLogRaw }}" hint-placeholder-val="{{ false }}">
+              <pre style="margin:0;max-height:420px;overflow:auto;padding:12px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);font:400 var(--fs-115,11.5px)/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;word-break:break-word">{{ mgLogRawText }}</pre>
+            </sc-if>
+          </div>
+          </div>
+        </sc-if>
       </div>
     </div>
   </sc-if>

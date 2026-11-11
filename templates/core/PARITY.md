@@ -120,7 +120,7 @@ reads) · `/sites/{id}/{env}/monitor` (uptime toggle — read-only at site-detai
 (absent from v3 entirely).
 
 **Domains:** `/domain/{id}/email-forwarding/logs` + `dialog_forwarding_log_details` ·
-`dialog_mailgun` (full event log — "View all logs →" at app.html:2053 is an inert span) ·
+~~`dialog_mailgun`~~ (done 2026-11-11: Email log viewer, STATUS.md) ·
 `dialog_mailgun_details` · `PUT /domains/{id}/account` (domain→account assignment,
 STATUS.md:809-811) · `POST /domain/{id}/update-site-link`.
 

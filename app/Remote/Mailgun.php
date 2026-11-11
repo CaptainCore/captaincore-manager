@@ -84,6 +84,57 @@ class Mailgun {
 
     }
 
+    /**
+     * Fetches a stored message (the storage.url on an event) for one zone.
+     *
+     * The URL comes from the browser, and the request carries the account-wide
+     * API key, so it must be exactly this zone's message store:
+     * https://storage[-region].api.mailgun.net/v3/domains/<zone>/messages/<key>.
+     * Returns the decoded body, or a WP_Error.
+     */
+    public static function stored_message( $domain, $url ) {
+
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return new \WP_Error( 'mailgun_not_configured', 'MAILGUN_API_KEY constant is not defined.', [ 'status' => 500 ] );
+        }
+
+        $parts = wp_parse_url( (string) $url );
+        $host  = isset( $parts['host'] ) ? strtolower( $parts['host'] ) : '';
+        $path  = isset( $parts['path'] ) ? $parts['path'] : '';
+        $valid_host = ( $host === 'api.mailgun.net' || preg_match( '/^storage(-[a-z0-9-]+)?\.api\.mailgun\.net$/', $host ) );
+        $pattern    = '#^/v3/domains/' . preg_quote( strtolower( (string) $domain ), '#' ) . '/messages/[A-Za-z0-9_=-]+$#';
+        if ( empty( $parts['scheme'] ) || $parts['scheme'] !== 'https' || ! $valid_host
+            || isset( $parts['query'] ) || isset( $parts['user'] ) || isset( $parts['port'] )
+            || ! preg_match( $pattern, strtolower( $path ) ) ) {
+            return new \WP_Error( 'invalid_message_url', 'Not a stored message for this domain.', [ 'status' => 400 ] );
+        }
+
+        $remote = wp_remote_get( "https://$host$path", [
+            'timeout' => 30,
+            'headers' => [
+                'Accept'        => 'application/json',
+                'Authorization' => 'Basic ' . base64_encode( 'api:' . MAILGUN_API_KEY ),
+            ],
+        ] );
+
+        if ( is_wp_error( $remote ) ) {
+            return new \WP_Error( 'mailgun_unreachable', $remote->get_error_message(), [ 'status' => 502 ] );
+        }
+        $code = wp_remote_retrieve_response_code( $remote );
+        if ( $code === 404 ) {
+            return new \WP_Error( 'message_expired', 'Mailgun no longer has this message. Stored copies are kept for a few days only.', [ 'status' => 404 ] );
+        }
+        if ( $code !== 200 ) {
+            return new \WP_Error( 'mailgun_error', "Mailgun answered HTTP $code.", [ 'status' => 502 ] );
+        }
+        $body = json_decode( wp_remote_retrieve_body( $remote ), true );
+        if ( ! is_array( $body ) ) {
+            return new \WP_Error( 'mailgun_error', 'Mailgun returned an unreadable message.', [ 'status' => 502 ] );
+        }
+        return $body;
+
+    }
+
     public static function post( $command, $post = [] ) {
 
         if ( ! defined( 'MAILGUN_API_KEY' ) ) {
