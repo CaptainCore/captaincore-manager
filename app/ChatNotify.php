@@ -25,6 +25,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * history and signature, and adds the reply to the thread. A reply from an
  * address that is not the customer's becomes an internal note instead.
  *
+ * Others on the email. Addresses on the To or Cc of the customer's email
+ * are suggested to operators, never added on their own. Once an operator
+ * adds someone (participants, status 'active') they are Cc'd on reply
+ * emails, and their replies post as messages under their own name. They
+ * get email only: no login, no chat. Removing them stops both.
+ *
  * Settings (a constant wins over the site option):
  *   CAPTAINCORE_CHAT_REPLY_DOMAIN / captaincore_chat_reply_domain
  *       Domain Mailgun receives for, e.g. mg.anchor.host. Unset: emails
@@ -125,10 +131,13 @@ class ChatNotify {
 		) );
 	}
 
-	/** After a customer read: drop the pending email once nothing is unread. */
+	/**
+	 * After a customer read: drop the pending email once nothing is unread.
+	 * Participants only ever read by email, so theirs still goes.
+	 */
 	public static function cancel_if_read( $conversation_id, $user_id ) {
 		global $wpdb;
-		if ( ! self::unread_replies( $conversation_id, $user_id, 0 ) ) {
+		if ( ! self::unread_replies( $conversation_id, $user_id, 0 ) && ! self::participant_replies( $conversation_id ) ) {
 			$c = $wpdb->base_prefix . 'captaincore_chat_conversations';
 			$wpdb->query( $wpdb->prepare( "UPDATE $c SET notify_after = NULL WHERE chat_conversation_id = %d", $conversation_id ) );
 		}
@@ -137,13 +146,14 @@ class ChatNotify {
 	/**
 	 * Operator comments the customer has not seen: newer than their read
 	 * mark, their own last comment and the last reply already emailed.
+	 * (A participant's message is not the customer's, so it doesn't count.)
 	 */
 	private static function unread_replies( $conversation_id, $user_id, $notified ) {
 		global $wpdb;
 		$m     = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$since = max( (int) $notified, Chat::last_read( $user_id, $conversation_id ), (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COALESCE(MAX(chat_message_id), 0) FROM $m WHERE chat_conversation_id = %d AND kind = 'comment' AND author_kind = 'customer'",
-			$conversation_id
+			"SELECT COALESCE(MAX(chat_message_id), 0) FROM $m WHERE chat_conversation_id = %d AND kind = 'comment' AND author_kind = 'customer' AND author_user_id = %d",
+			$conversation_id, $user_id
 		) ) );
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT * FROM $m WHERE chat_conversation_id = %d AND chat_message_id > %d AND kind = 'comment' AND internal = 0 AND author_kind = 'operator'
@@ -211,9 +221,12 @@ class ChatNotify {
 		return $sent;
 	}
 
-	/** Email the customer their unread replies. Returns whether one went out. */
+	/**
+	 * Email the unread replies: to the customer (with participants on Cc)
+	 * when they have some unread, else to the participants alone. Returns
+	 * whether one went out.
+	 */
 	public static function send( $conversation_id ) {
-		global $wpdb;
 		$conversation = ChatConversations::get( (int) $conversation_id );
 		if ( ! $conversation || (int) $conversation->user_id <= 0 ) {
 			return false;
@@ -223,22 +236,251 @@ class ChatNotify {
 			return false;
 		}
 		$replies = self::unread_replies( (int) $conversation_id, (int) $user->ID, (int) $conversation->notified_message_id );
-		if ( ! $replies ) {
+		$others  = self::participant_replies( (int) $conversation_id );
+		$all     = [];
+		foreach ( array_merge( $replies, $others ) as $r ) {
+			$all[ (int) $r->chat_message_id ] = $r;
+		}
+		if ( ! $all ) {
 			return false;
 		}
-		$last = (int) end( $replies )->chat_message_id;
-		ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
+		ksort( $all );
+		$all  = array_values( $all );
+		$last = (int) end( $all )->chat_message_id;
+		// Participants are on it only when it has something they haven't had.
+		$cc   = $others ? array_map( fn( $p ) => self::mailbox( $p->name, $p->email ), self::active( (int) $conversation_id ) ) : [];
+		if ( $replies ) {
+			ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
+			$to = $user->user_email;
+		} else {
+			$to = array_shift( $cc );
+		}
+		if ( $others ) {
+			global $wpdb;
+			$p = $wpdb->base_prefix . 'captaincore_chat_participants';
+			$wpdb->query( $wpdb->prepare( "UPDATE $p SET notified_message_id = GREATEST(notified_message_id, %d) WHERE chat_conversation_id = %d AND status = 'active'", $last, $conversation_id ) );
+		}
 
-		$earlier = self::earlier( (int) $conversation_id, $replies[0] );
-		$files   = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, array_merge( $replies, $earlier ) ) );
-		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ), $earlier );
+		$earlier = self::earlier( (int) $conversation_id, $all[0] );
+		$files   = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, array_merge( $all, $earlier ) ) );
+		// Only the customer can open the conversation; an email to the
+		// participants alone has no button.
+		Mailer::send_chat_replies( $user, $conversation, $all, $files, self::reply_address( $conversation_id ), $replies && Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ), $earlier, $to, $cc );
 
-		$event = Chat::append( (int) $conversation_id, [
+		$sent_to = array_merge( [ self::address_of( $to ) ], array_map( [ __CLASS__, 'address_of' ], $cc ) );
+		$event   = Chat::append( (int) $conversation_id, [
 			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',
-			'body' => ( count( $replies ) === 1 ? 'Unread reply' : count( $replies ) . ' unread replies' ) . ' emailed to ' . $user->user_email,
+			'body' => ( count( $all ) === 1 ? 'Unread reply' : count( $all ) . ' unread replies' ) . ' emailed to ' . implode( ', ', $sent_to ),
 		] );
 		Chat::emit( 'message.created', Chat::present_conversation( ChatConversations::get( (int) $conversation_id ), false ), $event );
 		return true;
+	}
+
+	// ── participants ────────────────────────────────────────────────────
+
+	const MAX_PARTICIPANTS = 10;
+
+	/** Active participants, oldest first. */
+	public static function active( $conversation_id ) {
+		global $wpdb;
+		$p = $wpdb->base_prefix . 'captaincore_chat_participants';
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $p WHERE chat_conversation_id = %d AND status = 'active' ORDER BY chat_participant_id ASC",
+			$conversation_id
+		) ) ?: [];
+	}
+
+	/** Operator comments not yet emailed to every active participant. */
+	private static function participant_replies( $conversation_id ) {
+		global $wpdb;
+		$p     = $wpdb->base_prefix . 'captaincore_chat_participants';
+		$since = $wpdb->get_var( $wpdb->prepare( "SELECT MIN(notified_message_id) FROM $p WHERE chat_conversation_id = %d AND status = 'active'", $conversation_id ) );
+		if ( $since === null ) {
+			return [];
+		}
+		$m = $wpdb->base_prefix . 'captaincore_chat_messages';
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $m WHERE chat_conversation_id = %d AND chat_message_id > %d AND kind = 'comment' AND internal = 0 AND author_kind = 'operator'
+			ORDER BY chat_message_id ASC LIMIT 20",
+			$conversation_id, (int) $since
+		) ) ?: [];
+	}
+
+	/**
+	 * The conversation's participants for the thread: operators get every
+	 * suggested and active one, the customer only who else is emailed.
+	 */
+	public static function participants( $conversation_id, $operator ) {
+		global $wpdb;
+		$p    = $wpdb->base_prefix . 'captaincore_chat_participants';
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $p WHERE chat_conversation_id = %d AND status IN ('active', 'suggested') ORDER BY chat_participant_id ASC",
+			$conversation_id
+		) ) ?: [];
+		$out = [];
+		foreach ( $rows as $r ) {
+			if ( ! $operator && $r->status !== 'active' ) {
+				continue;
+			}
+			$out[] = [ 'id' => (int) $r->chat_participant_id, 'email' => $r->email, 'name' => $r->name, 'status' => $r->status ];
+		}
+		return $out;
+	}
+
+	/**
+	 * Add someone to the emails (status active), stop emailing them or
+	 * dismiss a suggestion (status removed). Operators only. Leaves an
+	 * internal event so the thread shows who changed it.
+	 *
+	 * @param array $input email, status (active|removed), name (optional)
+	 */
+	public static function set_participant( $user_id, $conversation_id, $input ) {
+		global $wpdb;
+		$conversation = Chat::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! Chat::is_operator( $user_id ) ) {
+			return new \WP_Error( 'not_found', 'Conversation not found.', [ 'status' => 404 ] );
+		}
+		if ( (int) $conversation->user_id <= 0 ) {
+			return new \WP_Error( 'guest', 'Guest conversations are not emailed, so nobody can be added.', [ 'status' => 400 ] );
+		}
+		$email  = self::address_of( $input['email'] ?? '' );
+		$status = (string) ( $input['status'] ?? 'active' );
+		if ( $email === '' ) {
+			return new \WP_Error( 'bad_email', 'That is not an email address.', [ 'status' => 400 ] );
+		}
+		if ( ! in_array( $status, [ 'active', 'removed' ], true ) ) {
+			return new \WP_Error( 'bad_status', 'Status is active or removed.', [ 'status' => 400 ] );
+		}
+		$p   = $wpdb->base_prefix . 'captaincore_chat_participants';
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $p WHERE chat_conversation_id = %d AND email = %s", $conversation_id, $email ) );
+		$now = gmdate( 'Y-m-d H:i:s' );
+		if ( $status === 'active' ) {
+			$why = self::not_addable( $conversation, $email );
+			if ( $why !== '' ) {
+				return new \WP_Error( 'not_addable', $why, [ 'status' => 400 ] );
+			}
+			if ( ( ! $row || $row->status !== 'active' ) && count( self::active( $conversation_id ) ) >= self::MAX_PARTICIPANTS ) {
+				return new \WP_Error( 'too_many', 'A conversation can email at most ' . self::MAX_PARTICIPANTS . ' other people.', [ 'status' => 400 ] );
+			}
+		}
+		if ( $row && $row->status === $status ) {
+			return [ 'participants' => self::participants( $conversation_id, true ) ];
+		}
+		if ( ! $row && $status === 'removed' ) {
+			return [ 'participants' => self::participants( $conversation_id, true ) ];
+		}
+		$name = self::display_name( $input['name'] ?? ( $row->name ?? '' ) );
+		// Starting now: they get replies from here on, the earlier ones as
+		// context under the first one.
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$mark = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(MAX(chat_message_id), 0) FROM $m WHERE chat_conversation_id = %d", $conversation_id ) );
+		if ( $row ) {
+			$set = [ 'status' => $status, 'name' => $name, 'added_by' => (int) $user_id, 'updated_at' => $now ];
+			if ( $status === 'active' ) {
+				$set['notified_message_id'] = $mark;
+			}
+			ChatParticipants::update( $set, [ 'chat_participant_id' => (int) $row->chat_participant_id ] );
+		} else {
+			ChatParticipants::insert( [
+				'chat_conversation_id' => (int) $conversation_id, 'email' => $email, 'name' => $name, 'status' => 'active',
+				'added_by' => (int) $user_id, 'notified_message_id' => $mark, 'created_at' => $now, 'updated_at' => $now,
+			] );
+		}
+		$who   = get_userdata( (int) $user_id );
+		$label = $name !== '' ? $name . ' (' . $email . ')' : $email;
+		$body  = $status === 'active' ? 'added ' . $label . ' to the emails'
+			: ( $row && $row->status === 'suggested' ? 'dismissed ' . $label . ' from the email suggestions' : 'stopped emailing ' . $label );
+		$event = Chat::append( (int) $conversation_id, [
+			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',
+			'body' => ( $who ? $who->display_name : 'Someone' ) . ' ' . $body,
+		] );
+		Chat::emit( 'message.created', Chat::present_conversation( ChatConversations::get( (int) $conversation_id ), false ), $event );
+		self::emit_participants( $conversation );
+		return [ 'participants' => self::participants( $conversation_id, true ) ];
+	}
+
+	/** Why $email can't be a participant here, or ''. */
+	private static function not_addable( $conversation, $email ) {
+		$user = get_userdata( (int) $conversation->user_id );
+		if ( in_array( $email, array_filter( [ $user ? strtolower( $user->user_email ) : '', strtolower( (string) $conversation->contact_email ) ] ), true ) ) {
+			return 'That is the customer\'s own address.';
+		}
+		$domain = self::reply_domain();
+		if ( $domain !== '' && substr( $email, -strlen( '@' . $domain ) ) === '@' . $domain ) {
+			return 'That is one of our own reply addresses.';
+		}
+		$staff = get_user_by( 'email', $email );
+		if ( $staff && Chat::is_operator( (int) $staff->ID ) ) {
+			return 'That is a staff address. Staff see the conversation already.';
+		}
+		return '';
+	}
+
+	/**
+	 * Addresses on an email the customer (or a participant) sent in become
+	 * suggestions: the To and Cc, less the customer, our own addresses,
+	 * staff, and anyone already active, suggested or removed.
+	 */
+	private static function suggest( $conversation, $headers, $from ) {
+		$found = [];
+		foreach ( [ 'To', 'Cc' ] as $h ) {
+			foreach ( self::mailboxes( self::header( $headers, $h ) ) as $email => $name ) {
+				if ( $email !== $from && ! isset( $found[ $email ] ) && self::not_addable( $conversation, $email ) === '' ) {
+					$found[ $email ] = $name;
+				}
+			}
+		}
+		if ( ! $found ) {
+			return false;
+		}
+		$id  = (int) $conversation->chat_conversation_id;
+		$now = gmdate( 'Y-m-d H:i:s' );
+		$new = false;
+		foreach ( array_slice( $found, 0, self::MAX_PARTICIPANTS, true ) as $email => $name ) {
+			global $wpdb;
+			$p = $wpdb->base_prefix . 'captaincore_chat_participants';
+			$wpdb->query( $wpdb->prepare(
+				"INSERT IGNORE INTO $p (chat_conversation_id, email, name, status, created_at, updated_at) VALUES (%d, %s, %s, 'suggested', %s, %s)",
+				$id, $email, $name, $now, $now
+			) );
+			$new = $new || $wpdb->rows_affected > 0;
+		}
+		return $new;
+	}
+
+	/** Tell anyone viewing the conversation to reload its participants. */
+	private static function emit_participants( $conversation ) {
+		do_action( 'captaincore_chat_event', [ 'type' => 'participants.updated', 'conversation_id' => (int) $conversation->chat_conversation_id ], (int) $conversation->user_id, false );
+	}
+
+	/** A person's name from a header or a form: one line, at most 100 characters. */
+	private static function display_name( $text ) {
+		$text = (string) $text;
+		if ( ! mb_check_encoding( $text, 'UTF-8' ) ) {
+			$text = mb_convert_encoding( $text, 'UTF-8', 'UTF-8' );
+		}
+		return mb_substr( trim( (string) preg_replace( '/\s+/u', ' ', Chat::strip_controls( $text ) ) ), 0, 100 );
+	}
+
+	/** "Name <email>" with the name made safe for a header. */
+	private static function mailbox( $name, $email ) {
+		$name = trim( str_replace( [ '"', '\\', "\r", "\n", '<', '>', ',', ';' ], '', (string) $name ) );
+		return $name !== '' ? '"' . $name . '" <' . $email . '>' : $email;
+	}
+
+	/** email => display name for every address in a To/Cc header value. */
+	private static function mailboxes( $value ) {
+		$out = [];
+		// Split on commas outside quotes.
+		foreach ( preg_split( '/,(?=(?:[^"]*"[^"]*")*[^"]*$)/', (string) $value ) as $part ) {
+			$email = self::address_of( $part );
+			if ( $email === '' ) {
+				continue;
+			}
+			$name          = preg_match( '/^\s*"?([^"<]*?)"?\s*</', $part, $m ) ? self::display_name( $m[1] ) : '';
+			$out[ $email ] = $name;
+		}
+		return $out;
 	}
 
 	// ── in ──────────────────────────────────────────────────────────────
@@ -335,8 +577,24 @@ class ChatNotify {
 		if ( ! $customer && $from !== '' && $known && self::answers_our_email( $conversation_id, self::header( $mail['headers'], 'In-Reply-To' ) ) ) {
 			$customer = true;
 		}
+		// Someone an operator added to the emails: their reply is a message.
+		$participant = null;
+		if ( ! $customer && $from !== '' ) {
+			foreach ( self::active( $conversation_id ) as $p ) {
+				if ( $p->email === $from ) {
+					$participant = $p;
+				}
+			}
+		}
 
-		if ( $customer ) {
+		if ( $participant ) {
+			$message = Chat::append( $conversation_id, [
+				'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => 0,
+				'author_name' => $participant->name !== '' ? $participant->name : $participant->email,
+				'body' => $body !== '' ? $body : '(sent ' . ( count( $files ) === 1 ? 'a file' : 'files' ) . ')',
+				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external, 'email_from' => $from,
+			] );
+		} elseif ( $customer ) {
 			$message = Chat::append( $conversation_id, [
 				'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => $user ? (int) $user->ID : 0,
 				'author_name' => $user ? $user->display_name : (string) $conversation->contact_name,
@@ -364,15 +622,20 @@ class ChatNotify {
 				$user->ID, $conversation_id, $message['id'], gmdate( 'Y-m-d H:i:s' )
 			) );
 		}
+		// Others on the customer's (or a participant's) email: suggested to
+		// operators, never added on their own.
+		if ( ( $customer || $participant ) && (int) $conversation->user_id > 0 && self::suggest( $conversation, $mail['headers'], $from ) ) {
+			self::emit_participants( $conversation );
+		}
 		$attachments = Chat::attachments_for( [ (int) $message['id'] ] );
 		$message     = Chat::present_message( ChatMessages::get( (int) $message['id'] ), $attachments[ (int) $message['id'] ] ?? [] );
 		$fresh       = Chat::present_conversation( ChatConversations::get( $conversation_id ), false );
 		Chat::emit( 'message.created', $fresh, $message );
-		if ( $customer ) {
+		if ( $customer || $participant ) {
 			ChatPush::customer_message( $fresh, $message );
 		}
 		Chat::emit( 'conversation.updated', $fresh );
-		return [ 'message_id' => (int) $message['id'], 'as' => $customer ? 'customer' : 'note' ];
+		return [ 'message_id' => (int) $message['id'], 'as' => $customer ? 'customer' : ( $participant ? 'participant' : 'note' ) ];
 	}
 
 	/**

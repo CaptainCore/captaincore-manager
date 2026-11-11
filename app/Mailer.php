@@ -172,7 +172,9 @@ class Mailer {
     // conversation. Without it, replying to the email is the way back.
     // $earlier: the comments before these replies, newest first
     // (ChatNotify::earlier), shown smaller under the button for context.
-    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true, $message_id = '', $earlier = [] ) {
+    // $to: the address it goes to (the customer's when empty), $cc: the
+    // conversation's participants (ChatNotify::send decides both).
+    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true, $message_id = '', $earlier = [], $to = '', $cc = [] ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -269,6 +271,9 @@ class Mailer {
 
         $host    = wp_parse_url( home_url(), PHP_URL_HOST );
         $headers = [ "References: <chat-{$id}@{$host}>", "In-Reply-To: <chat-{$id}@{$host}>" ];
+        if ( $cc ) {
+            $headers[] = 'Cc: ' . implode( ', ', $cc );
+        }
         if ( $reply_address !== '' ) {
             $headers[] = 'Reply-To: ' . str_replace( [ '"', "\r", "\n" ], '', $site_name ) . " <{$reply_address}>";
         }
@@ -283,7 +288,7 @@ class Mailer {
             add_action( 'phpmailer_init', $set_id, 999 );
         }
         self::send_email_with_layout(
-            $user->user_email,
+            $to !== '' ? $to : $user->user_email,
             "[{$site_name}] {$topic}",
             $started ? "{$who} sent you a message" : ( count( $replies ) === 1 ? "{$who} replied" : "{$who} sent " . count( $replies ) . ' replies' ),
             $topic,

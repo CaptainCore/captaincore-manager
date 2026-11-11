@@ -276,6 +276,8 @@ class Chat {
 		$out      = [
 			'conversation' => self::present_conversation( $conversation, $operator ),
 			'messages'     => $messages,
+			// Others on the emails (ChatNotify participants).
+			'participants' => ChatNotify::participants( (int) $conversation->chat_conversation_id, $operator ),
 		];
 		if ( $operator ) {
 			// "Seen by <customer>" receipt.

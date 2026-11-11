@@ -144,6 +144,7 @@ return array(
     'CaptainCore\\ChatConversations' => $baseDir . '/app/ChatConversations.php',
     'CaptainCore\\ChatMessages' => $baseDir . '/app/ChatMessages.php',
     'CaptainCore\\ChatNotify' => $baseDir . '/app/ChatNotify.php',
+    'CaptainCore\\ChatParticipants' => $baseDir . '/app/ChatParticipants.php',
     'CaptainCore\\ChatPush' => $baseDir . '/app/ChatPush.php',
     'CaptainCore\\ChatRelay' => $baseDir . '/app/ChatRelay.php',
     'CaptainCore\\ComponentQueueCLI' => $baseDir . '/app/ComponentQueueCLI.php',

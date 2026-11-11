@@ -11816,6 +11816,18 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Others on a conversation's emails (ChatNotify::set_participant).
+	// Operators only: { email, status: active|removed, name }.
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/participants', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return CaptainCore\ChatNotify::set_participant( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/messages', [
 			'methods'             => 'POST',

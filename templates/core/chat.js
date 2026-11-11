@@ -415,6 +415,7 @@ Object.assign(Component.prototype, {
       items.push({ label: 'New message to ' + first, act: () => this.chatNewTo(x) });
     }
     if (x.customer_email) items.push({ label: 'Copy email', act: () => this.ctxCopy(x.customer_email, 'email') });
+    if (!open && x.customer_user_id) items.push({ label: 'Cc someone on the emails…', act: () => this.chatCcStart() });
     items.push({ label: 'Copy link', act: () => this.ctxCopy(this.chatLink(x.id), 'link') });
     this.openCtxMenu(e, items);
   },
@@ -618,6 +619,8 @@ Object.assign(Component.prototype, {
       const lr = c.list.find(x => x.id === ev.conversation_id);
       if (lr) lr.draft = ev.draft ? ev.draft.kind : '';
       if (cb.operator && c.conv && c.conv.conversation.id === ev.conversation_id) this.chatDraftSync(ev.draft || null, c.conv.draft);
+    } else if (ev.type === 'participants.updated') {
+      if (c.conv && c.conv.conversation.id === ev.conversation_id) this.chatLoadConv(ev.conversation_id, true);
     } else if (ev.type === 'message.updated') {
       if (ev.conversation) this.chatMergeConv(ev.conversation);
       if (ev.message) this.chatAfterEdit(ev.message);
@@ -1092,7 +1095,7 @@ Object.assign(Component.prototype, {
     if (conv.source === 'intercom') out += '<div class="ccc-imported">Imported from Intercom. Replies here continue the same conversation.</div>';
     // A customer message without its own picture (imported, guest) uses the
     // conversation's customer.
-    const avatarOf = m => m.author_avatar || (m.author_kind === 'customer' ? conv.customer_avatar : '') || '';
+    const avatarOf = m => m.author_avatar || (m.author_kind === 'customer' && !this.chatFromOther(m) ? conv.customer_avatar : '') || '';
     // The text, or the inline editor while this message is being edited.
     const body = (m, cls) => c.edit && c.edit.id === m.id ? this.chatEditHtml() : (m.body ? '<div class="' + cls + '">' + this.chatText(m.body) + '</div>' : '');
     // "edited": operators open the earlier versions from it.
@@ -1122,8 +1125,8 @@ Object.assign(Component.prototype, {
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span>' + edited(m) + '</div>') +
           body(m, 'ccc-mb') + (cont && m.edited_at ? '<div class="ccc-edline">' + edited(m) + '</div>' : '') + this.chatLogsHtml(m) + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatEditBtn(m) + this.chatReactBtn(m) + '</div>';
       } else {
-        const me = m.author_kind === 'customer';
-        const cont = prev && prev.author_kind === m.author_kind && m.created_at - prev.created_at < 300;
+        const me = m.author_kind === 'customer' && !this.chatFromOther(m);
+        const cont = prev && prev.author_kind === m.author_kind && this.chatFromOther(prev) === this.chatFromOther(m) && m.created_at - prev.created_at < 300;
         out += '<div data-mid="' + m.id + '" class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
           (me ? this.chatEditBtn(m) + this.chatReactBtn(m) : '') +
@@ -1639,6 +1642,100 @@ Object.assign(Component.prototype, {
     };
   },
 
+  // ── others on the emails ──────────────────────────────────────────────
+  // ChatNotify participants: people Cc'd on the reply emails, whose email
+  // replies post here. Suggested from the customer's own Cc, added by an
+  // operator. Operators manage them in the bar under the header.
+
+  chatCcVals() {
+    const c = this._chat;
+    const conv = c && c.conv && c.conv.conversation;
+    if (!conv || !this.chatBoot().operator || !conv.customer_user_id) return { chatCcShow: false, chatCcActive: [], chatCcSuggested: [] };
+    const list = c.conv.participants || [];
+    const active = list.filter(p => p.status === 'active');
+    const adding = c.ccAdding === conv.id;
+    const label = p => p.name ? p.name : p.email;
+    const first = String(conv.customer_name || 'the customer').split(' ')[0];
+    return {
+      chatCcShow: list.length > 0 || adding,
+      chatCcHasActive: active.length > 0,
+      chatCcActive: active.map(p => ({
+        label: label(p), title: (p.name ? p.name + ' <' + p.email + '>' : p.email) + '. Cc\'d on every reply email; their email replies post here.',
+        removeTitle: 'Stop emailing ' + p.email,
+        remove: () => this.chatCcSet(p.email, 'removed')
+      })),
+      chatCcSuggested: list.filter(p => p.status === 'suggested').map(p => ({
+        text: label(p) + ' was on ' + first + '’s email',
+        title: p.email + ' was on the To or Cc of an email ' + first + ' sent. Add to Cc them on the reply emails and post their replies here.',
+        add: () => this.chatCcSet(p.email, 'active', p.name),
+        dismiss: () => this.chatCcSet(p.email, 'removed')
+      })),
+      chatCcAdding: adding,
+      chatCcCanAdd: !adding && active.length < 10,
+      chatCcDraft: c.ccDraft || '',
+      chatCcInput: e => { c.ccDraft = e.target.value; this.setState({}); },
+      chatCcKey: e => {
+        if (e.key === 'Enter') { e.preventDefault(); this.chatCcAdd(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.chatCcCancel(); }
+      },
+      chatCcRef: el => { if (el && c.ccFocus) { c.ccFocus = false; el.focus(); } },
+      chatCcStart: () => this.chatCcStart(),
+      chatCcSave: () => this.chatCcAdd(),
+      chatCcCancel: () => this.chatCcCancel()
+    };
+  },
+
+  chatCcStart() {
+    const c = this._chat;
+    if (!c || !c.conv) return;
+    c.ccAdding = c.conv.conversation.id;
+    c.ccDraft = '';
+    c.ccFocus = true;
+    this.setState({});
+  },
+
+  chatCcCancel() {
+    const c = this._chat;
+    c.ccAdding = 0;
+    c.ccDraft = '';
+    this.setState({});
+  },
+
+  // "Name <email>" or a bare address.
+  chatCcAdd() {
+    const c = this._chat;
+    const raw = String(c.ccDraft || '').trim();
+    const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^<>\s]+@[^<>\s]+)>\s*$/);
+    const email = (m ? m[2] : raw).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.toast('Type an email address, like name@example.com.', { kind: 'info' }); return; }
+    this.chatCcSet(email, 'active', m ? m[1].trim() : '').then(ok => { if (ok) this.chatCcCancel(); });
+  },
+
+  chatCcSet(email, status, name) {
+    const c = this._chat;
+    const id = c.conv && c.conv.conversation.id;
+    if (!id) return Promise.resolve(false);
+    const body = { email, status };
+    if (name) body.name = name;
+    return this.api('/chat/conversations/' + id + '/participants', { method: 'POST', body }).then(r => {
+      if (!r || r.code || !r.participants) throw new Error((r && r.message) || 'Could not change who is emailed');
+      if (c.conv && c.conv.conversation.id === id) c.conv.participants = r.participants;
+      this.setState({});
+      if (status === 'active') this.toast(email + ' is Cc\'d on the reply emails from now on.');
+      return true;
+    }).catch(err => {
+      this.toast(err && err.message && err.message !== 'auth' ? err.message : 'Could not change who is emailed', { kind: 'error' });
+      return false;
+    });
+  },
+
+  // A message from a participant: by email, from someone with no login,
+  // on a conversation that belongs to a customer.
+  chatFromOther(m) {
+    const conv = this._chat.conv && this._chat.conv.conversation;
+    return !!(conv && conv.customer_user_id && m.author_kind === 'customer' && m.via === 'email' && !m.author_user_id);
+  },
+
   // ── edits ─────────────────────────────────────────────────────────────
   // Same rules as Chat::can_edit. The server keeps each replaced version
   // (Chat::revisions); operators read them from the "edited" label.
@@ -2052,6 +2149,7 @@ Object.assign(Component.prototype, {
       chatThreadRef: el => this.chatThreadRef(el),
       chatInputRef: el => this.chatInputRef(el),
       ...this.chatDraftVals(),
+      ...this.chatCcVals(),
       chatModes: isOp ? [['reply', 'Reply'], ['note', 'Internal note']].map(([v, l]) => ({
         label: l, go: () => { this._chatFocus = true; this.setState({ chatMode: v }); },
         bg: (s.chatMode || 'reply') === v ? (v === 'note' ? 'var(--ccc-note)' : 'var(--panel-2)') : 'transparent',
@@ -2148,7 +2246,7 @@ Object.assign(Component.prototype, {
       supNoneTitle: c.filter === 'open' ? 'Nothing open right now' : c.filter === 'closed' ? 'Nothing resolved yet' : 'No conversations yet',
       supNoneText: c.filter === 'all' ? 'Ask about a site, billing or anything else. Every conversation stays here, including replies you send by email.' : 'Start a new conversation, or look under All for past ones.',
       supLetter: conv ? (String(conv.subject || '?').trim().charAt(0).toUpperCase() || '?') : '', supLetterBg: conv ? this.chatColor(conv.subject || String(conv.id)) : '',
-      supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? 'you' : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies'].join(' · ') : '',
+      supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? 'you' : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies', ...(c.conv && (c.conv.participants || []).length ? ['Replies also emailed to ' + c.conv.participants.map(p => p.name || p.email).join(', ')] : [])].join(' · ') : '',
       supCanResolve: !!(conv && conv.status !== 'closed'),
       supHint: conv && conv.status === 'closed' ? 'This conversation is resolved. Replying reopens it.' : 'Enter sends, Shift+Enter for a new line.' + (c.online ? '' : ' If you leave, we’ll reply by email.'),
       supStarted: conv ? fullDate(conv.created_at) : '', supLast: conv ? fullDate(conv.last_message_at) : '',

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 76;
+    const REQUIRED_VERSION = 77;
 
     private static function _table() {
         global $wpdb;
@@ -1696,6 +1696,29 @@ class DB {
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v77: people besides the customer on a conversation's emails
+        // (ChatNotify participants). 'suggested' when they were on the To
+        // or Cc of an email the customer sent in, 'active' once an operator
+        // adds them (they are then Cc'd on reply emails and their replies
+        // post as messages), 'removed' after that, which also stops them
+        // being suggested again. notified_message_id: the last reply
+        // emailed to them.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_participants` (
+            chat_participant_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            email varchar(190) NOT NULL,
+            name varchar(255) NOT NULL DEFAULT '',
+            status varchar(12) NOT NULL DEFAULT 'suggested',
+            added_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            notified_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (chat_participant_id),
+        UNIQUE KEY conversation_email (chat_conversation_id,email)
         ) $charset_collate;";
 
         dbDelta($sql);
