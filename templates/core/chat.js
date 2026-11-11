@@ -1473,10 +1473,13 @@ Object.assign(Component.prototype, {
     pick.className = 'ccc-lpick';
     pick.setAttribute('role', 'dialog');
     pick.setAttribute('aria-label', 'Link a CaptainCore log');
-    pick.innerHTML = '<div class="ccc-lpick-head"><b>Link a log</b><select aria-label="Site"></select></div>' +
-      '<input type="search" placeholder="Search this site’s logs" aria-label="Search logs"><div class="ccc-lpick-list" role="listbox"><div class="ccc-lpick-none">Loading…</div></div>';
+    pick.innerHTML = '<div class="ccc-lpick-head"><b>Link a log</b><div class="ccc-lpick-site">' +
+      '<input class="ccc-lpick-sitein" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ccc-lpick-sites" aria-label="Site" placeholder="Find a site" autocomplete="off" spellcheck="false">' +
+      '<div class="ccc-lpick-sites" id="ccc-lpick-sites" role="listbox" hidden></div></div></div>' +
+      '<input class="ccc-lpick-q" type="search" placeholder="Search this site’s logs" aria-label="Search logs"><div class="ccc-lpick-list" role="listbox"><div class="ccc-lpick-none">Loading…</div></div>';
     document.body.appendChild(pick);
-    const sel = pick.querySelector('select'), input = pick.querySelector('input'), list = pick.querySelector('.ccc-lpick-list');
+    const siteIn = pick.querySelector('.ccc-lpick-sitein'), siteList = pick.querySelector('.ccc-lpick-sites');
+    const input = pick.querySelector('.ccc-lpick-q'), list = pick.querySelector('.ccc-lpick-list');
     const place = () => {
       const r = (btn && btn.getBoundingClientRect && btn.offsetParent !== null) ? btn.getBoundingClientRect() : { left: window.innerWidth / 2 - 220, top: window.innerHeight - 80 };
       const w = pick.offsetWidth, h = pick.offsetHeight;
@@ -1507,17 +1510,75 @@ Object.assign(Component.prototype, {
         if (n !== seq) return;
         if (!r || r.code) throw new Error((r && r.message) || 'Could not load logs');
         data = r;
-        sel.innerHTML = r.sites.map(st => '<option value="' + st.id + '"' + (st.id === r.site_id ? ' selected' : '') + '>' + esc(st.name + (st.customer ? '' : ' (not theirs)')) + '</option>').join('') + '<option value="other">Other site…</option>';
+        if (document.activeElement !== siteIn) siteIn.value = siteName();
         render();
       }).catch(e => { if (n === seq) { list.innerHTML = '<div class="ccc-lpick-none">' + esc(e && e.message !== 'auth' ? e.message : 'Could not load logs') + '</div>'; place(); } });
     };
-    sel.addEventListener('change', () => {
-      if (sel.value === 'other') {
-        const v = window.prompt('Site ID to pick a log from (it can only go in a note unless the customer can access it):');
-        if (v && /^\d+$/.test(v.trim())) load(+v.trim()); else if (data) sel.value = String(data.site_id);
-        return;
-      }
-      load(+sel.value);
+    // The site: type to search the customer's sites first, then the rest
+    // of the fleet by name, domain or site ID. Another customer's site can
+    // only go in a note unless this customer can access it.
+    const siteName = () => {
+      const st = data && data.sites.find(x => x.id === data.site_id);
+      if (st) return st.name;
+      const f = data && data.site_id && (this.FLEET || []).find(x => +x.id === data.site_id);
+      return f ? f.name : '';
+    };
+    // typed: whether the box holds a search yet; on focus it still shows
+    // the current site's name, and the list shows every customer site.
+    let opts = [], hi = 0, typed = false;
+    const siteOpts = () => {
+      const q = typed ? siteIn.value.trim().toLowerCase() : '';
+      const hit = (name, id) => !q || String(name || '').toLowerCase().includes(q) || String(id) === q;
+      const own = (data ? data.sites : []).filter(st => hit(st.name, st.id)).map(st => ({ id: st.id, name: st.name, sub: st.customer ? 'Customer’s site' : 'Not theirs', theirs: !!st.customer }));
+      const seen = new Set(own.map(o => o.id));
+      const rest = q ? (this.FLEET || []).filter(f => !f.removed && !seen.has(+f.id) && hit(f.name, f.id))
+        .sort((a, b) => (a.name.toLowerCase().startsWith(q) ? 0 : 1) - (b.name.toLowerCase().startsWith(q) ? 0 : 1) || a.name.localeCompare(b.name))
+        .slice(0, 8).map(f => ({ id: +f.id, name: f.name, sub: 'Not theirs' + (f.account ? ' · ' + f.account : ''), theirs: false })) : [];
+      return own.concat(rest);
+    };
+    const drawSites = () => {
+      opts = siteOpts();
+      hi = Math.max(0, Math.min(hi, opts.length - 1));
+      siteList.innerHTML = opts.length ? opts.map((o, i) => '<div role="option" class="ccc-lpick-opt' + (o.theirs ? '' : ' ccc-lpick-other') + '" id="ccc-lpick-o' + i + '" data-site="' + o.id + '" aria-selected="' + (i === hi) + '">' +
+        '<span class="ccc-lpick-t">' + esc(o.name) + (data && o.id === data.site_id ? ' <em>Current</em>' : '') + '</span><span class="ccc-lpick-s">' + esc(o.sub) + '</span></div>').join('')
+        : '<div class="ccc-lpick-none">' + (typed && siteIn.value.trim() ? 'No sites match.' : 'The customer has no sites. Type to search all sites.') + '</div>';
+      siteList.hidden = false;
+      siteIn.setAttribute('aria-expanded', 'true');
+      siteIn.setAttribute('aria-activedescendant', opts.length ? 'ccc-lpick-o' + hi : '');
+      const cur = siteList.querySelector('[aria-selected="true"]');
+      if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
+    };
+    const shutSites = restore => {
+      siteList.hidden = true;
+      siteIn.setAttribute('aria-expanded', 'false');
+      siteIn.removeAttribute('aria-activedescendant');
+      if (restore) siteIn.value = siteName();
+    };
+    const pickSite = o => {
+      if (!o) return;
+      siteIn.value = o.name;
+      shutSites(false);
+      input.value = '';
+      if (!data || o.id !== data.site_id) { list.innerHTML = '<div class="ccc-lpick-none">Loading…</div>'; load(o.id); }
+      input.focus();
+    };
+    siteIn.addEventListener('focus', () => { typed = false; hi = Math.max(0, siteOpts().findIndex(o => data && o.id === data.site_id)); siteIn.select(); drawSites(); });
+    siteIn.addEventListener('input', () => { typed = true; hi = 0; drawSites(); });
+    siteIn.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== siteIn) shutSites(true); }, 120));
+    siteIn.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (siteList.hidden) { drawSites(); return; }
+        hi = (hi + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % (opts.length || 1);
+        drawSites();
+      } else if (e.key === 'Enter') { e.preventDefault(); pickSite(opts[hi]); }
+      else if (e.key === 'Tab' && !siteList.hidden && typed && opts[hi]) { pickSite(opts[hi]); }
+    });
+    // mousedown, so the pick lands before the input's blur closes the list.
+    siteList.addEventListener('mousedown', e => {
+      const o = e.target.closest('[data-site]');
+      e.preventDefault();
+      if (o) pickSite(opts.find(x => x.id === +o.dataset.site));
     });
     input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load(data ? data.site_id : 0), 250); });
     list.addEventListener('click', e => {
@@ -1537,7 +1598,12 @@ Object.assign(Component.prototype, {
     });
     const close = () => { clearTimeout(timer); document.removeEventListener('mousedown', away, true); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', place); pick.remove(); this._chatLogPick = null; };
     const away = e => { if (!pick.contains(e.target) && !(btn && btn.contains(e.target))) close(); };
-    const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+    // Esc closes the site list first, then the picker.
+    const key = e => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); e.stopPropagation();
+      if (!siteList.hidden) { shutSites(true); input.focus(); } else close();
+    };
     document.addEventListener('mousedown', away, true);
     document.addEventListener('keydown', key, true);
     window.addEventListener('resize', place);

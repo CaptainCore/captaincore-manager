@@ -361,13 +361,19 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-log-foot a{color:var(--brand-ink);text-decoration:none}
 .ccc-log-foot a:hover,.ccc-log-foot button:hover{text-decoration:underline}
 .ccc-me .ccc-log{color:var(--ink)}
-.ccc-lpick{position:fixed;z-index:96;width:min(440px,calc(100vw - 16px));max-height:min(460px,calc(100vh - 100px));display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow);animation:ccfade .12s ease;overflow:hidden}
+.ccc-lpick{position:fixed;z-index:96;width:min(440px,calc(100vw - 16px));max-height:min(460px,calc(100vh - 100px));display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow);animation:ccfade .12s ease}
 .ccc-lpick-head{display:flex;align-items:center;gap:10px;padding:10px 12px 6px}
 .ccc-lpick-head b{flex:none;font:600 var(--fs-13) var(--sans)}
-.ccc-lpick-head select{flex:1;min-width:0;height:30px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 6px}
+.ccc-lpick-site{position:relative;flex:1;min-width:0}
+.ccc-lpick .ccc-lpick-sitein{display:block;box-sizing:border-box;width:100%;margin:0;height:30px;font-size:var(--fs-12);padding:0 26px 0 9px;background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center}
+.ccc-lpick-sites{position:absolute;z-index:2;top:calc(100% + 4px);left:0;right:0;max-height:260px;overflow:auto;border:1px solid var(--rule);border-radius:10px;background:var(--paper);box-shadow:var(--shadow);padding:4px}
+.ccc-lpick-opt{padding:6px 8px;border-radius:7px;cursor:pointer}
+.ccc-lpick-opt[aria-selected="true"]{background:color-mix(in srgb,var(--brand) 12%,transparent)}
+.ccc-lpick-opt:hover{background:var(--panel-2)}
+.ccc-lpick-other .ccc-lpick-s{color:color-mix(in srgb,var(--warn) 70%,var(--ink-dim))}
 .ccc-lpick input{margin:4px 12px 8px;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none}
 .ccc-lpick input:focus{border-color:var(--brand)}
-.ccc-lpick-list{overflow:auto;border-top:1px solid var(--rule)}
+.ccc-lpick-list{overflow:auto;border-top:1px solid var(--rule);border-radius:0 0 12px 12px}
 .ccc-lpick-row{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--rule);background:transparent;color:var(--ink);padding:9px 12px;cursor:pointer}
 .ccc-lpick-row:last-child{border-bottom:0}
 .ccc-lpick-row:hover,.ccc-lpick-row:focus-visible{background:var(--panel-2);outline:none}
