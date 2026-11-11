@@ -36,6 +36,9 @@ class ChatNotify {
 
 	const DELAY_ONLINE  = 600;
 	const DELAY_OFFLINE = 300;
+	const EARLIER_MAX   = 3;
+	const EARLIER_GAP   = 7 * DAY_IN_SECONDS;
+	const EARLIER_CHARS = 500;
 	const MARKER        = '##- Reply above this line -##';
 	const MAX_FILES     = 10;
 	const MAX_FILE_SIZE = 26214400; // Mailgun takes 25 MB per message
@@ -149,6 +152,42 @@ class ChatNotify {
 		) ) ?: [];
 	}
 
+	/**
+	 * Context for the email: the public comments before $first, newest
+	 * first. Up to EARLIER_MAX, stopping at a gap of more than EARLIER_GAP
+	 * (a gap usually means a new topic). The customer's latest message
+	 * always comes along, since it is what the reply answers. Notes and
+	 * events never do.
+	 */
+	private static function earlier( $conversation_id, $first ) {
+		global $wpdb;
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $m WHERE chat_conversation_id = %d AND chat_message_id < %d AND kind = 'comment' AND internal = 0
+			ORDER BY chat_message_id DESC LIMIT 50",
+			$conversation_id, (int) $first->chat_message_id
+		) ) ?: [];
+		$out  = [];
+		$prev = strtotime( $first->created_at . ' UTC' );
+		foreach ( $rows as $r ) {
+			$at = strtotime( $r->created_at . ' UTC' );
+			if ( count( $out ) >= self::EARLIER_MAX || $prev - $at > self::EARLIER_GAP ) {
+				break;
+			}
+			$out[] = $r;
+			$prev  = $at;
+		}
+		if ( ! array_filter( $out, fn( $r ) => $r->author_kind === 'customer' ) ) {
+			foreach ( $rows as $r ) {
+				if ( $r->author_kind === 'customer' ) {
+					$out[] = $r;
+					break;
+				}
+			}
+		}
+		return $out;
+	}
+
 	/** Send every email that is due. Cron runs it each minute; chat requests nudge it too. */
 	public static function run_due( $limit = 20 ) {
 		global $wpdb;
@@ -190,8 +229,9 @@ class ChatNotify {
 		$last = (int) end( $replies )->chat_message_id;
 		ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
 
-		$files = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, $replies ) );
-		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ) );
+		$earlier = self::earlier( (int) $conversation_id, $replies[0] );
+		$files   = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, array_merge( $replies, $earlier ) ) );
+		Mailer::send_chat_replies( $user, $conversation, $replies, $files, self::reply_address( $conversation_id ), Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ), $earlier );
 
 		$event = Chat::append( (int) $conversation_id, [
 			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',

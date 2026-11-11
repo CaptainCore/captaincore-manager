@@ -170,7 +170,9 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     // $can_open: chat is on for the customer, so the email links to the
     // conversation. Without it, replying to the email is the way back.
-    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true, $message_id = '' ) {
+    // $earlier: the comments before these replies, newest first
+    // (ChatNotify::earlier), shown smaller under the button for context.
+    static public function send_chat_replies( $user, $conversation, $replies, $files, $reply_address, $can_open = true, $message_id = '', $earlier = [] ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_name   = get_bloginfo( 'name' );
@@ -226,6 +228,35 @@ class Mailer {
             <div style='text-align: center;'>
                 <a href='{$link}' style='display: inline-block; background-color: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 24px; border-radius: 8px;'>Open conversation</a>
             </div>" : '';
+        $history = '';
+        foreach ( $earlier as $r ) {
+            $text  = trim( (string) $r->body );
+            $cut   = mb_strlen( $text ) > \CaptainCore\ChatNotify::EARLIER_CHARS;
+            if ( $cut ) {
+                $text = mb_substr( $text, 0, \CaptainCore\ChatNotify::EARLIER_CHARS );
+                $text = preg_replace( '/\s+\S*$/u', '', $text ) . '…';
+            }
+            $name  = (string) $r->author_name !== '' ? (string) $r->author_name : ( $r->author_kind === 'customer' ? (string) $user->display_name : $site_name );
+            $when  = esc_html( wp_date( 'M j, g:i a', strtotime( $r->created_at . ' UTC' ) ) );
+            $more  = $cut && $can_open ? " <a href='{$link}' style='color: {$brand_color};'>Read the rest</a>" : '';
+            $chips = '';
+            foreach ( $files[ (int) $r->chat_message_id ] ?? [] as $f ) {
+                $chips .= "<div style='margin-top: 6px; font-size: 12px; color: #666D7A;'>&#128206; " . esc_html( $f['name'] ) . "</div>";
+            }
+            $history .= "
+                <div style='margin-bottom: 14px; padding: 2px 0 2px 14px; border-left: 3px solid #E3E7EE; text-align: left;'>
+                    <div style='font-size: 12px; color: #666D7A; margin-bottom: 4px;'><strong style='color: #565C66;'>" . esc_html( $name ) . "</strong> &middot; {$when}</div>
+                    <div style='font-size: 14px; line-height: 1.5; color: #565C66;'>" . ( $text !== '' ? \CaptainCore\Chat::markdown_html( $text ) : '' ) . "{$more}</div>
+                    {$chips}
+                </div>";
+        }
+        if ( $history !== '' ) {
+            $history = "
+            <div style='margin-top: 32px; padding-top: 20px; border-top: 1px solid #E3E7EE;'>
+                <div style='font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #A3ACB9; text-align: left; margin-bottom: 14px;'>Earlier in this conversation</div>
+                {$history}
+            </div>";
+        }
         // A conversation an operator started: nothing from the customer yet.
         $started = empty( $conversation->last_customer_at ) && ! (int) $conversation->notified_message_id;
 
@@ -233,7 +264,8 @@ class Mailer {
             <div style='font-size: 11px; color: #A3ACB9; text-align: center; margin: -20px 0 20px;'>" . esc_html( \CaptainCore\ChatNotify::MARKER ) . "</div>
             {$items}
             <p style='margin: 24px 0 18px; font-size: 14px; color: #666D7A; text-align: center;'>{$how}</p>
-            {$button}";
+            {$button}
+            {$history}";
 
         $host    = wp_parse_url( home_url(), PHP_URL_HOST );
         $headers = [ "References: <chat-{$id}@{$host}>", "In-Reply-To: <chat-{$id}@{$host}>" ];
