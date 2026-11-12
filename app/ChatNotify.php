@@ -448,6 +448,53 @@ class ChatNotify {
 		return $new;
 	}
 
+	/**
+	 * Suggestions from imported history (ChatCLI::import_intercom): people
+	 * who were on a conversation's emails or added to it in Intercom. Same
+	 * rules as suggest(): never the customer, our own addresses or staff;
+	 * an existing row (active, suggested or removed) is left alone. Also
+	 * skips this site's own domain and $skip (lowercase addresses). Guest
+	 * conversations take none. Returns how many were added.
+	 *
+	 * @param array $people email => name
+	 */
+	public static function suggest_imported( $conversation, array $people, array $skip = [] ) {
+		global $wpdb;
+		if ( ! $conversation || (int) $conversation->user_id <= 0 ) {
+			return 0;
+		}
+		$own   = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		$own   = preg_replace( '/^www\./', '', $own );
+		$skip  = array_flip( $skip );
+		$found = [];
+		foreach ( $people as $email => $name ) {
+			$email = strtolower( trim( (string) $email ) );
+			if ( ! is_email( $email ) || isset( $skip[ $email ] ) || isset( $found[ $email ] ) ) {
+				continue;
+			}
+			$domain = substr( strrchr( $email, '@' ), 1 );
+			if ( ( $own !== '' && ( $domain === $own || substr( $domain, -strlen( '.' . $own ) ) === '.' . $own ) ) || strpos( $domain, 'intercom' ) !== false ) {
+				continue;
+			}
+			if ( self::not_addable( $conversation, $email ) !== '' ) {
+				continue;
+			}
+			$found[ $email ] = self::display_name( (string) $name );
+		}
+		$p     = $wpdb->base_prefix . 'captaincore_chat_participants';
+		$have  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $p WHERE chat_conversation_id = %d", (int) $conversation->chat_conversation_id ) );
+		$now   = gmdate( 'Y-m-d H:i:s' );
+		$added = 0;
+		foreach ( array_slice( $found, 0, max( 0, self::MAX_PARTICIPANTS - $have ), true ) as $email => $name ) {
+			$wpdb->query( $wpdb->prepare(
+				"INSERT IGNORE INTO $p (chat_conversation_id, email, name, status, created_at, updated_at) VALUES (%d, %s, %s, 'suggested', %s, %s)",
+				(int) $conversation->chat_conversation_id, $email, $name, $now, $now
+			) );
+			$added += (int) $wpdb->rows_affected;
+		}
+		return $added;
+	}
+
 	/** Tell anyone viewing the conversation to reload its participants. */
 	private static function emit_participants( $conversation ) {
 		do_action( 'captaincore_chat_event', [ 'type' => 'participants.updated', 'conversation_id' => (int) $conversation->chat_conversation_id ], (int) $conversation->user_id, false );

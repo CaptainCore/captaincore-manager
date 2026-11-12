@@ -1067,6 +1067,9 @@ class Chat {
 		if ( $operator ) {
 			$out['assignee_user_id'] = (int) $row->assignee_user_id ?: null;
 			$out['guest']            = (int) $row->user_id === 0;
+			// The page it started on (imported from Intercom), http/https only.
+			$url               = (string) ( $row->source_url ?? '' );
+			$out['source_url'] = preg_match( '#^https?://#i', $url ) ? $url : '';
 		}
 		return $out;
 	}

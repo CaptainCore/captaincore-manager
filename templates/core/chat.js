@@ -2317,6 +2317,9 @@ Object.assign(Component.prototype, {
       chatNoConv: !c.id && !c.newDraft, chatConvLoading: c.convLoading, chatHasErr: !!c.convErr, chatErr: c.convErr,
       chatHasConv: !!conv,
       chatSubject: conv ? conv.subject : '',
+      // The page it started on (Intercom recorded it): host + path, short.
+      chatSrcUrl: conv && /^https?:\/\//i.test(conv.source_url || '') ? conv.source_url : '',
+      chatSrcLabel: conv && conv.source_url ? (() => { try { const u = new URL(conv.source_url); const t = u.host + u.pathname.replace(/\/$/, ''); return t.length > 48 ? t.slice(0, 47) + '…' : t; } catch (e) { return ''; } })() : '',
       chatSub: conv ? [conv.customer_email || (conv.guest ? 'Guest' : ''), conv.source === 'intercom' ? 'Imported from Intercom' : 'Started in chat', 'Opened ' + this.chatAgo(conv.created_at) + ' ago'].filter(Boolean).join(' · ') : '',
       chatStatusLabel: conv ? statusChip(conv).label : '', chatStatusBg: conv ? statusChip(conv).bg : '', chatStatusFg: conv ? statusChip(conv).fg : '',
       chatActions: actions,

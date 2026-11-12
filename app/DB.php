@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 78;
+    const REQUIRED_VERSION = 79;
 
     private static function _table() {
         global $wpdb;
@@ -1529,6 +1529,8 @@ class DB {
         // conversation or part id for imported rows (idempotent re-runs).
         // v66: notify_after is when an unread operator reply gets emailed
         // (ChatNotify); notified_message_id is the last reply already sent.
+        // v79: source_url is the page the conversation started on (Intercom
+        // records it; http/https only), shown to operators.
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_conversations` (
             chat_conversation_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
@@ -1548,6 +1550,7 @@ class DB {
             external_id varchar(64) NOT NULL DEFAULT '',
             notify_after datetime DEFAULT NULL,
             notified_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            source_url varchar(500) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_conversation_id),

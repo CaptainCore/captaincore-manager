@@ -123,7 +123,38 @@ class ChatCLI {
 			}
 		}
 		$progress && $progress->finish();
+		if ( ! $this->dry_run ) {
+			$this->relink_intercom_notes();
+		}
 		$this->print_report();
+	}
+
+	/**
+	 * Intercom's notes point at app.intercom.com, which stops working once
+	 * Intercom is cancelled. Point them at the same conversation in chat
+	 * when it was imported (either side of it may arrive in a later run).
+	 */
+	private function relink_intercom_notes() {
+		global $wpdb;
+		$m      = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$c      = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$config = Configurations::get();
+		$base   = isset( $config->path ) ? trim( (string) $config->path, '/' ) : 'account';
+		$rows   = $wpdb->get_results( "SELECT chat_message_id, body FROM $m WHERE kind = 'note' AND author_user_id = 0 AND author_name = 'Intercom' AND body LIKE '%app.intercom.com/%'" );
+		$fixed  = 0;
+		foreach ( $rows ?: [] as $row ) {
+			$body = preg_replace_callback( '#https://app\.intercom\.com/a/apps/[^/\s)]+/conversations/(\d+)[^\s)]*#', function ( $mm ) use ( $wpdb, $c, $base ) {
+				$id = $wpdb->get_var( $wpdb->prepare( "SELECT chat_conversation_id FROM $c WHERE source = 'intercom' AND external_id = %s", $mm[1] ) );
+				return $id ? home_url( '/' . ( $base !== '' ? $base . '/' : '' ) . 'chat/' . (int) $id ) : $mm[0];
+			}, (string) $row->body );
+			if ( $body !== $row->body ) {
+				ChatMessages::update( [ 'body' => $body ], [ 'chat_message_id' => (int) $row->chat_message_id ] );
+				$fixed++;
+			}
+		}
+		if ( $fixed ) {
+			\WP_CLI::log( "Pointed $fixed Intercom note(s) at the conversations in chat." );
+		}
 	}
 
 	/**
@@ -189,12 +220,17 @@ class ChatCLI {
 
 	/** One record per conversation: the row, its parts, its downloaded files. */
 	private function records_from_sqlite( $only ) {
+		// Columns added by later intercom-cli versions, read when present.
+		$conv_cols = $this->db->query( 'PRAGMA table_info(conversations)' )->fetchAll( \PDO::FETCH_COLUMN, 1 );
+		$part_cols = $this->db->query( 'PRAGMA table_info(conversation_parts)' )->fetchAll( \PDO::FETCH_COLUMN, 1 );
+		$extra     = array_intersect( [ 'admin_assignee_id', 'source_url', 'source_recipients' ], $conv_cols );
 		$sql = 'SELECT id, title, state, contact_ids, source_type, source_author_type, source_author_id, source_body,
-			snoozed_until, created_at, updated_at, detail_version FROM conversations';
+			snoozed_until, created_at, updated_at, detail_version' . ( $extra ? ', ' . implode( ', ', $extra ) : '' ) . ' FROM conversations';
 		$sql .= $only !== null ? ' WHERE id = ?' : '';
 		$stmt = $this->db->prepare( $sql . ' ORDER BY created_at ASC' );
 		$stmt->execute( $only !== null ? [ $only ] : [] );
-		$parts = $this->db->prepare( 'SELECT id, part_type, body, author_type, author_id, author_name, author_email, created_at
+		$parts = $this->db->prepare( 'SELECT id, part_type, body, author_type, author_id, author_name, author_email, created_at' .
+			( in_array( 'email_headers', $part_cols, true ) ? ', email_headers' : '' ) . '
 			FROM conversation_parts WHERE conversation_id = ? ORDER BY created_at ASC, CAST(id AS INTEGER) ASC' );
 		$files = $this->db->prepare( "SELECT part_id, kind, position, name, content_type, sha256, local_path
 			FROM attachments WHERE conversation_id = ? AND status = 'ok' ORDER BY part_id, kind, position" );
@@ -230,7 +266,7 @@ class ChatCLI {
 		$ic   = $record['conversation'];
 		$year = $ic['created_at'] ? gmdate( 'Y', (int) $ic['created_at'] ) : '?';
 		$y    = &$this->report['years'][ $year ];
-		$y    = ( $y ?? [] ) + [ 'intercom' => 0, 'pending' => 0, 'new' => 0, 'updated' => 0, 'messages' => 0, 'notes' => 0, 'events' => 0, 'files' => 0, 'guest' => 0 ];
+		$y    = ( $y ?? [] ) + [ 'intercom' => 0, 'pending' => 0, 'new' => 0, 'updated' => 0, 'messages' => 0, 'notes' => 0, 'events' => 0, 'files' => 0, 'email' => 0, 'cc' => 0, 'guest' => 0 ];
 		$y['intercom']++;
 		if ( (int) $ic['detail_version'] < 2 ) {
 			$y['pending']++;
@@ -291,6 +327,8 @@ class ChatCLI {
 			'last_message_at'  => $times['last_message_at'],
 			'source'           => 'intercom',
 			'external_id'      => (string) $ic['id'],
+			'assignee_user_id' => ! empty( $ic['admin_assignee_id'] ) ? $this->operator_user( $ic['admin_assignee_id'] ) : 0,
+			'source_url'       => $this->clean_url( $ic['source_url'] ?? '' ),
 			'created_at'       => gmdate( 'Y-m-d H:i:s', (int) $ic['created_at'] ),
 			'updated_at'       => gmdate( 'Y-m-d H:i:s', (int) ( $ic['updated_at'] ?: $ic['created_at'] ) ),
 		];
@@ -309,6 +347,15 @@ class ChatCLI {
 		$m       = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$touched = false;
 		if ( $existing ) {
+			// Filled only where still empty, never over what someone set here.
+			$fill = array_filter( [ 'assignee_user_id' => $fields['assignee_user_id'], 'source_url' => $fields['source_url'] ] );
+			unset( $fields['assignee_user_id'], $fields['source_url'] );
+			foreach ( $fill as $col => $val ) {
+				$wpdb->query( $wpdb->prepare(
+					"UPDATE $c SET $col = %s WHERE chat_conversation_id = %d AND ( $col = '' OR $col = '0' )",
+					(string) $val, (int) $existing->chat_conversation_id
+				) );
+			}
 			// Keep a user link someone made by hand; claim a guest thread
 			// whose email now has a user.
 			if ( (int) $existing->user_id > 0 && ! $user_id ) {
@@ -339,6 +386,14 @@ class ChatCLI {
 		$added = [];
 		foreach ( $messages as $msg ) {
 			if ( isset( $have[ $msg['external_id'] ] ) ) {
+				// Imported before this importer knew it came by email.
+				if ( $msg['via'] !== '' ) {
+					$wpdb->query( $wpdb->prepare(
+						"UPDATE $m SET via = %s, email_from = %s WHERE chat_conversation_id = %d AND external_id = %s AND via = ''",
+						$msg['via'], $msg['email_from'], $conversation_id, $msg['external_id']
+					) );
+					$y['email'] += (int) $wpdb->rows_affected;
+				}
 				continue;
 			}
 			$added[] = $msg;
@@ -351,8 +406,11 @@ class ChatCLI {
 				'author_name'          => mb_substr( $msg['author_name'], 0, 255 ),
 				'body'                 => $msg['body'],
 				'external_id'          => $msg['external_id'],
+				'via'                  => $msg['via'],
+				'email_from'           => mb_substr( $msg['email_from'], 0, 255 ),
 				'created_at'           => $msg['created_at'],
 			] );
+			$y['email'] += $msg['via'] === 'email' ? 1 : 0;
 			$y[ $msg['kind'] === 'note' ? 'notes' : ( $msg['kind'] === 'event' ? 'events' : 'messages' ) ]++;
 			foreach ( $msg['files'] as $file ) {
 				if ( $this->store_file( $conversation_id, $message_id, $file ) ) {
@@ -360,6 +418,7 @@ class ChatCLI {
 				}
 			}
 		}
+		$y['cc'] += ChatNotify::suggest_imported( ChatConversations::get( $conversation_id ), $this->people( $record, $contact_id ), $this->staff_emails() );
 		if ( $touched ) {
 			$this->catch_up( $conversation_id, $added );
 			return;
@@ -454,6 +513,7 @@ class ChatCLI {
 		$out    = [];
 		$source = [
 			'id'          => 'source-' . $ic['id'],
+			'email_headers' => null,
 			'part_type'   => 'comment',
 			'body'        => $ic['source_body'],
 			'author_type' => $ic['source_author_type'],
@@ -474,10 +534,23 @@ class ChatCLI {
 			$is_op  = $author === 'admin';
 			$name   = $this->author_name( $p, $is_op, $contact_id );
 			$when   = gmdate( 'Y-m-d H:i:s', (int) ( $p['created_at'] ?: $ic['created_at'] ) );
+			// Came in by email: the customer side's emailed parts (API 2.14
+			// headers), or the opening message of an email conversation.
+			$headers = $this->headers( $p['email_headers'] ?? null );
+			$emailed = ! $is_op && $human && ( $headers || ( $p['id'] === $source['id'] && $ic['source_type'] === 'email' ) );
+			$from    = $emailed ? ( $this->header_addresses( $headers, [ 'from' ] ) ?: [ '' => '' ] ) : [ '' => '' ];
 			$base   = [ 'external_id' => (string) $p['id'], 'created_at' => $when, 'author_name' => $name, 'files' => $pfiles,
-				'author_kind' => $is_op ? 'operator' : 'customer', 'author_user_id' => $is_op ? $this->operator_user( $p['author_id'] ) : $this->user_for_email( $this->contact_email( $p['author_id'] ) ) ];
+				'author_kind' => $is_op ? 'operator' : 'customer', 'author_user_id' => $is_op ? $this->operator_user( $p['author_id'] ) : $this->user_for_email( $this->contact_email( $p['author_id'] ) ),
+				'via' => $emailed ? 'email' : '', 'email_from' => $emailed ? (string) array_key_first( $from ) : '' ];
 
 			if ( ! $human ) {
+				// Intercom's own notes worth keeping: a reply that bounced, and
+				// a new email that belongs to (or started) another conversation.
+				if ( $author === 'bot' && in_array( $type, [ 'note', 'unknown_participant_for_email_conversation_note' ], true ) && $body !== '' ) {
+					$out[] = array_merge( $base, [ 'kind' => 'note', 'internal' => 1, 'author_kind' => 'operator', 'author_user_id' => 0,
+						'author_name' => 'Intercom', 'via' => '', 'email_from' => '', 'body' => $body ] );
+					continue;
+				}
 				$this->skip( $author === 'bot' ? 'bot' : "author:$author" );
 				continue;
 			}
@@ -534,6 +607,57 @@ class ChatCLI {
 		}
 		$c = $this->contacts[ $p['author_id'] ?: $contact_id ] ?? [];
 		return (string) ( $c['name'] ?: ( $c['email'] ?? 'Customer' ) );
+	}
+
+	/** Decoded email headers of a part ([{type, name, email_address}]), or []. */
+	private function headers( $json ) {
+		$h = is_string( $json ) && $json !== '' ? json_decode( $json, true ) : ( is_array( $json ) ? $json : [] );
+		return is_array( $h ) ? $h : [];
+	}
+
+	/** email => name for headers of the given types (from, to, cc, reply_to). */
+	private function header_addresses( array $headers, array $types ) {
+		$out = [];
+		foreach ( $headers as $h ) {
+			$email = strtolower( trim( (string) ( $h['email_address'] ?? $h['email'] ?? '' ) ) );
+			if ( in_array( strtolower( (string) ( $h['type'] ?? '' ) ), $types, true ) && is_email( $email ) && ! isset( $out[ $email ] ) ) {
+				$out[ $email ] = (string) ( $h['name'] ?? '' );
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Everyone besides the customer who was on the conversation in
+	 * Intercom: the other contacts on it, the To and Cc of every email in
+	 * it (and From of emails the customer side sent), and the opening
+	 * email's recipients. email => name; ChatNotify filters the rest.
+	 */
+	private function people( array $record, $contact_id ) {
+		$ic  = $record['conversation'];
+		$out = [];
+		foreach ( (array) json_decode( (string) $ic['contact_ids'], true ) as $cid ) {
+			if ( (string) $cid !== (string) $contact_id && ( $email = $this->contact_email( $cid ) ) !== '' ) {
+				$out[ $email ] = (string) ( $this->contacts[ $cid ]['name'] ?? '' );
+			}
+		}
+		$out += $this->header_addresses( $this->headers( $ic['source_recipients'] ?? null ), [ 'to', 'cc' ] );
+		foreach ( $record['parts'] as $p ) {
+			$types = ( $p['author_type'] ?? '' ) === 'admin' ? [ 'to', 'cc' ] : [ 'from', 'to', 'cc' ];
+			$out  += $this->header_addresses( $this->headers( $p['email_headers'] ?? null ), $types );
+		}
+		return $out;
+	}
+
+	/** Intercom teammates' addresses (never suggested as participants). */
+	private function staff_emails() {
+		return array_values( array_filter( array_map( fn( $a ) => strtolower( trim( (string) ( $a['email'] ?? '' ) ) ), $this->admins ) ) );
+	}
+
+	/** A page address worth keeping: http or https, at most 500 characters. */
+	private function clean_url( $url ) {
+		$url = trim( (string) $url );
+		return preg_match( '#^https?://[^\s]+$#i', $url ) && strlen( $url ) <= 500 ? $url : '';
 	}
 
 	private function contact_email( $contact_id ) {
@@ -613,7 +737,7 @@ class ChatCLI {
 		}
 		$rows[] = [ 'year' => 'total' ] + $tot;
 		\WP_CLI::log( '' );
-		\WP_CLI\Utils\format_items( 'table', $rows, [ 'year', 'intercom', 'pending', 'new', 'updated', 'messages', 'notes', 'events', 'files', 'guest' ] );
+		\WP_CLI\Utils\format_items( 'table', $rows, [ 'year', 'intercom', 'pending', 'new', 'updated', 'messages', 'notes', 'events', 'files', 'email', 'cc', 'guest' ] );
 		arsort( $this->report['skipped_parts'] );
 		\WP_CLI::log( 'Skipped parts: ' . ( $this->report['skipped_parts'] ? implode( ', ', array_map( fn( $k, $v ) => "$k $v", array_keys( $this->report['skipped_parts'] ), $this->report['skipped_parts'] ) ) : 'none' ) );
 		\WP_CLI::log( 'Guest contacts (no Manager user): ' . count( $this->report['guests'] ) );
