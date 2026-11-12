@@ -407,7 +407,9 @@ class Mailer {
             $mark_html = "<td style='padding: 0 11px 0 0; vertical-align: middle;'><a href='{$site_url}' target='_blank' style='text-decoration: none;'>{$mark_html}</a></td>";
         }
         return "<table role='presentation' border='0' cellpadding='0' cellspacing='0' align='center' style='margin: 0 auto;'><tr>{$mark_html}"
-            . "<td style='vertical-align: middle;'><a href='{$site_url}' target='_blank' class='cc-brand-name' style='font-family: \"Plus Jakarta Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; font-size: 23px; font-weight: 600; letter-spacing: -0.3px; color: #15181D; text-decoration: none;'>{$site_name}</a></td>"
+            // Plain text, not a link: Missive darkens text colours itself but
+            // leaves link colours alone, which kept the name dark on dark.
+            . "<td style='vertical-align: middle; font-size: 23px; font-weight: 600; letter-spacing: -0.3px;'><span class='cc-brand-name' style='color: #15181D;'>{$site_name}</span></td>"
             . "</tr></table>";
     }
 
