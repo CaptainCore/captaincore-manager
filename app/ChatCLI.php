@@ -64,9 +64,15 @@ class ChatCLI {
 	 * [--dry-run]
 	 * : Map everything and print the report without writing.
 	 *
+	 * [--restore]
+	 * : With --conversation: bring back what operators deleted from that
+	 * conversation (or the whole conversation) by importing it again from the
+	 * archive. Without it, deleted conversations and messages are skipped.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp captaincore chat import-intercom --dry-run
+	 *     wp captaincore chat import-intercom --conversation=12345 --restore
 	 *     wp captaincore chat import-intercom
 	 *     wp captaincore chat import-intercom --bundle=~/private/intercom-bundle.jsonl --files=~/private/intercom-files
 	 *
@@ -80,6 +86,20 @@ class ChatCLI {
 		$this->report    = [ 'years' => [], 'skipped_parts' => [], 'guests' => [], 'pending' => 0, 'files_missing' => 0 ];
 		$only            = isset( $assoc['conversation'] ) ? (string) $assoc['conversation'] : null;
 		$limit           = (int) ( $assoc['limit'] ?? 0 );
+		$this->report['deleted'] = 0;
+		$this->report['deleted_messages'] = 0;
+
+		if ( isset( $assoc['restore'] ) ) {
+			if ( $only === null ) {
+				\WP_CLI::error( '--restore needs --conversation=<Intercom id>, so only the one you mean comes back.' );
+			}
+			global $wpdb;
+			$cleared = $this->dry_run ? 0 : (int) $wpdb->query( $wpdb->prepare(
+				"DELETE FROM {$wpdb->base_prefix}captaincore_chat_deletions WHERE source = 'intercom' AND conversation_external_id = %s AND kind IN ('conversation','message')",
+				$only
+			) );
+			\WP_CLI::log( $this->dry_run ? 'Dry run: deletions left in place.' : "Cleared $cleared deletion record(s) for Intercom conversation $only." );
+		}
 
 		if ( ! empty( $assoc['bundle'] ) ) {
 			$records = $this->records_from_bundle( (string) $assoc['bundle'] );
@@ -218,6 +238,13 @@ class ChatCLI {
 			return;
 		}
 
+		// Operators deleted it (or some of its messages) here: leave those out.
+		$deleted = Chat::deleted_external( 'intercom', (string) $ic['id'] );
+		if ( $deleted['conversation'] ) {
+			$this->report['deleted']++;
+			return;
+		}
+
 		// The customer: who opened it, else the first contact on it.
 		$contact_id = in_array( $ic['source_author_type'], [ 'user', 'lead', 'contact' ], true )
 			? $ic['source_author_id']
@@ -237,6 +264,11 @@ class ChatCLI {
 		}
 
 		$messages = $this->map_messages( $record, $contact_id );
+		if ( $deleted['messages'] ) {
+			$before   = count( $messages );
+			$messages = array_values( array_filter( $messages, fn( $m ) => ! isset( $deleted['messages'][ $m['external_id'] ] ) ) );
+			$this->report['deleted_messages'] += $before - count( $messages );
+		}
 		$times    = $this->conversation_times( $messages, $ic );
 		$subject  = Chat::clean_line( (string) $ic['title'], Chat::MAX_SUBJECT );
 		if ( is_wp_error( $subject ) ) {
@@ -585,6 +617,9 @@ class ChatCLI {
 		arsort( $this->report['skipped_parts'] );
 		\WP_CLI::log( 'Skipped parts: ' . ( $this->report['skipped_parts'] ? implode( ', ', array_map( fn( $k, $v ) => "$k $v", array_keys( $this->report['skipped_parts'] ), $this->report['skipped_parts'] ) ) : 'none' ) );
 		\WP_CLI::log( 'Guest contacts (no Manager user): ' . count( $this->report['guests'] ) );
+		if ( ! empty( $this->report['deleted'] ) || ! empty( $this->report['deleted_messages'] ) ) {
+			\WP_CLI::log( sprintf( 'Left out because operators deleted them: %d conversation(s), %d message(s). --conversation=<id> --restore brings one back.', $this->report['deleted'] ?? 0, $this->report['deleted_messages'] ?? 0 ) );
+		}
 		if ( $this->report['files_missing'] ) {
 			\WP_CLI::warning( $this->report['files_missing'] . ' files were listed as downloaded but are missing on disk.' );
 		}

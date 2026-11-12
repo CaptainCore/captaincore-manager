@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 77;
+    const REQUIRED_VERSION = 78;
 
     private static function _table() {
         global $wpdb;
@@ -1719,6 +1719,30 @@ class DB {
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_participant_id),
         UNIQUE KEY conversation_email (chat_conversation_id,email)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v78: what operators deleted from chat (Chat::delete_*). A row per
+        // conversation, message, file or earlier version removed: who, when
+        // and a summary with no content (counts, dates, file type). For
+        // imported rows source + conversation_external_id + external_id
+        // keep `import-intercom` from bringing them back (--restore clears).
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_deletions` (
+            chat_deletion_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            kind varchar(12) NOT NULL,
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            chat_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            source varchar(20) NOT NULL DEFAULT '',
+            conversation_external_id varchar(64) NOT NULL DEFAULT '',
+            external_id varchar(64) NOT NULL DEFAULT '',
+            customer_user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            summary varchar(255) NOT NULL DEFAULT '',
+            deleted_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            deleted_at datetime NOT NULL,
+        PRIMARY KEY  (chat_deletion_id),
+        KEY source_conversation (source,conversation_external_id),
+        KEY chat_conversation_id (chat_conversation_id)
         ) $charset_collate;";
 
         dbDelta($sql);

@@ -417,7 +417,89 @@ Object.assign(Component.prototype, {
     if (x.customer_email) items.push({ label: 'Copy email', act: () => this.ctxCopy(x.customer_email, 'email') });
     if (!open && x.customer_user_id) items.push({ label: 'Cc someone on the emails…', act: () => this.chatCcStart() });
     items.push({ label: 'Copy link', act: () => this.ctxCopy(this.chatLink(x.id), 'link') });
+    items.push({ label: 'Delete conversation…', danger: true, act: () => this.chatDeleteConv(x) });
     this.openCtxMenu(e, items);
+  },
+
+  // ── deleting (operators; Chat::delete_*) ─────────────────────────────
+  // Gone for good. Every other screen hears it from the relay
+  // (conversation.deleted / message.deleted); this one from the answer.
+  async chatDeleteConv(x) {
+    const who = x.customer_name || x.customer_email || 'the customer';
+    const ok = await this.uiConfirm('Delete this conversation?\n\n“' + (x.subject || 'Conversation #' + x.id) + '” with ' + who +
+      ' goes for good: every message, note and file in it. The customer loses it from their Support page too.' +
+      (x.source === 'intercom' ? ' A later Intercom import leaves it out.' : '') + '\n\nThis cannot be undone.', { label: 'Delete' });
+    if (!ok) return;
+    this.api('/chat/conversations/' + x.id, { method: 'DELETE' }).then(r => {
+      if (!r || r.code) throw new Error(r && r.message);
+      this.chatDropConv(x.id);
+      this.toast('Conversation deleted', { kind: 'success' });
+    }).catch(e => this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not delete the conversation', { kind: 'error' }));
+  },
+
+  chatDropConv(id) {
+    const c = this._chat;
+    if (!c || !id) return;
+    c.list = c.list.filter(x => x.id !== id);
+    if (c.id === id) {
+      this.chatOpen(0);
+      if (!this.chatBoot().operator) this.setState({ chatWView: 'home' });
+    }
+    clearTimeout(c.countsTimer);
+    c.countsTimer = setTimeout(() => this.chatLoadList(true), 800);
+    this.setState({});
+  },
+
+  // A message, note or event gone: out of the thread, and the list row's
+  // preview and counts come fresh from the server.
+  chatDropMsg(msg) {
+    const c = this._chat;
+    if (!c || !msg || !msg.id) return;
+    if (c.conv && c.conv.conversation.id === msg.conversation_id) c.conv.messages = c.conv.messages.filter(x => x.id !== msg.id);
+    if (c.edit && c.edit.id === msg.id) c.edit = null;
+    if (msg.kind === 'comment') {
+      clearTimeout(c.countsTimer);
+      c.countsTimer = setTimeout(() => this.chatLoadList(true), 800);
+    }
+  },
+
+  async chatDeleteMsg(m) {
+    const c = this._chat;
+    const what = m.kind === 'note' ? 'note' : m.kind === 'event' ? 'event' : 'message';
+    const files = (m.attachments || []).length;
+    const ok = await this.uiConfirm('Delete this ' + what + '?\n\n' +
+      (m.kind === 'event' ? 'It comes out of the thread for good.' :
+        'It goes for good' + (files ? ', with its ' + (files === 1 ? 'file' : files + ' files') : '') + ', reactions and edit history.' +
+        (m.kind === 'comment' ? ' The customer stops seeing it too, though an email that already went out keeps it.' : '') +
+        ' A note in the thread records that a ' + what + ' was deleted, never what it said.') +
+      '\n\nThis cannot be undone.', { label: 'Delete' });
+    if (!ok) return;
+    this.api('/chat/messages/' + m.id, { method: 'DELETE' }).then(r => {
+      if (!r || r.code) throw new Error(r && r.message);
+      this.chatDropMsg({ id: m.id, conversation_id: m.conversation_id, kind: m.kind });
+      if (r.conversation) this.chatMergeConv(r.conversation);
+      (r.events || []).forEach(ev => this.chatOnMessage(ev));
+      this.toast(what[0].toUpperCase() + what.slice(1) + ' deleted', { kind: 'success' });
+      this.setState({});
+    }).catch(e => this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not delete the ' + what, { kind: 'error' }));
+  },
+
+  async chatDeleteFile(m, att) {
+    const only = (m.attachments || []).length === 1 && !String(m.body || '').trim() && !(m.logs || []).length;
+    const ok = await this.uiConfirm('Delete ' + (att.name ? '“' + att.name + '”' : 'this file') + '?\n\n' +
+      (only ? 'It is all this message holds, so the message goes with it. ' : 'The rest of the message stays. ') +
+      'Stored copies are removed for good; an email that already went out keeps it.\n\nThis cannot be undone.', { label: 'Delete' });
+    if (!ok) return;
+    this.api('/chat/attachments/' + att.id, { method: 'DELETE' }).then(r => {
+      if (!r || r.code) throw new Error(r && r.message);
+      if (r.deleted) {
+        this.chatDropMsg({ id: m.id, conversation_id: m.conversation_id, kind: m.kind });
+        if (r.conversation) this.chatMergeConv(r.conversation);
+      } else if (r.message) this.chatAfterEdit(r.message);
+      (r.events || []).forEach(ev => this.chatOnMessage(ev));
+      this.toast('File deleted', { kind: 'success' });
+      this.setState({});
+    }).catch(e => this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not delete the file', { kind: 'error' }));
   },
 
   // Operator Mark as read / unread from a row. The open conversation marks
@@ -485,7 +567,7 @@ Object.assign(Component.prototype, {
     const isOp = this.chatBoot().operator;
     const row = e.target.closest('[data-mid]');
     const m = row ? c.conv.messages.find(x => x.id === +row.dataset.mid) : null;
-    const items = [];
+    const items = [], tail = [];
     const sel = String((window.getSelection && window.getSelection()) || '').trim();
     if (sel && el.contains(window.getSelection().anchorNode)) items.push({ label: 'Copy selection', act: () => this.ctxCopy(sel, 'selection') });
     const vid = e.target.closest('.ccc-vid');
@@ -501,6 +583,9 @@ Object.assign(Component.prototype, {
       if (file.classList.contains('ccc-img')) items.push({ label: 'View image', act: () => this.chatMediaOpen(el, file) });
       items.push({ label: 'Open in new tab ↗', act: () => window.open(href, '_blank') });
       items.push({ label: 'Download', act: () => { window.location.href = href + (href.indexOf('?') > -1 ? '&' : '?') + 'download=1'; } });
+      const aid = +((String(href).match(/\/chat\/attachments\/(\d+)/) || [])[1] || 0);
+      const att = isOp && m && aid && (m.attachments || []).find(a => a.id === aid);
+      if (att) tail.push({ label: 'Delete file…', danger: true, act: () => this.chatDeleteFile(m, att) });
     } else if (link) {
       items.push({ label: 'Open link in new tab ↗', act: () => window.open(link.href, '_blank', 'noopener') });
       items.push({ label: 'Copy link address', act: () => this.ctxCopy(link.href, 'link') });
@@ -515,12 +600,13 @@ Object.assign(Component.prototype, {
       const orig = isOp && row.querySelector('details.ccc-orig');
       if (orig) items.push({ label: orig.open ? 'Hide original email' : 'Show original email', act: () => { orig.open = !orig.open; } });
       if (isOp && m.email_from) items.push({ label: 'Copy sender address', act: () => this.ctxCopy(m.email_from, 'address') });
+      if (isOp) tail.push({ label: m.kind === 'note' ? 'Delete note…' : m.kind === 'event' ? 'Delete event…' : 'Delete message…', danger: true, act: () => this.chatDeleteMsg(m) });
     }
     const logCard = e.target.closest('.ccc-log');
     if (logCard && logCard.dataset.url) items.push({ label: 'Open site timeline ↗', act: () => window.open(logCard.dataset.url, '_blank') });
     if (isOp && this.chatComposer()) items.push({ label: 'Link a log…', act: () => this.chatLogPicker(document.querySelector('[data-log-btn]')) });
     items.push({ label: 'Copy link to conversation', act: () => this.ctxCopy(this.chatLink(conv.id), 'link') });
-    this.openCtxMenu(e, items);
+    this.openCtxMenu(e, items.concat(tail));
   },
 
   // The composer on screen (inbox, Support page or corner panel), or null.
@@ -624,6 +710,11 @@ Object.assign(Component.prototype, {
     } else if (ev.type === 'message.updated') {
       if (ev.conversation) this.chatMergeConv(ev.conversation);
       if (ev.message) this.chatAfterEdit(ev.message);
+    } else if (ev.type === 'conversation.deleted') {
+      this.chatDropConv(ev.conversation_id);
+    } else if (ev.type === 'message.deleted') {
+      if (ev.conversation) this.chatMergeConv(ev.conversation);
+      if (ev.message) this.chatDropMsg(ev.message);
     } else if (ev.type === 'message.reacted') {
       const m = c.conv && c.conv.conversation.id === ev.conversation_id && c.conv.messages.find(x => x.id === ev.message_id);
       if (m) m.reactions = ev.reactions || [];
@@ -1904,23 +1995,40 @@ Object.assign(Component.prototype, {
     const opener = from || document.activeElement;
     this.api('/chat/messages/' + mid + '/revisions').then(r => {
       if (!r || r.code || !r.revisions) throw new Error((r && r.message) || 'Could not load the edit history');
-      const list = r.revisions;
       const esc = t => this.chatEsc(t);
       const when = ts => new Date(ts * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
       const box = document.createElement('div');
       box.className = 'ccc-hist';
-      box.innerHTML = '<div class="ccc-hist-box" role="dialog" aria-modal="true" aria-labelledby="ccc-hist-h">' +
-        '<div class="ccc-hist-head"><h2 id="ccc-hist-h">Edit history</h2><span>' + list.length + ' versions</span><button type="button" class="ccc-tool" data-close aria-label="Close">✕</button></div>' +
-        '<ol class="ccc-hist-list">' + list.map((v, i) => {
-          const older = list[i + 1];
-          const label = v.current ? 'Current' : (!older ? 'Original' : 'Version ' + (list.length - i));
-          return '<li><div class="ccc-hist-meta"><b>' + label + '</b> · ' + esc(v.by || 'Someone') + ' · ' + esc(when(v.at)) + '</div>' +
-            '<div class="ccc-hist-body">' + (older ? this.chatWordDiff(older.body, v.body) : esc(v.body)) + '</div></li>';
-        }).join('') + '</ol></div>';
+      // Earlier versions carry a Remove button (a pasted password edited
+      // out still sits here). Two clicks: Remove, then Remove for good.
+      const render = list => {
+        box.innerHTML = '<div class="ccc-hist-box" role="dialog" aria-modal="true" aria-labelledby="ccc-hist-h">' +
+          '<div class="ccc-hist-head"><h2 id="ccc-hist-h">Edit history</h2><span>' + list.length + (list.length === 1 ? ' version' : ' versions') + '</span><button type="button" class="ccc-tool" data-close aria-label="Close">✕</button></div>' +
+          '<ol class="ccc-hist-list">' + list.map((v, i) => {
+            const older = list[i + 1];
+            const label = v.current ? 'Current' : (!older ? 'Original' : 'Version ' + (list.length - i));
+            return '<li><div class="ccc-hist-meta"><b>' + label + '</b> · ' + esc(v.by || 'Someone') + ' · ' + esc(when(v.at)) +
+              (!v.current && v.id ? '<button type="button" class="ccc-hist-rm" data-rev="' + v.id + '">Remove</button>' : '') + '</div>' +
+              '<div class="ccc-hist-body">' + (older ? this.chatWordDiff(older.body, v.body) : esc(v.body)) + '</div></li>';
+          }).join('') + '</ol></div>';
+      };
+      render(r.revisions);
       document.body.appendChild(box);
       const close = () => { document.removeEventListener('keydown', key, true); box.remove(); if (opener && opener.focus && document.body.contains(opener)) opener.focus(); };
       const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
-      box.addEventListener('click', e => { if (e.target === box || e.target.closest('[data-close]')) close(); });
+      box.addEventListener('click', e => {
+        if (e.target === box || e.target.closest('[data-close]')) return close();
+        const rm = e.target.closest('[data-rev]');
+        if (!rm || rm.disabled) return;
+        if (!rm.dataset.sure) { rm.dataset.sure = '1'; rm.textContent = 'Remove for good?'; rm.classList.add('sure'); return; }
+        rm.disabled = true;
+        this.api('/chat/messages/' + mid + '/revisions/' + rm.dataset.rev, { method: 'DELETE' }).then(x => {
+          if (!x || x.code || !x.revisions) throw new Error(x && x.message);
+          render(x.revisions);
+          box.querySelector('[data-close]').focus();
+          this.toast('Version removed', { kind: 'success' });
+        }).catch(err => { rm.disabled = false; this.toast(err && err.message && err.message !== 'auth' ? err.message : 'Could not remove that version', { kind: 'error' }); });
+      });
       document.addEventListener('keydown', key, true);
       box.querySelector('[data-close]').focus();
     }).catch(e => this.toast(e && e.message && e.message !== 'auth' ? e.message : 'Could not load the edit history', { kind: 'error' }));

@@ -11840,6 +11840,11 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_chat_update_func',
 				'permission_callback' => 'captaincore_permission_check',
 			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::delete_conversation( get_current_user_id(), (int) $r['id'] ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 		]
 	);
 
@@ -11969,9 +11974,16 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/chat/messages/(?P<id>[\d]+)', [
-			'methods'             => WP_REST_Server::EDITABLE,
-			'callback'            => 'captaincore_chat_edit_func',
-			'permission_callback' => 'captaincore_permission_check',
+			[
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => 'captaincore_chat_edit_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::delete_message( get_current_user_id(), (int) $r['id'] ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 		]
 	);
 
@@ -11980,6 +11992,16 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_chat_revisions_func',
 			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	// Remove one earlier version from a message's edit history (operators).
+	register_rest_route(
+		'captaincore/v1', '/chat/messages/(?P<id>[\d]+)/revisions/(?P<revision>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::delete_revision( get_current_user_id(), (int) $r['id'], (int) $r['revision'] ); },
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -11994,9 +12016,16 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/chat/attachments/(?P<id>[\d]+)', [
-			'methods'             => 'GET',
-			'callback'            => 'captaincore_chat_attachment_func',
-			'permission_callback' => 'captaincore_permission_check',
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_chat_attachment_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::delete_attachment( get_current_user_id(), (int) $r['id'] ); },
+				'permission_callback' => 'captaincore_admin_permission_check',
+			],
 		]
 	);
 

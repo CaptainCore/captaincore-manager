@@ -1372,6 +1372,7 @@ class Chat {
 		] ];
 		foreach ( $rows ?: [] as $r ) {
 			$out[] = [
+				'id'      => (int) $r->chat_revision_id,
 				'body'    => (string) $r->body,
 				'by'      => (string) $r->user_name,
 				'at'      => self::ts( $r->written_at ),
@@ -1379,6 +1380,295 @@ class Chat {
 			];
 		}
 		return [ 'message_id' => (int) $message->chat_message_id, 'revisions' => $out ];
+	}
+
+	// ── deleting ────────────────────────────────────────────────────────
+	//
+	// Operators only. Deleting removes the rows and the stored files for
+	// good; captaincore_chat_deletions keeps who did it, when, and a summary
+	// with no content. Imported rows also keep their Intercom ids there so
+	// `import-intercom` skips them (the Intercom archive itself, intercom.db
+	// and its downloaded files, is never touched; `--restore` brings one back).
+
+	private static function not_allowed() {
+		return new \WP_Error( 'operators_only', 'Only operators can delete from chat.', [ 'status' => 403 ] );
+	}
+
+	/** Leave a deletion row. $message may be null (a conversation or file). */
+	private static function record_deletion( $kind, $conversation, $message, $summary, $user_id ) {
+		global $wpdb;
+		$wpdb->insert( $wpdb->base_prefix . 'captaincore_chat_deletions', [
+			'kind'                     => $kind,
+			'chat_conversation_id'     => (int) $conversation->chat_conversation_id,
+			'chat_message_id'          => $message ? (int) $message->chat_message_id : 0,
+			'source'                   => (string) $conversation->source,
+			'conversation_external_id' => (string) $conversation->external_id,
+			'external_id'              => $message ? (string) $message->external_id : (string) $conversation->external_id,
+			'customer_user_id'         => (int) $conversation->user_id,
+			'summary'                  => mb_substr( (string) $summary, 0, 255 ),
+			'deleted_by'               => (int) $user_id,
+			'deleted_at'               => gmdate( 'Y-m-d H:i:s' ),
+		] );
+	}
+
+	/**
+	 * Intercom ids deleted here, for the importer: ['conversation' => bool,
+	 * 'messages' => [external_id => true]] for one Intercom conversation.
+	 */
+	public static function deleted_external( $source, $conversation_external_id ) {
+		global $wpdb;
+		$t    = $wpdb->base_prefix . 'captaincore_chat_deletions';
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT kind, external_id FROM $t WHERE source = %s AND conversation_external_id = %s AND kind IN ('conversation','message')",
+			(string) $source, (string) $conversation_external_id
+		) );
+		$out = [ 'conversation' => false, 'messages' => [] ];
+		foreach ( $rows ?: [] as $r ) {
+			if ( $r->kind === 'conversation' ) {
+				$out['conversation'] = true;
+			} elseif ( $r->external_id !== '' ) {
+				$out['messages'][ $r->external_id ] = true;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Unlink stored files (and their email thumbnails) for attachment rows
+	 * about to go, unless another attachment in the conversation that stays
+	 * points at the same file (the same screenshot sent twice is one file).
+	 */
+	private static function remove_files( $rows ) {
+		global $wpdb;
+		$a    = $wpdb->base_prefix . 'captaincore_chat_attachments';
+		$ids  = array_map( fn( $r ) => (int) $r->chat_attachment_id, $rows );
+		$done = [];
+		foreach ( $rows as $row ) {
+			$rel = ltrim( (string) $row->storage_path, '/' );
+			if ( $rel === '' || isset( $done[ $rel ] ) || strpos( $rel, '..' ) !== false ) {
+				continue;
+			}
+			$done[ $rel ] = true;
+			$shared       = $wpdb->get_var( $wpdb->prepare(
+				"SELECT 1 FROM $a WHERE chat_conversation_id = %d AND storage_path = %s AND chat_attachment_id NOT IN (" . implode( ',', $ids ) . ') LIMIT 1',
+				(int) $row->chat_conversation_id, (string) $row->storage_path
+			) );
+			if ( $shared ) {
+				continue;
+			}
+			$path = self::base_dir() . '/' . $rel;
+			foreach ( [ $path, $path . '-thumb' ] as $file ) {
+				if ( is_file( $file ) ) {
+					@unlink( $file );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Put the conversation's clocks back in line after a comment is gone:
+	 * last message times from what is left, and for an open thread the
+	 * wait starts at the first customer comment after the last reply.
+	 */
+	private static function recount( $conversation ) {
+		global $wpdb;
+		$m   = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$cid = (int) $conversation->chat_conversation_id;
+		$row = $wpdb->get_row( $wpdb->prepare(
+			"SELECT MAX(created_at) AS last_message_at,
+				MAX(IF(author_kind = 'customer', created_at, NULL)) AS last_customer_at,
+				MAX(IF(author_kind = 'operator', created_at, NULL)) AS last_operator_at,
+				COALESCE(MAX(IF(author_kind = 'operator', chat_message_id, NULL)), 0) AS last_reply_id
+			FROM $m WHERE chat_conversation_id = %d AND kind = 'comment'", $cid
+		) );
+		$waiting = null;
+		if ( $conversation->status === 'open' ) {
+			$waiting = $wpdb->get_var( $wpdb->prepare(
+				"SELECT MIN(created_at) FROM $m WHERE chat_conversation_id = %d AND kind = 'comment' AND author_kind = 'customer' AND chat_message_id > %d",
+				$cid, (int) $row->last_reply_id
+			) );
+		}
+		ChatConversations::update( [
+			'last_message_at'  => $row->last_message_at ?: $conversation->created_at,
+			'last_customer_at' => $row->last_customer_at,
+			'last_operator_at' => $row->last_operator_at,
+			'waiting_since'    => $waiting ?: null,
+			'updated_at'       => gmdate( 'Y-m-d H:i:s' ),
+		], [ 'chat_conversation_id' => $cid ] );
+	}
+
+	/**
+	 * Delete a whole conversation: every message, note and event, its
+	 * files, reactions, edit history, read marks, draft and the people on
+	 * its emails. Everyone viewing it gets conversation.deleted.
+	 */
+	public static function delete_conversation( $user_id, $conversation_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return self::not_allowed();
+		}
+		$conversation = ChatConversations::get( (int) $conversation_id );
+		if ( ! $conversation ) {
+			return self::not_found();
+		}
+		$cid       = (int) $conversation->chat_conversation_id;
+		$p         = $wpdb->base_prefix . 'captaincore_chat_';
+		$presented = self::present_conversation( $conversation, false );
+		$messages  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$p}messages WHERE chat_conversation_id = %d AND kind IN ('comment','note')", $cid ) );
+		$files     = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$p}attachments WHERE chat_conversation_id = %d", $cid ) ) ?: [];
+
+		$summary = sprintf( 'Conversation #%d (%s, started %s): %d message%s and note%s, %d file%s',
+			$cid, $conversation->source === 'intercom' ? 'from Intercom' : 'chat', gmdate( 'Y-m-d', strtotime( $conversation->created_at . ' UTC' ) ),
+			$messages, $messages === 1 ? '' : 's', $messages === 1 ? '' : 's', count( $files ), count( $files ) === 1 ? '' : 's' );
+		self::record_deletion( 'conversation', $conversation, null, $summary, $user_id );
+
+		if ( $files ) {
+			$path = self::base_dir() . '/' . $cid;
+			foreach ( $files as $f ) {
+				$rel = ltrim( (string) $f->storage_path, '/' );
+				if ( $rel === '' || strpos( $rel, '..' ) !== false ) {
+					continue;
+				}
+				foreach ( [ self::base_dir() . '/' . $rel, self::base_dir() . '/' . $rel . '-thumb' ] as $file ) {
+					if ( is_file( $file ) ) {
+						@unlink( $file );
+					}
+				}
+			}
+			if ( is_dir( $path ) && count( (array) @scandir( $path ) ) <= 2 ) {
+				@rmdir( $path );
+			}
+		}
+		foreach ( [ 'attachments', 'reactions', 'revisions', 'reads', 'drafts', 'participants', 'messages' ] as $table ) {
+			$wpdb->delete( $p . $table, [ 'chat_conversation_id' => $cid ] );
+		}
+		ChatConversations::delete( $cid );
+		self::emit( 'conversation.deleted', $presented );
+		return [ 'deleted' => $cid ];
+	}
+
+	/**
+	 * Delete one message, note or event with its files, reactions and edit
+	 * history. A deleted comment or note leaves an internal event saying
+	 * whose it was and when it was sent (never what it said).
+	 */
+	public static function delete_message( $user_id, $message_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return self::not_allowed();
+		}
+		$message      = ChatMessages::get( (int) $message_id );
+		$conversation = $message ? ChatConversations::get( (int) $message->chat_conversation_id ) : null;
+		if ( ! $message || ! $conversation ) {
+			return new \WP_Error( 'not_found', 'Message not found.', [ 'status' => 404 ] );
+		}
+		$mid   = (int) $message->chat_message_id;
+		$cid   = (int) $conversation->chat_conversation_id;
+		$p     = $wpdb->base_prefix . 'captaincore_chat_';
+		$files = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$p}attachments WHERE chat_message_id = %d", $mid ) ) ?: [];
+		$what  = $message->kind === 'note' ? 'note' : ( $message->kind === 'event' ? 'event' : 'message' );
+		$when  = gmdate( 'Y-m-d H:i', strtotime( $message->created_at . ' UTC' ) ) . ' UTC';
+		$from  = trim( (string) $message->author_name ) !== '' ? $message->author_name : ( $message->author_kind === 'customer' ? 'the customer' : 'an operator' );
+
+		self::record_deletion( 'message', $conversation, $message,
+			sprintf( 'A %s from %s sent %s%s', $what, $from, $when, $files ? ', with ' . count( $files ) . ' file' . ( count( $files ) === 1 ? '' : 's' ) : '' ), $user_id );
+		if ( $files ) {
+			self::remove_files( $files );
+		}
+		foreach ( [ 'attachments', 'reactions', 'revisions' ] as $table ) {
+			$wpdb->delete( $p . $table, [ 'chat_message_id' => $mid ] );
+		}
+		ChatMessages::delete( $mid );
+		if ( $message->kind === 'comment' ) {
+			self::recount( $conversation );
+		}
+
+		$fresh   = ChatConversations::get( $cid );
+		$created = null;
+		if ( $message->kind !== 'event' ) {
+			$created = self::append( $cid, [
+				'kind' => 'event', 'internal' => 1, 'author_kind' => 'operator', 'author_user_id' => (int) $user_id,
+				'author_name' => self::user_name( (int) $user_id, 'An operator' ),
+				'body' => sprintf( '%s from %s sent %s deleted by %s', $what === 'note' ? 'A note' : 'A message', $from, $when, self::user_name( (int) $user_id, 'an operator' ) ),
+			] );
+			$fresh = ChatConversations::get( $cid );
+		}
+		$safe = self::present_conversation( $fresh, false );
+		self::emit( 'message.deleted', $safe, [ 'id' => $mid, 'conversation_id' => $cid, 'kind' => $message->kind, 'internal' => (bool) (int) $message->internal ] );
+		if ( $created ) {
+			self::emit( 'message.created', $safe, $created );
+		}
+		self::emit( 'conversation.updated', $safe );
+		return [
+			'deleted'      => $mid,
+			'conversation' => self::present_conversation( $fresh, true ),
+			'events'       => $created ? [ $created ] : [],
+		];
+	}
+
+	/**
+	 * Delete one file from a message. A message left with no text, files or
+	 * logs goes too (delete_message). Otherwise everyone gets the message
+	 * again as message.updated.
+	 */
+	public static function delete_attachment( $user_id, $attachment_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return self::not_allowed();
+		}
+		$attachment   = ChatAttachments::get( (int) $attachment_id );
+		$message      = $attachment ? ChatMessages::get( (int) $attachment->chat_message_id ) : null;
+		$conversation = $message ? ChatConversations::get( (int) $message->chat_conversation_id ) : null;
+		if ( ! $conversation ) {
+			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
+		}
+		$mid  = (int) $message->chat_message_id;
+		$left = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->base_prefix}captaincore_chat_attachments WHERE chat_message_id = %d AND chat_attachment_id <> %d",
+			$mid, (int) $attachment->chat_attachment_id
+		) );
+		if ( ! $left && trim( (string) $message->body ) === '' && (string) $message->log_refs === '' ) {
+			return self::delete_message( $user_id, $mid );
+		}
+		self::record_deletion( 'attachment', $conversation, $message,
+			sprintf( 'A file (%s, %s) from %s', $attachment->mime ?: 'unknown type', size_format( (int) $attachment->size ), $message->author_name ?: $message->author_kind ), $user_id );
+		self::remove_files( [ $attachment ] );
+		ChatAttachments::delete( (int) $attachment->chat_attachment_id );
+
+		$row       = ChatMessages::get( $mid );
+		$presented = self::present_message( $row, self::attachments_for( [ $mid ] )[ $mid ] ?? [], self::reactions_for( [ $mid ] )[ $mid ] ?? [] );
+		$created   = self::append( (int) $conversation->chat_conversation_id, [
+			'kind' => 'event', 'internal' => 1, 'author_kind' => 'operator', 'author_user_id' => (int) $user_id,
+			'author_name' => self::user_name( (int) $user_id, 'An operator' ),
+			'body' => sprintf( 'A file (%s) on a message from %s deleted by %s', $attachment->mime ?: 'unknown type', trim( (string) $message->author_name ) !== '' ? $message->author_name : $message->author_kind, self::user_name( (int) $user_id, 'an operator' ) ),
+		] );
+		$safe = self::present_conversation( ChatConversations::get( (int) $conversation->chat_conversation_id ), false );
+		self::emit( 'message.updated', $safe, $presented );
+		self::emit( 'message.created', $safe, $created );
+		return [ 'message' => $presented, 'events' => [ $created ] ];
+	}
+
+	/**
+	 * Remove one earlier version of an edited message (a pasted password
+	 * that was edited out still sits in the history). The current text is
+	 * an edit away; this only touches what operators see in Edit history.
+	 */
+	public static function delete_revision( $user_id, $message_id, $revision_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return self::not_allowed();
+		}
+		$t        = $wpdb->base_prefix . 'captaincore_chat_revisions';
+		$revision = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_revision_id = %d AND chat_message_id = %d", (int) $revision_id, (int) $message_id ) );
+		$message  = $revision ? ChatMessages::get( (int) $revision->chat_message_id ) : null;
+		$conversation = $message ? ChatConversations::get( (int) $message->chat_conversation_id ) : null;
+		if ( ! $conversation ) {
+			return new \WP_Error( 'not_found', 'Version not found.', [ 'status' => 404 ] );
+		}
+		self::record_deletion( 'revision', $conversation, $message,
+			sprintf( 'An earlier version of message #%d, written by %s %s', (int) $message->chat_message_id, $revision->user_name ?: 'someone', gmdate( 'Y-m-d H:i', strtotime( $revision->written_at . ' UTC' ) ) . ' UTC' ), $user_id );
+		$wpdb->delete( $t, [ 'chat_revision_id' => (int) $revision->chat_revision_id ] );
+		return self::revisions( $user_id, (int) $message->chat_message_id );
 	}
 
 	// ── CaptainCore logs ────────────────────────────────────────────────

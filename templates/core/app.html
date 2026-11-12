@@ -424,6 +424,10 @@ button.ccc-edited:hover{color:var(--ink)}
 .ccc-hist-list li:last-child{border-bottom:0}
 .ccc-hist-meta{font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-bottom:6px}
 .ccc-hist-meta b{color:var(--ink);font-weight:600}
+.ccc-hist-rm{float:right;margin-left:8px;padding:1px 8px;border:1px solid var(--rule);border-radius:6px;background:none;color:var(--ink-dim);font:500 var(--fs-12) var(--sans);cursor:pointer}
+.ccc-hist-rm:hover,.ccc-hist-rm:focus-visible{color:var(--bad);border-color:var(--bad)}
+.ccc-hist-rm.sure{color:#fff;background:var(--bad);border-color:var(--bad)}
+.ccc-hist-rm:disabled{opacity:.6;cursor:default}
 .ccc-hist-body{white-space:pre-wrap;overflow-wrap:anywhere;font:400 var(--fs-13)/1.6 var(--sans)}
 .ccc-hist-body del{background:color-mix(in srgb,var(--bad) 16%,transparent);color:inherit;text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--bad) 70%,transparent);border-radius:3px}
 .ccc-hist-body ins{background:color-mix(in srgb,var(--ok) 18%,transparent);color:inherit;text-decoration:none;border-radius:3px}
