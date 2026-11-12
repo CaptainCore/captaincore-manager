@@ -368,20 +368,26 @@ class Mailer {
         </style>";
     }
 
+    private static function uses_logo_images( $config ) {
+        // A configured mark wins: it is the only logo Gmail and Missive can show on dark.
+        return empty( $config->email_mark ) && ! empty( $config->email_logo_dark );
+    }
+
     /**
      * The logo above the card.
      *
-     * With a dark version configured (email_logo_dark), the email logo image is
-     * swapped for it in apps that follow dark mode. Without one, a wordmark
-     * baked into an image can't follow dark mode at all: Gmail and Missive
-     * darken the email themselves and leave the dark lettering on a dark
-     * background. So the header is built from the brand mark (email_mark,
-     * else the dashboard logo) and the site name as live text, which every
-     * app recolours.
+     * The header is the brand mark (email_mark, else the dashboard logo) beside
+     * the site name as live text. A wordmark baked into an image can't follow
+     * dark mode in Gmail or Missive, which darken the email themselves and
+     * leave dark lettering on a dark background, while live text gets
+     * recoloured like everything else. Pick a mark colour that reads on light
+     * and dark; email_mark_dark swaps in a lighter one where dark mode styles
+     * run (Apple Mail, iOS). Only without an email_mark does a configured
+     * email_logo / email_logo_dark pair of images take over.
      */
     private static function logo_html( $config, $site_url, $site_name ) {
-        $logo_dark = esc_url( $config->email_logo_dark ?? '' );
-        if ( $logo_dark !== '' ) {
+        if ( self::uses_logo_images( $config ) ) {
+            $logo_dark = esc_url( $config->email_logo_dark );
             $logo_url = esc_url( $config->email_logo ?? $config->logo ?? '' );
             return "<a href='{$site_url}' target='_blank' class='cc-logo-light' style='display: inline-block; text-decoration: none;'><img src='{$logo_url}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>"
                 . "<a href='{$site_url}' target='_blank' class='cc-logo-dark' style='display: none; mso-hide: all; text-decoration: none;'><img src='{$logo_dark}' alt='{$site_name}' style='max-height: 40px; width: auto; border: 0;'></a>";
@@ -407,8 +413,7 @@ class Mailer {
             $mark_html = "<td style='padding: 0 11px 0 0; vertical-align: middle;'><a href='{$site_url}' target='_blank' style='text-decoration: none;'>{$mark_html}</a></td>";
         }
         return "<table role='presentation' border='0' cellpadding='0' cellspacing='0' align='center' style='margin: 0 auto;'><tr>{$mark_html}"
-            // Plain text, not a link: Missive darkens text colours itself but
-            // leaves link colours alone, which kept the name dark on dark.
+            // Plain text so mail apps that darken the email recolour it like body text.
             . "<td style='vertical-align: middle; font-size: 23px; font-weight: 600; letter-spacing: -0.3px;'><span class='cc-brand-name' style='color: #15181D;'>{$site_name}</span></td>"
             . "</tr></table>";
     }
@@ -433,8 +438,8 @@ class Mailer {
         $brand_color = $config->colors->primary ?? '#123E8C';
         $site_url    = esc_url( home_url() );
         $site_name   = esc_html( get_bloginfo( 'name' ) );
-        $logo_dark   = esc_url( $config->email_logo_dark ?? '' );
-        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7', $logo_dark !== '', $logo_dark === '' && ! empty( $config->email_mark_dark ) );
+        $logo_images = self::uses_logo_images( $config );
+        $dark_css    = self::dark_mode_css( $brand_color, $config->colors->accent ?? '#5C97F7', $logo_images, ! $logo_images && ! empty( $config->email_mark_dark ) );
         $logo_html   = self::logo_html( $config, $site_url, $site_name );
 
         // Build unsubscribe link if provided
