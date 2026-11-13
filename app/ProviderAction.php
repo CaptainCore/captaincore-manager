@@ -154,13 +154,46 @@ class ProviderAction {
         return self::active();
     }
 
+    // The browser drives the chain, and more than one poller can call run()
+    // on the same waiting action at once (the app-wide poll, a site tab's
+    // trackProviderOp, a second open tab). Two concurrent new-site link
+    // steps each created a CaptainCore site record for one Kinsta site, so
+    // only one run per action may be in flight, and a caller that gets the
+    // lock after another run already moved the action on does nothing.
+    // add_option() is not a lock: it reads first and then upserts, so two
+    // requests in the same second both "win". INSERT IGNORE on the unique
+    // option_name is atomic. The row bypasses the options cache on purpose.
     public function run() {
+        global $wpdb;
+        $lock = "captaincore_provider_action_run_{$this->provider_action_id}";
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST( option_value AS UNSIGNED ) < %d",
+            $lock, time() - 300
+        ) );
+        $claimed = $wpdb->query( $wpdb->prepare(
+            "INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'off' )",
+            $lock, (string) time()
+        ) );
+        if ( (int) $claimed !== 1 ) {
+            return self::active();
+        }
+        try {
+            return $this->run_locked();
+        } finally {
+            $wpdb->delete( $wpdb->options, [ 'option_name' => $lock ] );
+        }
+    }
+
+    protected function run_locked() {
         $user_id         = get_current_user_id();
         $provider_action = ( new ProviderActions )->get( $this->provider_action_id );
-        if ( $user_id != $provider_action->user_id ) {
+        if ( empty( $provider_action ) || $user_id != $provider_action->user_id ) {
             return;
         }
-    
+        if ( $provider_action->status !== "waiting" ) {
+            return self::active();
+        }
+
         $provider       = Providers::get( $provider_action->provider_id );
         $class_name     = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
         $current_action = json_decode( $provider_action->action );
