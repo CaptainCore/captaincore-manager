@@ -1295,6 +1295,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'hostnames'  => CaptainCore\HostConfigs::hostnames( $config ),
 			'primary'    => array_values( array_filter( $config['domains'], function ( $d ) { return ! empty( $d['primary'] ); } ) )[0]['name'] ?? '',
 			'image'      => CaptainCore\HostConfigs::PHP_IMAGES[ $config['php']['version'] ] ?? '',
+			'stack'      => CaptainCore\HostConfigs::stack( $env ),
 			'container'  => (string) ( $details->container ?? '' ),
 			'ip'         => (string) ( $details->container_ip ?? '' ),
 			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
@@ -6946,6 +6947,7 @@ function captaincore_site_hosting_response( $env ) {
 	return [
 		'environment_id' => (int) $env->environment_id,
 		'container'      => (string) ( ( json_decode( (string) $env->details ) ?: new stdClass() )->container ?? '' ),
+		'stack'          => CaptainCore\HostConfigs::stack( $env ),
 		'config'         => CaptainCore\HostConfigs::for_browser( $config ),
 		'revision'       => $last ? (int) $last->revision : 0,
 		'status'         => $last ? $last->status : 'default',
@@ -7267,7 +7269,8 @@ function captaincore_servers_add_site_func( $request ) {
 		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
 	}
 	$params  = $request->get_json_params();
-	$created = CaptainCore\HostConfigs::create_site( $server, $params['name'] ?? '', ( $params['start'] ?? '' ) === 'empty' ? 'empty' : 'wordpress', get_current_user_id(), (int) ( $params['account_id'] ?? 0 ) );
+	$start   = in_array( $params['start'] ?? '', [ 'empty', 'plain' ], true ) ? $params['start'] : 'wordpress';
+	$created = CaptainCore\HostConfigs::create_site( $server, $params['name'] ?? '', $start, get_current_user_id(), (int) ( $params['account_id'] ?? 0 ) );
 	if ( is_wp_error( $created ) ) {
 		return $created;
 	}

@@ -252,9 +252,12 @@ Object.assign(Component.prototype, {
     const appNames = (c.apps || []).filter(a => a.enabled !== false).map(a => a.name);
     return { ...vals,
       hostReady: true,
-      hostRuns: 'Runs WordPress' + (appNames.length ? ' + ' + appNames.join(', ') : '') + ' in container ' + (d.container || '—'),
+      hostRuns: 'Runs ' + (d.stack === 'plain' ? 'a plain site' : 'WordPress') + (appNames.length ? ' + ' + appNames.join(', ') : '') + ' in container ' + (d.container || '—'),
       hostCtIllo: this.illo('container'), hostCtName: d.container || '', hostCtServer: d.server ? d.server.name : '',
-      hostRunsItems: [{ name: 'WordPress', illo: this.illo('wordpress') }].concat((c.apps || []).filter(a => a.enabled !== false).map(a => ({ name: a.name, illo: this.illo(this.appIllo(a)) }))).concat([{ name: 'MariaDB', illo: this.illo('database') }]),
+      // A plain site serves files (PHP on hand for a form) and runs no database.
+      hostRunsItems: (d.stack === 'plain' ? [{ name: 'Plain site', illo: this.illo('edge') }] : [{ name: 'WordPress', illo: this.illo('wordpress') }])
+        .concat((c.apps || []).filter(a => a.enabled !== false).map(a => ({ name: a.name, illo: this.illo(this.appIllo(a)) })))
+        .concat(d.stack === 'plain' ? [] : [{ name: 'MariaDB', illo: this.illo('database') }]),
       hostIcoArrow: this.icon('arrow'), hostBkIllo: this.illo('backups'),
       hostIcoDomains: this.icon('globe'), hostIcoPhp: this.icon('code'), hostIcoRedirects: this.icon('redirect'), hostIcoAccess: this.icon('shield'),
       hostIcoTools: this.icon('wrench'), hostIcoBackups: this.icon('layers'), hostIcoHistory: this.icon('history'),
@@ -333,6 +336,8 @@ Object.assign(Component.prototype, {
       onHostPpPass: e => set(cc => { cc.password_protect.password = e.target.value; }),
       hostPpPassPh: c.password_protect && c.password_protect.has_password ? 'Password saved; type to change it' : 'Password (8+ characters)',
       // Tools
+      // A plain site (HTML files, no WordPress) has no debug switch or page cache.
+      hostWp: d.stack !== 'plain',
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
       hostNoindexMark: c.noindex !== false ? '✓' : '', toggleHostNoindex: () => set(cc => { cc.noindex = cc.noindex === false; }),
       hostSuspendMark: c.suspended ? '✓' : '', toggleHostSuspend: () => set(cc => { cc.suspended = !cc.suspended; }),

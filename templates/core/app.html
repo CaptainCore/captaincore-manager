@@ -2199,10 +2199,6 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);margin-top:14px;overflow:hidden">
                 <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--acc-terminal)"><span ref="{{ hostIcoTools }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Tools</h2></div>
                 <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                  <span onClick="{{ toggleHostDebug }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostDebugMark }}</span>WordPress debugging</span>
-                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Turns on WP_DEBUG and WP_DEBUG_LOG (written to wp-content/debug.log, never shown to visitors).</span>
-                </div>
-                <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule)">
                   <span onClick="{{ toggleHostNoindex }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostNoindexMark }}</span>Hide from search engines</span>
                   <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Sends X-Robots-Tag: noindex on every response and keeps WordPress's search engine visibility off. On for new sites and always on for staging; turn it off when the site goes live. Turning it off leaves WordPress's own setting as it is.</span>
                 </div>
@@ -2210,8 +2206,15 @@ button.ccc-edited:hover{color:var(--ink)}
                   <span onClick="{{ toggleHostSuspend }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--bad);flex:none">{{ hostSuspendMark }}</span>Suspend site</span>
                   <span class="cc-meta">The edge answers every request, apps included, with a "temporarily unavailable" page (503). Nothing is deleted; turn it off to bring the site back.</span>
                 </div>
+                <sc-if value="{{ hostWp }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule)">
+                  <span onClick="{{ toggleHostDebug }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font:500 var(--fs-125) var(--sans)"><span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:4px;display:inline-grid;place-items:center;font:700 11px var(--sans);color:var(--brand-ink);flex:none">{{ hostDebugMark }}</span>WordPress debugging</span>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Turns on WP_DEBUG and WP_DEBUG_LOG (written to wp-content/debug.log, never shown to visitors).</span>
+                </div>
+                </sc-if>
               </div>
 
+              <sc-if value="{{ hostWp }}" hint-placeholder-val="{{ true }}">
               <div class="cc-card" style="margin-top:14px">
                 <div class="cc-card-h">
                   <span class="cc-chip" style="--h:var(--acc-domains)"><span ref="{{ hostCacheIco }}"></span></span>
@@ -2245,6 +2248,7 @@ button.ccc-edited:hover{color:var(--ink)}
                 </sc-if>
                 <div style="padding:10px 16px;border-top:1px solid var(--rule)" class="cc-meta">Static files (CSS, JavaScript, fonts and images) are sent with a one-year browser cache on every site.</div>
               </div>
+              </sc-if>
 
               <div class="cc-card" style="margin-top:14px">
                 <div class="cc-card-h">

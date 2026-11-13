@@ -144,7 +144,7 @@ Object.assign(Component.prototype, {
       asOpen: true, asTitle: 'Add a site to ' + (s.asServerName || 'this server'), asIllo: this.illo('container'),
       asName: s.asName || '', onAsName: e => this.setState({ asName: e.target.value }),
       asSlugHint: slug ? 'Gets a temporary address like ' + slug.slice(0, 20) + '-xxxx.anchorhost.xyz, its own container, SSH port and database.' : 'A name for the site (you can add its real domain later).',
-      asStarts: [['wordpress', 'Fresh WordPress', 'Installed and ready to log in.'], ['empty', 'Empty', 'A placeholder page, for a copy or migration.']].map(([v, l, d]) => ({ label: l, desc: d,
+      asStarts: [['wordpress', 'Fresh WordPress', 'Installed and ready to log in.'], ['plain', 'Plain site', 'HTML files only: no WordPress, no database.'], ['empty', 'Empty', 'A placeholder page, for a copy or migration.']].map(([v, l, d]) => ({ label: l, desc: d,
         bd: s.asStart === v ? 'var(--brand)' : 'var(--rule)', bg: s.asStart === v ? 'var(--brand-soft)' : 'var(--paper)', mark: s.asStart === v ? '✓' : '',
         pick: () => this.setState({ asStart: v }) })),
       asAccQ: s.asAccQ || '', onAsAccQ: e => this.setState({ asAccQ: e.target.value }),

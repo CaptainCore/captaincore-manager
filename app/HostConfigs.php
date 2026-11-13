@@ -639,7 +639,9 @@ class HostConfigs extends DB {
 	 * site whose Production environment runs in container s<site_id> on the
 	 * server, with the next free IP and SSH port, a temporary domain and
 	 * revision 1 of its hosting config. The CLI (`host site create`) builds
-	 * the container. $start is 'wordpress' (a fresh install) or 'empty'.
+	 * the container. $start is 'wordpress' (a fresh install), 'plain' (HTML
+	 * files only: no WordPress, MariaDB and the cron timer off, no page cache)
+	 * or 'empty' (a placeholder page for a copy or migration).
 	 */
 	public static function create_site( $server, $label, $start, $user_id, $account_id = 0 ) {
 		$slug = substr( preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $label ) ), 0, 30 );
@@ -676,18 +678,35 @@ class HostConfigs extends DB {
 			'home_url'  => "https://{$host}",
 			'details'   => wp_json_encode( [
 				'container' => 's' . $site_id, 'container_ip' => $slot['ip'],
-				'start'     => $start === 'empty' ? 'empty' : 'wordpress',
+				'start'     => in_array( $start, [ 'empty', 'plain' ], true ) ? $start : 'wordpress',
 				'wp_admin'  => [ 'user' => $user ? $user->user_login : 'admin', 'email' => $user ? $user->user_email : get_option( 'admin_email' ) ],
 			] ),
 		], [ 'environment_id' => (int) $env->environment_id ] );
 		$env    = Environments::get( (int) $env->environment_id );
 		$config = self::default_for( $env );
 		$config['domains'] = [ [ 'name' => $host, 'primary' => true, 'www' => false, 'temporary' => true ] ];
+		if ( $start === 'plain' ) {
+			// Static files need no saved pages and little memory; PHP stays
+			// available for a form script.
+			$config['page_cache']         = [ 'enabled' => false, 'ttl' => 60, 'exclude' => [] ];
+			$config['memory_mb']          = self::LIMITS['memory_mb'][0];
+			$config['php']['workers']     = 1;
+			$config['php']['max_workers'] = 2;
+		}
 		$row = self::save( $env, $config, $user_id, 'Site created on ' . $server->name );
 		if ( is_wp_error( $row ) ) {
 			return $row;
 		}
 		return [ 'site_id' => $site_id, 'site' => $slug, 'domain' => $host, 'environment_id' => (int) $env->environment_id ];
+	}
+
+	/**
+	 * What runs in an environment's container: 'plain' (a site created as
+	 * HTML files, no WordPress or database) or 'wordpress' (everything else).
+	 */
+	public static function stack( $environment ) {
+		$d = json_decode( (string) ( $environment->details ?? '' ) );
+		return ( $d->start ?? '' ) === 'plain' ? 'plain' : 'wordpress';
 	}
 
 	/** What the CLI needs to build a new site's container (`host-site-prepare`). */
@@ -727,6 +746,10 @@ class HostConfigs extends DB {
 		$prod = $prod ? $prod[0] : null;
 		if ( ! $site || ! $prod || ! (int) $prod->server_id ) {
 			return new \WP_Error( 'not_own_server', 'Production is not on one of our servers.', [ 'status' => 400 ] );
+		}
+		if ( self::stack( $prod ) === 'plain' ) {
+			// Staging copies a WordPress database and rewrites its URLs.
+			return new \WP_Error( 'unsupported', 'Staging is not available for plain sites yet.', [ 'status' => 400 ] );
 		}
 		$pd     = json_decode( (string) $prod->details ) ?: new \stdClass();
 		$server = Servers::get( (int) $prod->server_id );
