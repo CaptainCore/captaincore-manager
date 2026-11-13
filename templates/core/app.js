@@ -2496,8 +2496,13 @@ class Component extends DCLogic {
       go: () => real ? this.pickLogFile(f) : this.setState({ logFile: f }) }));
     const logLines = (real ? this.realLogLines(real, s) : (this.LOGS[s.logFile] || []).map(text => ({ text })))
       .map((l, i) => ({ ...l, segs: this.logSegments(l.text || ''), n: l.ph ? '' : String(i + 1) }));
+    // A plain site on our own servers (HTML files, no WordPress): no WordPress
+    // login, no sync-data (it reads WordPress over SSH), no WP version.
+    const curEnv = real && real.envs ? real.envs.find(e => e.environment === s.env) : null;
+    const isPlain = !!(curEnv && curEnv.details && typeof curEnv.details === 'object' && curEnv.details.start === 'plain');
     return {
       dName: site.name,
+      dIsWp: !isPlain,
       // Split so the account name can be its own clickable segment. Design-mode
       // fixtures carry an account name but no id, so the link only renders when
       // there is somewhere to go; otherwise the name stays plain text.
@@ -2506,7 +2511,7 @@ class Component extends DCLogic {
       dAcctIsLink: !!( site.account && site.accountId ),
       dAcctPlain: !( site.account && site.accountId ),
       dAcctGo: () => this.openAccount(site.accountId),
-      dMetaPost: ' · WP ' + site.core + ' · ' + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
+      dMetaPost: (isPlain ? ' · Plain site · ' : ' · WP ' + site.core + ' · ') + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
       // Swap rides Kinsta's pre-push backup of production, so it needs a

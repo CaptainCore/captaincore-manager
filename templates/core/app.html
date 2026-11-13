@@ -1322,13 +1322,17 @@ button.ccc-edited:hover{color:var(--ink)}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"></path></svg>
                 </button>
               </sc-if>
+              <sc-if value="{{ dIsWp }}" hint-placeholder-val="{{ true }}">
               <button onClick="{{ dSync }}" title="Sync site data" style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7A9 9 0 005.5 5.5L4 7m0-4v4h4m-4 6a9 9 0 0014.5 5.5L20 17m0 4v-4h-4"></path></svg>
               </button>
+              </sc-if>
               <button onClick="{{ dTerm }}" title="Open terminal (⌃`)" style="width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--ink)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM7.5 9l3 3-3 3M12.5 15H17"></path></svg>
               </button>
+              <sc-if value="{{ dIsWp }}" hint-placeholder-val="{{ true }}">
               <button onClick="{{ dWpLogin }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);height:36px;padding:0 16px;display:inline-flex;align-items:center;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Login to WordPress →</button>
+              </sc-if>
             </div>
           </div>
           <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMetaPre }}<sc-if value="{{ dAcctIsLink }}" hint-placeholder-val="{{ false }}"><span onClick="{{ dAcctGo }}" title="Open account" style="color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ dAcct }}</span></sc-if><sc-if value="{{ dAcctPlain }}" hint-placeholder-val="{{ true }}">{{ dAcct }}</sc-if>{{ dMetaPost }}</div>
