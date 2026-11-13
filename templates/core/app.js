@@ -223,7 +223,7 @@ class Component extends DCLogic {
         { p: 'wp-content/plugins/gravityforms/', meta: '412 files · 18 MB', dir: true, cnt: 412, kb: 18432, children: [] },
         { p: 'wp-content/plugins/woocommerce/', meta: '2,381 files · 54 MB', dir: true, cnt: 2381, kb: 55296, children: [] }
       ] },
-      { p: 'wp-content/cache/', meta: 'omitted — still restorable', omitted: true, dir: true }
+      { p: 'wp-content/cache/', meta: 'omitted — still in the snapshot', omitted: true, dir: true }
     ] }
   ];
   PREVIEWS = window.CC_BOOT ? {} : {
@@ -2435,7 +2435,7 @@ class Component extends DCLogic {
     const backups = bkSrc.map(b => ({ ...b,
       id: b.idShort || b.id,
       openB: () => { this.setState({ bkDialog: b.id, bkSel: {}, bkPreview: '' }); if (real && b.id) this.loadBackupTree(b.id); },
-      doRestore: () => real ? this.realBackupRestore(real, { ...s, bkDialog: b.id }) : this.runJob('restore', b.id + ' on ' + site.name) }));
+      doSnapshot: () => real ? this.realBackupSnapshot(real, { ...s, bkDialog: b.id }) : this.runJob('snapshot', b.id + ' on ' + site.name) }));
     const bkDlg = s.bkDialog ? bkSrc.find(b => b.id === s.bkDialog) : null;
     const bkTreeSrc = real ? this.realBkTree(real, s) : this.BK_TREE;
     const flatAll = [];
@@ -2722,7 +2722,7 @@ class Component extends DCLogic {
       bkDlgOpen: !!bkDlg, bkDlgId: bkDlg ? (bkDlg.idShort || bkDlg.id) : '', bkDlgWhen: bkDlg ? bkDlg.when : '',
       bkDlgMeta: bkDlg ? bkDlg.size + ' · ' + bkDlg.files : '',
       closeBkDlg: () => this.setState({ bkDialog: '', bkPreview: '', bkSel: {} }),
-      bkDlgRestore: () => real ? this.realBackupRestore(real, s) : this.runJob('restore', (bkDlg ? bkDlg.id : '') + ' on ' + site.name),
+      bkDlgSnapshot: () => real ? this.realBackupSnapshot(real, s) : this.runJob('snapshot', (bkDlg ? bkDlg.id : '') + ' on ' + site.name),
       bkHasSel: selCnt > 0,
       bkSelTitle: selCnt.toLocaleString() + ' items selected',
       bkSelSize: fmtKb(selKb),

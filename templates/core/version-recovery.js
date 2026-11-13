@@ -355,7 +355,7 @@ Object.assign(Component.prototype, {
     };
     const rows = (bucket.files || []).map(mapNode);
     const omitted = bucket.omitted;
-    if (Array.isArray(omitted)) omitted.forEach(o => rows.push({ p: (typeof o === 'string' ? o : (o && o.path) || 'omitted') + '/', meta: 'omitted — still restorable', omitted: true, dir: true }));
+    if (Array.isArray(omitted)) omitted.forEach(o => rows.push({ p: (typeof o === 'string' ? o : (o && o.path) || 'omitted') + '/', meta: 'omitted — still in the snapshot', omitted: true, dir: true }));
     return rows;
   },
 
@@ -415,8 +415,8 @@ Object.assign(Component.prototype, {
     this.setState({ bkSel: {} });
   },
 
-  // "Restore" from a backup = point-in-time snapshot built from that restic backup (--backup-id).
-  realBackupRestore(real, s) {
+  // "Download snapshot" from a backup = point-in-time snapshot zip built from that restic backup (--backup-id), emailed. Nothing is restored onto the site.
+  realBackupSnapshot(real, s) {
     const b = (real.backups || []).find(x => x.id === s.bkDialog) || {};
     const email = (window.CC_BOOT || {}).userEmail || '';
     this.startJob({

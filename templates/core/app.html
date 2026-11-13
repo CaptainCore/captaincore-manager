@@ -1731,7 +1731,7 @@ button.ccc-edited:hover{color:var(--ink)}
 
           <sc-if value="{{ tabBackups }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
-              <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Restic · daily at 3:00 AM UTC · direct to Backblaze B2 · point-in-time restore to any date</span>
+              <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Restic · daily at 3:00 AM UTC · direct to Backblaze B2 · download any file or the whole site from any date</span>
               <div style="flex:1"></div>
               <button onClick="{{ backupNow }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Back up now</button>
             </div>
@@ -1744,8 +1744,8 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ b.size }}</span>
                     <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ b.files }}</span>
                     <div style="flex:1"></div>
-                    <span onClick="{{ b.openB }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Browse &amp; download</span>
-                    <span onClick="{{ b.doRestore }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Restore…</span>
+                    <span onClick="{{ b.openB }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 10px" style-hover="border-color:var(--brand)">Browse files</span>
+                    <span onClick="{{ b.doSnapshot }}" title="Zip the whole site as it was at this backup and email a download link" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">Download snapshot</span>
                   </div>
 
                 </div>
@@ -8344,12 +8344,12 @@ button.ccc-edited:hover{color:var(--ink)}
           <span style="font:600 var(--fs-145) var(--sans)">{{ bkDlgWhen }}</span>
           <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ bkDlgMeta }}</span>
           <div style="flex:1"></div>
-          <span onClick="{{ bkDlgRestore }}" style="font:500 var(--fs-12) var(--sans);color:var(--bad);cursor:pointer">Restore…</span>
+          <span onClick="{{ bkDlgSnapshot }}" title="Zip the whole site as it was at this backup and email a download link" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Download snapshot</span>
           <span onClick="{{ closeBkDlg }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="flex:none;display:flex;align-items:center;gap:9px;padding:8px 18px;border-bottom:1px solid var(--rule);background:var(--brand-soft)">
           <span style="flex:none;width:16px;height:16px;border-radius:50%;background:var(--brand);color:white;display:grid;place-items:center;font:600 10px var(--sans)">i</span>
-          <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--brand-ink)">This backup has too many files to show — uploads are omitted for viewing. Everything is still restorable.</span>
+          <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--brand-ink)">This backup has too many files to show — uploads are omitted for viewing. They are still in the snapshot download.</span>
         </div>
         <div style="flex:1;display:flex;min-height:0">
           <div style="flex:none;width:340px;border-right:1px solid var(--rule);overflow-y:auto">

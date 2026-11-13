@@ -15,6 +15,17 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Backups tab: snapshot wording (2026-11-13)
+The backup row's "Restore…" never restored anything: it runs `snapshot
+generate <site> --backup-id=<id>`, which zips the site as it was at that
+backup and emails the link (the job shows as "snapshot"). Renamed to
+**Download snapshot** on the row and in the browse dialog header (brand
+colour, not the red destructive hover), "Browse & download" became **Browse
+files** (per-file download still lives inside the dialog), and the header line
+and the omitted-uploads banner say "snapshot download" instead of "restore".
+Handlers renamed to match (`doSnapshot`, `bkDlgSnapshot`,
+`realBackupSnapshot`). A real in-place restore is not built.
+
 ## Sending → Email log viewer (2026-11-11)
 
 "View all logs →" on a domain's Sending tab was an inert span. It now opens
