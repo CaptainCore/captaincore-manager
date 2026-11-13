@@ -115,9 +115,10 @@ Object.assign(Component.prototype, {
   realCredPairs(real, s) {
     const e = this.currentEnv(real, s);
     if (!e) return [['Loading', '…']];
+    const plain = !!(e.details && typeof e.details === 'object' && e.details.start === 'plain');
     const pairs = [
       ['Site URL', e.home_url],
-      ['WP admin', e.home_url ? e.home_url.replace(/\/$/, '') + '/wp-admin' : ''],
+      ['WP admin', e.home_url && !plain ? e.home_url.replace(/\/$/, '') + '/wp-admin' : ''],
       ['Address', e.address], ['Username', e.username], ['Password', e.password],
       ['Port', e.port], ['Home directory', e.home_directory],
       ['Database', e.database_name], ['DB user', e.database_username], ['DB password', e.database_password],

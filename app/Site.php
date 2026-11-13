@@ -1542,7 +1542,8 @@ class Site {
             }
 
             $environment->fathom_analytics = ( ! empty( $details->fathom ) ? $details->fathom : [] );
-            if ( $site->provider == 'kinsta' || $site->provider == 'rocketdotnet' ) {
+            // Our own servers (provider captaincore, server_id set) take SSH as the site user on the container's port.
+            if ( $site->provider == 'kinsta' || $site->provider == 'rocketdotnet' || ( $site->provider == 'captaincore' && (int) ( $environment->server_id ?? 0 ) > 0 ) ) {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
             }
             if ( $site->provider == 'kinsta' and $environment->database_username ) {
