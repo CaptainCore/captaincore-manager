@@ -1336,6 +1336,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$done = CaptainCore\HostConfigs::remove_environment( CaptainCore\Environments::get( (int) $environment_id ), $parked );
 		return [ 'response' => 'Removed' ] + $done;
 	}
+	if ( $command === 'host-wordpress-installed' ) {
+		if ( empty( $environment_id ) ) {
+			return new WP_Error( 'site_required', 'host-wordpress-installed requires a site_id and environment.', [ 'status' => 400 ] );
+		}
+		$done = CaptainCore\HostConfigs::wordpress_installed( CaptainCore\Environments::get( (int) $environment_id ) );
+		return is_wp_error( $done ) ? $done : [ 'response' => 'Recorded as a WordPress site' ] + $done;
+	}
 	if ( $command === 'host-staging-prepare' ) {
 		if ( empty( $current_site ) ) {
 			return new WP_Error( 'site_required', 'host-staging-prepare requires a site_id.', [ 'status' => 400 ] );
@@ -1646,6 +1653,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$incoming_details = json_decode( $post->data->details );
 			if ( $incoming_details ) {
 				foreach ( $incoming_details as $key => $value ) {
+					// Hosting keys the Manager owns (container, address, plain or
+					// WordPress, admin): the CLI's cached copy can be older.
+					if ( in_array( $key, CaptainCore\HostConfigs::MANAGER_DETAILS, true ) && isset( $details->$key ) ) {
+						continue;
+					}
 					$details->$key = $value;
 				}
 			}
@@ -1689,6 +1701,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$incoming_details = json_decode( $post->data->details );
 			if ( $incoming_details ) {
 				foreach ( $incoming_details as $key => $value ) {
+					// Hosting keys the Manager owns (container, address, plain or
+					// WordPress, admin): the CLI's cached copy can be older.
+					if ( in_array( $key, CaptainCore\HostConfigs::MANAGER_DETAILS, true ) && isset( $details->$key ) ) {
+						continue;
+					}
 					$details->$key = $value;
 				}
 			}
@@ -7320,7 +7337,7 @@ function captaincore_servers_container_func( $request ) {
 		$site = CaptainCore\Sites::get( (int) $env->site_id );
 		$last = CaptainCore\HostConfigs::latest( $env->environment_id );
 		$data->site = [ 'site_id' => (int) $env->site_id, 'name' => $site ? $site->name : '', 'site' => $site ? $site->site : '',
-			'environment' => $env->environment, 'home_url' => $env->home_url ];
+			'environment' => $env->environment, 'home_url' => $env->home_url, 'stack' => CaptainCore\HostConfigs::stack( $env ) ];
 		$data->hosting = [
 			'config'     => CaptainCore\HostConfigs::for_browser( CaptainCore\HostConfigs::current( $env ) ),
 			'revision'   => $last ? (int) $last->revision : 0,
@@ -7359,6 +7376,27 @@ function captaincore_servers_container_restart_func( $request ) {
 		CaptainCore\ProcessLog::insert( 'Restarted ' . ( $labels[ $what ] ?? substr( $what, 4 ) ) . ' on ' . $ct, (int) $env->site_id );
 	}
 	return [ 'restarted' => $what, 'health' => (string) ( $data->health ?? '' ) ];
+}
+
+// Container page → Install WordPress on a plain site: the CLI's
+// `host wordpress install` (backup, MariaDB on, files moved aside, install,
+// `/api host-wordpress-installed`, apply, sync) as a job the dashboard streams.
+function captaincore_servers_container_wordpress_func( $request ) {
+	$id  = (int) $request['id'];
+	$ct  = (string) $request['ct'];
+	$env = CaptainCore\Servers::get( $id ) ? captaincore_server_container_env( $id, $ct ) : null;
+	if ( ! $env ) {
+		return new WP_Error( 'not_found', 'No site environment runs in that container.', [ 'status' => 404 ] );
+	}
+	if ( CaptainCore\HostConfigs::stack( $env ) !== 'plain' || strtolower( $env->environment ) !== 'production' ) {
+		return new WP_Error( 'invalid', 'WordPress can only be installed on a plain site\'s production environment.', [ 'status' => 400 ] );
+	}
+	$site = CaptainCore\Sites::get( (int) $env->site_id );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	CaptainCore\ProcessLog::insert( 'Installing WordPress on ' . $ct, (int) $env->site_id );
+	return [ 'token' => CaptainCore\Run::task( [ 'host', 'wordpress', 'install', $site->site ] ) ];
 }
 
 // Recent lines from a fixed list of server log sources (CLI `node logs`).
@@ -12628,6 +12666,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/restart', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_servers_container_restart_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/wordpress', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_container_wordpress_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);

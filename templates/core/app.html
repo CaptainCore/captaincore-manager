@@ -4991,6 +4991,7 @@ button.ccc-edited:hover{color:var(--ink)}
                       </div>
                     </div>
                   </sc-for>
+                  <sc-if value="{{ cxHasDb }}" hint-placeholder-val="{{ true }}">
                   <div class="cc-db-row" style="display:flex;align-items:center;gap:10px">
                     <span style="color:var(--ink-dim)">↳</span>
                     <div style="display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:6px 12px 6px 6px;border:1px solid var(--rule);border-radius:11px;background:var(--paper);min-width:0">
@@ -4999,6 +5000,7 @@ button.ccc-edited:hover{color:var(--ink)}
                       <span class="cc-pill" style="color:{{ cxDbFg }};background:color-mix(in srgb,{{ cxDbFg }} 12%,transparent)">{{ cxDbLabel }}</span>
                     </div>
                   </div>
+                  </sc-if>
                 </div>
               </div>
               <sc-if value="{{ cxHasHostApps }}" hint-placeholder-val="{{ false }}">
@@ -5041,6 +5043,7 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span onClick="{{ pg.logs }}" class="cc-btn"><span class="i" ref="{{ cxIcoLogBtn }}"></span>Logs</span>
                     <span onClick="{{ pg.restart }}" class="cc-btn"><span class="i" ref="{{ cxIcoRestart }}"></span>Restart</span>
                     <sc-if value="{{ pg.canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ pg.edit }}" class="cc-btn" style="color:var(--brand-ink)"><span class="i" ref="{{ cxIcoEdit }}"></span>Edit</span></sc-if>
+                    <sc-if value="{{ pg.canInstall }}" hint-placeholder-val="{{ false }}"><span style="flex:1"></span><span onClick="{{ pg.install }}" class="cc-btn primary"><span class="i" ref="{{ cxIcoPlus }}"></span>Install WordPress</span></sc-if>
                   </div>
                 </div>
               </sc-for>

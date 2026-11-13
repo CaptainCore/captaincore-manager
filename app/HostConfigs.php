@@ -40,6 +40,9 @@ class HostConfigs extends DB {
 		'memory_mb'           => [ 512, 4096 ],  // container memory limit
 	];
 
+	/** Environment details keys only the Manager writes; CLI syncs never overwrite them. */
+	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container' ];
+
 	/** Starting config for an environment that has no revision yet. */
 	public static function default_for( $environment ) {
 		$site    = Sites::get( (int) $environment->site_id );
@@ -707,6 +710,37 @@ class HostConfigs extends DB {
 	public static function stack( $environment ) {
 		$d = json_decode( (string) ( $environment->details ?? '' ) );
 		return ( $d->start ?? '' ) === 'plain' ? 'plain' : 'wordpress';
+	}
+
+	/**
+	 * A plain site that just had WordPress installed (`host wordpress install`):
+	 * the environment becomes a WordPress one (start: wordpress) and a new
+	 * revision gives it the WordPress defaults a plain site was created
+	 * without: page cache on, 1024 MB and 2 to 4 PHP workers (where the plain
+	 * defaults were still in place). The CLI applies it next.
+	 */
+	public static function wordpress_installed( $environment ) {
+		if ( ! $environment || self::stack( $environment ) !== 'plain' ) {
+			return new \WP_Error( 'invalid', 'Not a plain site.', [ 'status' => 400 ] );
+		}
+		$d        = json_decode( (string) $environment->details ) ?: new \stdClass();
+		$d->start = 'wordpress';
+		Environments::update( [ 'details' => wp_json_encode( $d ) ], [ 'environment_id' => (int) $environment->environment_id ] );
+		$environment = Environments::get( (int) $environment->environment_id );
+		$config      = self::current( $environment );
+		$config['page_cache']['enabled'] = true;
+		if ( (int) $config['memory_mb'] <= self::LIMITS['memory_mb'][0] ) {
+			$config['memory_mb'] = 1024;
+		}
+		if ( (int) $config['php']['workers'] === 1 && (int) $config['php']['max_workers'] === 2 ) {
+			$config['php']['workers']     = 2;
+			$config['php']['max_workers'] = 4;
+		}
+		$row = self::save( $environment, $config, 0, 'WordPress installed', 'captaincore' );
+		if ( is_wp_error( $row ) ) {
+			return $row;
+		}
+		return [ 'revision' => (int) self::latest( $environment->environment_id )->revision ];
 	}
 
 	/** What the CLI needs to build a new site's container (`host-site-prepare`). */

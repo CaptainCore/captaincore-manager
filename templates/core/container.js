@@ -1,12 +1,14 @@
 // CaptainCore v3 — Container page (mixin), /account/servers/<id>/<container>.
 // Operators only. One site container on one of our servers: how a request is
 // served (edge → the container's programs), each program (WordPress on
-// FrankenPHP, every app, MariaDB) with its status and restart, the apps
+// FrankenPHP, or the web server alone on a plain site, every app, MariaDB)
+// with its status and restart, Install WordPress on a plain site, the apps
 // editor, the generated web server rules (read-only: each rule names where it
 // is edited), this container's CPU and memory, and its logs.
 //   GET  /servers/{id}/containers/{ct}?range=1h|24h|7d → { container, units, versions,
 //        listening, db, traffic, caddyfile, edge_caddyfile, history, server, site, hosting }
 //   POST /servers/{id}/containers/{ct}/restart  { what: php|database|cron|app-<name>|container }
+//   POST /servers/{id}/containers/{ct}/wordpress → { token } (job: host wordpress install)
 //   Apps save through PUT /sites/{site}/hosting (a new hosting revision + apply).
 
 Object.assign(Component.prototype, {
@@ -165,6 +167,11 @@ Object.assign(Component.prototype, {
     const versions = d.versions || {};
     const fp = (versions.frankenphp || '').match(/FrankenPHP (v[\d.]+)/), cad = (versions.frankenphp || '').match(/Caddy (v[\d.]+)/);
     const maria = (versions.mariadb || '').match(/(\d+\.\d+\.\d+)-MariaDB/);
+    // What the node found: WordPress is installed when wp-config.php is there;
+    // a plain site's container keeps MariaDB and WP-Cron switched off.
+    const wpInstalled = versions.wp_config === '1', wpVer = versions.wordpress || '';
+    const dbOff = d.stack === 'plain';
+    const canInstallWp = !wpInstalled && !!site && site.stack === 'plain' && (site.environment || 'Production') === 'Production';
     const hostingOpen = () => { if (!site) return; clearTimeout(this._ctTimer); this.setState({ env: site.environment || 'Production' }); this.openSite(String(site.site_id)); this.goSiteTab('hosting'); };
     const logBtn = src => () => this.openContainerLog('ct:' + s.ctName + ':' + src);
 
@@ -190,7 +197,9 @@ Object.assign(Component.prototype, {
       return { match: a.path + (a.strip_prefix ? ' (prefix removed)' : ''), name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label, app: true, illo: this.illo(this.appIllo(a)) };
     });
     const wpDot = dot(wpUnit);
-    flowRoutes.push({ match: flowRoutes.length ? 'everything else' : '/*', name: 'WordPress', sub: 'FrankenPHP · :80 · ' + (php.workers || 2) + '–' + (php.max_workers || 4) + ' PHP threads', fg: wpDot.fg, label: wpDot.label, app: false, illo: this.illo('wordpress') });
+    flowRoutes.push({ match: flowRoutes.length ? 'everything else' : '/*', name: wpInstalled ? 'WordPress' : 'Web server',
+      sub: wpInstalled ? 'FrankenPHP · :80 · ' + (php.workers || 2) + '–' + (php.max_workers || 4) + ' PHP threads' : 'FrankenPHP · :80 · files in ~/public',
+      fg: wpDot.fg, label: wpDot.label, app: false, illo: this.illo(wpInstalled ? 'wordpress' : 'app') });
     const hostApps = apps.filter(a => a.enabled !== false && a.route === 'hostname').map(a => {
       const u = appUnit(a.name), dt = dot(u);
       return { host: a.hostname, name: a.name, sub: progName(a.command) + ' · :' + a.port, fg: dt.fg, label: dt.label, illo: this.illo(this.appIllo(a)) };
@@ -200,9 +209,18 @@ Object.assign(Component.prototype, {
     // ── Programs ──
     const editing = s.ctAppEdit;
     const programs = [];
-    programs.push({ illo: this.illo('wordpress'), hue: 'var(--brand)', title: 'WordPress', kind: 'FrankenPHP ' + (fp ? fp[1] : '') + ' · PHP ' + (versions.php || php.version || ''),
+    const installWp = () => this.uiConfirm('Install WordPress on ' + site.name + '? A local backup is taken first. MariaDB is turned on, the files now in ~/public move to ~/html-before-wordpress-<date>, and WordPress is installed at https://' + (primary || site.name) + ' with the page cache on. Visitors see the new WordPress site as soon as it finishes (about a minute).', { label: 'Install WordPress' }).then(ok => {
+      if (!ok) return;
+      this.startJob({ label: 'install-wordpress', target: site.name, command: 'host wordpress install', siteId: String(site.site_id), environment: site.environment || 'Production',
+        dispatch: () => this.api('/servers/' + s.serverId + '/containers/' + encodeURIComponent(s.ctName) + '/wordpress', { method: 'POST' }),
+        onFinish: () => { this._detail = null; this.loadContainer(); this.toast('WordPress is installed on ' + site.name + '. Sign in with Login to WordPress.', { kind: 'success', timeout: 8000 }); } });
+    });
+    programs.push({ illo: this.illo(wpInstalled ? 'wordpress' : 'app'), hue: 'var(--brand)', title: wpInstalled ? 'WordPress' : 'Web server',
+      kind: (wpInstalled && wpVer ? 'WordPress ' + wpVer + ' · ' : '') + 'FrankenPHP ' + (fp ? fp[1] : '') + ' · PHP ' + (versions.php || php.version || ''),
       fg: wpDot.fg, label: wpDot.label, meta: [up(wpUnit), wpUnit && wpUnit.memory != null ? this.fmtBytes(wpUnit.memory) : '', restarts(wpUnit)].filter(Boolean).join(' · '),
+      canInstall: canInstallWp, install: installWp,
       lines: [
+        ...(wpInstalled ? [] : [{ k: 'Serves', v: 'The files in ~/public. WordPress is not installed.' }]),
         { k: 'PHP threads', v: (php.workers || 2) + ' to ' + (php.max_workers || 4) + ' · ' + (php.memory_limit || 256) + ' MB each' },
         { k: 'Traffic', v: tr.requests != null ? (tr.per_min + ' requests/min over the last ' + Math.round((tr.window_s || 900) / 60) + ' min') : 'No requests yet' },
         { k: 'Responses', v: tr.requests ? ['2xx', '3xx', '4xx', '5xx'].map(k => (codes[k] || 0) + ' ' + k).join(' · ') + (tr.p95_ms != null ? ' · p95 ' + tr.p95_ms + ' ms' : '') : '—' }
@@ -223,7 +241,7 @@ Object.assign(Component.prototype, {
         logs: logBtn('app-' + a.name), restart: () => this.uiConfirm('Restart ' + a.name + '? Its connections drop and reconnect.', { label: 'Restart' }).then(ok => ok && this.containerRestart('app-' + a.name, a.name)),
         canEdit: true, edit: () => { this._ctAppDraft = this.containerAppForm(a); this.setState({ ctAppEdit: i }); }, hasEditor: editing === i });
     });
-    programs.push({ illo: this.illo('database'), hue: 'var(--acc-reports)', title: 'MariaDB', kind: 'MariaDB ' + (maria ? maria[1] : ''),
+    if (!dbOff) programs.push({ illo: this.illo('database'), hue: 'var(--acc-reports)', title: 'MariaDB', kind: 'MariaDB ' + (maria ? maria[1] : ''),
       fg: dbDot.fg, label: dbDot.label, meta: [up(dbUnit), dbUnit && dbUnit.memory != null ? this.fmtBytes(dbUnit.memory) : '', restarts(dbUnit)].filter(Boolean).join(' · '),
       lines: [
         { k: 'Database', v: (d.db && d.db.bytes != null ? this.fmtBytes(d.db.bytes) : '—') + ' · wordpress' },
@@ -232,12 +250,12 @@ Object.assign(Component.prototype, {
       ],
       logs: logBtn('database'), restart: () => this.uiConfirm('Restart MariaDB? The site shows database errors for a few seconds.', { label: 'Restart' }).then(ok => ok && this.containerRestart('database', 'MariaDB')),
       canEdit: false, edit: () => {}, hasEditor: false });
-    programs.forEach(p => { p.hasMeta = !!p.meta; p.lines.forEach(l => { l.font = l.mono ? 'var(--mono)' : 'var(--sans)'; }); });
+    programs.forEach(p => { p.hasMeta = !!p.meta; p.canInstall = !!p.canInstall; p.install = p.install || (() => {}); p.lines.forEach(l => { l.font = l.mono ? 'var(--mono)' : 'var(--sans)'; }); });
 
     const sshU = unit('ssh'), timerU = unit('cron-timer'), cronU = unit('cron');
     const background = [
       { k: 'SSH', ico: this.icon('key'), v: (dot(sshU).label) + ' · as site on port ' + (c.ssh_port || '—'), fg: dot(sshU).fg, logs: logBtn('ssh') },
-      { k: 'WP-Cron', ico: this.icon('clock'), v: (timerU && timerU.active === 'active' ? 'Every minute' : 'Timer off') + (cronU && cronU.last_exit ? ' · last ran ' + (since(cronU.last_exit) < 60 ? 'just now' : this.fmtDuration(since(cronU.last_exit)) + ' ago') + (cronU.result && cronU.result !== 'success' ? ' (' + cronU.result + ')' : '') : ''), fg: dot(timerU).fg, logs: logBtn('cron') }
+      ...(dbOff ? [] : [{ k: 'WP-Cron', ico: this.icon('clock'), v: (timerU && timerU.active === 'active' ? 'Every minute' : 'Timer off') + (cronU && cronU.last_exit ? ' · last ran ' + (since(cronU.last_exit) < 60 ? 'just now' : this.fmtDuration(since(cronU.last_exit)) + ' ago') + (cronU.result && cronU.result !== 'success' ? ' (' + cronU.result + ')' : '') : ''), fg: dot(timerU).fg, logs: logBtn('cron') }])
     ];
 
     // ── App editor ──
@@ -307,7 +325,7 @@ Object.assign(Component.prototype, {
     const memMax = c.mem_limit || Math.max(1, ...h.map(r => r.mem));
 
     // ── Logs ──
-    const logSrcs = [['php', 'WordPress (PHP)'], ['database', 'MariaDB'], ['ssh', 'SSH'], ['cron', 'WP-Cron']].concat(apps.map(a => ['app-' + a.name, a.name]));
+    const logSrcs = (dbOff ? [['php', 'Web server (PHP)'], ['ssh', 'SSH']] : [['php', wpInstalled ? 'WordPress (PHP)' : 'Web server (PHP)'], ['database', 'MariaDB'], ['ssh', 'SSH'], ['cron', 'WP-Cron']]).concat(apps.map(a => ['app-' + a.name, a.name]));
     const curLog = s.ctLogSrc || '', log = this._ctLog;
 
     const lim = c.limits || {};
@@ -320,7 +338,7 @@ Object.assign(Component.prototype, {
       cxSiteOpen: () => { if (site) { clearTimeout(this._ctTimer); this.setState({ env: site.environment || 'Production' }); this.openSite(String(site.site_id)); } },
       cxHome: site && site.home_url ? site.home_url : '', cxHasHome: !!(site && site.home_url),
       cxHosting: hostingOpen,
-      cxImage: [versions.os, fp ? 'FrankenPHP ' + fp[1] : '', cad ? 'Caddy ' + cad[1] : '', versions.php ? 'PHP ' + versions.php : '', maria ? 'MariaDB ' + maria[1] : ''].filter(Boolean).join(' · ') || c.image || '',
+      cxImage: [versions.os, fp ? 'FrankenPHP ' + fp[1] : '', cad ? 'Caddy ' + cad[1] : '', versions.php ? 'PHP ' + versions.php : '', maria && !dbOff ? 'MariaDB ' + maria[1] : ''].filter(Boolean).join(' · ') || c.image || '',
       cxFacts: [
         { k: 'Memory', ico: this.icon('memory'), h: 'var(--brand)', pct: c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100).toFixed(0) + '%' : '0%', v: this.fmtBytes(c.mem) + ' of ' + (c.mem_limit ? gb(c.mem_limit) : '—') },
         { k: 'Disk', ico: this.icon('disk'), h: 'var(--acc-reports)', pct: c.disk_quota ? Math.min(100, c.disk / c.disk_quota * 100).toFixed(0) + '%' : '0%', v: this.fmtBytes(c.disk) + (c.disk_quota ? ' of ' + gb(c.disk_quota) : '') + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : '') },
@@ -334,7 +352,7 @@ Object.assign(Component.prototype, {
       cxVisitorIllo: this.illo('visitor'), cxEdgeIllo: this.illo('edge'), cxDbIllo: this.illo('database'),
       cxEdgeRules: edgeRules, cxEdgeHost: d.server ? 'Caddy on ' + d.server.name : 'Edge',
       cxFlowRoutes: flowRoutes, cxHostApps: hostApps, cxHasHostApps: hostApps.length > 0,
-      cxDbFg: dbDot.fg, cxDbLabel: dbDot.label, cxDbSize: d.db && d.db.bytes != null ? this.fmtBytes(d.db.bytes) : '',
+      cxHasDb: !dbOff, cxDbFg: dbDot.fg, cxDbLabel: dbDot.label, cxDbSize: d.db && d.db.bytes != null ? this.fmtBytes(d.db.bytes) : '',
       // Programs
       cxPrograms: programs, cxBackground: background,
       cxAddApp: () => { this._ctAppDraft = this.containerAppForm({ port: 3000 + apps.length + 1, route: 'path', path: '/' }); this.setState({ ctAppEdit: 'new' }); },
