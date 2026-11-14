@@ -339,6 +339,7 @@ Object.assign(Component.prototype, {
       // A plain site (HTML files, no WordPress) has no debug switch or page cache.
       hostWp: d.stack !== 'plain',
       hostDebugMark: c.debug ? '✓' : '', toggleHostDebug: () => set(cc => { cc.debug = !cc.debug; }),
+      hostCronMark: c.cron !== false ? '✓' : '', toggleHostCron: () => set(cc => { cc.cron = cc.cron === false; }),
       hostNoindexMark: c.noindex !== false ? '✓' : '', toggleHostNoindex: () => set(cc => { cc.noindex = cc.noindex === false; }),
       hostSuspendMark: c.suspended ? '✓' : '', toggleHostSuspend: () => set(cc => { cc.suspended = !cc.suspended; }),
       hostIsSuspended: !!(d.config && d.config.suspended),

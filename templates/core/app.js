@@ -1525,7 +1525,7 @@ class Component extends DCLogic {
     return {
       paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
       ptoOpen: false, epOpen: false, delOpen: false, rmOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
-      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false,
+      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
       // Settings
       provDlgOpen: false, recipeDlgOpen: false, defDlgOpen: false, procDlgOpen: false, procEditOpen: false,
@@ -3596,6 +3596,7 @@ class Component extends DCLogic {
       ...this.relayVals(s),
       ...(this.chatVals ? this.chatVals(s) : {}),
       ...(this.chatTriageVals ? this.chatTriageVals(s) : {}),
+      ...(this.restoreVals ? this.restoreVals(s) : {}),
       goProfile: this.go('profile'),
       // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
       // fresh mount" must compare against a slot the null call never clears

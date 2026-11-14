@@ -1325,6 +1325,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$info = CaptainCore\HostConfigs::site_build_info( (int) $current_site->site_id );
 		return is_wp_error( $info ) ? $info : [ 'response' => 'ok' ] + $info;
 	}
+	if ( $command === 'host-site-restored' ) {
+		if ( empty( $current_site ) ) {
+			return new WP_Error( 'site_required', 'host-site-restored requires a site_id.', [ 'status' => 400 ] );
+		}
+		$done = CaptainCore\HostConfigs::restored( (int) $current_site->site_id, $post->result ?? [] );
+		return is_wp_error( $done ) ? $done : [ 'response' => $done ];
+	}
 	if ( $command === 'host-site-removed' ) {
 		if ( empty( $environment_id ) ) {
 			return new WP_Error( 'site_required', 'host-site-removed requires a site_id and environment.', [ 'status' => 400 ] );
@@ -7295,6 +7302,23 @@ function captaincore_servers_add_site_func( $request ) {
 	return $created + [ 'token' => CaptainCore\Run::task( [ 'host', 'site', 'create', (string) $created['site_id'] ] ) ];
 }
 
+// Backups → Restore to a new site: any site's long-term backup becomes a new
+// site on one of our servers (HostConfigs::restore_to_new_site), built by the
+// `host site create` job this returns.
+function captaincore_backup_restore_to_server_func( $request ) {
+	$params = $request->get_json_params();
+	$server = CaptainCore\Servers::get( (int) ( $params['server_id'] ?? 0 ) );
+	if ( ! $server ) {
+		return new WP_Error( 'not_found', 'Pick one of our servers.', [ 'status' => 404 ] );
+	}
+	$created = CaptainCore\HostConfigs::restore_to_new_site( $server, (int) $request['id'], (string) $request['environment'], (string) $request['backup_id'],
+		(string) ( $params['name'] ?? '' ), get_current_user_id(), ! empty( $params['cron'] ) );
+	if ( is_wp_error( $created ) ) {
+		return $created;
+	}
+	return $created + [ 'token' => CaptainCore\Run::task( [ 'host', 'site', 'create', (string) $created['site_id'] ] ) ];
+}
+
 // One container's page: its programs, traffic, both Caddyfiles and metrics
 // from the node (CLI `node container`), plus the environment it hosts and
 // that environment's hosting configuration.
@@ -12683,6 +12707,14 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_servers_create_func',
 				'permission_callback' => 'captaincore_admin_permission_check',
 			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>production|staging)/backups/(?P<backup_id>[0-9a-f]{8,64})/restore-to-server', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_backup_restore_to_server_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 

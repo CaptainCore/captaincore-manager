@@ -430,6 +430,72 @@ Object.assign(Component.prototype, {
     });
   },
 
+  // ── Restore to a new site (operators) ─────────────────────────
+  // Any backup becomes a new site on one of our servers: POST
+  // /sites/{id}/{env}/backups/{backup}/restore-to-server makes the site, the
+  // job it returns (`host site create`) streams the backup into its container.
+  // The copy sends no mail, runs no cron and is hidden from search engines.
+  openRestoreToServer() {
+    const real = this._detail, s = this.state;
+    if (!real || !s.bkDialog) return;
+    const b = (real.backups || []).find(x => x.id === s.bkDialog) || {};
+    const slug = String((real.site && (real.site.site || real.site.name)) || 'site').toLowerCase().replace(/\.[a-z.]+$/, '').replace(/[^a-z0-9]/g, '').slice(0, 18);
+    const d = b._raw && b._raw.time ? new Date(b._raw.time) : new Date();
+    const stamp = String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    this.loadServers();
+    this.setState({ rsOpen: true, rsBackup: b.id || s.bkDialog, rsWhen: b.when || '', rsEnv: s.env, rsName: slug + 'restore' + stamp, rsServer: '', rsCron: false, rsBusy: false });
+  },
+
+  submitRestoreToServer() {
+    const real = this._detail, s = this.state;
+    const servers = this.rsServers();
+    const server = servers.find(x => String(x.server_id) === String(s.rsServer)) || servers[0];
+    const name = (s.rsName || '').trim();
+    if (!real || !server) { this.toast('No server to restore onto', { kind: 'error' }); return; }
+    if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]{2,40}$/.test(name)) { this.toast('Give the new site a name of 3 to 40 letters or digits', { kind: 'error' }); return; }
+    this.setState({ rsBusy: true });
+    const tid = this.toast('Creating ' + name + ' on ' + server.name + '…', { kind: 'loading' });
+    this.api('/sites/' + real.siteId + '/' + String(s.rsEnv || 'production').toLowerCase() + '/backups/' + s.rsBackup + '/restore-to-server',
+      { method: 'POST', body: { server_id: Number(server.server_id), name, cron: !!s.rsCron } })
+      .then(res => {
+        if (!res || res.code) throw new Error((res && res.message) || 'Could not create the site');
+        this.updateToast(tid, (res.domain || name) + ' created; restoring the backup into it', { kind: 'success', timeout: 6000 });
+        this.setState({ rsOpen: false, rsBusy: false, bkDialog: '' });
+        this.startJob({ label: 'restore', target: String(s.rsBackup).slice(0, 8) + ' → ' + (res.domain || name), command: 'host site create', siteId: res.site_id,
+          environment: 'Production', expand: true, dispatch: () => Promise.resolve(res), onFinish: () => this.loadServers(true) });
+      })
+      .catch(e => { this.setState({ rsBusy: false }); this.updateToast(tid, (e && e.message) || 'Could not create the site', { kind: 'error', timeout: 8000 }); });
+  },
+
+  rsServers() {
+    const list = (this._srv && this._srv.list) || [];
+    return list.filter(x => x.status !== 'retired' && x.status !== 'draining');
+  },
+
+  restoreVals(s) {
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
+    const base = { bkDlgCanRestore: isOp && !!this._detail, bkDlgRestore: () => this.openRestoreToServer() };
+    if (!s.rsOpen) return { ...base, rsOpen: false };
+    const servers = this.rsServers();
+    const picked = servers.find(x => String(x.server_id) === String(s.rsServer)) || servers[0];
+    const site = (this._detail && this._detail.site && this._detail.site.name) || 'this site';
+    return {
+      ...base, rsOpen: true, rsIllo: this.illo('container'),
+      rsTitle: 'Restore to a new site',
+      rsFrom: site + ' · ' + String(s.rsEnv || 'Production').toLowerCase() + ' backup ' + String(s.rsBackup || '').slice(0, 8) + (s.rsWhen ? ' · ' + s.rsWhen : ''),
+      rsName: s.rsName || '', onRsName: e => this.setState({ rsName: e.target.value }),
+      rsLoading: !this._srv, rsNoServers: !!this._srv && servers.length === 0,
+      rsServers: servers.map(x => ({ label: x.name, desc: (x.sites || 0) + ' sites · ' + (x.address || ''),
+        bd: picked && picked.server_id === x.server_id ? 'var(--brand)' : 'var(--rule)', bg: picked && picked.server_id === x.server_id ? 'var(--brand-soft)' : 'var(--paper)',
+        mark: picked && picked.server_id === x.server_id ? '✓' : '', pick: () => this.setState({ rsServer: x.server_id }) })),
+      rsCronMark: s.rsCron ? '✓' : '', rsCronBg: s.rsCron ? 'var(--brand)' : 'var(--paper)',
+      rsCronToggle: () => this.setState({ rsCron: !s.rsCron }),
+      rsSubmitLabel: s.rsBusy ? 'Creating…' : 'Restore to new site',
+      rsClose: () => this.setState({ rsOpen: false }),
+      rsSubmit: () => { if (!s.rsBusy) this.submitRestoreToServer(); }
+    };
+  },
+
   // ── Snapshots ─────────────────────────────────────────────────
   loadSnapshots() {
     const real = this._detail;

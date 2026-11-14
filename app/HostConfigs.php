@@ -41,7 +41,7 @@ class HostConfigs extends DB {
 	];
 
 	/** Environment details keys only the Manager writes; CLI syncs never overwrite them. */
-	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container' ];
+	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container', 'restore', 'restored' ];
 
 	/** Starting config for an environment that has no revision yet. */
 	public static function default_for( $environment ) {
@@ -71,6 +71,7 @@ class HostConfigs extends DB {
 			'debug'               => false,
 			'noindex'             => true,
 			'mail'                => 'relay',
+			'cron'                => true,
 			'suspended'           => false,
 			'page_cache'          => [ 'enabled' => true, 'ttl' => 60, 'exclude' => [] ],
 			'apps'                => [],
@@ -277,6 +278,9 @@ class HostConfigs extends DB {
 		// Outgoing mail through the server's relay (Mailgun, mg.<hosting zone>),
 		// or off: the relay refuses mail from this site's container.
 		$out['mail']             = ( $in['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
+		// WordPress cron (the container's timer). Off for a copy that must
+		// not act on its own, such as a restored backup.
+		$out['cron']             = ! array_key_exists( 'cron', $in ) || ! empty( $in['cron'] );
 		// Suspended: the edge answers every request with a holding page (503).
 		$out['suspended']        = ! empty( $in['suspended'] );
 		$cache_errors            = [];
@@ -363,6 +367,7 @@ class HostConfigs extends DB {
 		$config['debug']     = ! empty( $config['debug'] );
 		$config['noindex']   = ! array_key_exists( 'noindex', $config ) || ! empty( $config['noindex'] );
 		$config['mail']      = ( $config['mail'] ?? 'relay' ) === 'off' ? 'off' : 'relay';
+		$config['cron']      = ! array_key_exists( 'cron', $config ) || ! empty( $config['cron'] );
 		$config['suspended'] = ! empty( $config['suspended'] );
 		if ( isset( $config['php'] ) && is_array( $config['php'] ) ) {
 			$config['php']['shell'] = ! empty( $config['php']['shell'] );
@@ -646,7 +651,7 @@ class HostConfigs extends DB {
 	 * files only: no WordPress, MariaDB and the cron timer off, no page cache)
 	 * or 'empty' (a placeholder page for a copy or migration).
 	 */
-	public static function create_site( $server, $label, $start, $user_id, $account_id = 0 ) {
+	public static function create_site( $server, $label, $start, $user_id, $account_id = 0, $restore = null ) {
 		$slug = substr( preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $label ) ), 0, 30 );
 		if ( strlen( $slug ) < 3 ) {
 			return new \WP_Error( 'invalid', 'Give the site a name of at least 3 letters or digits.', [ 'status' => 400 ] );
@@ -681,9 +686,9 @@ class HostConfigs extends DB {
 			'home_url'  => "https://{$host}",
 			'details'   => wp_json_encode( [
 				'container' => 's' . $site_id, 'container_ip' => $slot['ip'],
-				'start'     => in_array( $start, [ 'empty', 'plain' ], true ) ? $start : 'wordpress',
+				'start'     => in_array( $start, [ 'empty', 'plain', 'restore' ], true ) ? $start : 'wordpress',
 				'wp_admin'  => [ 'user' => $user ? $user->user_login : 'admin', 'email' => $user ? $user->user_email : get_option( 'admin_email' ) ],
-			] ),
+			] + ( $start === 'restore' && $restore ? [ 'restore' => $restore ] : [] ) ),
 		], [ 'environment_id' => (int) $env->environment_id ] );
 		$env    = Environments::get( (int) $env->environment_id );
 		$config = self::default_for( $env );
@@ -696,7 +701,13 @@ class HostConfigs extends DB {
 			$config['php']['workers']     = 1;
 			$config['php']['max_workers'] = 2;
 		}
-		$row = self::save( $env, $config, $user_id, 'Site created on ' . $server->name );
+		if ( $start === 'restore' ) {
+			// A copy of a real site: it sends no mail and runs no scheduled
+			// tasks (renewals, newsletters) until someone turns them on.
+			$config['mail'] = 'off';
+			$config['cron'] = ! empty( $restore['cron'] ) && $restore['cron'] === 'on';
+		}
+		$row = self::save( $env, $config, $user_id, $start === 'restore' ? 'Site created on ' . $server->name . ' from a backup' : 'Site created on ' . $server->name );
 		if ( is_wp_error( $row ) ) {
 			return $row;
 		}
@@ -764,7 +775,55 @@ class HostConfigs extends DB {
 			'image'     => self::PHP_IMAGES[ $config['php']['version'] ] ?? '', 'memory_mib' => (int) $config['memory_mb'], 'disk_gib' => 10,
 			'primary'   => $primary, 'start' => $d->start ?? 'wordpress', 'title' => $site ? $site->site : 'New site',
 			'admin_user' => $d->wp_admin->user ?? 'admin', 'admin_email' => $d->wp_admin->email ?? '',
+		] + ( ( $d->start ?? '' ) === 'restore' && ! empty( $d->restore ) ? [ 'restore' => $d->restore ] : [] );
+	}
+
+	/**
+	 * Restore to a new site: a site on one of our servers built from a
+	 * long-term backup of any site (`host site create` streams it in). Admin
+	 * only; the copy belongs to no account, sends no mail, runs no cron and
+	 * stays hidden from search engines until someone changes that.
+	 */
+	public static function restore_to_new_site( $server, $source_site_id, $environment, $backup_id, $label, $user_id, $cron = false ) {
+		$source = Sites::get( (int) $source_site_id );
+		if ( ! $source ) {
+			return new \WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+		}
+		$environment = ucfirst( strtolower( (string) $environment ) );
+		if ( ! in_array( $environment, [ 'Production', 'Staging' ], true ) || ! preg_match( '/^[0-9a-f]{8,64}$/', (string) $backup_id ) ) {
+			return new \WP_Error( 'invalid', 'Pick a backup of production or staging.', [ 'status' => 400 ] );
+		}
+		$restore = [ 'site_id' => (int) $source->site_id, 'environment' => $environment, 'backup_id' => (string) $backup_id, 'cron' => $cron ? 'on' : 'off' ];
+		$created = self::create_site( $server, $label, 'restore', $user_id, 0, $restore );
+		if ( is_wp_error( $created ) ) {
+			return $created;
+		}
+		ProcessLog::insert( 'Created on ' . $server->name . ' from ' . $source->name . ' (' . strtolower( $environment ) . ') backup ' . substr( $backup_id, 0, 8 ), $created['site_id'] );
+		ProcessLog::insert( 'Backup ' . substr( $backup_id, 0, 8 ) . ' restored to a new site, ' . $created['domain'] . ', on ' . $server->name, (int) $source->site_id );
+		return $created;
+	}
+
+	/** `host site create` finished a restore: the site is a WordPress site now. */
+	public static function restored( $site_id, $result ) {
+		$env = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Production' ] );
+		$env = $env ? $env[0] : null;
+		if ( ! $env ) {
+			return new \WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
+		}
+		$d = json_decode( (string) $env->details ) ?: new \stdClass();
+		if ( ( $d->start ?? '' ) !== 'restore' ) {
+			return new \WP_Error( 'invalid', 'Not a site being restored.', [ 'status' => 400 ] );
+		}
+		$r          = (array) $result;
+		$d->start   = 'wordpress';
+		$d->restored = [
+			'site_id' => (int) ( $d->restore->site_id ?? 0 ), 'environment' => (string) ( $d->restore->environment ?? '' ),
+			'backup_id' => (string) ( $d->restore->backup_id ?? '' ), 'old_home' => substr( (string) ( $r['old_home'] ?? '' ), 0, 200 ),
+			'kept_in' => substr( (string) ( $r['kept_in'] ?? '' ), 0, 100 ), 'at' => gmdate( 'Y-m-d H:i:s' ),
 		];
+		unset( $d->restore );
+		Environments::update( [ 'details' => wp_json_encode( $d ) ], [ 'environment_id' => (int) $env->environment_id ] );
+		return 'Recorded: ' . ( $d->restored['old_home'] ?: 'the backup' ) . ' now runs at ' . $env->home_url . '.';
 	}
 
 	/**
