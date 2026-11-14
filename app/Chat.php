@@ -207,8 +207,11 @@ class Chat {
 		if ( $search !== '' ) {
 			$like = '%' . $wpdb->esc_like( mb_substr( $search, 0, 100 ) ) . '%';
 			if ( $operator ) {
-				$where[] = '(c.contact_name LIKE %s OR c.contact_email LIKE %s OR c.subject LIKE %s)';
-				array_push( $args, $like, $like, $like );
+				// Operators search who, the subject, and what was said,
+				// internal notes included.
+				$where[] = "(c.contact_name LIKE %s OR c.contact_email LIKE %s OR c.subject LIKE %s OR EXISTS (SELECT 1 FROM $m ms
+					WHERE ms.chat_conversation_id = c.chat_conversation_id AND ms.kind IN ('comment', 'note') AND ms.body LIKE %s))";
+				array_push( $args, $like, $like, $like, $like );
 			} else {
 				// Customers search their own history: subjects and what was said.
 				$where[] = "(c.subject LIKE %s OR EXISTS (SELECT 1 FROM $m ms WHERE ms.chat_conversation_id = c.chat_conversation_id
