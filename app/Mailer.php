@@ -182,7 +182,10 @@ class Mailer {
         $link        = esc_url( home_url( '/account/chat/' . $id ) );
         $names       = array_values( array_unique( array_map( fn( $r ) => (string) $r->author_name, $replies ) ) );
         $who         = $names[0] !== '' ? $names[0] : $site_name;
-        $topic       = trim( (string) $conversation->subject ) !== '' ? trim( (string) $conversation->subject ) : 'Your conversation';
+        // Same subject on every email of a conversation, so mail apps thread them.
+        $topic       = \CaptainCore\Chat::email_topic( (string) $conversation->subject );
+        $opened      = strtotime( (string) $conversation->created_at . ' UTC' );
+        $opened_on   = $opened ? wp_date( wp_date( 'Y', $opened ) === wp_date( 'Y' ) ? 'M j' : 'M j, Y', $opened ) : '';
 
         $items = '';
         foreach ( $replies as $r ) {
@@ -219,7 +222,7 @@ class Mailer {
             $items .= "
                 <div style='margin-bottom: 18px; padding: 16px 18px; background-color: #F5F7FA; border-radius: 10px; text-align: left;'>
                     <div style='font-size: 13px; color: #666D7A; margin-bottom: 6px;'><strong style='color: #15181D;'>{$author}</strong> &middot; {$when}</div>
-                    <div style='font-size: 15px; line-height: 1.55; color: #15181D;'>{$body}</div>
+                    <div style='font-size: 15px; line-height: 1.6; color: #15181D;'>{$body}</div>
                     {$attached}
                 </div>";
         }
@@ -291,7 +294,7 @@ class Mailer {
             $to !== '' ? $to : $user->user_email,
             "[{$site_name}] {$topic}",
             $started ? "{$who} sent you a message" : ( count( $replies ) === 1 ? "{$who} replied" : "{$who} sent " . count( $replies ) . ' replies' ),
-            $topic,
+            $started ? $topic : ( $opened_on !== '' ? "In your conversation from {$opened_on}" : '' ),
             $content_html,
             $headers,
             '',

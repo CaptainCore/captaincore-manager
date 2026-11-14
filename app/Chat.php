@@ -1159,7 +1159,7 @@ class Chat {
 		$para  = [];
 		$flush = function () use ( &$para, &$out, $inline ) {
 			if ( $para ) {
-				$out[] = '<p style="margin:0 0 8px;">' . implode( '<br>', array_map( $inline, $para ) ) . '</p>';
+				$out[] = '<p style="margin:0 0 14px;">' . implode( '<br>', array_map( $inline, $para ) ) . '</p>';
 				$para  = [];
 			}
 		};
@@ -1172,14 +1172,14 @@ class Chat {
 				for ( $i++; $i < $count && ! preg_match( '/^\s*```/', $lines[ $i ] ); $i++ ) {
 					$block[] = $lines[ $i ];
 				}
-				$out[] = '<pre style="' . $code . 'padding:10px 12px;white-space:pre-wrap;margin:0 0 8px;">' . implode( "\n", $block ) . '</pre>';
+				$out[] = '<pre style="' . $code . 'padding:10px 12px;white-space:pre-wrap;margin:0 0 14px;">' . implode( "\n", $block ) . '</pre>';
 				continue;
 			}
 			$matched = false;
 			foreach ( [
-				[ '/^\s*&gt;\s?/', '<blockquote style="margin:0 0 8px;padding-left:11px;border-left:3px solid #D5DAE1;color:#666D7A;">', '</blockquote>', 'quote' ],
-				[ '/^\s*[-*]\s+/', '<ul style="margin:0 0 8px;padding-left:22px;">', '</ul>', 'li' ],
-				[ '/^\s*\d+[.)]\s+/', '<ol style="margin:0 0 8px;padding-left:22px;">', '</ol>', 'li' ],
+				[ '/^\s*&gt;\s?/', '<blockquote style="margin:0 0 14px;padding-left:11px;border-left:3px solid #D5DAE1;color:#666D7A;">', '</blockquote>', 'quote' ],
+				[ '/^\s*[-*]\s+/', '<ul style="margin:0 0 14px;padding-left:22px;">', '</ul>', 'li' ],
+				[ '/^\s*\d+[.)]\s+/', '<ol style="margin:0 0 14px;padding-left:22px;">', '</ol>', 'li' ],
 			] as [ $re, $open, $close, $kind ] ) {
 				if ( ! preg_match( $re, $line ) ) {
 					continue;
@@ -1204,6 +1204,10 @@ class Chat {
 			$para[] = $line;
 		}
 		$flush();
+		// The last block sits flush with whatever holds it.
+		if ( $out ) {
+			$out[ count( $out ) - 1 ] = preg_replace( '/margin:0 0 14px;/', 'margin:0;', $out[ count( $out ) - 1 ], 1 );
+		}
 		return preg_replace_callback( '/\x00(\d+)\x00/', fn( $m ) => $keep[ (int) $m[1] ], implode( '', $out ) );
 	}
 
@@ -2120,6 +2124,39 @@ class Chat {
 		}
 		if ( mb_strlen( $text ) > $max ) {
 			return new \WP_Error( 'bad_text', 'Text is too long.', [ 'status' => 400 ] );
+		}
+		return $text;
+	}
+
+	/**
+	 * A conversation's subject as an email subject line. Subjects made from
+	 * the first line of a message (most imported ones) open with a greeting
+	 * ("Hi Austin , Good evening.") and carry Intercom's "mailto:" link text.
+	 * Those come off here, for the email only: the stored subject stays as
+	 * it is. Cut at a word, max $max characters.
+	 */
+	public static function email_topic( $subject, $max = 70 ) {
+		$text = preg_replace( '/\bmailto:/i', '', (string) $subject );
+		$text = trim( preg_replace( [ '/\s+/u', '/\s+([,.!?;:])/u' ], [ ' ', '$1' ], $text ) );
+		$greeting = '/^(?:hi|hey|hello|hiya|howdy|dear|greetings|good\s+(?:morning|afternoon|evening|day))\b(?:\s+(?:there|all|team|guys|folks|everyone|support|[A-Z][\w\'’-]*))?(?:\s+or\s+\w+)?\s*[,!.:;\-–—]+\s*/iu';
+		for ( $i = 0; $i < 3; $i++ ) {
+			$next = preg_replace( $greeting, '', $text );
+			$next = preg_replace( '/^(?:I\s+)?hope\s+(?:you\s+are|you\'re|all\s+is)\s+[^.!?]*[.!?]\s*/iu', '', $next );
+			if ( $next === $text ) {
+				break;
+			}
+			$text = $next;
+		}
+		$text = trim( $text );
+		if ( $text === '' || mb_strlen( $text ) < 4 ) {
+			$text = trim( (string) $subject ) !== '' ? trim( (string) $subject ) : 'Your conversation';
+		}
+		$text = mb_strtoupper( mb_substr( $text, 0, 1 ) ) . mb_substr( $text, 1 );
+		$text = preg_replace( '/(?<!\.)\.$/u', '', $text );
+		if ( mb_strlen( $text ) > $max ) {
+			$cut  = mb_substr( $text, 0, $max );
+			$cut  = preg_replace( '/\s+\S*$/u', '', $cut ) ?: $cut;
+			$text = rtrim( $cut, " ,.;:-–—…" ) . '…';
 		}
 		return $text;
 	}
