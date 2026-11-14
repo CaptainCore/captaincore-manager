@@ -3595,6 +3595,7 @@ class Component extends DCLogic {
       ...securityVals, ...auditsVals, ...reportsVals, ...archivesVals, ...serversVals, ...settingsVals, ...profileVals,
       ...this.relayVals(s),
       ...(this.chatVals ? this.chatVals(s) : {}),
+      ...(this.chatTriageVals ? this.chatTriageVals(s) : {}),
       goProfile: this.go('profile'),
       // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
       // fresh mount" must compare against a slot the null call never clears

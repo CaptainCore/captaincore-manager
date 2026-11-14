@@ -669,6 +669,10 @@ class Chat {
 		}
 
 		ChatConversations::update( $set, [ 'chat_conversation_id' => (int) $conversation->chat_conversation_id ] );
+		// Closed is done: its triage goes too (a reopened one gets a fresh look).
+		if ( ( $set['status'] ?? '' ) === 'closed' ) {
+			self::clear_triage( (int) $conversation->chat_conversation_id );
+		}
 		$created = [];
 		foreach ( $events as [ $body, $internal ] ) {
 			$created[] = self::append( (int) $conversation->chat_conversation_id, [
@@ -1549,7 +1553,7 @@ class Chat {
 				@rmdir( $path );
 			}
 		}
-		foreach ( [ 'attachments', 'reactions', 'revisions', 'reads', 'drafts', 'participants', 'messages' ] as $table ) {
+		foreach ( [ 'attachments', 'reactions', 'revisions', 'reads', 'drafts', 'triage', 'participants', 'messages' ] as $table ) {
 			$wpdb->delete( $p . $table, [ 'chat_conversation_id' => $cid ] );
 		}
 		ChatConversations::delete( $cid );
@@ -2008,26 +2012,226 @@ class Chat {
 			ORDER BY c.waiting_since ASC LIMIT %d",
 			gmdate( 'Y-m-d H:i:s', $now - max( 60, (int) $min_wait ) ), gmdate( 'Y-m-d H:i:s', $now - max( 3600, (int) $max_wait ) ), max( 1, min( 25, (int) $limit ) )
 		) );
-		$config = Configurations::get();
-		$base   = isset( $config->path ) ? trim( (string) $config->path, '/' ) : 'account';
-		return array_map( function ( $row ) use ( $now, $base ) {
-			$uid    = (int) $row->user_id;
-			$access = $uid > 0 ? self::customer_access( $uid ) : null;
-			$site   = null;
-			if ( (int) $row->site_id ) {
-				$s    = Sites::get( (int) $row->site_id );
-				$site = $s ? [ 'id' => (int) $row->site_id, 'name' => (string) $s->name, 'url' => (string) ( json_decode( (string) $s->details )->home_url ?? '' ) ] : null;
-			}
-			return [
-				'conversation'    => self::present_conversation( $row, true ),
-				'waiting_minutes' => (int) floor( ( $now - strtotime( $row->waiting_since . ' UTC' ) ) / 60 ),
-				'link'            => home_url( '/' . ( $base !== '' ? $base . '/' : '' ) . 'chat/' . (int) $row->chat_conversation_id ),
-				'customer'        => [ 'user_id' => $uid ?: null, 'name' => $row->contact_name, 'email' => $row->contact_email, 'guest' => $uid === 0 ],
-				'access'          => is_wp_error( $access ) ? null : $access,
-				'site'            => $site,
-				'messages'        => self::messages( (int) $row->chat_conversation_id, true, 0, 40 ),
-			];
+		return array_map( function ( $row ) use ( $now ) {
+			return [ 'conversation' => self::present_conversation( $row, true ), 'waiting_minutes' => (int) floor( ( $now - strtotime( $row->waiting_since . ' UTC' ) ) / 60 ) ]
+				+ self::agent_context( $row, 40 );
 		}, $rows ?: [] );
+	}
+
+	/**
+	 * What an agent needs to work one conversation: a link to it, the
+	 * customer, what they can access, the site they tagged and the latest
+	 * $messages messages (internal notes included).
+	 */
+	private static function agent_context( $row, $messages = 40 ) {
+		static $base = null;
+		if ( $base === null ) {
+			$config = Configurations::get();
+			$base   = isset( $config->path ) ? trim( (string) $config->path, '/' ) : 'account';
+		}
+		$uid    = (int) $row->user_id;
+		$access = $uid > 0 ? self::customer_access( $uid ) : null;
+		$site   = null;
+		if ( (int) $row->site_id ) {
+			$s    = Sites::get( (int) $row->site_id );
+			$site = $s ? [ 'id' => (int) $row->site_id, 'name' => (string) $s->name, 'url' => (string) ( json_decode( (string) $s->details )->home_url ?? '' ) ] : null;
+		}
+		return [
+			'link'     => home_url( '/' . ( $base !== '' ? $base . '/' : '' ) . 'chat/' . (int) $row->chat_conversation_id ),
+			'customer' => [ 'user_id' => $uid ?: null, 'name' => $row->contact_name, 'email' => $row->contact_email, 'guest' => $uid === 0 ],
+			'access'   => is_wp_error( $access ) ? null : $access,
+			'site'     => $site,
+			'messages' => self::messages( (int) $row->chat_conversation_id, true, 0, $messages ),
+		];
+	}
+
+	// ── triage ──────────────────────────────────────────────────────────
+	//
+	// A first pass over open conversations, usually by an AI agent, so an
+	// operator can work them in groups: close the ones that are done, send
+	// the ones with a good draft, and spend their time on the rest. A
+	// conversation's triage holds while nobody comments; a newer comment
+	// (either side) makes it stale and the conversation untriaged again.
+
+	const TRIAGE = [ 'close' => 'Likely close', 'reply' => 'Draft ready', 'attention' => 'Needs you' ];
+
+	/** The triage row for presentation: from a joined row (t_* columns) or the table row. */
+	private static function present_triage( $row, $last_comment_id ) {
+		$category = (string) ( $row->t_category ?? $row->category ?? '' );
+		if ( $category === '' ) {
+			return null;
+		}
+		$agent = (string) ( $row->t_agent ?? $row->agent ?? '' );
+		$based = (int) ( $row->t_based ?? $row->based_on_message_id ?? 0 );
+		return [
+			'category' => $category,
+			'label'    => self::TRIAGE[ $category ] ?? $category,
+			'reason'   => (string) ( $row->t_reason ?? $row->reason ?? '' ),
+			'agent'    => $agent,
+			'by'       => $agent !== '' && isset( self::AGENTS[ $agent ] ) ? self::AGENTS[ $agent ] : self::user_name( (int) ( $row->t_user ?? $row->user_id ?? 0 ), 'Someone' ),
+			'based_on_message_id' => $based,
+			'stale'    => (int) $last_comment_id > $based,
+			'at'       => self::ts( $row->t_at ?? $row->updated_at ?? null ),
+		];
+	}
+
+	/**
+	 * Every open conversation with its triage, for the Triage view
+	 * (operators). Snoozed and closed ones stay out. Newest activity first.
+	 */
+	public static function triage_board( $user_id ) {
+		global $wpdb;
+		if ( ! self::is_operator( $user_id ) ) {
+			return self::not_allowed();
+		}
+		$c    = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$t    = $wpdb->base_prefix . 'captaincore_chat_triage';
+		$d    = $wpdb->base_prefix . 'captaincore_chat_drafts';
+		$rows = $wpdb->get_results( "SELECT c.*, t.category t_category, t.reason t_reason, t.agent t_agent, t.user_id t_user,
+			t.based_on_message_id t_based, t.updated_at t_at, d.kind draft_kind,
+			(SELECT MAX(lc.chat_message_id) FROM $m lc WHERE lc.chat_conversation_id = c.chat_conversation_id AND lc.kind = 'comment') last_comment_id,
+			(SELECT CONCAT(la.author_kind, ':', IF(la.body = '', IF(la.log_refs <> '', '📋 Shared a log', '📎 Sent a file'), SUBSTRING(la.body, 1, 200))) FROM $m la
+				WHERE la.chat_conversation_id = c.chat_conversation_id AND la.kind = 'comment' ORDER BY la.chat_message_id DESC LIMIT 1) last_comment
+			FROM $c c LEFT JOIN $t t ON t.chat_conversation_id = c.chat_conversation_id LEFT JOIN $d d ON d.chat_conversation_id = c.chat_conversation_id
+			WHERE c.status = 'open' ORDER BY c.last_message_at DESC, c.chat_conversation_id DESC LIMIT 3000" );
+		return [
+			'groups'        => self::TRIAGE,
+			'conversations' => array_map( function ( $row ) {
+				$out          = self::present_conversation( $row, true );
+				$last         = (string) $row->last_comment;
+				$sep          = strpos( $last, ':' );
+				$out['last_author'] = $sep === false ? '' : substr( $last, 0, $sep );
+				$out['preview']     = $sep === false ? '' : substr( $last, $sep + 1 );
+				$out['triage']      = self::present_triage( $row, (int) $row->last_comment_id );
+				return $out;
+			}, $rows ?: [] ),
+		];
+	}
+
+	/**
+	 * Open conversations an agent should triage: never triaged, or stale.
+	 * One whose last comment is an operator's, newer than $quiet seconds,
+	 * is waiting on the customer and stays out until then. Newest first,
+	 * each with agent_context().
+	 */
+	public static function triage_pending( $limit = 10, $quiet = 172800, $messages = 30 ) {
+		global $wpdb;
+		$c    = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$t    = $wpdb->base_prefix . 'captaincore_chat_triage';
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM (SELECT c.*, t.based_on_message_id t_based, t.category t_category,
+				(SELECT MAX(lc.chat_message_id) FROM $m lc WHERE lc.chat_conversation_id = c.chat_conversation_id AND lc.kind = 'comment') last_comment_id
+				FROM $c c LEFT JOIN $t t ON t.chat_conversation_id = c.chat_conversation_id WHERE c.status = 'open') x
+			WHERE (x.t_category IS NULL OR x.last_comment_id > x.t_based)
+			AND NOT (x.waiting_since IS NULL AND x.last_operator_at IS NOT NULL AND x.last_operator_at > %s)
+			ORDER BY x.last_message_at DESC, x.chat_conversation_id DESC LIMIT %d",
+			gmdate( 'Y-m-d H:i:s', time() - max( 0, (int) $quiet ) ), max( 1, min( 50, (int) $limit ) )
+		) );
+		$left = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM (SELECT c.waiting_since, c.last_operator_at, t.based_on_message_id t_based, t.category t_category,
+				(SELECT MAX(lc.chat_message_id) FROM $m lc WHERE lc.chat_conversation_id = c.chat_conversation_id AND lc.kind = 'comment') last_comment_id
+				FROM $c c LEFT JOIN $t t ON t.chat_conversation_id = c.chat_conversation_id WHERE c.status = 'open') x
+			WHERE (x.t_category IS NULL OR x.last_comment_id > x.t_based)
+			AND NOT (x.waiting_since IS NULL AND x.last_operator_at IS NOT NULL AND x.last_operator_at > %s)",
+			gmdate( 'Y-m-d H:i:s', time() - max( 0, (int) $quiet ) )
+		) );
+		$messages = max( 5, min( 100, (int) $messages ) );
+		return [
+			'pending'       => $left,
+			'conversations' => array_map( function ( $row ) use ( $messages ) {
+				return [
+					'conversation' => self::present_conversation( $row, true ),
+					'triage'       => self::present_triage( $row, (int) $row->last_comment_id ),
+					'draft'        => self::draft( (int) $row->chat_conversation_id ),
+				] + self::agent_context( $row, $messages );
+			}, $rows ?: [] ),
+		];
+	}
+
+	/**
+	 * Put an open conversation in a triage group (operators). agent names
+	 * the AI that decided (Chat::AGENTS); without one it is the operator's
+	 * call. draft (with draft_kind) saves the reply alongside, as the same
+	 * agent. An agent's 'reply' needs a draft, new or already waiting.
+	 *
+	 * @param array $input category (close|reply|attention), reason, agent, draft, draft_kind
+	 */
+	public static function set_triage( $user_id, $conversation_id, $input ) {
+		global $wpdb;
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! self::is_operator( $user_id ) ) {
+			return self::not_found();
+		}
+		$cid      = (int) $conversation->chat_conversation_id;
+		$category = (string) ( $input['category'] ?? '' );
+		if ( ! isset( self::TRIAGE[ $category ] ) ) {
+			return new \WP_Error( 'bad_category', 'category must be close, reply or attention.', [ 'status' => 400 ] );
+		}
+		$agent = (string) ( $input['agent'] ?? '' );
+		if ( $agent !== '' && ! isset( self::AGENTS[ $agent ] ) ) {
+			return new \WP_Error( 'bad_agent', 'Unknown agent.', [ 'status' => 400 ] );
+		}
+		$reason = trim( preg_replace( '/\s+/', ' ', self::strip_controls( (string) ( $input['reason'] ?? '' ) ) ) );
+		if ( mb_strlen( $reason ) > 500 ) {
+			$reason = mb_substr( $reason, 0, 499 ) . '…';
+		}
+		if ( $agent !== '' && $reason === '' ) {
+			return new \WP_Error( 'missing_reason', 'Say why in reason (one line).', [ 'status' => 400 ] );
+		}
+		$draft = null;
+		if ( trim( (string) ( $input['draft'] ?? '' ) ) !== '' ) {
+			$saved = self::save_draft( $user_id, $cid, [ 'body' => (string) $input['draft'], 'kind' => (string) ( $input['draft_kind'] ?? 'comment' ), 'agent' => $agent ] );
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
+			$draft = $saved['draft'];
+		} else {
+			$draft = self::draft( $cid );
+		}
+		if ( $category === 'reply' && $agent !== '' && ( ! $draft || $draft['kind'] !== 'comment' ) ) {
+			return new \WP_Error( 'missing_draft', 'A reply needs a draft: send it as draft.', [ 'status' => 400 ] );
+		}
+		$t    = $wpdb->base_prefix . 'captaincore_chat_triage';
+		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		$now  = gmdate( 'Y-m-d H:i:s' );
+		$old  = $wpdb->get_row( $wpdb->prepare( "SELECT created_at FROM $t WHERE chat_conversation_id = %d", $cid ) );
+		$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(chat_message_id) FROM $m WHERE chat_conversation_id = %d AND kind = 'comment'", $cid ) );
+		$wpdb->replace( $t, [
+			'chat_conversation_id' => $cid,
+			'category'             => $category,
+			'reason'               => $reason,
+			'agent'                => $agent,
+			'user_id'              => (int) $user_id,
+			'based_on_message_id'  => $last,
+			'created_at'           => $old ? $old->created_at : $now,
+			'updated_at'           => $now,
+		] );
+		if ( $wpdb->last_error ) {
+			return new \WP_Error( 'save_failed', 'Could not save the triage.', [ 'status' => 500 ] );
+		}
+		$triage = self::present_triage( $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE chat_conversation_id = %d", $cid ) ), $last );
+		do_action( 'captaincore_chat_event', [ 'type' => 'triage.updated', 'conversation_id' => $cid, 'triage' => $triage ], 0, true );
+		return [ 'triage' => $triage, 'draft' => $draft ];
+	}
+
+	/** Take a conversation out of triage (operators), back to untriaged. */
+	public static function discard_triage( $user_id, $conversation_id ) {
+		$conversation = self::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || ! self::is_operator( $user_id ) ) {
+			return self::not_found();
+		}
+		self::clear_triage( (int) $conversation->chat_conversation_id );
+		return [ 'triage' => null ];
+	}
+
+	/** Remove a conversation's triage (closing it, deleting it, discard_triage). */
+	public static function clear_triage( $conversation_id ) {
+		global $wpdb;
+		if ( $wpdb->delete( $wpdb->base_prefix . 'captaincore_chat_triage', [ 'chat_conversation_id' => (int) $conversation_id ] ) ) {
+			do_action( 'captaincore_chat_event', [ 'type' => 'triage.updated', 'conversation_id' => (int) $conversation_id, 'triage' => null ], 0, true );
+		}
 	}
 
 	// ── uploads ─────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 79;
+    const REQUIRED_VERSION = 80;
 
     private static function _table() {
         global $wpdb;
@@ -1746,6 +1746,26 @@ class DB {
         PRIMARY KEY  (chat_deletion_id),
         KEY source_conversation (source,conversation_external_id),
         KEY chat_conversation_id (chat_conversation_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // v80: a first pass over open conversations (Chat::set_triage), one
+        // row per conversation, usually by an AI agent: which group it
+        // belongs in (close | reply | attention) and why, for the Triage
+        // view. based_on_message_id is the newest comment it saw; a newer
+        // comment makes the row stale and the conversation untriaged again.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_chat_triage` (
+            chat_conversation_id bigint(20) UNSIGNED NOT NULL,
+            category varchar(12) NOT NULL,
+            reason varchar(500) NOT NULL DEFAULT '',
+            agent varchar(20) NOT NULL DEFAULT '',
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            based_on_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (chat_conversation_id),
+        KEY category (category)
         ) $charset_collate;";
 
         dbDelta($sql);

@@ -694,6 +694,7 @@ Object.assign(Component.prototype, {
   chatOnEvent(ev) {
     const c = this._chat;
     const cb = this.chatBoot();
+    if (cb.operator && this.chatTriageOnEvent) this.chatTriageOnEvent(ev);
     if (ev.type === 'conversation.created' || ev.type === 'conversation.updated' || ev.type === 'message.created') {
       if (ev.conversation) this.chatMergeConv(ev.conversation, ev.type === 'conversation.created');
       if (ev.message) this.chatOnMessage(ev.message);

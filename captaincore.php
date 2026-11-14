@@ -11962,6 +11962,46 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Triage (Chat::triage_*): every open conversation with its group for
+	// the operators' Triage view; the queue an agent works (never triaged,
+	// or a comment since), and setting or clearing one conversation's group.
+	register_rest_route(
+		'captaincore/v1', '/chat/triage', [
+			'methods'             => 'GET',
+			'callback'            => function () { return CaptainCore\Chat::triage_board( get_current_user_id() ); },
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/triage/pending', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $r ) {
+				return CaptainCore\Chat::triage_pending(
+					(int) ( $r->get_param( 'limit' ) ?: 10 ),
+					null !== $r->get_param( 'quiet' ) ? (int) $r->get_param( 'quiet' ) : 172800,
+					(int) ( $r->get_param( 'messages' ) ?: 30 )
+				);
+			},
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/triage', [
+			[
+				'methods'             => 'POST',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::set_triage( get_current_user_id(), (int) $r['id'], (array) ( $r->get_json_params() ?: $r->get_body_params() ) ); },
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => function ( WP_REST_Request $r ) { return CaptainCore\Chat::discard_triage( get_current_user_id(), (int) $r['id'] ); },
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+
 	// What a chat customer can access (operator sidebar).
 	register_rest_route(
 		'captaincore/v1', '/chat/customers/(?P<id>[\d]+)/access', [

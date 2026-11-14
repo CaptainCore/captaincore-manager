@@ -142,7 +142,7 @@ if ( class_exists( 'user_switching' ) ) {
     }
 }
 
-$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'processes.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'network.js', 'site-requests.js', 'new-site.js', 'ai-relay.js', 'chat.js', 'version-recovery.js', 'registry.js', 'tools.js', 'files.js', 'performance.js', 'servers.js', 'hosting.js', 'container.js', 'illustrations.js' ];
+$v3_scripts = [ 'app.js', 'data.js', 'router.js', 'toast.js', 'home.js', 'users.js', 'jobs.js', 'processes.js', 'terminal.js', 'site-detail.js', 'addons.js', 'stats.js', 'domains.js', 'accounts.js', 'billing.js', 'security.js', 'reports.js', 'settings.js', 'archives.js', 'profile.js', 'sites-filters.js', 'network.js', 'site-requests.js', 'new-site.js', 'ai-relay.js', 'chat.js', 'chat-triage.js', 'version-recovery.js', 'registry.js', 'tools.js', 'files.js', 'performance.js', 'servers.js', 'hosting.js', 'container.js', 'illustrations.js' ];
 ?><!DOCTYPE html>
 <html>
 <head>
