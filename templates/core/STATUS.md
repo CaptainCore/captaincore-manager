@@ -163,6 +163,7 @@ Gotchas:
 - `value="{{ }}"` only seeds a field, so `_chatClear` empties the composer through `chatInputRef`.
 - Composer and search fields carry inline `border:none` so the global focus ring skips them.
 - Imported messages have `imported: true`, and the "Seen" receipt skips them, because their read marks come from the importer.
+- Under the last staff reply (operators only, until the customer writes again): "Seen by <first name>" once their read mark reaches it, otherwise "Not seen by <first name> yet", plus " · emailed" once ChatNotify's "… emailed to …" event follows it. Imported replies show neither: Intercom's API never says what a customer saw.
 
 Email (`app/ChatNotify.php`, DB v66):
 - **Out:** an operator reply the customer hasn't read is emailed after 20 minutes if it reached an open tab (the relay's publish response counts the customer's connections), or 5 minutes if not. Replies inside the wait go out together. A read (thread on screen, tab visible) or a customer message cancels it (`notify_after` = NULL). `notified_message_id` stops resends. WP-Cron `captaincore_chat_notify` runs every minute; `/chat/token` and the list route nudge it too. Each send leaves an internal event ("2 unread replies emailed to …").
