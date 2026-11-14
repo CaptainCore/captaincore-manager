@@ -1306,6 +1306,20 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
             </div>
           </sc-if>
+          <!-- Deep link before the fleet has loaded: a skeleton, not the design-mode sample site. -->
+          <sc-if value="{{ siteLoading }}" hint-placeholder-val="{{ false }}">
+            <div aria-busy="true" aria-label="Loading site">
+              <div style="display:flex;align-items:center;gap:14px;margin-top:14px"><span class="cc-skel" style="width:260px;height:28px"></span><span class="cc-skel" style="width:96px;height:30px;border-radius:9px"></span><div style="flex:1"></div><span class="cc-skel" style="width:36px;height:36px;border-radius:9px"></span><span class="cc-skel" style="width:36px;height:36px;border-radius:9px"></span></div>
+              <span class="cc-skel" style="display:block;width:340px;max-width:70%;height:14px;margin-top:12px"></span>
+              <span class="cc-skel" style="display:block;width:560px;max-width:100%;height:40px;margin-top:20px;border-radius:10px"></span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:16px">
+                <span class="cc-skel" style="height:112px;border-radius:13px"></span><span class="cc-skel" style="height:112px;border-radius:13px"></span><span class="cc-skel" style="height:112px;border-radius:13px"></span><span class="cc-skel" style="height:112px;border-radius:13px"></span><span class="cc-skel" style="height:112px;border-radius:13px"></span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">
+                <span class="cc-skel" style="height:330px;border-radius:13px"></span><span class="cc-skel" style="height:330px;border-radius:13px"></span>
+              </div>
+            </div>
+          </sc-if>
           <sc-if value="{{ siteFound }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>

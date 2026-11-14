@@ -3639,7 +3639,10 @@ class Component extends DCLogic {
       // not shared with this user. Renders a not-found panel instead of a
       // borrowed header (see computeDetail).
       siteMissing: s.route === 'site' && !!this._hydrated && !this.FLEET.some(x => x.id === s.siteId),
-      siteFound: !(s.route === 'site' && !!this._hydrated && !this.FLEET.some(x => x.id === s.siteId)),
+      // Before hydrate() the fleet is the design-mode sample, so a deep link
+      // would wear its numbers and a Kinsta login: show a skeleton instead.
+      siteLoading: s.route === 'site' && !this._hydrated,
+      siteFound: s.route !== 'site' || (!!this._hydrated && this.FLEET.some(x => x.id === s.siteId)),
       siteMissingId: s.siteId ? '#' + s.siteId : '',
       siteMissingShowArchives: isOp,
       siteMissingArchives: this.go('archives'),
