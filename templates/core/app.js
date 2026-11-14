@@ -2945,12 +2945,16 @@ class Component extends DCLogic {
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlEditEl) { e.preventDefault(); this.submitTlEdit(); }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target === this._tlDraftEl) { e.preventDefault(); this.submitTlDraft(); }
       // Escape peels one layer at a time: rollback sub-dialog → open dropdown →
-      // context menu → every dialog (closeAllDialogs).
+      // context menu → every dialog (closeAllDialogs) → the console dock.
       else if (e.key === 'Escape') {
         if (this.state.rbComp) this.setState({ rbComp: '' });
         else if (this.state.ddOpen) this.setState({ ddOpen: '', ddQ: '' });
         else if (this.state.ctxMenu) this.setState({ ctxMenu: null });
-        else this.setState(this.closeAllDialogs());
+        else {
+          const shut = this.closeAllDialogs();
+          if (Object.keys(shut).some(k => this.state[k])) this.setState(shut);
+          else if (this.state.dockOpen) this.setState({ dockOpen: false });
+        }
       }
       else if (this.state.paletteOpen && e.key === 'ArrowDown') { e.preventDefault(); this.setState(s => ({ palIdx: Math.min(s.palIdx + 1, this.filteredPal(s.palQuery).length - 1) })); }
       else if (this.state.paletteOpen && e.key === 'ArrowUp') { e.preventDefault(); this.setState(s => ({ palIdx: Math.max(s.palIdx - 1, 0) })); }
