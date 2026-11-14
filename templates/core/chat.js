@@ -1226,19 +1226,10 @@ Object.assign(Component.prototype, {
       }
       prev = m;
     });
-    // Seen / Not seen receipt under the last operator reply (operators only).
-    // Imported replies get none: Intercom never says what the customer saw.
-    // "emailed" comes from ChatNotify's "… emailed to …" event after it.
+    // "Seen" receipt under the last operator reply (operators only).
     if (cb.operator && conv.customer_user_id) {
       const lastOp = [...msgs].reverse().find(m => m.kind === 'comment' && m.author_kind === 'operator');
-      if (lastOp && !lastOp.imported) {
-        const first = esc(String(conv.customer_name || 'the customer').split(' ')[0]);
-        if ((c.conv.customer_last_read_message_id || 0) >= lastOp.id) out += '<div class="ccc-seen">Seen by ' + first + '</div>';
-        else {
-          const mailed = msgs.some(m => m.kind === 'event' && m.id > lastOp.id && / emailed to /.test(m.body || ''));
-          out += '<div class="ccc-seen ccc-unseen">Not seen by ' + first + ' yet' + (mailed ? ' · emailed' : '') + '</div>';
-        }
-      }
+      if (lastOp && !lastOp.imported && (c.conv.customer_last_read_message_id || 0) >= lastOp.id) out += '<div class="ccc-seen">Seen by ' + esc(String(conv.customer_name || 'the customer').split(' ')[0]) + '</div>';
     }
     const ty = c.typing[conv.id];
     if (ty && ty.until > Date.now() && ty.text && cb.operator) {
