@@ -90,6 +90,7 @@ Object.assign(Component.prototype, {
     if (!t) return;
     t.sel = id || 0;
     if (id) {
+      if (t.pos) delete t.pos[id]; // reopening starts at the newest message
       // The selected one and the next two load now, so moving on is instant.
       const rows = this.cctRows(t.group);
       const i = rows.findIndex(x => x.id === id);
@@ -334,24 +335,45 @@ Object.assign(Component.prototype, {
     return out;
   },
 
+  // The thread opens at its newest message, then keeps the reader's place
+  // (as distance from the bottom, t.pos[id]) through every redraw, a fresh
+  // load and a rebuilt element: a thread whose messages arrived after it was
+  // selected used to open at the top, and a redraw could put it back there.
   cctLegRef(el) {
     if (!el) return;
     const t = this.cctState();
+    t.pos = t.pos || {};
     if (!el._cctBound) {
       el._cctBound = true;
       el.addEventListener('click', e => {
         const b = e.target.closest && e.target.closest('[data-cct-full]');
-        if (b) { e.preventDefault(); t.full[+b.dataset.cctFull] = true; this.setState({}); }
+        if (b) { e.preventDefault(); el._cctEarlier = true; t.full[+b.dataset.cctFull] = true; this.setState({}); }
       });
+      el.addEventListener('scroll', () => {
+        const leg = el._cctId && t.legs[el._cctId];
+        if (leg && !leg.loading) t.pos[el._cctId] = { top: el.scrollTop, gap: Math.max(0, el.scrollHeight - el.scrollTop - el.clientHeight) };
+      }, { passive: true });
     }
-    const html = this.cctLegHtml(t.sel);
-    if (el._cctHtml !== html) {
-      const fresh = el._cctId !== t.sel;
-      el._cctHtml = html;
-      el._cctId = t.sel;
-      el.innerHTML = html;
-      if (fresh) el.scrollTop = el.scrollHeight;
-    }
+    const id = t.sel;
+    const html = this.cctLegHtml(id);
+    if (el._cctHtml === html && el._cctId === id) return;
+    el._cctHtml = html;
+    el._cctId = id;
+    el.innerHTML = html;
+    // At the bottom (or new here): stay at the newest message. Earlier
+    // messages shown above: keep the same distance from the bottom. Anything
+    // else (a message arriving below while reading): keep the same top.
+    const earlier = !!el._cctEarlier;
+    el._cctEarlier = false;
+    const restore = () => {
+      if (el._cctId !== id) return;
+      const at = t.pos[id];
+      el.scrollTop = !at || at.gap < 40 ? el.scrollHeight
+        : earlier ? Math.max(0, el.scrollHeight - el.clientHeight - at.gap) : at.top;
+    };
+    restore();
+    // A ref can run before the element is laid out, where scrollTop does nothing.
+    requestAnimationFrame(restore);
   },
 
   chatTriageVals(s) {
@@ -439,7 +461,18 @@ Object.assign(Component.prototype, {
         if (el._cctId !== id || (document.activeElement !== el && el.value !== reply)) el.value = reply;
         el._cctId = id;
         if (!el._cctBlur) { el._cctBlur = true; el.addEventListener('blur', () => { if (el._cctId) this.cctSaveDraft(el._cctId); }); }
-        el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 260) + 'px';
+        // Measure only when the text or width changed: collapsing the box to
+        // auto on every render (the live clock redraws each second) briefly
+        // grew the thread above and knocked its scroll position up. When it
+        // does resize, a thread read to the bottom stays at the bottom.
+        const key = el.value + '\n' + el.clientWidth;
+        if (el._cctSized !== key) {
+          el._cctSized = key;
+          const leg = document.querySelector('.cct-leg');
+          const fromBottom = leg ? leg.scrollHeight - leg.scrollTop - leg.clientHeight : 0;
+          el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 260) + 'px';
+          if (leg && fromBottom < 40) leg.scrollTop = leg.scrollHeight;
+        }
       },
       cctCanSend: hasText && !busy,
       cctSendOpacity: hasText && !busy ? '1' : '.45',
