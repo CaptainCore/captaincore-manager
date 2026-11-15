@@ -755,11 +755,10 @@ class HostConfigs extends DB {
 	}
 
 	/** What the CLI needs to build a new site's container (`host-site-prepare`). */
-	public static function site_build_info( $site_id ) {
-		$env = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Production' ] );
-		$env = $env ? $env[0] : null;
+	public static function site_build_info( $site_id, $environment = 'Production' ) {
+		$env = Environments::for_site( (int) $site_id, $environment ?: 'Production' );
 		if ( ! $env || ! (int) $env->server_id ) {
-			return new \WP_Error( 'not_own_server', 'Production is not on one of our servers.', [ 'status' => 400 ] );
+			return new \WP_Error( 'not_own_server', 'That environment is not on one of our servers.', [ 'status' => 400 ] );
 		}
 		$d      = json_decode( (string) $env->details ) ?: new \stdClass();
 		$config = self::current( $env );
@@ -772,6 +771,7 @@ class HostConfigs extends DB {
 		$site = Sites::get( (int) $site_id );
 		return [
 			'container' => $d->container ?? '', 'ip' => $d->container_ip ?? '', 'ssh_port' => (int) $env->port,
+			'environment' => $env->environment,
 			'image'     => self::PHP_IMAGES[ $config['php']['version'] ] ?? '', 'memory_mib' => (int) $config['memory_mb'], 'disk_gib' => 10,
 			'primary'   => $primary, 'start' => $d->start ?? 'wordpress', 'title' => $site ? $site->site : 'New site',
 			'admin_user' => $d->wp_admin->user ?? 'admin', 'admin_email' => $d->wp_admin->email ?? '',
@@ -804,10 +804,85 @@ class HostConfigs extends DB {
 		return $created;
 	}
 
+	/**
+	 * A new environment of an existing site, on one of our servers, built from
+	 * a backup of another of its environments (by default the latest backup
+	 * of Production): a Kinsta site gets a Development (or any name) of ours
+	 * beside its Kinsta ones. The row is the site's like any other, with the
+	 * server, container s<site_id>-<name>, the next free address and SSH port,
+	 * a temporary domain and revision 1 of its hosting config (no mail, cron
+	 * off unless asked, hidden from search engines). `host site create
+	 * <site_id> --environment=<name>` builds it. Returns what the job needs.
+	 */
+	public static function add_environment( $site_id, $server, $name, $user_id, $from = 'Production', $backup_id = 'latest', $cron = false ) {
+		$site = Sites::get( (int) $site_id );
+		if ( ! $site ) {
+			return new \WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+		}
+		if ( ! Environments::valid_name( $name ) ) {
+			return new \WP_Error( 'invalid', 'An environment name is one word of letters and digits, starting with a letter (20 at most), such as Development or Dev2.', [ 'status' => 400 ] );
+		}
+		$name = Environments::display_name( $name );
+		if ( Environments::for_site( $site->site_id, $name ) ) {
+			return new \WP_Error( 'exists', "This site already has a {$name} environment.", [ 'status' => 409 ] );
+		}
+		$source = Environments::for_site( $site->site_id, $from ?: 'Production' );
+		if ( ! $source ) {
+			return new \WP_Error( 'invalid', 'Pick one of the site\'s environments to copy.', [ 'status' => 400 ] );
+		}
+		if ( $backup_id !== 'latest' && ! preg_match( '/^[0-9a-f]{8,64}$/', (string) $backup_id ) ) {
+			return new \WP_Error( 'invalid', 'Pick a backup.', [ 'status' => 400 ] );
+		}
+		$slot = Servers::allocate( $server->server_id );
+		if ( is_wp_error( $slot ) ) {
+			return $slot;
+		}
+		$slug = strtolower( $name );
+		$host = self::temporary_dns( $site, $server, substr( $site->site, 0, 24 ) . '-' . $slug );
+		if ( is_wp_error( $host ) ) {
+			return $host;
+		}
+		$user = get_userdata( (int) $user_id );
+		$now  = current_time( 'mysql' );
+		$id   = Environments::insert( [
+			'site_id'         => (int) $site->site_id,
+			'environment'     => $name,
+			'address'         => $server->address,
+			'username'        => 'site',
+			'password'        => '',
+			'protocol'        => 'sftp',
+			'port'            => (string) $slot['port'],
+			'home_directory'  => '/srv/site/public',
+			'home_url'        => "https://{$host}",
+			'server_id'       => (int) $server->server_id,
+			'monitor_enabled' => 0,
+			'updates_enabled' => 0,
+			'details'         => wp_json_encode( [
+				'container' => substr( 's' . $site->site_id . '-' . $slug, 0, 63 ), 'container_ip' => $slot['ip'], 'start' => 'restore',
+				'restore'   => [ 'site_id' => (int) $site->site_id, 'environment' => $source->environment, 'backup_id' => (string) $backup_id, 'cron' => $cron ? 'on' : 'off' ],
+				'wp_admin'  => [ 'user' => $user ? $user->user_login : 'admin', 'email' => $user ? $user->user_email : get_option( 'admin_email' ) ],
+			] ),
+			'created_at'      => $now,
+			'updated_at'      => $now,
+		] );
+		$env    = Environments::get( $id );
+		$config = self::default_for( $env );
+		$config['domains'] = [ [ 'name' => $host, 'primary' => true, 'www' => false, 'temporary' => true ] ];
+		$config['mail']    = 'off';
+		$config['cron']    = (bool) $cron;
+		$row = self::save( $env, $config, $user_id, "{$name} created on {$server->name} from {$source->environment}" );
+		if ( is_wp_error( $row ) ) {
+			return $row;
+		}
+		Sites::update_environments_cache( (int) $site->site_id );
+		$which = $backup_id === 'latest' ? 'its latest backup' : 'backup ' . substr( $backup_id, 0, 8 );
+		ProcessLog::insert( "{$name} environment added on {$server->name} ({$host}) from {$source->environment}, {$which}", (int) $site->site_id );
+		return [ 'site_id' => (int) $site->site_id, 'environment' => $name, 'environment_id' => (int) $id, 'domain' => $host ];
+	}
+
 	/** `host site create` finished a restore: the site is a WordPress site now. */
-	public static function restored( $site_id, $result ) {
-		$env = Environments::where( [ 'site_id' => (int) $site_id, 'environment' => 'Production' ] );
-		$env = $env ? $env[0] : null;
+	public static function restored( $site_id, $result, $environment = 'Production' ) {
+		$env = Environments::for_site( (int) $site_id, $environment ?: 'Production' );
 		if ( ! $env ) {
 			return new \WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
 		}
