@@ -1632,6 +1632,15 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span onClick="{{ c.copyPill }}" title="{{ c.pillTitle }}" class="cc-conn-copy">{{ c.mark }}</span>
                   </div>
                     </sc-for>
+                    <sc-if value="{{ connKeysShow }}" hint-placeholder-val="{{ false }}">
+                      <sc-if value="{{ ssetKeysShow }}" hint-placeholder-val="{{ false }}">
+                        <div class="cc-conn-row" style="cursor:default">
+                          <span class="cc-conn-k">SSH keys</span>
+                          <span class="cc-conn-v" style="font-family:var(--sans)">{{ ssetKeysLabel }}</span>
+                          <button type="button" onClick="{{ ssetKeysOpenDlg }}" style="flex:none;border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">Manage…</button>
+                        </div>
+                      </sc-if>
+                    </sc-if>
                     <div style="padding:9px 16px 12px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ connNote }}</div>
                   </sc-if>
                 </section>
@@ -1702,6 +1711,7 @@ button.ccc-edited:hover{color:var(--ink)}
                         <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sr.k }}</span>
                         <div style="flex:1"></div>
                         <sc-if value="{{ sr.hasV }}" hint-placeholder-val="{{ true }}"><span style="font:400 var(--fs-125) var(--mono)">{{ sr.v }}</span></sc-if>
+                        <sc-if value="{{ sr.hasAct2 }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ sr.go2 }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sr.act2 }}</button></sc-if>
                         <button type="button" onClick="{{ sr.go }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sr.act }}</button>
                       </div>
                     </sc-for>
@@ -8807,6 +8817,45 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="flex:1"></div>
           <span onClick="{{ ssetRdClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
           <span onClick="{{ ssetRdSave }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px;opacity:{{ ssetRdSaveOpacity }}">{{ ssetRdSaveLabel }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ SSH keys (any role, our servers, site-settings.js) ══ -->
+  <sc-if value="{{ ssetKeysOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ ssetKeysClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" role="dialog" aria-label="{{ ssetKeysTitle }}" style="width:600px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis">{{ ssetKeysTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetKeysClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div class="cc-meta" style="padding:10px 18px;border-bottom:1px solid var(--rule)">Anyone holding one of these keys can sign in over SFTP and SSH, and reach the database. Add one key per person, and remove it when they stop working on the site.</div>
+        <sc-if value="{{ ssetKeysEmpty }}" hint-placeholder-val="{{ false }}">
+          <div class="cc-meta" style="padding:14px 18px;border-bottom:1px solid var(--rule)">No keys yet.</div>
+        </sc-if>
+        <sc-for list="{{ ssetKeysRows }}" as="kr" hint-placeholder-count="1">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--rule)">
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+              <span style="font:600 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ kr.title }}</span>
+              <span style="font:400 var(--fs-115) var(--mono);color:var(--ink-dim);overflow-wrap:anywhere">{{ kr.type }} · {{ kr.fp }}</span>
+            </div>
+            <button type="button" onClick="{{ kr.remove }}" style="flex:none;border:0;background:none;padding:0;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</button>
+          </div>
+        </sc-for>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px 18px">
+          <input value="{{ ssetKTitle }}" onInput="{{ onSsetKTitle }}" aria-label="Key name" placeholder="Name, such as Jane's laptop" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none">
+          <textarea value="{{ ssetKText }}" onInput="{{ onSsetKText }}" aria-label="Public key" placeholder="ssh-ed25519 AAAA… (paste the .pub file)" rows="3" style="border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:8px 10px;outline:none;resize:vertical"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="cc-meta" style="flex:1;min-width:200px">The public key only, from a file ending in .pub. Never paste a private key.</span>
+            <button type="button" onClick="{{ ssetKeysAdd }}" class="cc-btn" style="font-size:var(--fs-125)">Add key</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetKeysClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <span onClick="{{ ssetKeysSave }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px;opacity:{{ ssetKeysSaveOpacity }}">{{ ssetKeysSaveLabel }}</span>
         </div>
       </div>
     </div>

@@ -7192,6 +7192,10 @@ function captaincore_site_settings_response( $t ) {
 			'php'       => [ 'version' => (string) ( $config['php']['version'] ?? '' ), 'versions' => array_keys( array_filter( CaptainCore\HostConfigs::PHP_IMAGES ) ) ],
 			'cache'     => ! $plain && ! empty( $config['page_cache']['enabled'] ),
 			'redirects' => array_values( (array) ( $config['redirects'] ?? [] ) ),
+			// Public keys only; who may sign in over SSH/SFTP (our servers take no passwords).
+			'ssh_keys'  => array_map( function ( $k ) {
+				return [ 'title' => (string) ( $k['title'] ?? '' ), 'key' => (string) ( $k['key'] ?? '' ), 'fingerprint' => (string) ( $k['fingerprint'] ?? '' ) ];
+			}, array_values( (array) ( $config['ssh_keys'] ?? [] ) ) ),
 			'applying'  => $last && $last->status === 'pending',
 			'error'     => $failed,
 		];
@@ -7206,6 +7210,7 @@ function captaincore_site_settings_response( $t ) {
 		'php'       => [ 'version' => is_string( $version ) ? $version : '', 'versions' => $versions ],
 		'cache'     => true,
 		'redirects' => null,
+		'ssh_keys'  => null,
 		'applying'  => false,
 		'error'     => is_wp_error( $version ) ? 'Could not read the PHP version from Kinsta.' : '',
 	];
@@ -7216,7 +7221,8 @@ function captaincore_site_settings_func( $request ) {
 	return is_wp_error( $t ) ? $t : captaincore_site_settings_response( $t );
 }
 
-// Body: { php_version } or { redirects: [ {from, to, code} ] }.
+// Body: { php_version }, { redirects: [ {from, to, code} ] } or
+// { ssh_keys: [ {title, key} ] } (the last two on our servers only).
 function captaincore_site_settings_update_func( $request ) {
 	$t = captaincore_site_settings_target( $request );
 	if ( is_wp_error( $t ) ) {
@@ -7245,6 +7251,12 @@ function captaincore_site_settings_update_func( $request ) {
 		[ $config ]          = captaincore_site_settings_base( $t['env'] );
 		$config['redirects'] = array_values( (array) $params['redirects'] );
 		$note                = 'Redirects (' . count( $config['redirects'] ) . ')';
+	} elseif ( isset( $params['ssh_keys'] ) && $t['host'] === 'captaincore' ) {
+		[ $config ]         = captaincore_site_settings_base( $t['env'] );
+		$config['ssh_keys'] = array_values( array_map( function ( $k ) {
+			return [ 'title' => (string) ( $k['title'] ?? '' ), 'key' => (string) ( $k['key'] ?? '' ) ];
+		}, array_filter( (array) $params['ssh_keys'], 'is_array' ) ) );
+		$note               = 'SSH keys (' . count( $config['ssh_keys'] ) . ')';
 	} else {
 		return new WP_Error( 'invalid', 'Nothing to change.', [ 'status' => 400 ] );
 	}
@@ -7254,6 +7266,41 @@ function captaincore_site_settings_update_func( $request ) {
 	}
 	CaptainCore\ProcessLog::insert( "Started a change to {$label} on our servers: {$note}", $site_id );
 	return captaincore_site_settings_response( $t ) + [ 'token' => CaptainCore\HostConfigs::apply( $t['env'] ) ];
+}
+
+// Restart PHP: Kinsta's PHP engine through its API, or FrankenPHP in the
+// environment's container on our servers (a few seconds, then its health).
+function captaincore_site_restart_php_func( $request ) {
+	$t = captaincore_site_settings_target( $request );
+	if ( is_wp_error( $t ) ) {
+		return $t;
+	}
+	$site_id = (int) $t['site']->site_id;
+	$label   = $t['env']->environment;
+	if ( $t['host'] === 'kinsta' ) {
+		$res = CaptainCore\Providers\Kinsta::restart_php( $site_id, $label );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		CaptainCore\ProcessLog::insert( "Restarted PHP on {$label} at Kinsta", $site_id );
+		return [ 'host' => 'kinsta', 'health' => '' ];
+	}
+	$details   = json_decode( (string) $t['env']->details ) ?: new stdClass();
+	$container = (string) ( $details->container ?? '' );
+	if ( ! preg_match( '/^[a-z0-9][a-z0-9-]{0,62}$/', $container ) ) {
+		return new WP_Error( 'no_container', 'This environment has no container yet.', [ 'status' => 409 ] );
+	}
+	$res = CaptainCore\Run::execute( [ 'node', 'restart', (string) (int) $t['env']->server_id, $container, 'php' ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'restart_failed', 'PHP did not restart. Try again in a minute, or ask us to look.', [ 'status' => 502 ] );
+	}
+	CaptainCore\ProcessLog::insert( "Restarted PHP on {$label}", $site_id );
+	return [ 'host' => 'captaincore', 'health' => (string) ( $data->health ?? '' ) ];
 }
 
 function captaincore_site_cache_clear_func( $request ) {
@@ -13116,6 +13163,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/cache/clear', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_cache_clear_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/restart-php', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_restart_php_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);

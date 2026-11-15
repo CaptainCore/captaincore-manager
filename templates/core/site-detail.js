@@ -132,10 +132,11 @@ Object.assign(Component.prototype, {
   sftpCopyVals(real, s) {
     const e = real ? this.currentEnv(real, s) : null;
     if (!e || !e.address || !e.username) return { credSftpShow: false };
+    // Our servers have no SFTP password (SSH keys only): leave the line out.
     const text = [
       'Address: ' + e.address,
       'Username: ' + e.username,
-      'Password: ' + (e.password || ''),
+      e.password ? 'Password: ' + e.password : (e.host === 'captaincore' ? 'Password: none, sign in with your SSH key' : 'Password: '),
       'Protocol: ' + (e.protocol || 'sftp'),
       'Port: ' + (e.port || '')
     ].join('\n');

@@ -99,8 +99,16 @@ Object.assign(Component.prototype, {
     };
     const names = Object.keys(groups).filter(t => groups[t].length);
     const tab = names.includes(s.connTab) ? s.connTab : (names[0] || 'SFTP');
-    const notes = { SFTP: 'For any SFTP app, such as FileZilla or Transmit.', SSH: 'Connect from a terminal.', Database: 'Changes here are live. Take a backup first.' };
+    // Our servers sign in with SSH keys only (managed under SSH keys, site-settings.js)
+    // and reach the database through an SSH tunnel; there is no phpMyAdmin.
+    const ours = !!(this.siteSettingsHost && this.siteSettingsHost(real, s) === 'captaincore');
+    const notes = ours
+      ? { SFTP: 'Sign in with an SSH key: our servers do not use passwords. Works in FileZilla, Transmit and other SFTP apps.',
+          SSH: 'Connect from a terminal with your SSH key.',
+          Database: 'Connect through SSH: in TablePlus, Sequel Ace or a similar app pick an SSH connection with the SFTP address, username, port and your SSH key, then database host 127.0.0.1, port 3306. Changes are live, so take a backup first.' }
+      : { SFTP: 'For any SFTP app, such as FileZilla or Transmit.', SSH: 'Connect from a terminal.', Database: 'Changes here are live. Take a backup first.' };
     return {
+      connKeysShow: ours && tab !== 'Database',
       connTabs: names.map(t => ({ label: t, pressed: t === tab ? 'true' : 'false',
         bg: t === tab ? 'var(--paper)' : 'transparent', fg: t === tab ? 'var(--ink)' : 'var(--ink-dim)',
         sh: t === tab ? '0 1px 2px rgba(0,0,0,.12)' : 'none', pick: () => this.setState({ connTab: t }) })),

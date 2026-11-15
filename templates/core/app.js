@@ -1525,7 +1525,7 @@ class Component extends DCLogic {
     return {
       paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
       ptoOpen: false, epOpen: false, delOpen: false, rmOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
-      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false, eaOpen: false, edOpen: false, ssetPhpOpen: false, ssetRdOpen: false,
+      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false, eaOpen: false, edOpen: false, ssetPhpOpen: false, ssetRdOpen: false, ssetKeysOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
       // Settings
       provDlgOpen: false, recipeDlgOpen: false, defDlgOpen: false, procDlgOpen: false, procEditOpen: false,
@@ -2671,7 +2671,8 @@ class Component extends DCLogic {
         this.setState(st => ({ shared: [...(st.shared || this.SHARED_INIT), { uid: Date.now(), name: v, people: 0, level: 'Sites only', pending: true }], shareDraft: '' }));
         this.runJob('grant-access', v + ' → ' + site.name); },
       ...this.computeShareDialog(real, s, site),
-      showPma: !!(real && real.site && ['kinsta', 'rocketdotnet'].includes(real.site.provider)) || (!real && !window.CC_BOOT),
+      // Not for an environment on our servers (a Kinsta site's Development, say): no phpMyAdmin there.
+      showPma: (!!(real && real.site && ['kinsta', 'rocketdotnet'].includes(real.site.provider)) && !(this.siteSettingsHost && this.siteSettingsHost(real, s) === 'captaincore')) || (!real && !window.CC_BOOT),
       openPma: () => { if (real) this.realPhpMyAdmin(real, s); },
       akpBg: s.addonKind === 'plugins' ? 'var(--panel-2)' : 'transparent', akpFg: s.addonKind === 'plugins' ? 'var(--ink)' : 'var(--ink-dim)',
       aktBg: s.addonKind === 'themes' ? 'var(--panel-2)' : 'transparent', aktFg: s.addonKind === 'themes' ? 'var(--ink)' : 'var(--ink-dim)',
