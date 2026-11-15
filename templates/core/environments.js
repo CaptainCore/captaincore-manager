@@ -24,12 +24,27 @@ Object.assign(Component.prototype, {
     const real = this._detail;
     if (!real || !real.envs) return;
     this.loadServers();
-    this.setState({ eaOpen: true, eaName: this.envNextName(real), eaServer: '', eaFrom: 'Production', eaCron: false, eaBusy: false, eaLinking: false, eaLinkMsg: '' });
+    this.setState({ eaOpen: true, eaWhere: this.envCanKinstaStaging(real) ? 'kinsta' : 'ours', eaName: this.envNextName(real), eaServer: '', eaFrom: 'Production', eaCron: false, eaBusy: false, eaLinking: false, eaLinkMsg: '' });
+  },
+
+  // A Kinsta site with only production gets Staging from Kinsta itself (the
+  // same build as Deploy → Pull production → staging): Kinsta copies one of
+  // its environments to another faster than a restore onto our servers.
+  envCanKinstaStaging(real) {
+    const site = (real && real.site) || {};
+    return site.provider === 'kinsta' && !!site.provider_site_id
+      && !!(real.envs && real.envs.some(e => e.environment === 'Production'))
+      && !(real.envs || []).some(e => String(e.environment).toLowerCase() === 'staging');
   },
 
   submitAddEnv() {
     const real = this._detail, s = this.state;
     if (!real || s.eaBusy) return;
+    if (s.eaWhere === 'kinsta' && this.envCanKinstaStaging(real)) {
+      this.setState({ eaOpen: false });
+      this.realPullToNewStaging(real);
+      return;
+    }
     const name = (s.eaName || '').trim();
     if (!/^[A-Za-z][A-Za-z0-9]{0,19}$/.test(name)) { this.toast('An environment name is one word of letters and digits, starting with a letter', { kind: 'error' }); return; }
     if ((real.envs || []).some(e => String(e.environment).toLowerCase() === name.toLowerCase())) { this.toast('This site already has a ' + name + ' environment', { kind: 'error' }); return; }
@@ -160,8 +175,15 @@ Object.assign(Component.prototype, {
     const picked = servers.find(x => String(x.server_id) === String(s.eaServer)) || servers[0];
     const provider = String(real.site.provider || '');
     const chip = (on) => ({ bd: on ? 'var(--brand)' : 'var(--rule)', bg: on ? 'var(--brand-soft)' : 'var(--paper)', mark: on ? '✓' : '' });
+    const canKinsta = this.envCanKinstaStaging(real);
+    const where = canKinsta && s.eaWhere === 'kinsta' ? 'kinsta' : 'ours';
     return {
       ...base, eaOpen: true, eaIllo: this.illo('container'),
+      eaHasWhere: canKinsta, eaKinsta: where === 'kinsta', eaOurs: where === 'ours',
+      eaWheres: canKinsta ? [
+        { label: 'Staging at Kinsta', desc: 'Kinsta copies production into a new Staging environment. Usually the fastest way.', ...chip(where === 'kinsta'), pick: () => this.setState({ eaWhere: 'kinsta' }) },
+        { label: 'On our servers', desc: 'Any name, built from the latest backup of an environment, on one of our servers.', ...chip(where === 'ours'), pick: () => this.setState({ eaWhere: 'ours' }) }
+      ] : [],
       eaTitle: 'Add an environment to ' + (real.site.name || 'this site'),
       eaName: s.eaName || '', onEaName: e => this.setState({ eaName: e.target.value }),
       eaNameHint: 'One word: Development, Testing, Dev2. Gets its own temporary address, container, SSH port and database.',
@@ -175,7 +197,7 @@ Object.assign(Component.prototype, {
       eaIsKinsta: provider === 'kinsta' && !!real.site.provider_site_id,
       eaLinkLabel: s.eaLinking ? 'Checking Kinsta…' : 'Check Kinsta for environments',
       eaLink: () => this.linkHostEnvs(), eaLinkMsg: s.eaLinkMsg || '', eaHasLinkMsg: !!s.eaLinkMsg,
-      eaSubmitLabel: s.eaBusy ? 'Adding…' : 'Add environment',
+      eaSubmitLabel: where === 'kinsta' ? 'Create staging' : s.eaBusy ? 'Adding…' : 'Add environment',
       eaClose: () => this.setState({ eaOpen: false }),
       eaSubmit: () => this.submitAddEnv()
     };

@@ -8647,6 +8647,22 @@ button.ccc-edited:hover{color:var(--ink)}
           <span onClick="{{ eaClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
         </div>
         <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <sc-if value="{{ eaHasWhere }}" hint-placeholder-val="{{ false }}">
+            <div role="radiogroup" aria-label="Where" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+              <sc-for list="{{ eaWheres }}" as="wh" hint-placeholder-count="2">
+                <div onClick="{{ wh.pick }}" role="radio" style="cursor:pointer;border:1px solid {{ wh.bd }};background:{{ wh.bg }};border-radius:11px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+                  <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);flex:none;margin-top:2px;background:var(--paper)">{{ wh.mark }}</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 var(--fs-13) var(--sans)">{{ wh.label }}</span><span class="cc-meta">{{ wh.desc }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ eaKinsta }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px;border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel)">
+              <span class="cc-meta">Kinsta builds Staging from a copy of production, which can take several minutes. Progress shows in the jobs dock, and the new environment appears here once Kinsta has linked it.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ eaOurs }}" hint-placeholder-val="{{ true }}">
           <sc-if value="{{ eaIsKinsta }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel)">
               <span style="font:500 var(--fs-13) var(--sans)">Environments at Kinsta</span>
@@ -8693,6 +8709,7 @@ button.ccc-edited:hover{color:var(--ink)}
               <span style="font:400 var(--fs-13) var(--sans)">Run WordPress cron (scheduled posts, renewals, emails)</span>
             </div>
           </div>
+          </sc-if>
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
           <span class="cc-meta">Runs in the jobs dock.</span>
