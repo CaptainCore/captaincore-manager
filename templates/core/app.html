@@ -73,6 +73,7 @@
 .cc-chip > span{width:16px;height:16px}
 @media (max-width:640px){.cc-hide-sm{display:none!important}}
 /* Hosting screens: shared card, header, button and status pill. */
+.cc-cap-teaser{margin:0 16px;border:1px solid var(--rule);border-radius:9px;overflow:hidden;aspect-ratio:16/9;background:var(--panel-2);cursor:pointer}.cc-cap-teaser img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .25s ease}.cc-cap-teaser:hover img{transform:scale(1.015)}
 .cc-card{border:1px solid var(--rule);border-radius:14px;background:var(--paper);overflow:hidden}
 .cc-card-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .cc-card-h h2{margin:0;font:600 var(--fs-14) var(--sans)}
@@ -1653,12 +1654,14 @@ button.ccc-edited:hover{color:var(--ink)}
                   <sc-if value="{{ hasDomMore }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ domToggle }}" style="border:0;background:none;padding:10px 16px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">{{ dDomMore }}</button></sc-if>
                 </section>
                 <sc-if value="{{ capTeaserShow }}" hint-placeholder-val="{{ false }}">
-                  <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;display:flex;align-items:center;gap:6px 9px;flex-wrap:wrap">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
-                    <span style="font:600 var(--fs-14) var(--sans)">Visual captures</span>
-                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ capTeaserLabel }}</span>
-                    <div style="flex:1"></div>
-                    <span onClick="{{ goCaptures }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;white-space:nowrap">View history →</span>
+                  <section class="cc-card">
+                    <div class="cc-card-h"><h2>Visual captures</h2><span class="cc-meta">{{ capTeaserLabel }}</span><div style="flex:1"></div><span onClick="{{ goCaptures }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;white-space:nowrap">View history →</span></div>
+                    <sc-if value="{{ capTeaserHasImg }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ goCaptures }}" title="Open the capture history" class="cc-cap-teaser"><img src="{{ capTeaserImg }}" alt="Latest capture of the homepage" loading="lazy"></div>
+                    </sc-if>
+                    <sc-if value="{{ capTeaserHasWhen }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding:9px 16px 12px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ capTeaserWhen }}</div>
+                    </sc-if>
                   </section>
                 </sc-if>
               </div>

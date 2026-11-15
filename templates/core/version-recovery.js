@@ -92,6 +92,21 @@ Object.assign(Component.prototype, {
           d.style.cssText = 'padding:26px;text-align:center;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)';
           el.parentNode.appendChild(d); }
       })) : [],
+      // Overview card: the latest capture's homepage (the 800px thumbnail the
+      // capture makes; shown once it loads), when it was taken and the count.
+      ...(() => {
+        const shot = curEnv && curEnv.screenshots && curEnv.screenshots.large ? curEnv.screenshots.large : '';
+        const taken = curEnv && curEnv.screenshot_base ? Number(String(curEnv.screenshot_base).split('_')[0]) : 0;
+        const ready = !!shot && this.thumbReady(shot);
+        const d = taken ? new Date(taken * 1000) : null;
+        const ago = d ? this.agoText(d.getTime()) : '';
+        return {
+          capTeaserImg: ready ? shot : '', capTeaserHasImg: ready,
+          capTeaserWhen: d ? 'Last captured ' + d.toLocaleDateString(undefined, Object.assign({ month: 'short', day: 'numeric' }, d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}))
+            + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + (ago ? ' · ' + ago : '') : '',
+          capTeaserHasWhen: !!d
+        };
+      })(),
       capTeaserShow: teaserN > 0,
       capTeaserLabel: teaserN.toLocaleString() + (teaserN === 1 ? ' capture' : ' captures'),
       goCaptures: () => this.goSiteTab('captures')
