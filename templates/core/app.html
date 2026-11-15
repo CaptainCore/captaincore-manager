@@ -85,6 +85,24 @@
 .cc-btn .i{width:14px;height:14px;display:inline-block}
 .cc-pill{display:inline-flex;align-items:center;gap:6px;font:600 var(--fs-115) var(--sans);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .cc-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+/* Server page: container cards. */
+.cc-ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:14px 16px 16px}
+.cc-ct-tile{position:relative;display:flex;flex-direction:column;gap:11px;padding:14px 14px 12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);cursor:pointer;min-width:0;overflow:hidden;transition:border-color .15s,box-shadow .15s,transform .15s}
+.cc-ct-tile::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--h)}
+.cc-ct-tile:hover,.cc-ct-tile:focus-visible{border-color:color-mix(in srgb,var(--h) 55%,var(--rule));box-shadow:0 6px 18px -10px color-mix(in srgb,var(--h) 60%,transparent);transform:translateY(-1px);outline:none}
+.cc-ct-tile:hover .cc-ct-go{color:var(--brand-ink)}
+.cc-ct-name{font:600 var(--fs-13) var(--mono);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-ct-site{font:400 var(--fs-12) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cc-ct-site:hover{text-decoration:underline}
+.cc-ct-env{flex:none;font:500 var(--fs-11,11px) var(--sans);color:var(--ink-dim);border:1px solid var(--rule);border-radius:999px;padding:0 7px;line-height:14px}
+.cc-ct-meters{display:flex;flex-direction:column;gap:8px}
+.cc-ct-k{display:flex;justify-content:space-between;gap:8px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim);margin-bottom:4px}
+.cc-ct-k span:last-child{color:var(--ink);font-variant-numeric:tabular-nums}
+.cc-ct-bar{height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+.cc-ct-bar > div{height:100%;border-radius:3px}
+.cc-ct-foot{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:auto;padding-top:9px;border-top:1px dashed var(--rule);font:400 var(--fs-12) var(--mono);color:var(--ink-dim)}
+.cc-ct-go{margin-left:auto;font-family:var(--sans);font-weight:500}
+@media (max-width:640px){.cc-ct-grid{grid-template-columns:1fr;padding:12px}}
 .cc-flow-arrow{display:flex;align-items:center;color:var(--ink-dim);padding:0 4px}
 .cc-flow-arrow span{width:22px;height:22px}
 .cc-db-row{padding-left:116px}
@@ -4947,7 +4965,33 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
             </div>
             <div style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden;margin-top:12px">
-              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--brand)"><span ref="{{ sdIcoCt }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Containers</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">One per site environment. CPU is the share of the whole server over the last minute. Open a container to see its programs, web server rules and logs.</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap"><span class="cc-chip" style="--h:var(--brand)"><span ref="{{ sdIcoCt }}"></span></span><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Containers</h2><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);flex:1;min-width:220px">One per site environment. CPU is the share of the whole server over the last minute. Open a container to see its programs, web server rules and logs.</span>
+                <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                  <sc-for list="{{ sdCtViews }}" as="cv" hint-placeholder-count="2"><span onClick="{{ cv.go }}" style="padding:3px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-12) var(--sans);color:{{ cv.fg }};background:{{ cv.bg }}">{{ cv.label }}</span></sc-for>
+                </div>
+              </div>
+              <sc-if value="{{ sdCtGrid }}" hint-placeholder-val="{{ true }}">
+                <div class="cc-ct-grid">
+                  <sc-for list="{{ sdCts }}" as="ct" hint-placeholder-count="6">
+                    <div class="cc-ct-tile" onClick="{{ ct.openCt }}" onKeyDown="{{ ct.key }}" role="link" tabindex="0" title="Open {{ ct.name }}" style="--h:{{ ct.hue }};opacity:{{ ct.dim }}">
+                      <div style="display:flex;align-items:flex-start;gap:10px;min-width:0">
+                        <div ref="{{ ct.illo }}" style="width:44px;height:33px;flex:none"></div>
+                        <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+                          <span class="cc-ct-name">{{ ct.name }}</span>
+                          <div style="display:flex;align-items:center;gap:6px;min-width:0"><span onClick="{{ ct.open }}" class="cc-ct-site" style="color:{{ ct.siteFg }}">{{ ct.siteName }}</span><sc-if value="{{ ct.hasEnv }}" hint-placeholder-val="{{ false }}"><span class="cc-ct-env">{{ ct.envLabel }}</span></sc-if></div>
+                        </div>
+                        <span class="cc-pill" style="color:{{ ct.statusFg }};background:{{ ct.pillBg }}">{{ ct.status }}</span>
+                      </div>
+                      <div class="cc-ct-meters">
+                        <div><div class="cc-ct-k"><span>Memory</span><span>{{ ct.memShort }}</span></div><div class="cc-ct-bar"><div style="width:{{ ct.memW }};background:{{ ct.memBar }}"></div></div></div>
+                        <div><div class="cc-ct-k"><span>Disk</span><span>{{ ct.diskShort }}</span></div><div class="cc-ct-bar"><div style="width:{{ ct.diskW }};background:{{ ct.diskBar }}"></div></div></div>
+                      </div>
+                      <div class="cc-ct-foot"><span>CPU {{ ct.cpu }}</span><span>{{ ct.ip }}</span><span>SSH {{ ct.ssh }}</span><span class="cc-ct-go">Open →</span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sdCtList }}" hint-placeholder-val="{{ false }}">
               <div style="overflow-x:auto">
                 <div style="display:grid;grid-template-columns:minmax(200px,1.6fr) 90px 80px minmax(170px,1.2fr) minmax(150px,1fr) 110px 70px;min-width:900px">
                   <span style="padding:8px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Container</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Status</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">CPU</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Memory</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Disk</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">IP</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">SSH</span>
@@ -4962,6 +5006,7 @@ button.ccc-edited:hover{color:var(--ink)}
                   </sc-for>
                 </div>
               </div>
+              </sc-if>
             </div>
             <div class="cc-card" style="margin-top:12px">
               <div class="cc-card-h">

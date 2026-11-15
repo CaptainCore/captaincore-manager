@@ -500,6 +500,55 @@ Object.assign(Component.prototype, {
     };
   },
 
+  // Containers on the server page: a grid of cards (default) or the table.
+  // The whole card opens the container; the site line opens the site. Site
+  // containers come first, then what is left over (removed sites, replaced
+  // roots, image builds), dimmed. The view is a per-browser choice.
+  serverCtView() {
+    if (this.state.sdCtView) return this.state.sdCtView;
+    try { return localStorage.getItem('cc.servers.ctView') || 'grid'; } catch (e) { return 'grid'; }
+  },
+
+  serverCtVals(s, d) {
+    const view = this.serverCtView();
+    const C1 = 'var(--chart-1)';
+    const meter = (used, cap) => { const p = cap ? Math.min(100, used / cap * 100) : 0; return { w: p.toFixed(0) + '%', bar: p > 85 ? 'var(--warn)' : C1 }; };
+    const gb = n => (Math.round(n / 107374182.4) / 10) + ' GB';
+    const cts = (d.containers || []).map(c => {
+      // Containers that are not a live site say what they are and when they go:
+      // a removed site (kept a week), what a rebuild replaced (kept a week), an image being built.
+      const left = c.name.match(/^(.+)-(removed|oldroot)-(\d{4})(\d\d)(\d\d)/);
+      const goes = left ? new Date(Date.UTC(+left[3], +left[4] - 1, +left[5] + 7)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+      const what = left ? (left[2] === 'removed' ? 'Removed site, deleted ' + goes : 'Replaced by a rebuild of ' + left[1] + ', deleted ' + goes)
+        : /^build-php8\d$/.test(c.name) ? 'Image being built' : '';
+      const running = c.status === 'Running';
+      const mem = meter(c.mem, c.mem_limit), disk = meter(c.disk, c.disk_quota);
+      const env = c.site && c.site.environment && c.site.environment !== 'Production' ? c.site.environment : '';
+      const tone = running ? 'var(--ok)' : what ? 'var(--ink-dim)' : 'var(--warn)';
+      return { tier: what ? 2 : c.site ? 0 : 1, sortName: (c.site ? c.site.name + ' ' + (env || '') : c.name).toLowerCase(),
+        name: c.name, illo: this.illo('container'), openCt: () => this.openContainer(s.serverId, c.name),
+        key: (e) => { if (e.key === 'Enter' && e.target === e.currentTarget) { e.preventDefault(); this.openContainer(s.serverId, c.name); } },
+        site: what || (c.site ? c.site.name + (env ? ' · ' + env.toLowerCase() : '') : 'Not linked to a site'),
+        siteName: what || (c.site ? c.site.name : 'Not linked to a site'), envLabel: what ? '' : env, hasEnv: !what && !!env,
+        siteFg: c.site && !what ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        open: (e) => { if (e && e.stopPropagation) e.stopPropagation(); if (c.site && !what) { this.setState({ env: c.site.environment || 'Production' }); this.openSite(String(c.site.site_id)); } },
+        status: c.status, statusFg: tone, hue: running ? 'var(--brand)' : what ? 'var(--ink-dim)' : 'var(--warn)',
+        pillBg: 'color-mix(in srgb,' + tone + ' 12%,var(--paper))', dim: what ? '0.62' : '1',
+        cpu: c.cpu == null || !running ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%'),
+        mem: this.fmtBytes(c.mem) + (c.mem_limit ? ' / ' + gb(c.mem_limit) : ''), memW: running ? mem.w : '0%', memBar: mem.bar,
+        memShort: !running ? 'Not running' : this.fmtBytes(c.mem) + (c.mem_limit ? ' of ' + gb(c.mem_limit) : ''),
+        disk: this.fmtBytes(c.disk) + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : ''),
+        diskShort: !c.disk && !c.disk_quota ? 'No volumes' : this.fmtBytes(c.disk) + (c.disk_quota ? ' of ' + gb(c.disk_quota) : ''), diskW: disk.w, diskBar: disk.bar,
+        backups: c.snapshots_bytes ? '+ ' + this.fmtBytes(c.snapshots_bytes, 0) + ' in local backups' : 'No local backups yet',
+        ip: c.ip || '—', ssh: c.ssh_port || '—' };
+    }).sort((a, b) => a.tier - b.tier || (a.sortName < b.sortName ? -1 : a.sortName > b.sortName ? 1 : 0));
+    const pick = v => () => { try { localStorage.setItem('cc.servers.ctView', v); } catch (e) {} this.setState({ sdCtView: v }); };
+    return { sdCts: cts, sdCtGrid: view !== 'list', sdCtList: view === 'list',
+      sdCtViews: [['grid', 'Grid'], ['list', 'List']].map(([v, l]) => ({ label: l, go: pick(v),
+        fg: view === v || (v === 'grid' && view !== 'list') ? 'var(--ink)' : 'var(--ink-dim)',
+        bg: view === v || (v === 'grid' && view !== 'list') ? 'var(--panel-2)' : 'transparent' })) };
+  },
+
   computeServerDetail(s) {
     if (s.route !== 'server') return { showServer: false };
     const st = this._srvStats, row = st && st.data ? st.data.server : ((this._srv && this._srv.list) || []).find(r => String(r.server_id) === String(s.serverId));
@@ -545,23 +594,7 @@ Object.assign(Component.prototype, {
       sdChartNet: el => this.srvChart(el, { t, fmt: (x, ax) => this.fmtBytes(x, ax ? 0 : 1) + '/s',
         series: [{ name: 'In', values: h.map(r => r.rx_bps || 0), color: C1 }, { name: 'Out', values: h.map(r => r.tx_bps || 0), color: C2 }] }, v),
       sdChartLoad: el => this.srvChart(el, { t, fmt: x => x.toFixed(x < 10 ? 2 : 0), series: [{ name: 'Load (1 min)', values: h.map(r => r.load), color: C1 }] }, v),
-      sdCts: (d.containers || []).map(c => {
-        const memPct = c.mem_limit ? Math.min(100, c.mem / c.mem_limit * 100) : 0;
-        // Containers that are not a live site say what they are and when they go:
-        // a removed site (kept a week), what a rebuild replaced (kept a week), an image being built.
-        const left = c.name.match(/^(.+)-(removed|oldroot)-(\d{4})(\d\d)(\d\d)/);
-        const goes = left ? new Date(Date.UTC(+left[3], +left[4] - 1, +left[5] + 7)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
-        const what = left ? (left[2] === 'removed' ? 'Removed site, deleted ' + goes : 'Replaced by a rebuild of ' + left[1] + ', deleted ' + goes)
-          : /^build-php8\d$/.test(c.name) ? 'Image being built' : '';
-        return { name: c.name, illo: this.illo('container'), openCt: () => this.openContainer(s.serverId, c.name), site: what || (c.site ? c.site.name + (c.site.environment && c.site.environment !== 'Production' ? ' · ' + c.site.environment.toLowerCase() : '') : 'Not linked to a site'),
-          siteFg: c.site && !what ? 'var(--brand-ink)' : 'var(--ink-dim)', open: () => { if (c.site) { this.setState({ env: c.site.environment || 'Production' }); this.openSite(String(c.site.site_id)); } },
-          status: c.status, statusFg: c.status === 'Running' ? 'var(--ok)' : what ? 'var(--ink-dim)' : 'var(--warn)',
-          cpu: c.cpu == null ? '—' : (c.cpu < 0.1 ? '<0.1%' : c.cpu.toFixed(1) + '%'),
-          mem: this.fmtBytes(c.mem) + (c.mem_limit ? ' / ' + (Math.round(c.mem_limit / 107374182.4) / 10) + ' GB' : ''), memW: memPct.toFixed(0) + '%',
-          memBar: memPct > 85 ? 'var(--warn)' : C1,
-          disk: this.fmtBytes(c.disk) + (c.snapshots_bytes ? ' + ' + this.fmtBytes(c.snapshots_bytes) + ' backups' : ''),
-          ip: c.ip || '—', ssh: c.ssh_port || '—' };
-      }),
+      ...this.serverCtVals(s, d),
       sdSys: [
         ['CPU', sys.cpu_model + ' · ' + sys.cpus + ' threads'], ['OS', sys.os], ['Kernel', sys.kernel],
         ['Incus', sys.incus], ['ZFS', sys.zfs + ' · cache capped at ' + (sys.arc_max / 1073741824).toFixed(0) + ' GiB'],
