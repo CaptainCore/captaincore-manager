@@ -634,7 +634,7 @@ class Site {
         }
 
         // Fetch normalized envs from the provider.
-        $remote_envs = $provider_class::fetch_remote_environments( $provider_site_id, $site->provider_id );
+        $remote_envs = $provider_class::fetch_remote_environments( $provider_site_id, $site->provider_id, $this->site_id );
         if ( is_wp_error( $remote_envs ) ) {
             $result['status']  = 'error';
             $result['message'] = $remote_envs->get_error_message();

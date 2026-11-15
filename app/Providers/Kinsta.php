@@ -155,7 +155,7 @@ class Kinsta {
      * @param string $provider_id    CaptainCore provider id (defaults to primary Kinsta)
      * @return array|\WP_Error
      */
-    public static function fetch_remote_environments( $remote_site_id = "", $provider_id = "" ) {
+    public static function fetch_remote_environments( $remote_site_id = "", $provider_id = "", $site_id = 0 ) {
         if ( empty( $remote_site_id ) ) {
             return new \WP_Error( 'kinsta_missing_remote_id', 'Remote Kinsta site id is required' );
         }
@@ -180,7 +180,7 @@ class Kinsta {
         }
 
         $environments = [];
-        $names        = self::environment_names( $environments_response->site->environments );
+        $names        = self::link_map( (int) $site_id, $environments_response->site->environments );
         foreach ( $environments_response->site->environments as $env ) {
             // A premium environment used to be labelled Staging too, and the
             // last one won: Staging's record took its address and port.
@@ -404,66 +404,132 @@ class Kinsta {
     }
 
     /**
-     * CaptainCore's names for a Kinsta site's environments, by Kinsta
-     * environment id: live is Production, staging is Staging, and a premium
-     * environment keeps its own name as one word ("Dev site" is "Devsite"),
-     * numbered when two would collide. Every lookup between the two goes
-     * through this, so a premium environment can never pass for Staging.
+     * Which CaptainCore environment each of a site's Kinsta environments is,
+     * by Kinsta environment id. Kinsta's `name` says little (live, or staging
+     * for the standard environment and every premium one alike); the id is
+     * the link, kept in the environment's details as `kinsta_env_id`.
+     *   1. A local environment that recorded its Kinsta id keeps it.
+     *   2. Older rows: Production is live, Staging is the standard
+     *      (non-premium) staging environment, whatever it is called now.
+     *   3. The standard staging environment is Staging; a premium one is
+     *      named after what MyKinsta shows, as one word ("Dev site" is
+     *      "Devsite"), numbered when taken (a premium "Staging" is Staging2);
+     *      a local row of that name not yet linked is the same environment.
+     * With no site id, only rule 3 applies (live is Production).
      */
-    public static function environment_names( $kinsta_envs ) {
-        $names = [];
-        $taken = [];
-        $envs  = is_array( $kinsta_envs ) ? $kinsta_envs : [];
-        // Live and staging first, so a premium one never takes their names.
-        usort( $envs, function ( $a, $b ) {
-            $rank = function ( $e ) { return [ 'live' => 0, 'staging' => 1 ][ strtolower( (string) ( $e->name ?? '' ) ) ] ?? 2; };
-            return $rank( $a ) <=> $rank( $b );
-        } );
-        foreach ( $envs as $env ) {
-            $kname = strtolower( (string) ( $env->name ?? '' ) );
-            if ( $kname === 'live' ) {
+    public static function link_map( $site_id, $kinsta_envs ) {
+        $envs  = is_array( $kinsta_envs ) ? array_values( $kinsta_envs ) : [];
+        $by_id = [];
+        foreach ( $envs as $e ) {
+            $by_id[ (string) ( $e->id ?? '' ) ] = $e;
+        }
+        $locals = $site_id ? \CaptainCore\Environments::fetch_environments( $site_id ) : [];
+        $map    = [];
+        $used   = [];
+        $claim  = function ( $kid, $name ) use ( &$map, &$used ) {
+            $map[ $kid ] = $name;
+            $used[ strtolower( $name ) ] = true;
+        };
+        foreach ( $locals as $l ) {
+            $kid = (string) ( ( json_decode( (string) $l->details ) ?: new \stdClass() )->kinsta_env_id ?? '' );
+            if ( $kid !== '' && isset( $by_id[ $kid ] ) && ! isset( $map[ $kid ] ) ) {
+                $claim( $kid, $l->environment );
+            }
+        }
+        $kind = function ( $e ) {
+            $n = strtolower( (string) ( $e->name ?? '' ) );
+            return $n === 'live' ? 'live' : ( empty( $e->is_premium ) && $n === 'staging' ? 'standard' : 'premium' );
+        };
+        foreach ( $locals as $l ) {
+            if ( isset( $used[ strtolower( $l->environment ) ] ) ) {
+                continue;
+            }
+            $want = [ 'production' => 'live', 'staging' => 'standard' ][ strtolower( $l->environment ) ] ?? '';
+            foreach ( $want ? $envs : [] as $e ) {
+                if ( ! isset( $map[ (string) $e->id ] ) && $kind( $e ) === $want ) {
+                    $claim( (string) $e->id, $l->environment );
+                    break;
+                }
+            }
+        }
+        $local_by_name = [];
+        foreach ( $locals as $l ) {
+            $local_by_name[ strtolower( $l->environment ) ] = $l->environment;
+        }
+        // Live, then the standard staging, then premium ones in Kinsta's order.
+        $order = [ 'live' => 0, 'standard' => 1, 'premium' => 2 ];
+        usort( $envs, function ( $a, $b ) use ( $kind, $order ) { return $order[ $kind( $a ) ] <=> $order[ $kind( $b ) ]; } );
+        foreach ( $envs as $e ) {
+            $kid = (string) ( $e->id ?? '' );
+            if ( isset( $map[ $kid ] ) ) {
+                continue;
+            }
+            if ( $kind( $e ) === 'live' ) {
                 $label = 'Production';
-            } elseif ( $kname === 'staging' ) {
+            } elseif ( $kind( $e ) === 'standard' ) {
+                // Staging is always Kinsta's standard staging environment,
+                // whatever MyKinsta calls it: Link staging, deploy to staging
+                // and swap all act on that one.
                 $label = 'Staging';
             } else {
-                $label = preg_replace( '/[^A-Za-z0-9]/', '', (string) ( $env->display_name ?? '' ) );
+                $label = preg_replace( '/[^A-Za-z0-9]/', '', (string) ( $e->display_name ?? '' ) );
                 if ( $label === '' ) {
-                    $label = preg_replace( '/[^A-Za-z0-9]/', '', $kname );
+                    $label = $kind( $e ) === 'standard' ? 'Staging' : 'Env';
                 }
-                if ( $label === '' || ! ctype_alpha( $label[0] ) ) {
+                if ( ! ctype_alpha( $label[0] ) ) {
                     $label = 'Env' . $label;
                 }
                 $label = \CaptainCore\Environments::display_name( substr( $label, 0, 18 ) );
-                if ( ! \CaptainCore\Environments::valid_name( $label ) || in_array( strtolower( $label ), [ 'live' ], true ) ) {
+                if ( ! \CaptainCore\Environments::valid_name( $label ) || in_array( strtolower( $label ), [ 'production', 'live' ], true ) ) {
                     $label = 'Env';
                 }
-                $base = $label;
-                for ( $i = 2; isset( $taken[ strtolower( $label ) ] ); $i++ ) {
-                    $label = substr( $base, 0, 18 ) . $i;
-                }
             }
-            $taken[ strtolower( $label ) ] = true;
-            $names[ (string) ( $env->id ?? '' ) ] = $label;
+            // A local row of this name not yet linked is this environment.
+            if ( isset( $local_by_name[ strtolower( $label ) ] ) && ! isset( $used[ strtolower( $label ) ] ) ) {
+                $claim( $kid, $local_by_name[ strtolower( $label ) ] );
+                continue;
+            }
+            $base = $label;
+            for ( $i = 2; isset( $used[ strtolower( $label ) ] ); $i++ ) {
+                $label = substr( $base, 0, 18 ) . $i;
+            }
+            $claim( $kid, $label );
         }
-        return $names;
+        return $map;
+    }
+
+    /** CaptainCore names by Kinsta environment id, with no site to consult. */
+    public static function environment_names( $kinsta_envs ) {
+        return self::link_map( 0, $kinsta_envs );
     }
 
     /** The Kinsta environment a CaptainCore environment name stands for, or null. */
-    public static function match_environment( $kinsta_envs, $cc_name ) {
-        $names = self::environment_names( $kinsta_envs );
+    public static function match_environment( $kinsta_envs, $cc_name, $site_id = 0 ) {
+        $map = self::link_map( $site_id, $kinsta_envs );
         foreach ( (array) $kinsta_envs as $env ) {
-            if ( strcasecmp( $names[ (string) ( $env->id ?? '' ) ] ?? '', trim( (string) $cc_name ) ) === 0 ) {
+            if ( strcasecmp( $map[ (string) ( $env->id ?? '' ) ] ?? '', trim( (string) $cc_name ) ) === 0 ) {
                 return $env;
             }
         }
         return null;
     }
 
+    /** Record which Kinsta environment a CaptainCore environment is. */
+    public static function remember_link( $environment, $kinsta_env_id ) {
+        $d = json_decode( (string) $environment->details ) ?: new \stdClass();
+        if ( ( $d->kinsta_env_id ?? '' ) === (string) $kinsta_env_id ) {
+            return;
+        }
+        $d->kinsta_env_id = (string) $kinsta_env_id;
+        ( new \CaptainCore\Environments )->update( [ 'details' => wp_json_encode( $d ) ], [ 'environment_id' => $environment->environment_id ] );
+    }
+
     /**
-     * Track a site's premium Kinsta environments (anything but live and
-     * staging) as CaptainCore environments of the site, with the SSH address
-     * and port Kinsta gives each and the site's shared SFTP login. Staging
-     * stays an explicit Link (connect_staging). Returns the names added.
+     * Track a site's premium Kinsta environments as environments of the site,
+     * under the names link_map gives them, with Kinsta's address and port for
+     * each and the site's shared SFTP login. The standard staging environment
+     * stays an explicit Link (connect_staging). Every environment matched to
+     * Kinsta has its Kinsta id recorded. Returns the names added.
      */
     public static function connect_premium_environments( $site_id ) {
         $site = ( new \CaptainCore\Sites )->get( $site_id );
@@ -480,15 +546,20 @@ class Kinsta {
         if ( ! is_array( $kinsta ) ) {
             return [];
         }
-        $names = self::environment_names( $kinsta );
+        $map   = self::link_map( $site_id, $kinsta );
         $added = [];
         $now   = date( 'Y-m-d H:i:s' );
         foreach ( $kinsta as $env ) {
-            if ( in_array( strtolower( (string) $env->name ), [ 'live', 'staging' ], true ) ) {
+            $label = $map[ (string) $env->id ] ?? '';
+            if ( $label === '' ) {
                 continue;
             }
-            $label = $names[ (string) $env->id ] ?? '';
-            if ( $label === '' || \CaptainCore\Environments::for_site( $site_id, $label ) ) {
+            $local = \CaptainCore\Environments::for_site( $site_id, $label );
+            if ( $local ) {
+                self::remember_link( $local, $env->id );
+                continue;
+            }
+            if ( strtolower( (string) $env->name ) === 'live' || empty( $env->is_premium ) ) {
                 continue;
             }
             ( new \CaptainCore\Environments )->insert( [
@@ -513,6 +584,7 @@ class Kinsta {
                 'updates_enabled'         => 0,
                 'updates_exclude_plugins' => '',
                 'updates_exclude_themes'  => '',
+                'details'                 => wp_json_encode( [ 'kinsta_env_id' => (string) $env->id ] ),
             ] );
             $added[] = $label;
         }
@@ -558,7 +630,9 @@ class Kinsta {
         $has_staging = in_array( 'Staging', array_column( $environments, 'environment' ), true );
 
         foreach( $response->site->environments as $kinsta_environment ) {
-            if ( $kinsta_environment->name == "staging" ) {
+            // The standard staging environment: premium ones are named
+            // "staging" by Kinsta too (connect_premium_environments links those).
+            if ( $kinsta_environment->name == "staging" && empty( $kinsta_environment->is_premium ) ) {
                 if ( $has_staging ) {
                     return self::push_site_to_cli( $site_id );
                 }
@@ -584,6 +658,7 @@ class Kinsta {
                     'updates_enabled'         => 1,
                     'updates_exclude_plugins' => "",
                     'updates_exclude_themes'  => "",
+                    'details'                 => wp_json_encode( [ 'kinsta_env_id' => (string) $kinsta_environment->id ] ),
                 ];
                 ( new \CaptainCore\Environments )->insert( $new_environment );
                 \CaptainCore\Sites::update_environments_cache( $site_id );
@@ -629,10 +704,11 @@ class Kinsta {
         // Kinsta environment of the same name (environment_names); every
         // non-live one also shares production's SFTP login, as Kinsta does.
         foreach ( $environments as $environment ) {
-            $kinsta_environment = self::match_environment( $kinsta, $environment->environment );
+            $kinsta_environment = self::match_environment( $kinsta, $environment->environment, $site_id );
             if ( ! $kinsta_environment ) {
                 continue;
             }
+            self::remember_link( $environment, $kinsta_environment->id );
             $update = [
                 "address" => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
                 "port"    => $kinsta_environment->ssh_connection->ssh_port,
@@ -1045,7 +1121,7 @@ class Kinsta {
 			return new \WP_Error( 'kinsta_api_error', "Could not fetch environments from Kinsta for site {$cc_site->name}.", [ 'status' => 500 ] );
 		}
 
-		$kinsta_env = self::match_environment( $kinsta_environments_response->site->environments, $cc_env->environment );
+		$kinsta_env = self::match_environment( $kinsta_environments_response->site->environments, $cc_env->environment, (int) $cc_site->site_id );
 		if ( $kinsta_env ) {
 			return $kinsta_env->id;
 		}
@@ -1209,7 +1285,7 @@ class Kinsta {
             return $env_response;
         }
 
-        $env = self::match_environment( $env_response->site->environments ?? [], $environment );
+        $env = self::match_environment( $env_response->site->environments ?? [], $environment, (int) $site_id );
         if ( $env ) {
             return $env->id;
         }
