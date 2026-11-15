@@ -227,23 +227,23 @@ Object.assign(Component.prototype, {
     const on = fn => () => { if (real) fn(); };
     const isOp = (window.CC_BOOT || {}).dcRole === 'operator' || !window.CC_BOOT;
     const tools = [
-      { k: 'update',  label: 'Run managed update', desc: 'Update plugins & themes with quicksaves before and after',
+      { k: 'update',  label: 'Run managed update', desc: 'Update plugins and themes, with a quicksave before and after', primary: true,
         icon: 'M21 12a9 9 0 1 1-2.64-6.36 M21 3v6h-6', go: on(() => this.toolManagedUpdate(real, s)) },
       // Operator-only: the per-environment update policy (on/off + exclusions).
       ...(isOp ? [{ k: 'updsettings', label: 'Update settings…', desc: 'Managed updates on or off, excluded plugins & themes',
         icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z',
         go: on(() => this.openUpdSettings(real, s)) }] : []),
-      { k: 'deploy',  label: 'Deploy defaults',  desc: 'Apply standard config & plugins',
+      { k: 'deploy',  label: 'Deploy defaults',  desc: 'Apply our standard settings and plugins',
         icon: 'M21 12a9 9 0 1 1-6.2-8.6 M21 3v6h-6', go: on(() => this.toolDeployDefaults(real, s)) },
-      { k: 'migrate', label: 'Migrate backup…',  desc: 'Import from an external URL',
+      { k: 'migrate', label: 'Migrate backup…',  desc: 'Replace this site with a backup from a URL',
         icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3', go: on(() => this.openToolDialog('migrate', real, s)) },
-      { k: 'https',   label: 'Apply HTTPS…',     desc: 'Search & replace http:// → https://',
+      { k: 'https',   label: 'Apply HTTPS…',     desc: 'Switch links in the database from http:// to https://',
         icon: 'M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z M7 11V7a5 5 0 0 1 10 0v4', go: on(() => this.openToolDialog('https', real, s)) },
-      { k: 'perms',   label: 'Reset permissions', desc: 'Fix file ownership & groups',
+      { k: 'perms',   label: 'Reset permissions', desc: 'Put file ownership and permissions back to defaults',
         icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M12 18v-4 M10 16h4', go: on(() => this.toolResetPermissions(real, s)) },
-      { k: 'maint',   label: 'Maintenance mode…', desc: 'Toggle public accessibility',
+      { k: 'maint',   label: 'Maintenance mode…', desc: 'Show visitors a “back soon” page', primary: true,
         icon: 'M14.7 6.3a4 4 0 0 0 5 5l-9.4 9.4a2.8 2.8 0 0 1-4-4Z', go: on(() => this.openToolDialog('maintenance', real, s)) },
-      { k: 'launch',  label: 'Launch site…',      desc: 'Go-live domain replacement',
+      { k: 'launch',  label: 'Launch site…',      desc: 'Move the site from its temporary address to its domain',
         icon: 'M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2a2.1 2.1 0 0 0-3-3Z M12 15l-3-3a22 22 0 0 1 8-10 10 10 0 0 1 5 5 22 22 0 0 1-10 8Z', go: on(() => this.openToolDialog('launch', real, s)) }
     ];
     // Provider-backed domain mappings (Kinsta / Rocket.net) — jumps to the
@@ -252,14 +252,20 @@ Object.assign(Component.prototype, {
     const fRow = real ? this.FLEET.find(x => String(x.id) === String(real.siteId)) : null;
     const sdProvider = ((real && real.site && real.site.provider) || (fRow && fRow.provider) || '').toLowerCase();
     if (sdProvider === 'kinsta' || sdProvider === 'rocketdotnet') {
-      tools.push({ k: 'mappings', label: 'Configure domain mappings', desc: 'Add, remove or set the primary domain',
+      tools.push({ k: 'mappings', label: 'Configure domain mappings', desc: 'Add, remove or set the primary domain', primary: true,
         icon: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M2 12h20 M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z',
         go: on(() => { this.setState({ siteTab: 'sitedomains' }); this.loadEnvDomains(); }) });
     }
 
     const dlg = s.toolDlg || '';
     return {
+      // The Overview's Tools card shows the everyday tools with a line each
+      // and keeps the rest behind More tools (toolsMore).
       siteTools: tools,
+      siteToolsMain: tools.filter(t => t.primary),
+      siteToolsMore: s.toolsMore ? tools.filter(t => !t.primary) : [],
+      toolsMoreLabel: s.toolsMore ? 'Fewer tools' : 'More tools (' + tools.filter(t => !t.primary).length + ')',
+      toolsMoreToggle: () => this.setState(st => ({ toolsMore: !st.toolsMore })),
       ...this.computeScheduled(real, s),
       // ── Apply HTTPS ──
       thOpen: dlg === 'https',

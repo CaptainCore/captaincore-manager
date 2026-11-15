@@ -2613,15 +2613,19 @@ class Component extends DCLogic {
       // get the monitor as a switch row (umShow) plus the Managed updates
       // value and its Update settings link; everyone else sees neither.
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']])
-        .filter(([k]) => k === 'Uptime monitor' ? false : (k === 'Managed updates' ? isOp : true)).map(([k, v]) => ({
+        // WordPress, PHP, storage and visits are on the health cards now.
+        .filter(([k]) => !['Uptime monitor', 'WordPress', 'PHP', 'Storage', 'Visits / wk'].includes(k) && (k === 'Managed updates' ? isOp : true)).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)
       })),
-      dDomains: (real && real.domains
+      // Customers have nothing left in the card unless the site has subsites.
+      envCardShow: !!isOp || (real ? this.realEnvRows(real, s) : []).some(([k]) => k === 'Subsites'),
+      ...(this.connectVals ? this.connectVals(credRows, s, real) : {}),
+      ...this.overviewDomainVals((real && real.domains
         ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))
         : [site.name, 'www.' + site.name].map(name => ({ name, did: '' })))
-        .map(d => ({ ...d, open: () => { if (d.did) this.openDomain(d.did); } })),
+        .map(d => ({ ...d, open: () => { if (d.did) this.openDomain(d.did); } })), s),
       dGoDomains: () => this.setState({ route: 'domains' }),
       sharedRows: (real && real.sharedWith
         ? [...real.sharedWith.map(a => ({ uid: 'acc' + a.account_id, name: this.decodeHtml(a.name), accId: String(a.account_id),

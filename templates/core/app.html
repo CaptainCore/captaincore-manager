@@ -101,6 +101,19 @@
 .cc-health-v{font:700 19px/1.2 var(--sans);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-health-sub{font:400 var(--fs-12) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:640px){.cc-site-tabs{gap:20px;-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:28px}.cc-health{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cc-health-card:last-child{grid-column:1 / -1}.cc-health-v{font-size:17px}}
+/* Site Overview: Connect rows, deploy shortcuts, tools. */
+.cc-conn-row{display:flex;align-items:center;gap:12px;padding:9px 16px;border-top:1px solid var(--rule);cursor:pointer}
+.cc-conn-row:hover{background:var(--panel-2);color:var(--brand-ink)}
+.cc-conn-k{flex:none;width:110px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.cc-conn-v{flex:1;min-width:0;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-conn-copy{flex:none;font:500 var(--fs-115) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px}
+.cc-conn-copy:hover{background:var(--panel-2)}
+.cc-deploy-quick{display:flex;flex-direction:column;gap:8px}
+.cc-deploy-quick > span,.cc-deploy-quick sc-if > span{font-size:var(--fs-13)!important}
+.cc-tool{width:100%;display:flex;align-items:center;gap:12px;padding:8px 16px;border:0;background:none;text-align:left;cursor:pointer;font:inherit}
+.cc-tool:hover{background:var(--panel-2)}
+.cc-tool-i{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 10%,var(--paper));color:var(--brand-ink)}
+@media (max-width:640px){.cc-conn-k{width:84px}}
 /* Server page: container cards. */
 .cc-ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:14px 16px 16px}
 .cc-ct-tile{position:relative;display:flex;flex-direction:column;gap:11px;padding:14px 14px 12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);cursor:pointer;min-width:0;overflow:hidden;transition:border-color .15s,box-shadow .15s,transform .15s}
@@ -1572,26 +1585,114 @@ button.ccc-edited:hover{color:var(--ink)}
                 </div>
               </section>
             </sc-if>
-            <div class="cc-cols" style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px;align-items:start">
-              <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Credentials</h2><div style="flex:1"></div><sc-if value="{{ credSftpShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ credCopySftp }}" title="Copy address, username, password, protocol and port" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;margin-right:14px" style-hover="text-decoration:underline">Copy SFTP info</span></sc-if><sc-if value="{{ edsShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ eeOpenDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Edit</span></sc-if></div>
-                <sc-for list="{{ credRows }}" as="c" hint-placeholder-count="7">
-                  <div onClick="{{ c.copy }}" title="{{ c.copyTitle }}" style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">
-                    <span style="flex:none;width:110px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ c.k }}</span>
-                    <span style="flex:1;min-width:0;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.v }}</span>
+            <div class="cc-cols" style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin-top:14px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+                <section class="cc-card">
+                  <div class="cc-card-h">
+                    <h2>Connect</h2>
+                    <div style="flex:1"></div>
+                    <sc-if value="{{ edsShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ eeOpenDlg }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Edit</span></sc-if>
+                  </div>
+                  <sc-for list="{{ connLinks }}" as="c" hint-placeholder-count="2">
+                    <div onClick="{{ c.copy }}" title="{{ c.copyTitle }}" class="cc-conn-row">
+                    <span class="cc-conn-k">{{ c.k }}</span>
+                    <span class="cc-conn-v">{{ c.v }}</span>
                     <sc-if value="{{ c.isPass }}" hint-placeholder-val="{{ false }}">
                       <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">{{ c.revealMark }}</span>
                     </sc-if>
                     <sc-if value="{{ c.isUrl }}" hint-placeholder-val="{{ false }}">
                       <span style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim)">Open ↗</span>
                     </sc-if>
-                    <span onClick="{{ c.copyPill }}" title="{{ c.pillTitle }}" style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px" style-hover="background:var(--panel-2)">{{ c.mark }}</span>
+                    <span onClick="{{ c.copyPill }}" title="{{ c.pillTitle }}" class="cc-conn-copy">{{ c.mark }}</span>
                   </div>
-                </sc-for>
-              </section>
-              <div style="display:flex;flex-direction:column;gap:14px">
+                  </sc-for>
+                  <sc-if value="{{ connHasTabs }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 8px;flex-wrap:wrap">
+                      <div role="group" aria-label="Connection type" style="display:inline-flex;gap:2px;background:var(--panel-2);border-radius:9px;padding:3px">
+                        <sc-for list="{{ connTabs }}" as="ct" hint-placeholder-count="3">
+                          <button type="button" onClick="{{ ct.pick }}" aria-pressed="{{ ct.pressed }}" style="border:0;border-radius:7px;padding:4px 12px;font:500 var(--fs-13) var(--sans);cursor:pointer;background:{{ ct.bg }};color:{{ ct.fg }};box-shadow:{{ ct.sh }}">{{ ct.label }}</button>
+                        </sc-for>
+                      </div>
+                      <div style="flex:1"></div>
+                      <sc-if value="{{ connIsSftp }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ credSftpShow }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ credCopySftp }}" title="Copy address, username, password, protocol and port" class="cc-btn">Copy all</button></sc-if></sc-if>
+                      <sc-if value="{{ connIsDb }}" hint-placeholder-val="{{ false }}"><sc-if value="{{ showPma }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ openPma }}" class="cc-btn">Open phpMyAdmin ↗</button></sc-if></sc-if>
+                    </div>
+                    <sc-for list="{{ connRows }}" as="c" hint-placeholder-count="4">
+                      <div onClick="{{ c.copy }}" title="{{ c.copyTitle }}" class="cc-conn-row">
+                    <span class="cc-conn-k">{{ c.k }}</span>
+                    <span class="cc-conn-v">{{ c.v }}</span>
+                    <sc-if value="{{ c.isPass }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ c.vToggle }}" title="{{ c.vTitle }}" style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">{{ c.revealMark }}</span>
+                    </sc-if>
+                    <sc-if value="{{ c.isUrl }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex:none;font:500 var(--fs-115) var(--sans);color:var(--ink-dim)">Open ↗</span>
+                    </sc-if>
+                    <span onClick="{{ c.copyPill }}" title="{{ c.pillTitle }}" class="cc-conn-copy">{{ c.mark }}</span>
+                  </div>
+                    </sc-for>
+                    <div style="padding:9px 16px 12px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ connNote }}</div>
+                  </sc-if>
+                </section>
+                <section class="cc-card">
+                  <div class="cc-card-h"><h2>Domains</h2><span class="cc-meta">{{ dDomainCount }}</span><div style="flex:1"></div><span onClick="{{ dGoDomains }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
+                  <sc-for list="{{ dDomains }}" as="d" hint-placeholder-count="2">
+                    <div onClick="{{ d.open }}" style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 var(--fs-13) var(--mono);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" style-hover="background:var(--panel-2);color:var(--brand-ink)">{{ d.name }}</div>
+                  </sc-for>
+                  <sc-if value="{{ hasDomMore }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ domToggle }}" style="border:0;background:none;padding:10px 16px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">{{ dDomMore }}</button></sc-if>
+                </section>
+                <sc-if value="{{ capTeaserShow }}" hint-placeholder-val="{{ false }}">
+                  <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;display:flex;align-items:center;gap:6px 9px;flex-wrap:wrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
+                    <span style="font:600 var(--fs-14) var(--sans)">Visual captures</span>
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ capTeaserLabel }}</span>
+                    <div style="flex:1"></div>
+                    <span onClick="{{ goCaptures }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;white-space:nowrap">View history →</span>
+                  </section>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+                <section class="cc-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Deploy</h2>
+                  <sc-if value="{{ envDeployShow }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button type="button" onClick="{{ envDeployOpen }}" class="cc-btn primary">Deploy between environments…</button><span class="cc-meta">Pick any two. A backup of the target is taken first.</span></div>
+                  </sc-if>
+                  <div class="cc-deploy-quick">
+                  <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
+                  </sc-if>
+                  <sc-if value="{{ canSwap }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ swapEnv }}" title="Production gets staging; staging gets production as it was right before the push" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M7 20V4 M3 8l4-4 4 4 M17 4v16 M13 16l4 4 4-4"></path></svg>Swap staging ⇄ production</span>
+                  </sc-if>
+                  <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
+                  <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
+                  </div>
+                </section>
+                <section class="cc-card" style="padding:6px 0 4px">
+                  <h2 style="margin:0;padding:8px 16px 4px;font:600 var(--fs-14) var(--sans)">Tools</h2>
+                  <sc-for list="{{ siteToolsMain }}" as="tl" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ tl.go }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tl.icon }}"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">{{ tl.label }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tl.desc }}</span></span></button>
+                  </sc-for>
+                  <sc-for list="{{ siteToolsMore }}" as="tl" hint-placeholder-count="0">
+                    <button type="button" onClick="{{ tl.go }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tl.icon }}"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">{{ tl.label }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tl.desc }}</span></span></button>
+                  </sc-for>
+                  <div style="display:flex;flex-direction:column;gap:9px;padding:8px 16px 12px;border-top:1px solid var(--rule);margin-top:4px">
+                    <span onClick="{{ toolsMoreToggle }}" style="font:600 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">{{ toolsMoreLabel }}</span>
+                  <!-- Removal: customers can only REQUEST; the hard delete is
+                       operator-only in the UI and enforced server-side. -->
+                  <sc-if value="{{ rmRequestShow }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ rmRequest }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"></path></svg>{{ rmRequestLabel }}</span>
+                  </sc-if>
+                  <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ rmCancel }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 3v5h5"></path></svg>Cancel removal request</span>
+                  </sc-if>
+                  <sc-if value="{{ rmCanDelete }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ rmDelete }}" title="Administrators only — irreversible" style="display:flex;align-items:center;gap:9px;font:600 var(--fs-13) var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>Delete site permanently…</span>
+                  </sc-if>
+                  </div>
+                </section>
+                <sc-if value="{{ envCardShow }}" hint-placeholder-val="{{ true }}">
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                  <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Environment</h2></div>
+                  <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Settings</h2></div>
                   <sc-for list="{{ envRows }}" as="r" hint-placeholder-count="5">
                     <div onClick="{{ r.copy }}" title="{{ r.copyTitle }}" style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">
                       <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
@@ -1610,21 +1711,7 @@ button.ccc-edited:hover{color:var(--ink)}
                     <div onClick="{{ openUpdSettings }}" style="padding:9px 16px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:var(--brand-ink)" style-hover="background:var(--panel-2)">Update settings…</div>
                   </sc-if>
                 </section>
-                <sc-if value="{{ capTeaserShow }}" hint-placeholder-val="{{ false }}">
-                  <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;display:flex;align-items:center;gap:9px">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
-                    <span style="font:600 var(--fs-14) var(--sans)">Visual captures</span>
-                    <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ capTeaserLabel }}</span>
-                    <div style="flex:1"></div>
-                    <span onClick="{{ goCaptures }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">View history →</span>
-                  </section>
                 </sc-if>
-                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
-                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Domains</h2><span onClick="{{ dGoDomains }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Configure →</span></div>
-                  <sc-for list="{{ dDomains }}" as="d" hint-placeholder-count="2">
-                    <div onClick="{{ d.open }}" style="padding:9px 16px;border-bottom:1px solid var(--rule);font:400 var(--fs-13) var(--mono);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">{{ d.name }}</div>
-                  </sc-for>
-                </section>
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--rule)">
                     <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Accounts</h2>
@@ -1654,41 +1741,6 @@ button.ccc-edited:hover{color:var(--ink)}
                       <button onClick="{{ openAsg }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Assign…</button>
                     </sc-if>
                   </div>
-                </section>
-                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
-                  <h2 style="margin:0 0 2px;font:600 var(--fs-14) var(--sans)">Deploy</h2>
-                  <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
-                  </sc-if>
-                  <sc-if value="{{ canSwap }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ swapEnv }}" title="Production gets staging; staging gets production as it was right before the push" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M7 20V4 M3 8l4-4 4 4 M17 4v16 M13 16l4 4 4-4"></path></svg>Swap staging ⇄ production</span>
-                  </sc-if>
-                  <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
-                  <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
-                  <sc-if value="{{ envDeployShow }}" hint-placeholder-val="{{ false }}">
-                    <span onClick="{{ envDeployOpen }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M4 7h13 M14 4l3 3-3 3 M20 17H7 M10 14l-3 3 3 3"></path></svg>Deploy between environments…</span>
-                  </sc-if>
-                </section>
-                <!-- System tools — v1 Scripts-tab parity, rehomed here (tools.js) -->
-                <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
-                  <h2 style="margin:0 0 2px;font:600 var(--fs-14) var(--sans)">Tools</h2>
-                  <sc-for list="{{ siteTools }}" as="tl" hint-placeholder-count="6">
-                    <span onClick="{{ tl.go }}" title="{{ tl.desc }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="{{ tl.icon }}"></path></svg>{{ tl.label }}</span>
-                  </sc-for>
-                  <sc-if value="{{ showPma }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ openPma }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 9c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3Z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"></path></svg>Open phpMyAdmin</span>
-                  </sc-if>
-                  <!-- Removal: customers can only REQUEST; the hard delete is
-                       operator-only in the UI and enforced server-side. -->
-                  <sc-if value="{{ rmRequestShow }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ rmRequest }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"></path></svg>{{ rmRequestLabel }}</span>
-                  </sc-if>
-                  <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
-                    <span onClick="{{ rmCancel }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M3 12a9 9 0 1 0 2.6-6.4M3 3v5h5"></path></svg>Cancel removal request</span>
-                  </sc-if>
-                  <sc-if value="{{ rmCanDelete }}" hint-placeholder-val="{{ false }}">
-                    <span onClick="{{ rmDelete }}" title="Administrators only — irreversible" style="display:flex;align-items:center;gap:9px;font:600 var(--fs-13) var(--sans);color:var(--bad);cursor:pointer;margin-top:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>Delete site permanently…</span>
-                  </sc-if>
                 </section>
               </div>
             </div>

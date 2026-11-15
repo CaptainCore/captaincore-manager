@@ -66,6 +66,40 @@ Object.assign(Component.prototype, {
     };
   },
 
+  // Connect card: the site's two addresses on top, then SFTP / SSH /
+  // Database tabs over the Credentials rows (credRows from app.js, each row
+  // keeps its copy, reveal and open handlers). Unknown keys go under SFTP.
+  connectVals(credRows, s, real) {
+    const LINKS = ['Site URL', 'WP admin'], SSH = ['SSH'], DB = ['Database', 'DB user', 'DB password'];
+    const rows = credRows || [];
+    const groups = {
+      SFTP: rows.filter(r => !LINKS.includes(r.k) && !SSH.includes(r.k) && !DB.includes(r.k)),
+      SSH: rows.filter(r => SSH.includes(r.k)),
+      Database: rows.filter(r => DB.includes(r.k))
+    };
+    const names = Object.keys(groups).filter(t => groups[t].length);
+    const tab = names.includes(s.connTab) ? s.connTab : (names[0] || 'SFTP');
+    const notes = { SFTP: 'For any SFTP app, such as FileZilla or Transmit.', SSH: 'Connect from a terminal.', Database: 'Changes here are live. Take a backup first.' };
+    return {
+      connLinks: rows.filter(r => LINKS.includes(r.k)),
+      connTabs: names.map(t => ({ label: t, pressed: t === tab ? 'true' : 'false',
+        bg: t === tab ? 'var(--paper)' : 'transparent', fg: t === tab ? 'var(--ink)' : 'var(--ink-dim)',
+        sh: t === tab ? '0 1px 2px rgba(0,0,0,.12)' : 'none', pick: () => this.setState({ connTab: t }) })),
+      connHasTabs: names.length > 0,
+      connRows: groups[tab] || [], connNote: notes[tab] || '',
+      connIsSftp: tab === 'SFTP', connIsDb: tab === 'Database'
+    };
+  },
+
+  // Domains card: the first five, then "Show all".
+  overviewDomainVals(list, s) {
+    const all = list || [];
+    const open = !!s.domAll || all.length <= 6;
+    return { dDomains: open ? all : all.slice(0, 5), dDomainCount: all.length > 1 ? all.length + ' on this site' : '',
+      hasDomMore: all.length > 6, dDomMore: open ? 'Show fewer' : 'Show all ' + all.length,
+      domToggle: () => this.setState(st => ({ domAll: !st.domAll })) };
+  },
+
   // The screenshot shows only once it has loaded, so a missing file never
   // leaves a broken image in the header (an onError attribute in the template
   // would run as inline script before the app binds it).
