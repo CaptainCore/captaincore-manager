@@ -553,6 +553,7 @@ button.ccc-edited:hover{color:var(--ink)}
 .ccc-accnone{font:400 var(--fs-12) var(--sans);color:var(--ink-dim);padding:2px 0}
 .ccc-accmore{border:0;background:none;padding:4px 0;color:var(--ink-dim);font:500 var(--fs-12) var(--sans);cursor:pointer}
 .ccc-accmore:hover{color:var(--brand-ink)}
+.ccc-themebtn{display:inline-grid;place-items:center;width:30px;height:30px;padding:0;border-radius:999px;border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);cursor:pointer}.ccc-themebtn:hover{background:var(--panel-2);color:var(--ink)}
 .ccc-pushbtn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);font:500 var(--fs-125) var(--sans);cursor:pointer}
 .ccc-back{display:none;flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font-size:17px;cursor:pointer}
 .ccc-acticon{display:none}
@@ -7336,7 +7337,7 @@ button.ccc-edited:hover{color:var(--ink)}
                       </div>
                     </sc-if>
                   </div>
-                  <div class="ns-sub" style="margin-top:-2px">The copy is made in the same datacenter as the original.</div>
+                  <div class="ns-sub" style="margin-top:-2px">{{ nsCloneNote }}</div>
                 </sc-if>
               </div>
               </sc-if>
@@ -9357,6 +9358,14 @@ button.ccc-edited:hover{color:var(--ink)}
           </button>
         </sc-if>
         <span class="ccc-livepill" style="display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);font:500 var(--fs-125) var(--sans);color:var(--ink)"><span style="width:8px;height:8px;border-radius:50%;background:{{ chatLiveFg }}"></span>{{ chatLiveLabel }}</span>
+        <button onClick="{{ toggleTheme }}" onContextMenu="{{ themeMenu }}" title="{{ themeTitle }}" aria-label="Switch light and dark" class="ccc-themebtn">
+          <sc-if value="{{ themeIsSystem }}" hint-placeholder-val="{{ false }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke-width="0"></path></svg>
+          </sc-if>
+          <sc-if value="{{ themeNotSystem }}" hint-placeholder-val="{{ true }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ themeIcon }}"></path></svg>
+          </sc-if>
+        </button>
       </div>
       <div class="ccc-body" data-view="{{ chatPhoneView }}" data-hide="{{ chatInboxHide }}">
         <aside class="ccc-list">

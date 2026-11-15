@@ -68,8 +68,12 @@ Object.assign(Component.prototype, {
     this.setState(v.trim() ? { nsName: v, nsNameTouched: true } : { nsName: nsNameFromDomain(this.state.nsDomain), nsNameTouched: false });
   },
 
-  // Kinsta sites the caller could copy from (same rule as app.js ddNsCloneOpts).
+  // Sites the caller could copy. At Kinsta it is Kinsta's clone, which needs
+  // a Kinsta site on the selected connection and stays in its datacenter. On
+  // our servers (this._nsSpots is set) any site works: the server restores
+  // its latest backup, the same job that adds an environment from a backup.
   nsCloneSources(s) {
+    if (this._nsSpots) return this.FLEET.filter(f => f && f.id && f.name && !f.removed);
     const prov = String(s.nsProviderId || NS_KINSTA_PROVIDER);
     return this.FLEET.filter(f => f.provider === 'Kinsta' && f.providerSiteId
       && String(f.providerConnId || String(NS_KINSTA_PROVIDER)) === prov);
@@ -114,23 +118,27 @@ Object.assign(Component.prototype, {
     const domain = (st.nsDomain || '').trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[/?#].*$/, '');
     const spots = this.nsOurSpots();
     const spot = spots.find(d => d.title === st.nsLoc) || spots[0];
+    // Copy an existing site: restored on the server from its latest backup.
+    const copying = st.nsOurStart === 'clone';
+    const copy = copying && !String(st.nsClone).startsWith('None') ? this.nsCloneSources(st).find(f => f.name === st.nsClone) : null;
     const errors = [];
     if (!name) errors.push('Enter a web address or a name for the site');
     else if (name.replace(/[^A-Za-z0-9]/g, '').length < 3) errors.push('Site names need at least 3 letters or digits');
     if (!spot) errors.push('Pick a location');
+    if (copying && !copy) errors.push('Choose the site to copy, or start from a fresh WordPress install');
     if ((st.nsNotes || '').length > 2000) errors.push('Notes can be at most 2,000 characters');
     if (errors.length) { this.setState({ nsErrors: errors }); return; }
     this.setState({ nsBusy: true, nsErrors: [] });
     this.api('/servers/sites', { method: 'POST', body: {
       location: spot.loc.key, server_id: Number(st.nsServerId) || 0, name, domain,
-      start: st.nsOurStart === 'plain' ? 'plain' : 'wordpress',
+      start: st.nsOurStart === 'plain' ? 'plain' : 'wordpress', copy_site_id: copy ? Number(copy.id) : 0,
       account_id: Number(st.nsBillingId) || 0, customer_id: Number(st.nsCustomerId) || 0,
       shared_with: (st.nsShared || []).map(Number), notes: (st.nsNotes || '').trim()
     } }).then(res => {
       if (!res || res.code || !res.site_id) { this.setState({ nsBusy: false, nsErrors: [(res && res.message) || 'Could not create the site'] }); return; }
-      this.toast((domain || name) + ' is on its way to ' + res.server + '. Its container builds in about a minute.', { kind: 'success', timeout: 6000 });
+      this.toast((domain || name) + ' is on its way to ' + res.server + (copy ? ', copied from the latest backup of ' + copy.name + '.' : '. Its container builds in about a minute.'), { kind: 'success', timeout: 6000 });
       this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsNotes: '', nsNameTouched: false,
-        nsShared: [], nsCustomerId: '', nsBillingId: '', nsServerId: '' });
+        nsShared: [], nsCustomerId: '', nsBillingId: '', nsServerId: '', nsClone: 'None (fresh install)', nsOurStart: 'wordpress' });
       if (this.reloadAccounts) this.reloadAccounts();
       this._nsLocs = null; // site counts changed
       this.startJob({ label: 'create', target: name + ' on ' + res.server, command: 'host site create', siteId: res.site_id, environment: 'Production',
@@ -164,9 +172,15 @@ Object.assign(Component.prototype, {
     const ranked = s.dcpPlace ? (this._dcpRanked || []) : [];
     const miles = {};
     ranked.forEach((d, i) => { miles[d.title] = { mi: d.miles, nearest: i === 0 }; });
-    const sources = ours ? [] : this.nsCloneSources(s);
-    const isClone = !ours && s.nsStart === 'clone' && sources.length > 0;
+    const sources = this.nsCloneSources(s);
+    const isClone = (ours ? s.nsOurStart === 'clone' : s.nsStart === 'clone') && sources.length > 0;
     const cloneSrc = isClone && !String(s.nsClone).startsWith('None') ? s.nsClone : '';
+    // Kinsta's clone stays in the original's datacenter; a copy on our
+    // servers is restored from the source's latest backup where you pick.
+    const sameDc = !ours && isClone;
+    const cloneNote = !isClone ? ''
+      : sameDc ? 'The copy is made in the same datacenter as the original.'
+      : 'Copied from the latest backup of ' + (cloneSrc || 'the site') + ', onto the server you pick.';
     const on = sel => ({
       bd: sel ? 'var(--brand)' : 'var(--rule)',
       bg: sel ? 'var(--brand-soft)' : 'var(--paper)',
@@ -202,7 +216,8 @@ Object.assign(Component.prototype, {
         { id: 'kinsta', title: 'Kinsta', sub: 'Managed by Kinsta in ' + NS_DATACENTERS.length + ' datacenters.' },
         { id: 'ours', title: 'Our servers', sub: ourSpots.length + ' location' + (ourSpots.length === 1 ? '' : 's') + ', on the server with the most room.' }
       ].map(c => ({ ...c, ...on((c.id === 'ours') === ours),
-        pick: () => this.setState({ nsHost: c.id, nsDcGroup: '', dcpPlace: '', nsServerId: '' }) })),
+        // The two hosts copy from different lists, so a picked source resets.
+        pick: () => this.setState({ nsHost: c.id, nsDcGroup: '', dcpPlace: '', nsServerId: '', nsClone: 'None (fresh install)' }) })),
       nsSrvShow: ours && srvAll.length > 1,
       nsSrvChips: [{ id: '', label: 'Most room' + (srvBest ? ' · ' + srvBest.name : ''), ok: !!srvBest, title: srvBest ? room(srvBest) : 'No server here can take a site' }]
         .concat(srvAll.map(v => ({ id: String(v.server_id), label: v.name, ok: v.ok, title: v.ok ? room(v) : v.why })))
@@ -232,8 +247,9 @@ Object.assign(Component.prototype, {
       nsStartShow: true,
       nsStartCards: ours ? [
         { id: 'wordpress', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
-        { id: 'plain', title: 'Plain site', sub: 'HTML files only: no WordPress, no database.', icon: 'M4 4h16v16H4zM8 9h8M8 13h5' }
-      ].map(c => ({ ...c, ...on(c.id === (s.nsOurStart === 'plain' ? 'plain' : 'wordpress')), pick: () => this.setState({ nsOurStart: c.id }) })) : [
+        { id: 'plain', title: 'Plain site', sub: 'HTML files only: no WordPress, no database.', icon: 'M4 4h16v16H4zM8 9h8M8 13h5' },
+        ...(sources.length ? [{ id: 'clone', title: 'Copy an existing site', sub: 'Start from one of your sites, content and all.', icon: 'M8 8h11v11H8zM5 16V5h11' }] : [])
+      ].map(c => ({ ...c, ...on(c.id === (isClone ? 'clone' : s.nsOurStart === 'plain' ? 'plain' : 'wordpress')), pick: () => this.setState({ nsOurStart: c.id }) })) : [
         { id: 'fresh', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
         { id: 'empty', title: 'Empty site', sub: 'No WordPress. For moving a site in or building it yourself.', icon: 'M4 4h16v16H4z' },
         ...(sources.length ? [{ id: 'clone', title: 'Copy an existing site', sub: 'Start from one of your sites, content and all.', icon: 'M8 8h11v11H8zM5 16V5h11' }] : [])
@@ -242,7 +258,8 @@ Object.assign(Component.prototype, {
       nsIsClone: isClone,
       nsCloneLabel: cloneSrc || 'Choose a site to copy…',
       nsCloneLabelDim: cloneSrc ? 'var(--ink)' : 'var(--ink-dim)',
-      nsShowWhere: !isClone,
+      nsCloneNote: cloneNote,
+      nsShowWhere: !sameDc,
       nsDcTabs: NS_DC_GROUPS.filter(([id]) => spots.some(d => nsDcGroupOf(d.value) === id)).map(([id, label]) => {
         const sel = id === group, hasPick = nsDcGroupOf(dc.value) === id;
         return { label, dot: hasPick ? 'inline-block' : 'none',
@@ -266,8 +283,9 @@ Object.assign(Component.prototype, {
         ? 'Closest to ' + s.dcpPlace + '. Pick another any time.'
         : 'Pick the region closest to most of your visitors. Not sure? Search a city below.',
       nsSumAcc: accLabel,
-      nsSumWhere: isClone ? 'Same as the copied site' : meta.city + ', ' + meta.country,
-      nsSumStart: ours ? (s.nsOurStart === 'plain' ? 'Plain site' : 'Fresh WordPress') : isClone ? (cloneSrc ? 'Copy of ' + cloneSrc : 'Copy of…') : s.nsStart === 'empty' ? 'Empty site' : 'Fresh WordPress',
+      nsSumWhere: sameDc ? 'Same as the copied site' : meta.city + ', ' + meta.country,
+      nsSumStart: isClone ? (cloneSrc ? 'Copy of ' + cloneSrc + (ours ? ' (latest backup)' : '') : 'Copy of…')
+        : ours ? (s.nsOurStart === 'plain' ? 'Plain site' : 'Fresh WordPress') : s.nsStart === 'empty' ? 'Empty site' : 'Fresh WordPress',
       nsNotesCount: (s.nsNotes || '').length ? (s.nsNotes || '').length + ' / 2000' : '',
       nsCtaLabel: s.nsBusy ? 'Creating…' : 'Create site'
     };

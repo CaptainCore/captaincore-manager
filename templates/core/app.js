@@ -1300,7 +1300,9 @@ class Component extends DCLogic {
       // the SELECTED provider connection — the clone API resolves
       // source_env_id from sites/{clone_site_id}/environments, and Kinsta
       // cannot clone across companies.
-      ddNsCloneOpts: this.ddOpts(this.nsCloneSources(s).map(f => f.name), s.nsClone, 'nsClone'),
+      // On our servers any site can be copied (from its latest backup), so
+      // the list is built only while open and shows the first 50 matches.
+      ddNsCloneOpts: s.ddOpen === 'nsClone' ? this.ddOpts(this.nsCloneSources(s).map(f => f.name), s.nsClone, 'nsClone').slice(0, 50) : [],
       nsDc: s.nsDc,
       // v1 parity: the clone API ignores region, so Datacenter hides while cloning.
       nsShowDc: s.nsClone.startsWith('None'),

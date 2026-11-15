@@ -826,23 +826,26 @@ class HostConfigs extends DB {
 	 * only; the copy belongs to no account, sends no mail, runs no cron and
 	 * stays hidden from search engines until someone changes that.
 	 */
-	public static function restore_to_new_site( $server, $source_site_id, $environment, $backup_id, $label, $user_id, $cron = false ) {
+	public static function restore_to_new_site( $server, $source_site_id, $environment, $backup_id, $label, $user_id, $cron = false, $account_id = 0, $owners = [] ) {
 		$source = Sites::get( (int) $source_site_id );
 		if ( ! $source ) {
 			return new \WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
 		}
 		$source_env = Environments::valid_name( $environment ) ? Environments::for_site( $source->site_id, $environment ) : null;
-		if ( ! $source_env || ! preg_match( '/^[0-9a-f]{8,64}$/', (string) $backup_id ) ) {
+		// 'latest' (Copy an existing site in the New site dialog): the CLI
+		// resolves it to the newest backup when it restores.
+		if ( ! $source_env || ! preg_match( '/^([0-9a-f]{8,64}|latest)$/', (string) $backup_id ) ) {
 			return new \WP_Error( 'invalid', 'Pick a backup of one of this site\'s environments.', [ 'status' => 400 ] );
 		}
 		$environment = $source_env->environment;
 		$restore = [ 'site_id' => (int) $source->site_id, 'environment' => $environment, 'backup_id' => (string) $backup_id, 'cron' => $cron ? 'on' : 'off' ];
-		$created = self::create_site( $server, $label, 'restore', $user_id, 0, $restore );
+		$created = self::create_site( $server, $label, 'restore', $user_id, (int) $account_id, $restore, $owners );
 		if ( is_wp_error( $created ) ) {
 			return $created;
 		}
-		ProcessLog::insert( 'Created on ' . $server->name . ' from ' . $source->name . ' (' . strtolower( $environment ) . ') backup ' . substr( $backup_id, 0, 8 ), $created['site_id'] );
-		ProcessLog::insert( 'Backup ' . substr( $backup_id, 0, 8 ) . ' restored to a new site, ' . $created['domain'] . ', on ' . $server->name, (int) $source->site_id );
+		$which = $backup_id === 'latest' ? 'latest backup' : 'backup ' . substr( $backup_id, 0, 8 );
+		ProcessLog::insert( 'Created on ' . $server->name . ' from ' . $source->name . ' (' . strtolower( $environment ) . ') ' . $which, $created['site_id'] );
+		ProcessLog::insert( ucfirst( $which ) . ' restored to a new site, ' . $created['domain'] . ', on ' . $server->name, (int) $source->site_id );
 		return $created;
 	}
 

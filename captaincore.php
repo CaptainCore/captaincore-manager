@@ -7636,18 +7636,24 @@ function captaincore_servers_place_site_func( $request ) {
 	$customer = $ids( [ $p['customer_id'] ?? 0 ] );
 	$billing  = $ids( [ $p['account_id'] ?? 0 ] );
 	$start    = in_array( $p['start'] ?? '', [ 'plain' ], true ) ? 'plain' : 'wordpress';
-	$created  = CaptainCore\HostConfigs::create_site( $server, (string) ( $p['name'] ?? '' ), $start, get_current_user_id(), $billing[0] ?? 0, null, [
-		'name' => $domain, 'customer_id' => $customer[0] ?? 0, 'shared_with' => $ids( $p['shared_with'] ?? [] ),
-	] );
+	$owners   = [ 'name' => $domain, 'customer_id' => $customer[0] ?? 0, 'shared_with' => $ids( $p['shared_with'] ?? [] ) ];
+	// Copy an existing site: a new site from its latest production backup.
+	$copy     = (int) ( $p['copy_site_id'] ?? 0 );
+	$created  = $copy
+		? CaptainCore\HostConfigs::restore_to_new_site( $server, $copy, 'Production', 'latest', (string) ( $p['name'] ?? '' ), get_current_user_id(), false, $billing[0] ?? 0, $owners )
+		: CaptainCore\HostConfigs::create_site( $server, (string) ( $p['name'] ?? '' ), $start, get_current_user_id(), $billing[0] ?? 0, null, $owners );
 	if ( is_wp_error( $created ) ) {
 		return $created;
 	}
-	CaptainCore\ProcessLog::insert( 'Created on ' . $server->name, $created['site_id'] );
+	if ( ! $copy ) {
+		CaptainCore\ProcessLog::insert( 'Created on ' . $server->name, $created['site_id'] );
+	}
 	$site  = CaptainCore\Sites::get( $created['site_id'] );
+	$src   = $copy ? CaptainCore\Sites::get( $copy ) : null;
 	$notes = trim( substr( (string) ( $p['notes'] ?? '' ), 0, 2000 ) );
 	if ( $notes !== '' ) {
 		$account = $site && $site->customer_id ? CaptainCore\Accounts::get( (int) $site->customer_id ) : null;
-		CaptainCore\Mailer::send_new_site_notes( [ 'name' => $created['site'], 'domain' => $domain ?: $created['domain'], 'datacenter' => $server->name . ' (' . $server->location . ')', 'clone' => '' ],
+		CaptainCore\Mailer::send_new_site_notes( [ 'name' => $created['site'], 'domain' => $domain ?: $created['domain'], 'datacenter' => $server->name . ' (' . $server->location . ')', 'clone' => $src ? $src->name : '' ],
 			$notes, $account->name ?? '', (object) ( new CaptainCore\User )->fetch() );
 	}
 	return $created + [
