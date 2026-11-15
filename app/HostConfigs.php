@@ -789,10 +789,11 @@ class HostConfigs extends DB {
 		if ( ! $source ) {
 			return new \WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
 		}
-		$environment = ucfirst( strtolower( (string) $environment ) );
-		if ( ! in_array( $environment, [ 'Production', 'Staging' ], true ) || ! preg_match( '/^[0-9a-f]{8,64}$/', (string) $backup_id ) ) {
-			return new \WP_Error( 'invalid', 'Pick a backup of production or staging.', [ 'status' => 400 ] );
+		$source_env = Environments::valid_name( $environment ) ? Environments::for_site( $source->site_id, $environment ) : null;
+		if ( ! $source_env || ! preg_match( '/^[0-9a-f]{8,64}$/', (string) $backup_id ) ) {
+			return new \WP_Error( 'invalid', 'Pick a backup of one of this site\'s environments.', [ 'status' => 400 ] );
 		}
+		$environment = $source_env->environment;
 		$restore = [ 'site_id' => (int) $source->site_id, 'environment' => $environment, 'backup_id' => (string) $backup_id, 'cron' => $cron ? 'on' : 'off' ];
 		$created = self::create_site( $server, $label, 'restore', $user_id, 0, $restore );
 		if ( is_wp_error( $created ) ) {

@@ -37,9 +37,19 @@ class Run {
      * @param string   $fallback
      * @return string
      */
+    /**
+     * An environment name as the CLI takes it (lowercase). Any name a site can
+     * have passes (Environments::valid_name), plus the extra words a caller
+     * allows ('both'); only something that could never be an environment
+     * falls back. A well-formed name a site does not have reaches the CLI,
+     * which refuses it, instead of quietly becoming production.
+     */
     public static function safe_environment( $environment, $allowed = [ 'production', 'staging' ], $fallback = 'production' ) {
         $environment = strtolower( trim( (string) $environment ) );
-        return in_array( $environment, $allowed, true ) ? $environment : $fallback;
+        if ( in_array( $environment, $allowed, true ) || Environments::valid_name( $environment ) ) {
+            return $environment;
+        }
+        return $fallback;
     }
 
     private static function build_body( $command, $payload = "" ) {

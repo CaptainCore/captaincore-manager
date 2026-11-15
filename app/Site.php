@@ -441,9 +441,15 @@ class Site {
         foreach ( $site->environments as $environment ) {
             // Add as new environment
             if ( empty( $environment['environment_id'] ) ) {
+                // A new row keeps the name it was given when it is a valid
+                // one (the old form only ever added Staging).
+                $new_name = Environments::valid_name( $environment['environment'] ?? '' ) ? Environments::display_name( $environment['environment'] ) : 'Staging';
+                if ( Environments::for_site( $this->site_id, $new_name ) ) {
+                    continue;
+                }
                 $new_environment = [
                     'site_id'                 => $this->site_id,
-                    'environment'             => "Staging",
+                    'environment'             => $new_name,
                     'address'                 => $environment['address'],
                     'username'                => $environment['username'],
                     'password'                => $environment['password'],
@@ -675,9 +681,19 @@ class Site {
             }
         }
 
+        // Premium environments at the host become environments of the site
+        // (Kinsta: anything but live and staging; Staging stays an explicit Link).
+        $linked = [];
+        if ( ! $dry_run && method_exists( $provider_class, 'connect_premium_environments' ) ) {
+            $linked = (array) $provider_class::connect_premium_environments( $this->site_id );
+            foreach ( $linked as $label ) {
+                $result['changes'][] = [ 'environment' => $label, 'field' => 'linked', 'before' => '', 'after' => 'linked' ];
+            }
+        }
+
         // Surface remote envs the local DB doesn't track.
         foreach ( $remote_by_label as $label => $remote_env ) {
-            if ( ! in_array( $label, $local_labels, true ) ) {
+            if ( ! in_array( $label, $local_labels, true ) && ! in_array( $label, $linked, true ) ) {
                 $result['warnings'][] = "{$site->provider} has '{$label}' environment but it isn't tracked locally";
             }
         }
@@ -1387,6 +1403,10 @@ class Site {
         if ( $name === '' ) {
             return new \WP_Error( 'missing_environment', 'Environment name is required', [ 'status' => 400 ] );
         }
+        if ( ! Environments::valid_name( $name ) ) {
+            return new \WP_Error( 'invalid_environment', 'An environment name is one word of letters and digits, starting with a letter (20 at most), such as Development or Dev2.', [ 'status' => 400 ] );
+        }
+        $name = Environments::display_name( $name );
         // Production is created with the site; a second one would give the CLI
         // two rows to choose from for the same site-environment pair.
         foreach ( ( new Environments )->where( [ "site_id" => $this->site_id ] ) as $existing ) {

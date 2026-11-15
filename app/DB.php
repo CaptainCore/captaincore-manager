@@ -707,7 +707,9 @@ class DB {
     static function fetch_environments( $value ) {
         global $wpdb;
         $value = intval( $value );
-        $sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by `environment` ASC";
+        // Production first, then Staging, then any others in the order they
+        // were added: callers read [0] as production and [1] as staging.
+        $sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by CASE LOWER(`environment`) WHEN 'production' THEN 0 WHEN 'staging' THEN 1 ELSE 2 END, `environment_id` ASC";
         return $wpdb->get_results( $sql );
     }
 

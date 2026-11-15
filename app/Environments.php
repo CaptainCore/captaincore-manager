@@ -11,6 +11,36 @@ class Environments extends DB {
 
     static $primary_key = 'environment_id';
 
+    /** Words the CLI uses for more than one environment. */
+    const RESERVED_NAMES = [ 'both', 'all' ];
+
+    /**
+     * An environment's name is one word of letters and digits ("Production",
+     * "Staging", "Development", "Dev2"). The CLI, backup folders and rclone
+     * remotes use it lowercased (`<site>-development`, `<site>_<id>/development/`),
+     * so a space, dash or slash would break them.
+     */
+    public static function valid_name( $name ) {
+        $name = strtolower( trim( (string) $name ) );
+        return (bool) preg_match( '/^[a-z][a-z0-9]{0,19}$/', $name ) && ! in_array( $name, self::RESERVED_NAMES, true );
+    }
+
+    /** The stored form of a name: "development" or "DEVELOPMENT" becomes "Development". */
+    public static function display_name( $name ) {
+        $name = trim( (string) $name );
+        return $name === strtolower( $name ) || $name === strtoupper( $name ) && strlen( $name ) > 3 ? ucfirst( strtolower( $name ) ) : $name;
+    }
+
+    /** A site's environment by name, whatever its case. */
+    public static function for_site( $site_id, $name ) {
+        foreach ( self::where( [ 'site_id' => (int) $site_id ] ) as $env ) {
+            if ( strcasecmp( (string) $env->environment, trim( (string) $name ) ) === 0 ) {
+                return $env;
+            }
+        }
+        return null;
+    }
+
     public function filters() {
         $filters     = [];
         $user        = new User;

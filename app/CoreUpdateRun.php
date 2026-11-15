@@ -155,24 +155,19 @@ class CoreUpdateRun {
 
 	public static function resolve_site_env( $site_key ) {
 		$out = [ 'site_id' => 0, 'environment_id' => 0 ];
-		if ( ! preg_match( '/^(.*)-(production|staging)$/i', (string) $site_key, $m ) ) {
+		if ( ! preg_match( '/^(.*)-([a-z][a-z0-9]{0,19})$/i', (string) $site_key, $m ) || ! Environments::valid_name( $m[2] ) ) {
 			return $out;
 		}
 		$name = $m[1];
-		$env  = ucfirst( strtolower( $m[2] ) );
+		$env  = Environments::display_name( $m[2] );
 		$sites = ( new Sites() )->where( [ 'site' => $name ] );
 		if ( empty( $sites[0]->site_id ) ) {
 			return $out;
 		}
 		$out['site_id'] = (int) $sites[0]->site_id;
-		$envs = ( new Environments() )->where(
-			[
-				'site_id'     => $out['site_id'],
-				'environment' => $env,
-			]
-		);
-		if ( ! empty( $envs[0]->environment_id ) ) {
-			$out['environment_id'] = (int) $envs[0]->environment_id;
+		$found = Environments::for_site( $out['site_id'], $env );
+		if ( $found ) {
+			$out['environment_id'] = (int) $found->environment_id;
 		}
 		return $out;
 	}

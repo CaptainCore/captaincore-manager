@@ -2519,6 +2519,11 @@ class Component extends DCLogic {
       canSwap: real && real.envs ? (real.site || {}).provider === 'kinsta' && !!(real.site || {}).provider_site_id
         && real.envs.some(e => e.environment === 'Staging') && real.envs.some(e => e.environment === 'Production') : true,
       setEnvProd: () => this.setEnv('Production'), setEnvStag: () => this.setEnv('Staging'),
+      // One tab per environment, as the Manager orders them (Production,
+      // Staging, then the rest); Production alone until the site loads.
+      envTabs: (real && real.envs ? real.envs.map(e => e.environment) : ['Production']).map(name => ({
+        label: name, bg: segBg(name), fg: segFg(name), pick: () => this.setEnv(name)
+      })),
       backToSites: () => this.setState({ route: 'sites' }),
       dSync: () => real ? this.realSync(real, s) : this.runJob('sync-data', site.name),
       dTerm: () => this.setState({ dockOpen: true }),

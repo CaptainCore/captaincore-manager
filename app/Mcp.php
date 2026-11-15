@@ -140,7 +140,7 @@ class Mcp {
 					'type'       => 'object',
 					'properties' => [
 						'site'        => [ 'type' => 'string', 'description' => 'Site id, name or domain, as returned by list_sites.' ],
-						'environment' => [ 'type' => 'string', 'enum' => [ 'production', 'staging' ], 'description' => 'Defaults to production.' ],
+						'environment' => [ 'type' => 'string', 'description' => 'production (the default), staging, or another environment the site has, as list_sites shows it.' ],
 						'command'     => [ 'type' => 'string', 'description' => 'The WP-CLI or bash commands to run.' ],
 					],
 					'required'   => [ 'site', 'command' ],
@@ -254,7 +254,7 @@ class Mcp {
 			return self::text_result( $site->get_error_message(), true );
 		}
 		$environment = Run::safe_environment( $arguments['environment'] ?? 'production' );
-		if ( empty( ( new Site( $site->site_id ) )->fetch_environment_id( ucfirst( $environment ) ) ) ) {
+		if ( ! Environments::for_site( $site->site_id, $environment ) ) {
 			return self::text_result( "{$site->name} has no {$environment} environment.", true );
 		}
 

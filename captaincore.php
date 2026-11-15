@@ -1409,7 +1409,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$max     = ( isset( $probe->max_workers ) && is_numeric( $probe->max_workers ) && (int) $probe->max_workers > 0 ) ? (int) $probe->max_workers : null;
 		$code    = substr( (string) ( $d->http_code ?? '' ), 0, 10 );
 		$error   = substr( (string) ( $d->error ?? '' ), 0, 1000 );
-		$env     = ! empty( $environment ) ? ucfirst( strtolower( $environment ) ) : 'Production';
+		$env     = ! empty( $environment ) ? CaptainCore\Environments::display_name( $environment ) : 'Production';
 		$attempt = max( 1, (int) ( $d->attempt ?? 1 ) );
 
 		$saturated = $ssh_ok && $max !== null && $busy !== null && $busy >= $max;
@@ -6948,9 +6948,7 @@ HEREDOC;
 // The environment a hosting request is about: must run on one of our servers.
 function captaincore_hosting_environment( $request ) {
 	$site_id = (int) $request['id'];
-	$name    = ucfirst( strtolower( (string) ( $request['environment'] ?? 'Production' ) ) );
-	$envs    = CaptainCore\Environments::where( [ 'site_id' => $site_id, 'environment' => $name ] );
-	$env     = $envs ? $envs[0] : null;
+	$env     = CaptainCore\Environments::for_site( $site_id, (string) ( $request['environment'] ?? 'Production' ) );
 	if ( ! $env ) {
 		return new WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
 	}
@@ -7757,7 +7755,7 @@ function captaincore_site_captures_new_func( $request ) {
 	}
 
 	$environment = strtolower( (string) $request['environment'] );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 	$site        = new CaptainCore\Site( $site_id );
@@ -7863,7 +7861,7 @@ function captaincore_site_environment_performance_monitor_toggle_func( $request 
 	}
 
 	$environment = strtolower( (string) $environment );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 
@@ -7885,7 +7883,7 @@ function captaincore_site_environment_performance_monitor_fetch_func( $request )
 	}
 
 	$environment = strtolower( (string) $environment );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 
@@ -8051,7 +8049,7 @@ function captaincore_update_logs_get_func( $request ) {
 	}
 
 	$environment = strtolower( (string) $environment );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 
@@ -8284,7 +8282,7 @@ function captaincore_site_sync_data_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 	$environment = strtolower( (string) $environment );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
@@ -8573,7 +8571,7 @@ function captaincore_site_logs_list_func( $request ) {
 	}
 
 	$environment = strtolower( (string) $request['environment'] );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
@@ -8594,7 +8592,7 @@ function captaincore_site_logs_fetch_func( $request ) {
 	}
 
 	$environment = strtolower( (string) $request['environment'] );
-	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+	if ( ! CaptainCore\Environments::valid_name( $environment ) || ! CaptainCore\Environments::for_site( $site_id, $environment ) ) {
 		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
 	}
 
@@ -12711,7 +12709,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>production|staging)/backups/(?P<backup_id>[0-9a-f]{8,64})/restore-to-server', [
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-z][a-z0-9]{0,19})/backups/(?P<backup_id>[0-9a-f]{8,64})/restore-to-server', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_backup_restore_to_server_func',
 			'permission_callback' => 'captaincore_admin_permission_check',

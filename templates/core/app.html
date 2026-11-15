@@ -1398,10 +1398,9 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
             <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>
             <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
-              <span onClick="{{ setEnvProd }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);background:{{ pBg }};color:{{ pFg }}">Production</span>
-              <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
-                <span onClick="{{ setEnvStag }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);background:{{ sBg }};color:{{ sFg }}">Staging</span>
-              </sc-if>
+              <sc-for list="{{ envTabs }}" as="et" hint-placeholder-count="2">
+                <span onClick="{{ et.pick }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);background:{{ et.bg }};color:{{ et.fg }};white-space:nowrap">{{ et.label }}</span>
+              </sc-for>
             </div>
             <div style="flex:1"></div>
             <div style="display:flex;align-items:center;gap:8px">

@@ -180,8 +180,11 @@ class Kinsta {
         }
 
         $environments = [];
+        $names        = self::environment_names( $environments_response->site->environments );
         foreach ( $environments_response->site->environments as $env ) {
-            $label  = ( $env->name === 'live' ) ? 'Production' : 'Staging';
+            // A premium environment used to be labelled Staging too, and the
+            // last one won: Staging's record took its address and port.
+            $label  = $names[ (string) $env->id ] ?? 'Production';
             $remote = [
                 'remote_id'      => $env->id,
                 'environment'    => $label,
@@ -400,6 +403,127 @@ class Kinsta {
         return $response->site->environments;
     }
 
+    /**
+     * CaptainCore's names for a Kinsta site's environments, by Kinsta
+     * environment id: live is Production, staging is Staging, and a premium
+     * environment keeps its own name as one word ("Dev site" is "Devsite"),
+     * numbered when two would collide. Every lookup between the two goes
+     * through this, so a premium environment can never pass for Staging.
+     */
+    public static function environment_names( $kinsta_envs ) {
+        $names = [];
+        $taken = [];
+        $envs  = is_array( $kinsta_envs ) ? $kinsta_envs : [];
+        // Live and staging first, so a premium one never takes their names.
+        usort( $envs, function ( $a, $b ) {
+            $rank = function ( $e ) { return [ 'live' => 0, 'staging' => 1 ][ strtolower( (string) ( $e->name ?? '' ) ) ] ?? 2; };
+            return $rank( $a ) <=> $rank( $b );
+        } );
+        foreach ( $envs as $env ) {
+            $kname = strtolower( (string) ( $env->name ?? '' ) );
+            if ( $kname === 'live' ) {
+                $label = 'Production';
+            } elseif ( $kname === 'staging' ) {
+                $label = 'Staging';
+            } else {
+                $label = preg_replace( '/[^A-Za-z0-9]/', '', (string) ( $env->display_name ?? '' ) );
+                if ( $label === '' ) {
+                    $label = preg_replace( '/[^A-Za-z0-9]/', '', $kname );
+                }
+                if ( $label === '' || ! ctype_alpha( $label[0] ) ) {
+                    $label = 'Env' . $label;
+                }
+                $label = \CaptainCore\Environments::display_name( substr( $label, 0, 18 ) );
+                if ( ! \CaptainCore\Environments::valid_name( $label ) || in_array( strtolower( $label ), [ 'live' ], true ) ) {
+                    $label = 'Env';
+                }
+                $base = $label;
+                for ( $i = 2; isset( $taken[ strtolower( $label ) ] ); $i++ ) {
+                    $label = substr( $base, 0, 18 ) . $i;
+                }
+            }
+            $taken[ strtolower( $label ) ] = true;
+            $names[ (string) ( $env->id ?? '' ) ] = $label;
+        }
+        return $names;
+    }
+
+    /** The Kinsta environment a CaptainCore environment name stands for, or null. */
+    public static function match_environment( $kinsta_envs, $cc_name ) {
+        $names = self::environment_names( $kinsta_envs );
+        foreach ( (array) $kinsta_envs as $env ) {
+            if ( strcasecmp( $names[ (string) ( $env->id ?? '' ) ] ?? '', trim( (string) $cc_name ) ) === 0 ) {
+                return $env;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Track a site's premium Kinsta environments (anything but live and
+     * staging) as CaptainCore environments of the site, with the SSH address
+     * and port Kinsta gives each and the site's shared SFTP login. Staging
+     * stays an explicit Link (connect_staging). Returns the names added.
+     */
+    public static function connect_premium_environments( $site_id ) {
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site->provider_site_id ) ) {
+            return [];
+        }
+        $production = \CaptainCore\Environments::for_site( $site_id, 'Production' );
+        if ( ! $production ) {
+            return [];
+        }
+        self::use_provider( $site->provider_id );
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
+        $kinsta   = $response->site->environments ?? null;
+        if ( ! is_array( $kinsta ) ) {
+            return [];
+        }
+        $names = self::environment_names( $kinsta );
+        $added = [];
+        $now   = date( 'Y-m-d H:i:s' );
+        foreach ( $kinsta as $env ) {
+            if ( in_array( strtolower( (string) $env->name ), [ 'live', 'staging' ], true ) ) {
+                continue;
+            }
+            $label = $names[ (string) $env->id ] ?? '';
+            if ( $label === '' || \CaptainCore\Environments::for_site( $site_id, $label ) ) {
+                continue;
+            }
+            ( new \CaptainCore\Environments )->insert( [
+                'site_id'                 => $site_id,
+                'created_at'              => $now,
+                'updated_at'              => $now,
+                'environment'             => $label,
+                'address'                 => $env->ssh_connection->ssh_ip->external_ip ?? '',
+                'username'                => $production->username,
+                'password'                => $production->password,
+                'protocol'                => $production->protocol,
+                'port'                    => (string) ( $env->ssh_connection->ssh_port ?? '' ),
+                'home_directory'          => $production->home_directory,
+                'database_username'       => $production->database_username,
+                'database_password'       => '',
+                'offload_enabled'         => '',
+                'offload_access_key'      => '',
+                'offload_secret_key'      => '',
+                'offload_bucket'          => '',
+                'offload_path'            => '',
+                'monitor_enabled'         => 0,
+                'updates_enabled'         => 0,
+                'updates_exclude_plugins' => '',
+                'updates_exclude_themes'  => '',
+            ] );
+            $added[] = $label;
+        }
+        if ( $added ) {
+            \CaptainCore\Sites::update_environments_cache( $site_id );
+            \CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $site->name, 'Linked Kinsta environments: ' . implode( ', ', $added ) );
+            self::push_site_to_cli( $site_id );
+        }
+        return $added;
+    }
+
     public static function connect_staging( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
         $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
@@ -494,39 +618,34 @@ class Kinsta {
         if ( empty( $site->provider_site_id ) ) {
             return;
         }
-        foreach( $environments as $environment ) {
-            if ( $environment->environment == "Production" ) {
-                $production_environment = $environment;
-            }
-        }
+        $production_environment = \CaptainCore\Environments::for_site( $site_id, 'Production' );
         self::use_provider( $site->provider_id );
         $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
-
-        foreach( $response->site->environments as $kinsta_environment ) {
-            if ( $kinsta_environment->name == "live" ) {
-                foreach( $environments as $environment ) {
-                    if ( $environment->environment == "Production" ) {
-                        ( new \CaptainCore\Environments )->update( [ 
-                            "address" => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
-                            "port"    => $kinsta_environment->ssh_connection->ssh_port,
-                        ], [ "environment_id" => $environment->environment_id ] );
-                    }
-                }
+        $kinsta   = $response->site->environments ?? null;
+        if ( ! is_array( $kinsta ) ) {
+            return;
+        }
+        // Each CaptainCore environment takes the address and port of the
+        // Kinsta environment of the same name (environment_names); every
+        // non-live one also shares production's SFTP login, as Kinsta does.
+        foreach ( $environments as $environment ) {
+            $kinsta_environment = self::match_environment( $kinsta, $environment->environment );
+            if ( ! $kinsta_environment ) {
+                continue;
             }
-            if ( $kinsta_environment->name == "staging" ) {
-                foreach( $environments as $environment ) {
-                    if ( $environment->environment == "Staging" ) {
-                        ( new \CaptainCore\Environments )->update( [
-                            "address"        => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
-                            "port"           => $kinsta_environment->ssh_connection->ssh_port,
-                            "username"       => $production_environment->username,
-                            "password"       => $production_environment->password,
-                            "protocol"       => $production_environment->protocol,
-                            "home_directory" => $production_environment->home_directory,
-                        ], [ "environment_id" => $environment->environment_id ]);
-                    }
-                }
+            $update = [
+                "address" => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
+                "port"    => $kinsta_environment->ssh_connection->ssh_port,
+            ];
+            if ( strtolower( (string) $kinsta_environment->name ) !== 'live' && $production_environment ) {
+                $update += [
+                    "username"       => $production_environment->username,
+                    "password"       => $production_environment->password,
+                    "protocol"       => $production_environment->protocol,
+                    "home_directory" => $production_environment->home_directory,
+                ];
             }
+            ( new \CaptainCore\Environments )->update( $update, [ "environment_id" => $environment->environment_id ] );
         }
     }
 
@@ -926,13 +1045,9 @@ class Kinsta {
 			return new \WP_Error( 'kinsta_api_error', "Could not fetch environments from Kinsta for site {$cc_site->name}.", [ 'status' => 500 ] );
 		}
 
-		$cc_env_name_lower = strtolower( $cc_env->environment );
-		$kinsta_env_name_match = ( $cc_env_name_lower == 'production' ) ? 'live' : $cc_env_name_lower;
-		
-		foreach ( $kinsta_environments_response->site->environments as $kinsta_env ) {
-			if ( strtolower( $kinsta_env->name ) == $kinsta_env_name_match ) {
-				return $kinsta_env->id; // Found it
-			}
+		$kinsta_env = self::match_environment( $kinsta_environments_response->site->environments, $cc_env->environment );
+		if ( $kinsta_env ) {
+			return $kinsta_env->id;
 		}
 
 		return new \WP_Error( 'kinsta_env_not_found', "Could not find matching Kinsta environment for {$cc_site->name} ({$cc_env->environment}).", [ 'status' => 404 ] );
@@ -1094,10 +1209,9 @@ class Kinsta {
             return $env_response;
         }
 
-        foreach ( ( $env_response->site->environments ?? [] ) as $env ) {
-            if ( strtolower( $env->name ) === strtolower( $kinsta_env_name ) ) {
-                return $env->id;
-            }
+        $env = self::match_environment( $env_response->site->environments ?? [], $environment );
+        if ( $env ) {
+            return $env->id;
         }
         return new \WP_Error( 'kinsta_env_not_found', "Kinsta environment '{$kinsta_env_name}' not found." );
     }
