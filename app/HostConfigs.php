@@ -292,32 +292,6 @@ class HostConfigs extends DB {
 			return new \WP_Error( 'invalid', $cache_errors[0], [ 'status' => 400 ] );
 		}
 
-		// SSH keys of the people who work on this environment (the customer and
-		// their developers): host apply writes them into a managed block of the
-		// site user's authorized_keys, beside the team keys. Our servers take
-		// keys only, never passwords. One public key each, no options.
-		$out['ssh_keys'] = [];
-		$fingerprints    = [];
-		foreach ( (array) ( $in['ssh_keys'] ?? [] ) as $k ) {
-			$parsed = PublicKeys::parse( is_array( $k ) ? ( $k['key'] ?? '' ) : '' );
-			if ( is_wp_error( $parsed ) ) {
-				return $parsed;
-			}
-			[ $type, $b64, $comment, $fingerprint ] = $parsed;
-			if ( isset( $fingerprints[ $fingerprint ] ) ) {
-				return new \WP_Error( 'invalid', 'That key is listed twice.', [ 'status' => 400 ] );
-			}
-			$title = substr( sanitize_text_field( (string) ( $k['title'] ?? '' ) ), 0, 60 );
-			if ( $title === '' ) {
-				$title = $comment !== '' ? substr( sanitize_text_field( $comment ), 0, 60 ) : $type;
-			}
-			$fingerprints[ $fingerprint ] = true;
-			$out['ssh_keys'][] = [ 'title' => $title, 'key' => $type . ' ' . $b64, 'fingerprint' => $fingerprint ];
-		}
-		if ( count( $out['ssh_keys'] ) > 20 ) {
-			return new \WP_Error( 'invalid', 'At most 20 SSH keys per environment.', [ 'status' => 400 ] );
-		}
-
 		// Scheduled tasks: one command each on a preset schedule, run as the
 		// site user in ~/public (host apply: a systemd timer per task). They run
 		// only while `cron` is on.
@@ -438,7 +412,6 @@ class HostConfigs extends DB {
 		$none                 = [];
 		$config['page_cache'] = self::sanitize_page_cache( $config['page_cache'] ?? null, $none );
 		$config['apps']      = $config['apps'] ?? [];
-		$config['ssh_keys']  = $config['ssh_keys'] ?? [];
 		$config['cron_jobs'] = $config['cron_jobs'] ?? [];
 		return $config;
 	}

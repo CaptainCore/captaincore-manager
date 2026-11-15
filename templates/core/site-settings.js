@@ -95,60 +95,9 @@ Object.assign(Component.prototype, {
       .catch(e => { this.setState({ ssetRestarting: false }); this.updateToast(tid, (e && e.message) || 'PHP did not restart', { kind: 'error', timeout: 8000 }); });
   },
 
-  // SSH keys dialog (our servers): a draft list; Save sends the whole list.
-  openSiteKeys() {
-    const d = this._sset && this._sset.key === this.siteSettingsKey() ? this._sset.data : null;
-    if (!d || !Array.isArray(d.ssh_keys)) return;
-    this._ssetKeys = d.ssh_keys.map(k => ({ title: k.title, key: k.key, fingerprint: k.fingerprint }));
-    this.setState({ ssetKeysOpen: true, ssetKTitle: '', ssetKText: '' });
-  },
-
-  siteKeysVals(d, s, env) {
-    const ours = !!(d && Array.isArray(d.ssh_keys));
-    const n = ours ? d.ssh_keys.length : 0;
-    const out = {
-      ssetKeysShow: ours,
-      ssetKeysLabel: !ours ? '' : n === 0 ? 'No SSH keys yet' : n === 1 ? '1 SSH key' : n + ' SSH keys',
-      ssetKeysOpenDlg: () => this.openSiteKeys(),
-      ssetKeysOpen: false
-    };
-    if (!s.ssetKeysOpen || !ours) return out;
-    const draft = this._ssetKeys || [];
-    const dirty = JSON.stringify(draft.map(k => k.key + k.title)) !== JSON.stringify(d.ssh_keys.map(k => k.key + k.title));
-    return { ...out,
-      ssetKeysOpen: true,
-      ssetKeysTitle: 'SSH keys for ' + env,
-      ssetKeysRows: draft.map((k, i) => ({ title: k.title, fp: k.fingerprint || 'New, saved with the list',
-        type: (k.key || '').split(' ')[0], remove: () => { draft.splice(i, 1); this.setState({}); } })),
-      ssetKeysEmpty: draft.length === 0,
-      ssetKTitle: s.ssetKTitle || '', ssetKText: s.ssetKText || '',
-      onSsetKTitle: e => this.setState({ ssetKTitle: e.target.value }),
-      onSsetKText: e => this.setState({ ssetKText: e.target.value }),
-      ssetKeysAdd: () => {
-        const text = (this.state.ssetKText || '').trim().replace(/\s+/g, ' ');
-        if (!/^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+/]+={0,3}( .*)?$/.test(text)) {
-          this.toast('Paste a public key: one line starting with ssh-ed25519, ssh-rsa or ecdsa (the .pub file, never the private key)', { kind: 'error', timeout: 7000 }); return;
-        }
-        const parts = text.split(' ');
-        const key = parts[0] + ' ' + parts[1];
-        if (draft.some(k => k.key === key)) { this.toast('That key is already in the list', { kind: 'error' }); return; }
-        draft.push({ title: (this.state.ssetKTitle || '').trim() || parts.slice(2).join(' ') || parts[0], key });
-        this.setState({ ssetKTitle: '', ssetKText: '' });
-      },
-      ssetKeysSaveLabel: dirty ? 'Save keys' : 'No changes',
-      ssetKeysSaveOpacity: dirty && !s.ssetBusy ? '1' : '.5',
-      ssetKeysClose: () => this.setState({ ssetKeysOpen: false }),
-      ssetKeysSave: () => {
-        if (!dirty || s.ssetBusy) return;
-        this.saveSiteSettings({ ssh_keys: draft.map(k => ({ title: k.title, key: k.key })) }, 'Saving SSH keys…', 'SSH keys saved. They work in a few seconds.')
-          .then(ok => { if (ok) this.setState({ ssetKeysOpen: false }); });
-      }
-    };
-  },
-
   siteSettingsVals(real, s) {
     const host = this.siteSettingsHost(real, s);
-    const off = { ssetShow: false, ssetPhpOpen: false, ssetRdOpen: false, ssetKeysShow: false, ssetKeysOpen: false };
+    const off = { ssetShow: false, ssetPhpOpen: false, ssetRdOpen: false, ssetKeysShow: false };
     if (!host) return off;
     const key = this.siteSettingsKey();
     if (!this._sset || this._sset.key !== key) setTimeout(() => this.loadSiteSettings(), 0);
@@ -171,7 +120,8 @@ Object.assign(Component.prototype, {
     const out = {
       ssetShow: true,
       ssetRows: rows.map(r => ({ ...r, hasV: r.v !== '', hasAct2: !!r.act2, act2: r.act2 || '', go2: r.go2 || (() => {}) })),
-      ...this.siteKeysVals(d, s, env),
+      // Our servers sign in with the person's own keys (Profile → SSH keys, my-ssh-keys.js).
+      ...(host === 'captaincore' && this.myKeysConnectVals ? this.myKeysConnectVals() : { ssetKeysShow: false }),
       ssetApplying: !!(d && d.applying),
       ssetError: (ss && ss.error) || (d && d.error) || '',
       ssetHasError: !!((ss && ss.error) || (d && d.error)),

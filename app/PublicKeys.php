@@ -8,11 +8,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Operator SSH public keys, replicated by the CLI (`ssh-keys deploy`) into
- * a managed block of authorized_keys on every site on our own servers.
- * Removing a key removes it everywhere on the next deploy, since the block
- * is replaced whole. The CLI adds its own management key itself, so a
- * deploy can never lock CaptainCore out.
+ * SSH public keys, replicated by the CLI (`ssh-keys deploy`) into a managed
+ * block of authorized_keys on every environment on our own servers. Team
+ * keys (operators, Servers → Team SSH keys) go everywhere; personal keys
+ * (Profile → SSH keys) go to the environments of every site their owner can
+ * access in the Manager, so access granted or taken away in the Manager is
+ * access over SSH and SFTP too. Each environment's block is replaced whole
+ * and its hash recorded; `ssh-keys deploy --stale` (after every change and
+ * from core's cron) fixes the ones that differ. The CLI adds its own
+ * management key itself, so a deploy can never lock CaptainCore out.
  */
 class PublicKeys extends DB {
 
@@ -72,7 +76,16 @@ class PublicKeys extends DB {
 		};
 	}
 
-	public static function add( $title, $public_key, $user_id ) {
+	/** Most personal keys one person may hold. */
+	const PERSONAL_MAX = 10;
+
+	/**
+	 * Add a key. kind team: every site on our servers (operators, Servers →
+	 * Team SSH keys). kind personal: a person's own key (Profile → SSH keys),
+	 * on every site on our servers that person can access in the Manager.
+	 */
+	public static function add( $title, $public_key, $user_id, $kind = 'team' ) {
+		$kind  = $kind === 'personal' ? 'personal' : 'team';
 		$title = substr( sanitize_text_field( (string) $title ), 0, 100 );
 		$parsed = self::parse( $public_key );
 		if ( is_wp_error( $parsed ) ) {
@@ -85,9 +98,13 @@ class PublicKeys extends DB {
 		if ( self::where( [ 'fingerprint' => $fingerprint ] ) ) {
 			return new \WP_Error( 'duplicate', 'That key is already added.', [ 'status' => 409 ] );
 		}
+		if ( $kind === 'personal' && count( self::for_user( $user_id ) ) >= self::PERSONAL_MAX ) {
+			return new \WP_Error( 'too_many', 'You can keep at most ' . self::PERSONAL_MAX . ' SSH keys. Remove one first.', [ 'status' => 400 ] );
+		}
 		$now = current_time( 'mysql' );
 		$id  = self::insert( [
 			'user_id'     => (int) $user_id,
+			'kind'        => $kind,
 			'title'       => $title,
 			'key_type'    => $type,
 			'public_key'  => $type . ' ' . $b64,
@@ -98,12 +115,78 @@ class PublicKeys extends DB {
 		return $id ? self::get( $id ) : new \WP_Error( 'db_error', 'Could not save the key.', [ 'status' => 500 ] );
 	}
 
-	/** The authorized_keys lines the Manager wants, comment = cc:<id>:<title>. */
+	/** Team keys (operators' shared keys). */
+	public static function team() {
+		return array_values( array_filter( ( new self )->all( 'public_key_id', 'ASC' ), function ( $k ) {
+			return ( $k->kind ?? 'team' ) !== 'personal';
+		} ) );
+	}
+
+	/** One person's own keys. */
+	public static function for_user( $user_id ) {
+		return self::where( [ 'user_id' => (int) $user_id, 'kind' => 'personal' ] );
+	}
+
+	private static function line( $key, $label ) {
+		$label = trim( preg_replace( '/[^A-Za-z0-9._@-]+/', '-', $label ), '-' );
+		return $key->public_key . ' cc:' . (int) $key->public_key_id . ':' . ( $label !== '' ? $label : 'key' );
+	}
+
+	/** The team lines: comment = cc:<id>:<title>. */
 	public static function authorized_lines() {
 		$lines = [];
-		foreach ( ( new self )->all( 'public_key_id', 'ASC' ) as $key ) {
-			$label   = preg_replace( '/[^A-Za-z0-9._@-]+/', '-', $key->title );
-			$lines[] = $key->public_key . ' cc:' . (int) $key->public_key_id . ':' . trim( $label, '-' );
+		foreach ( self::team() as $key ) {
+			$lines[] = self::line( $key, $key->title );
+		}
+		return $lines;
+	}
+
+	/** Site ids each person with personal keys can access (the Manager's own rules), per request. */
+	private static $reach = null;
+
+	private static function reach() {
+		if ( self::$reach !== null ) {
+			return self::$reach;
+		}
+		self::$reach = [];
+		$owners = array_unique( array_map( function ( $k ) { return (int) $k->user_id; }, self::where( [ 'kind' => 'personal' ] ) ) );
+		$was    = get_current_user_id();
+		foreach ( $owners as $uid ) {
+			if ( ! get_userdata( $uid ) ) {
+				continue;
+			}
+			// Sites works out access for the current user (account levels,
+			// domains-only members left out, active sites). Ask it as the owner.
+			wp_set_current_user( $uid );
+			$admin = ( new User )->is_admin();
+			self::$reach[ $uid ] = $admin ? true : array_map( 'intval', (array) ( new Sites )->site_ids() );
+		}
+		wp_set_current_user( $was );
+		return self::$reach;
+	}
+
+	/** Forget cached access (after keys or access changed in this request). */
+	public static function reset_reach() {
+		self::$reach = null;
+	}
+
+	/**
+	 * The lines one environment on our servers should hold: the team keys,
+	 * then the personal keys of everyone who can access its site, labelled
+	 * with the person's login so the file shows whose key it is.
+	 */
+	public static function lines_for( $environment ) {
+		$lines = self::authorized_lines();
+		if ( ! $environment || (int) $environment->server_id <= 0 ) {
+			return $lines;
+		}
+		$reach = self::reach();
+		foreach ( self::where( [ 'kind' => 'personal' ] ) as $key ) {
+			$sites = $reach[ (int) $key->user_id ] ?? [];
+			if ( $sites === true || in_array( (int) $environment->site_id, (array) $sites, true ) ) {
+				$user    = get_userdata( (int) $key->user_id );
+				$lines[] = self::line( $key, ( $user ? $user->user_login : 'u' . (int) $key->user_id ) . '-' . $key->title );
+			}
 		}
 		return $lines;
 	}
@@ -114,12 +197,11 @@ class PublicKeys extends DB {
 		return hash( 'sha256', implode( "\n", $lines ) );
 	}
 
-	/** Environments on our own servers, with whether each has the current keys. */
+	/** Environments on our own servers, with whether each has the keys it should. */
 	public static function deploy_status() {
 		global $wpdb;
-		$hash = self::lines_hash();
 		$rows = $wpdb->get_results(
-			"SELECT e.environment_id, e.environment, e.details, s.site, s.name
+			"SELECT e.*, s.site, s.name
 			 FROM {$wpdb->base_prefix}captaincore_environments e
 			 JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id
 			 WHERE e.server_id > 0 AND s.status = 'active' ORDER BY s.name"
@@ -127,16 +209,38 @@ class PublicKeys extends DB {
 		$out = [];
 		foreach ( $rows as $row ) {
 			$d     = json_decode( (string) $row->details );
+			$want  = self::lines_for( $row );
 			$out[] = [
 				'environment_id' => (int) $row->environment_id,
 				'site'           => $row->site,
 				'name'           => $row->name,
 				'environment'    => $row->environment,
-				'current'        => ( $d->ssh_keys_hash ?? '' ) === $hash,
+				'target'         => $row->site . ( strtolower( $row->environment ) === 'production' ? '' : '-' . strtolower( $row->environment ) ),
+				'keys'           => count( $want ),
+				'current'        => ( $d->ssh_keys_hash ?? '' ) === self::lines_hash( $want ),
 				'deployed_at'    => $d->ssh_keys_deployed_at ?? '',
 			];
 		}
 		return $out;
+	}
+
+	/** CLI targets (<site>[-<env>]) whose keys are not what they should be. */
+	public static function stale_targets() {
+		return array_values( array_map( function ( $r ) { return $r['target']; },
+			array_filter( self::deploy_status(), function ( $r ) { return ! $r['current']; } ) ) );
+	}
+
+	/** Environments on our servers one person's keys reach. */
+	public static function user_reach_count( $user_id ) {
+		global $wpdb;
+		$was = get_current_user_id();
+		wp_set_current_user( (int) $user_id );
+		$all   = ( new User )->is_admin();
+		$sites = $all ? [] : array_map( 'intval', (array) ( new Sites )->site_ids() );
+		wp_set_current_user( $was );
+		$rows = $wpdb->get_results( "SELECT e.site_id FROM {$wpdb->base_prefix}captaincore_environments e
+			JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id WHERE e.server_id > 0 AND s.status = 'active'" );
+		return count( array_filter( $rows, function ( $r ) use ( $all, $sites ) { return $all || in_array( (int) $r->site_id, $sites, true ); } ) );
 	}
 
 	/** Called by the CLI after it wrote the block (`authorized-keys-deployed`). */
@@ -160,6 +264,17 @@ class PublicKeys extends DB {
 	 */
 	public static function deploy_all() {
 		$res = Run::background_task( [ 'ssh-keys', 'deploy', '--all' ] );
+		return is_wp_error( $res ) ? '' : ( $res['token'] ?? '' );
+	}
+
+	/**
+	 * Bring only the environments whose keys are out of date up to date (the
+	 * CLI asks the Manager which). Core's cron runs the same every few
+	 * minutes, which also catches access changes (a person added to an
+	 * account, a site shared or unshared).
+	 */
+	public static function deploy_stale() {
+		$res = Run::background_task( [ 'ssh-keys', 'deploy', '--stale' ] );
 		return is_wp_error( $res ) ? '' : ( $res['token'] ?? '' );
 	}
 }

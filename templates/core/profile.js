@@ -253,6 +253,7 @@ Object.assign(Component.prototype, {
     if (!this._prof) return { ...this.apiDocsVals(s) };
     return {
       ...this.apiDocsVals(s),
+      ...(this.myKeysVals ? this.myKeysVals(s) : {}),
       profName: s.profName, onProfName: e => this.setState({ profName: e.target.value }),
       profFirst: s.profFirst || '', onProfFirst: e => this.setState({ profFirst: e.target.value }),
       profLast: s.profLast || '', onProfLast: e => this.setState({ profLast: e.target.value }),

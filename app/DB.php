@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 80;
+    const REQUIRED_VERSION = 81;
 
     private static function _table() {
         global $wpdb;
@@ -1796,9 +1796,12 @@ class DB {
 
         // v75: operator SSH public keys, replicated into a managed block of
         // authorized_keys on every site on our own servers (PublicKeys).
+        // v81: kind = team (every site on our servers) or personal (a user's
+        // own key: the sites on our servers that user can access).
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_public_keys` (
             public_key_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            kind varchar(20) NOT NULL DEFAULT 'team',
             title varchar(100) NOT NULL DEFAULT '',
             key_type varchar(40) NOT NULL DEFAULT '',
             public_key text NOT NULL,
@@ -1806,7 +1809,8 @@ class DB {
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (public_key_id),
-        UNIQUE KEY fingerprint (fingerprint)
+        UNIQUE KEY fingerprint (fingerprint),
+        KEY user_kind (user_id,kind)
         ) $charset_collate;";
 
         dbDelta($sql);

@@ -1384,16 +1384,22 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		return [ 'response' => $ok ? 'Recorded' : 'Revision not found' ];
 	}
 
-	// Operator SSH keys (CLI: `captaincore ssh-keys deploy`). The CLI fetches
-	// the managed lines for a site on our servers, writes them, and reports
-	// the hash back so the Servers screen can show which sites are current.
+	// SSH keys (CLI: `captaincore ssh-keys deploy`). The CLI fetches the
+	// managed lines for an environment on our servers (team keys + the own
+	// keys of everyone with access to the site), writes them, and reports the
+	// hash back so the Manager knows which environments are current.
 	if ( $command === 'authorized-keys' ) {
 		if ( empty( $current_site ) || empty( $environment_id ) ) {
 			return new WP_Error( 'site_required', 'authorized-keys requires a site_id and environment.', [ 'status' => 400 ] );
 		}
 		$env   = CaptainCore\Environments::get( (int) $environment_id );
-		$lines = ( $env && (int) $env->server_id > 0 ) ? CaptainCore\PublicKeys::authorized_lines() : [];
+		$lines = ( $env && (int) $env->server_id > 0 ) ? CaptainCore\PublicKeys::lines_for( $env ) : [];
 		return [ 'own_server' => $env && (int) $env->server_id > 0, 'keys' => $lines, 'hash' => CaptainCore\PublicKeys::lines_hash( $lines ) ];
+	}
+	// Environments on our servers whose keys differ from what they should hold
+	// (`ssh-keys deploy --stale`, after a change and from core's cron).
+	if ( $command === 'authorized-keys-stale' ) {
+		return [ 'targets' => CaptainCore\PublicKeys::stale_targets() ];
 	}
 	if ( $command === 'authorized-keys-deployed' ) {
 		if ( empty( $environment_id ) ) {
@@ -7192,10 +7198,6 @@ function captaincore_site_settings_response( $t ) {
 			'php'       => [ 'version' => (string) ( $config['php']['version'] ?? '' ), 'versions' => array_keys( array_filter( CaptainCore\HostConfigs::PHP_IMAGES ) ) ],
 			'cache'     => ! $plain && ! empty( $config['page_cache']['enabled'] ),
 			'redirects' => array_values( (array) ( $config['redirects'] ?? [] ) ),
-			// Public keys only; who may sign in over SSH/SFTP (our servers take no passwords).
-			'ssh_keys'  => array_map( function ( $k ) {
-				return [ 'title' => (string) ( $k['title'] ?? '' ), 'key' => (string) ( $k['key'] ?? '' ), 'fingerprint' => (string) ( $k['fingerprint'] ?? '' ) ];
-			}, array_values( (array) ( $config['ssh_keys'] ?? [] ) ) ),
 			'applying'  => $last && $last->status === 'pending',
 			'error'     => $failed,
 		];
@@ -7210,7 +7212,6 @@ function captaincore_site_settings_response( $t ) {
 		'php'       => [ 'version' => is_string( $version ) ? $version : '', 'versions' => $versions ],
 		'cache'     => true,
 		'redirects' => null,
-		'ssh_keys'  => null,
 		'applying'  => false,
 		'error'     => is_wp_error( $version ) ? 'Could not read the PHP version from Kinsta.' : '',
 	];
@@ -7221,8 +7222,7 @@ function captaincore_site_settings_func( $request ) {
 	return is_wp_error( $t ) ? $t : captaincore_site_settings_response( $t );
 }
 
-// Body: { php_version }, { redirects: [ {from, to, code} ] } or
-// { ssh_keys: [ {title, key} ] } (the last two on our servers only).
+// Body: { php_version } or { redirects: [ {from, to, code} ] } (our servers only).
 function captaincore_site_settings_update_func( $request ) {
 	$t = captaincore_site_settings_target( $request );
 	if ( is_wp_error( $t ) ) {
@@ -7251,12 +7251,6 @@ function captaincore_site_settings_update_func( $request ) {
 		[ $config ]          = captaincore_site_settings_base( $t['env'] );
 		$config['redirects'] = array_values( (array) $params['redirects'] );
 		$note                = 'Redirects (' . count( $config['redirects'] ) . ')';
-	} elseif ( isset( $params['ssh_keys'] ) && $t['host'] === 'captaincore' ) {
-		[ $config ]         = captaincore_site_settings_base( $t['env'] );
-		$config['ssh_keys'] = array_values( array_map( function ( $k ) {
-			return [ 'title' => (string) ( $k['title'] ?? '' ), 'key' => (string) ( $k['key'] ?? '' ) ];
-		}, array_filter( (array) $params['ssh_keys'], 'is_array' ) ) );
-		$note               = 'SSH keys (' . count( $config['ssh_keys'] ) . ')';
 	} else {
 		return new WP_Error( 'invalid', 'Nothing to change.', [ 'status' => 400 ] );
 	}
@@ -7458,7 +7452,7 @@ function captaincore_site_hosting_deploy_func( $request ) {
 
 function captaincore_public_keys_response() {
 	$keys = [];
-	foreach ( ( new CaptainCore\PublicKeys )->all( 'public_key_id', 'ASC' ) as $key ) {
+	foreach ( CaptainCore\PublicKeys::team() as $key ) {
 		$user   = get_userdata( (int) $key->user_id );
 		$keys[] = [
 			'public_key_id' => (int) $key->public_key_id,
@@ -7488,8 +7482,9 @@ function captaincore_public_keys_create_func( $request ) {
 }
 
 function captaincore_public_keys_delete_func( $request ) {
-	$id = (int) $request['id'];
-	if ( ! CaptainCore\PublicKeys::get( $id ) ) {
+	$id  = (int) $request['id'];
+	$key = CaptainCore\PublicKeys::get( $id );
+	if ( ! $key || ( $key->kind ?? 'team' ) === 'personal' ) { // personal keys belong to their owner (Profile)
 		return new WP_Error( 'not_found', 'Key not found.', [ 'status' => 404 ] );
 	}
 	CaptainCore\PublicKeys::delete( $id );
@@ -7498,6 +7493,39 @@ function captaincore_public_keys_delete_func( $request ) {
 
 function captaincore_public_keys_deploy_func( $request ) {
 	return [ 'token' => CaptainCore\PublicKeys::deploy_all() ];
+}
+
+// ── Your own SSH keys (Profile) ────────────────────────────────────────────
+// Anyone signed in keeps their own public keys here. They reach every
+// environment on our servers whose site that person can access, and follow
+// access as it changes. Kinsta sites take keys through MyKinsta, not these.
+function captaincore_my_ssh_keys_response( $user_id ) {
+	$keys = array_map( function ( $k ) {
+		return [ 'id' => (int) $k->public_key_id, 'title' => $k->title, 'key_type' => $k->key_type, 'fingerprint' => $k->fingerprint, 'created_at' => $k->created_at ];
+	}, CaptainCore\PublicKeys::for_user( $user_id ) );
+	return [ 'keys' => $keys, 'reach' => CaptainCore\PublicKeys::user_reach_count( $user_id ), 'max' => CaptainCore\PublicKeys::PERSONAL_MAX ];
+}
+
+function captaincore_my_ssh_keys_func( $request ) {
+	return captaincore_my_ssh_keys_response( get_current_user_id() );
+}
+
+function captaincore_my_ssh_keys_create_func( $request ) {
+	$params = (array) $request->get_json_params();
+	$key    = CaptainCore\PublicKeys::add( $params['title'] ?? '', $params['public_key'] ?? '', get_current_user_id(), 'personal' );
+	if ( is_wp_error( $key ) ) {
+		return $key;
+	}
+	return captaincore_my_ssh_keys_response( get_current_user_id() ) + [ 'token' => CaptainCore\PublicKeys::deploy_stale() ];
+}
+
+function captaincore_my_ssh_keys_delete_func( $request ) {
+	$key = CaptainCore\PublicKeys::get( (int) $request['id'] );
+	if ( ! $key || ( $key->kind ?? '' ) !== 'personal' || (int) $key->user_id !== get_current_user_id() ) {
+		return new WP_Error( 'not_found', 'Key not found.', [ 'status' => 404 ] );
+	}
+	CaptainCore\PublicKeys::delete( (int) $key->public_key_id );
+	return captaincore_my_ssh_keys_response( get_current_user_id() ) + [ 'token' => CaptainCore\PublicKeys::deploy_stale() ];
 }
 
 function captaincore_servers_func( $request ) {
@@ -13207,6 +13235,18 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	// Operator SSH public keys for sites on our own servers — admin only.
+	register_rest_route(
+		'captaincore/v1', '/me/ssh-keys', [
+			[ 'methods' => 'GET', 'callback' => 'captaincore_my_ssh_keys_func', 'permission_callback' => 'captaincore_permission_check' ],
+			[ 'methods' => 'POST', 'callback' => 'captaincore_my_ssh_keys_create_func', 'permission_callback' => 'captaincore_permission_check' ],
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/me/ssh-keys/(?P<id>[\d]+)', [
+			'methods' => 'DELETE', 'callback' => 'captaincore_my_ssh_keys_delete_func', 'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/public-keys', [
 			[
