@@ -7289,6 +7289,22 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
               </sc-if>
 
+              <!-- Operators: host at Kinsta or on one of our servers -->
+              <sc-if value="{{ nsHostShow }}" hint-placeholder-val="{{ false }}">
+              <div class="ns-sec">
+                <div class="ns-h"><span class="ns-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"></rect><rect x="3" y="13" width="18" height="7" rx="2"></rect><path d="M7 7.5h.01M7 16.5h.01"></path></svg></span>Hosted by</div>
+                <div class="ns-grid ns-grid-2">
+                  <sc-for list="{{ nsHostCards }}" as="c" hint-placeholder-count="2">
+                    <div onClick="{{ c.pick }}" class="ns-card" style="border-color:{{ c.bd }};background:{{ c.bg }};box-shadow:{{ c.ring }};position:relative">
+                      <span style="display:block;font:600 var(--fs-125) var(--sans);padding-right:16px">{{ c.title }}</span>
+                      <span style="display:block;margin-top:2px;font:400 var(--fs-12)/1.4 var(--sans);color:var(--ink-dim)">{{ c.sub }}</span>
+                      <span class="ns-check" style="position:absolute;top:8px;right:9px">{{ c.mark }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              </sc-if>
+
               <!-- Starting point -->
               <sc-if value="{{ nsStartShow }}" hint-placeholder-val="{{ true }}">
               <div class="ns-sec">
@@ -7347,6 +7363,17 @@ button.ccc-edited:hover{color:var(--ink)}
                     </div>
                   </sc-for>
                 </div>
+                <sc-if value="{{ nsSrvShow }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+                      <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-right:2px">Server</span>
+                      <sc-for list="{{ nsSrvChips }}" as="v" hint-placeholder-count="2">
+                        <span onClick="{{ v.pick }}" title="{{ v.title }}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;border:1px solid {{ v.bd }};background:{{ v.bg }};color:{{ v.fg }};font:500 var(--fs-12) var(--sans);cursor:{{ v.cursor }};opacity:{{ v.op }}">{{ v.label }}</span>
+                      </sc-for>
+                    </div>
+                    <div class="ns-sub" style="margin:0">{{ nsSrvNote }}</div>
+                  </div>
+                </sc-if>
                 <span onClick="{{ dcpToggle }}" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>Find the closest datacenter to your visitors</span>
                 <sc-if value="{{ dcpOpen }}" hint-placeholder-val="{{ false }}">
                   <div style="border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:10px">
@@ -7471,6 +7498,7 @@ button.ccc-edited:hover{color:var(--ink)}
               <div style="border-top:1px solid var(--rule);padding-top:10px;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font:400 var(--fs-12) var(--sans)">
                 <span style="color:var(--ink-dim)">Account</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumAcc }}</span>
                 <span style="color:var(--ink-dim)">Location</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumWhere }}</span>
+                <span style="display:{{ nsSumServerDisp }};color:var(--ink-dim)">Server</span><span style="display:{{ nsSumServerDisp }};font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumServer }}</span>
                 <span style="color:var(--ink-dim)">Start</span><span style="font-weight:600;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ nsSumStart }}</span>
               </div>
             </div>

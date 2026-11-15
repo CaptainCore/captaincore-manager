@@ -687,9 +687,12 @@ class HostConfigs extends DB {
 	 * revision 1 of its hosting config. The CLI (`host site create`) builds
 	 * the container. $start is 'wordpress' (a fresh install), 'plain' (HTML
 	 * files only: no WordPress, MariaDB and the cron timer off, no page cache)
-	 * or 'empty' (a placeholder page for a copy or migration).
+	 * or 'empty' (a placeholder page for a copy or migration). $owners (the
+	 * New site dialog) can name the site after its real domain and set its
+	 * customer account and shared accounts; with no customer, Site::create
+	 * makes an account named after the site, as it does for Kinsta.
 	 */
-	public static function create_site( $server, $label, $start, $user_id, $account_id = 0, $restore = null ) {
+	public static function create_site( $server, $label, $start, $user_id, $account_id = 0, $restore = null, $owners = [] ) {
 		$slug = substr( preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $label ) ), 0, 30 );
 		if ( strlen( $slug ) < 3 ) {
 			return new \WP_Error( 'invalid', 'Give the site a name of at least 3 letters or digits.', [ 'status' => 400 ] );
@@ -708,7 +711,8 @@ class HostConfigs extends DB {
 		}
 		$user    = get_userdata( (int) $user_id );
 		$created = ( new Site )->create( [
-			'name' => $host, 'site' => $slug, 'account_id' => (int) $account_id, 'customer_id' => 0,
+			'name' => ! empty( $owners['name'] ) ? $owners['name'] : $host, 'site' => $slug, 'account_id' => (int) $account_id,
+			'customer_id' => (int) ( $owners['customer_id'] ?? 0 ), 'shared_with' => array_map( 'intval', (array) ( $owners['shared_with'] ?? [] ) ),
 			'provider' => 'captaincore', 'key' => '', 'environment_vars' => [], 'remote_key' => '',
 			'environments' => [ [ 'environment' => 'Production', 'address' => $server->address, 'username' => 'site', 'password' => '',
 				'protocol' => 'sftp', 'port' => (string) $slot['port'], 'home_directory' => '/srv/site/public', 'database_username' => '', 'database_password' => '',

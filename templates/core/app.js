@@ -401,7 +401,8 @@ class Component extends DCLogic {
 
   dcpPick(place) {
     const toRad = d => d * Math.PI / 180;
-    this._dcpRanked = NS_DATACENTERS.map(d => {
+    // Kinsta's datacenters, or our server locations when Hosted by says so.
+    this._dcpRanked = (this._nsSpots || NS_DATACENTERS).map(d => {
       const sLat = Math.sin(toRad(d.lat - place.lat) / 2), sLng = Math.sin(toRad(d.lng - place.lng) / 2);
       const a = sLat * sLat + Math.cos(toRad(place.lat)) * Math.cos(toRad(d.lat)) * sLng * sLng;
       return { ...d, miles: Math.round(2 * 3959 * Math.asin(Math.sqrt(a))) };
@@ -409,7 +410,8 @@ class Component extends DCLogic {
     this._dcpResults = null;
     this._dcpPoint = place; // the globe draws it with an arc to the pick
     // Nearest wins immediately; the ranked list stays up for overriding.
-    this.setState({ dcpPlace: place.label, nsDc: this._dcpRanked[0].title, nsDcGroup: '', dcpQ: '' });
+    const nearest = this._dcpRanked[0];
+    this.setState(Object.assign({ dcpPlace: place.label, nsDcGroup: '', dcpQ: '' }, nearest.loc ? { nsLoc: nearest.title, nsServerId: '' } : { nsDc: nearest.title }));
   }
 
   // Target a set of sites-list rows in the dock terminal — the sites-list
@@ -1321,7 +1323,7 @@ class Component extends DCLogic {
         title: d.title, miles: d.miles.toLocaleString() + ' mi',
         mark: s.nsDc === d.title ? '✓' : '',
         bg: s.nsDc === d.title ? 'var(--brand-soft)' : 'transparent',
-        pick: () => this.setState({ nsDc: d.title, dcpOpen: false }) })),
+        pick: () => { this.nsPickDc(d); this.setState({ dcpOpen: false }); } })),
       ddRectTop: (s.ddRect || {}).top || 0, ddRectLeft: (s.ddRect || {}).left || 0, ddRectWidth: (s.ddRect || {}).width || 0,
       // v1 parity (new-site dialog admin section): assign shared-access accounts,
       // optionally marking ONE as customer contact and ONE as billing contact.
@@ -1350,6 +1352,7 @@ class Component extends DCLogic {
       ...this.computeNsImport(s, isOp),
       ...this.nsVals(s, isOp),
       nsCreate: () => { const st = this.state;
+        if (st.nsPath === 'kinsta' && this._nsSpots) { if (!st.nsBusy) this.createServerSite(); return; }
         if (st.nsPath === 'kinsta') { if (st.nsVerify !== 'ok' || st.nsBusy) return; this.createKinstaSite(); return; }
         else if (st.nsPath === 'import') { this.importProviderSites(); return; }
         else { if (this._hydrated) { this.submitManualSite(); return; }

@@ -7606,6 +7606,55 @@ function captaincore_servers_add_site_func( $request ) {
 	return $created + [ 'token' => CaptainCore\Run::task( [ 'host', 'site', 'create', (string) $created['site_id'] ] ) ];
 }
 
+// New site dialog → Our servers: where a site can go (Servers::placement)
+// and the temporary domain zone the dialog previews.
+function captaincore_servers_locations_func( $request ) {
+	$zone = CaptainCore\HostConfigs::temporary_zone();
+	return [ 'locations' => CaptainCore\Servers::placement(), 'zone' => $zone ? $zone->name : '' ];
+}
+
+// New site dialog → Our servers: a fresh site at a location, on the server
+// with the most room there (or the one the operator picked), with the same
+// accounts the Kinsta path sets up and the notes email. The job it returns
+// builds the container (`host site create`).
+function captaincore_servers_place_site_func( $request ) {
+	$p      = (array) $request->get_json_params();
+	$server = CaptainCore\Servers::pick( (string) ( $p['location'] ?? '' ), (int) ( $p['server_id'] ?? 0 ) );
+	if ( is_wp_error( $server ) ) {
+		return $server;
+	}
+	$domain = strtolower( trim( (string) ( $p['domain'] ?? '' ) ) );
+	$domain = preg_replace( '~[/?#].*$~', '', preg_replace( '~^[a-z]+://~', '', $domain ) );
+	if ( $domain !== '' && ! preg_match( '/^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/', $domain ) ) {
+		$domain = '';
+	}
+	$ids = function ( $v ) {
+		return array_values( array_filter( array_map( 'intval', (array) $v ), function ( $id ) { return $id > 0 && CaptainCore\Accounts::get( $id ); } ) );
+	};
+	$customer = $ids( [ $p['customer_id'] ?? 0 ] );
+	$billing  = $ids( [ $p['account_id'] ?? 0 ] );
+	$start    = in_array( $p['start'] ?? '', [ 'plain' ], true ) ? 'plain' : 'wordpress';
+	$created  = CaptainCore\HostConfigs::create_site( $server, (string) ( $p['name'] ?? '' ), $start, get_current_user_id(), $billing[0] ?? 0, null, [
+		'name' => $domain, 'customer_id' => $customer[0] ?? 0, 'shared_with' => $ids( $p['shared_with'] ?? [] ),
+	] );
+	if ( is_wp_error( $created ) ) {
+		return $created;
+	}
+	CaptainCore\ProcessLog::insert( 'Created on ' . $server->name, $created['site_id'] );
+	$site  = CaptainCore\Sites::get( $created['site_id'] );
+	$notes = trim( substr( (string) ( $p['notes'] ?? '' ), 0, 2000 ) );
+	if ( $notes !== '' ) {
+		$account = $site && $site->customer_id ? CaptainCore\Accounts::get( (int) $site->customer_id ) : null;
+		CaptainCore\Mailer::send_new_site_notes( [ 'name' => $created['site'], 'domain' => $domain ?: $created['domain'], 'datacenter' => $server->name . ' (' . $server->location . ')', 'clone' => '' ],
+			$notes, $account->name ?? '', (object) ( new CaptainCore\User )->fetch() );
+	}
+	return $created + [
+		'server' => $server->name, 'location' => $server->location,
+		'customer_id' => $site ? (int) $site->customer_id : 0,
+		'token' => CaptainCore\Run::task( [ 'host', 'site', 'create', (string) $created['site_id'] ] ),
+	];
+}
+
 // Add environment → on one of our servers: a new environment of this site
 // (any provider) built from a backup of one of its environments
 // (HostConfigs::add_environment), by the `host site create` job this returns.
@@ -13051,6 +13100,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments-on-server', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_environment_on_server_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/locations', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_servers_locations_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/sites', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_place_site_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);

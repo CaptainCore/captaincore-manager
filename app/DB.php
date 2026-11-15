@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 81;
+    const REQUIRED_VERSION = 82;
 
     private static function _table() {
         global $wpdb;
@@ -1834,6 +1834,9 @@ class DB {
             ssh_port int(10) UNSIGNED NOT NULL DEFAULT 22,
             ssh_user varchar(64) NOT NULL DEFAULT 'root',
             location varchar(255) NOT NULL DEFAULT '',
+            latitude decimal(9,6) DEFAULT NULL,
+            longitude decimal(9,6) DEFAULT NULL,
+            country varchar(2) NOT NULL DEFAULT '',
             specs longtext,
             max_sites int(10) UNSIGNED NOT NULL DEFAULT 0,
             monthly_cost decimal(10,2) NOT NULL DEFAULT 0,

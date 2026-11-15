@@ -4,6 +4,10 @@
 // Fresh / Copy starting point, a datacenter picker that pairs region cards
 // with a spinning dot globe, a notes box for the team, and a live preview of
 // the site being made. createKinstaSite (app.js) still does the actual work.
+// Operators can host it on one of our servers instead (Hosted by): the cards
+// become our server locations (GET /servers/locations), the Manager puts the
+// site on the server with the most room there unless one is picked, and
+// createServerSite (POST /servers/sites) starts the `host site create` job.
 
 // Land sampled on an equal-area grid from Natural Earth 1:110m land (public
 // domain, via world-atlas). One row per latitude band:
@@ -14,6 +18,13 @@ const NS_LAND =
 
 const NS_DC_GROUPS = [['americas', 'Americas'], ['europe', 'Europe'], ['apac', 'Asia Pacific'], ['mea', 'Middle East & Africa']];
 const nsDcGroupOf = value => /^(us|ca|sa)-/.test(value) ? 'americas' : /^(eu|uk)-/.test(value) ? 'europe' : /^ap-/.test(value) ? 'apac' : 'mea';
+
+// Our server locations take a value prefix by country, so they group like
+// Kinsta's (nsDcGroupOf) and read as datacenters to the cards and the globe.
+const NS_AMERICAS = 'US CA MX BR AR CL CO PE UY EC VE BO PY CR PA GT DO PR JM'.split(' ');
+const NS_EUROPE = 'GB IE FR DE NL BE LU CH AT IT ES PT DK SE NO FI IS PL CZ SK HU RO BG GR HR SI RS UA LT LV EE MT CY'.split(' ');
+const NS_APAC = 'JP KR CN TW HK SG IN ID MY TH VN PH AU NZ'.split(' ');
+const nsOurPrefix = cc => NS_AMERICAS.includes(cc) ? 'us' : NS_EUROPE.includes(cc) ? 'eu' : NS_APAC.includes(cc) ? 'ap' : 'me';
 
 // "Ashburn (US East)" → { city: 'Ashburn', country: 'United States', qual: 'East' }.
 const nsDcMeta = (() => {
@@ -73,7 +84,58 @@ Object.assign(Component.prototype, {
   },
 
   nsPickDc(d) {
+    if (d.loc) { this.setState({ nsLoc: d.title, nsDcGroup: nsDcGroupOf(d.value), nsServerId: '' }); return; }
     this.setState({ nsDc: d.title, nsDcGroup: nsDcGroupOf(d.value) });
+  },
+
+  // Operators: where a site can go on our servers.
+  loadNsLocations() {
+    if (this._nsLocsLoading) return;
+    this._nsLocsLoading = true;
+    this.api('/servers/locations').then(res => {
+      this._nsLocsLoading = false;
+      this._nsLocs = res && Array.isArray(res.locations) ? res : { locations: [], zone: '' };
+      this.setState({});
+    }).catch(() => { this._nsLocsLoading = false; this._nsLocs = { locations: [], zone: '' }; });
+  },
+
+  // Our locations shaped like NS_DATACENTERS rows (value, title, lat, lng).
+  nsOurSpots() {
+    return ((this._nsLocs && this._nsLocs.locations) || []).map(l => ({
+      value: nsOurPrefix(l.country) + '-srv-' + l.key,
+      title: l.city + (l.country ? ' (' + l.country + ')' : ''),
+      lat: l.lat, lng: l.lng, loc: l
+    }));
+  },
+
+  createServerSite() {
+    const st = this.state;
+    const name = (st.nsName || '').trim();
+    const domain = (st.nsDomain || '').trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[/?#].*$/, '');
+    const spots = this.nsOurSpots();
+    const spot = spots.find(d => d.title === st.nsLoc) || spots[0];
+    const errors = [];
+    if (!name) errors.push('Enter a web address or a name for the site');
+    else if (name.replace(/[^A-Za-z0-9]/g, '').length < 3) errors.push('Site names need at least 3 letters or digits');
+    if (!spot) errors.push('Pick a location');
+    if ((st.nsNotes || '').length > 2000) errors.push('Notes can be at most 2,000 characters');
+    if (errors.length) { this.setState({ nsErrors: errors }); return; }
+    this.setState({ nsBusy: true, nsErrors: [] });
+    this.api('/servers/sites', { method: 'POST', body: {
+      location: spot.loc.key, server_id: Number(st.nsServerId) || 0, name, domain,
+      start: st.nsOurStart === 'plain' ? 'plain' : 'wordpress',
+      account_id: Number(st.nsBillingId) || 0, customer_id: Number(st.nsCustomerId) || 0,
+      shared_with: (st.nsShared || []).map(Number), notes: (st.nsNotes || '').trim()
+    } }).then(res => {
+      if (!res || res.code || !res.site_id) { this.setState({ nsBusy: false, nsErrors: [(res && res.message) || 'Could not create the site'] }); return; }
+      this.toast((domain || name) + ' is on its way to ' + res.server + '. Its container builds in about a minute.', { kind: 'success', timeout: 6000 });
+      this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsNotes: '', nsNameTouched: false,
+        nsShared: [], nsCustomerId: '', nsBillingId: '', nsServerId: '' });
+      if (this.reloadAccounts) this.reloadAccounts();
+      this._nsLocs = null; // site counts changed
+      this.startJob({ label: 'create', target: name + ' on ' + res.server, command: 'host site create', siteId: res.site_id, environment: 'Production',
+        expand: true, dispatch: () => Promise.resolve(res), onFinish: () => { if (this.hydrate) this.hydrate(); } });
+    }).catch(e => this.setState({ nsBusy: false, nsErrors: [(e && e.message) || 'Request failed. Try again.'] }));
   },
 
   nsVals(s, isOp) {
@@ -83,14 +145,27 @@ Object.assign(Component.prototype, {
     const len = name.length;
     const nameBad = len > 32 || (len > 0 && len < 5);
     const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const dc = NS_DATACENTERS.find(d => d.title === s.nsDc) || NS_DATACENTERS[0];
+    // Hosted by: Kinsta's datacenters, or our server locations (operators).
+    if (isOp && s.nsOpen && !this._nsLocs) this.loadNsLocations();
+    const ourSpots = isOp ? this.nsOurSpots() : [];
+    const ours = isOp && s.nsHost === 'ours' && ourSpots.length > 0;
+    const spots = ours ? ourSpots : NS_DATACENTERS;
+    this._nsSpots = ours ? spots : null;
+    const dc = spots.find(d => d.title === (ours ? s.nsLoc : s.nsDc)) || spots[0];
+    this._nsSpotSel = dc.title;
+    const loc = ours ? dc.loc : null;
+    const srvAll = loc ? loc.servers : [];
+    const srvPicked = srvAll.find(v => String(v.server_id) === String(s.nsServerId) && v.ok);
+    const srvBest = srvAll.find(v => v.server_id === (loc && loc.best));
+    const srvUse = srvPicked || srvBest;
+    const room = v => (v.free === null ? 'no site limit' : v.free + ' of ' + v.max_sites + ' site slots free') + ', disk ' + Math.round(v.disk) + '% used';
     const meta = nsDcMeta(dc);
-    const group = s.nsDcGroup || nsDcGroupOf(dc.value);
+    const group = s.nsDcGroup && spots.some(d => nsDcGroupOf(d.value) === s.nsDcGroup) ? s.nsDcGroup : nsDcGroupOf(dc.value);
     const ranked = s.dcpPlace ? (this._dcpRanked || []) : [];
     const miles = {};
     ranked.forEach((d, i) => { miles[d.title] = { mi: d.miles, nearest: i === 0 }; });
-    const sources = this.nsCloneSources(s);
-    const isClone = s.nsStart === 'clone' && sources.length > 0;
+    const sources = ours ? [] : this.nsCloneSources(s);
+    const isClone = !ours && s.nsStart === 'clone' && sources.length > 0;
     const cloneSrc = isClone && !String(s.nsClone).startsWith('None') ? s.nsClone : '';
     const on = sel => ({
       bd: sel ? 'var(--brand)' : 'var(--rule)',
@@ -121,7 +196,23 @@ Object.assign(Component.prototype, {
       nsNameEdited: !!s.nsNameTouched,
       nsNameHint: hint, nsNameHintColor: hintColor, nsNameHintShow: !!hint,
       nsNameBd: nameBad ? 'var(--bad)' : 'var(--rule)',
-      nsTempUrl: (slug || 'yoursite') + '.kinsta.cloud',
+      nsTempUrl: ours ? (slug || 'yoursite').slice(0, 30) + '-xxxx.' + ((this._nsLocs && this._nsLocs.zone) || 'temporary domain') : (slug || 'yoursite') + '.kinsta.cloud',
+      nsHostShow: isOp && ourSpots.length > 0,
+      nsHostCards: [
+        { id: 'kinsta', title: 'Kinsta', sub: 'Managed by Kinsta in ' + NS_DATACENTERS.length + ' datacenters.' },
+        { id: 'ours', title: 'Our servers', sub: ourSpots.length + ' location' + (ourSpots.length === 1 ? '' : 's') + ', on the server with the most room.' }
+      ].map(c => ({ ...c, ...on((c.id === 'ours') === ours),
+        pick: () => this.setState({ nsHost: c.id, nsDcGroup: '', dcpPlace: '', nsServerId: '' }) })),
+      nsSrvShow: ours && srvAll.length > 1,
+      nsSrvChips: [{ id: '', label: 'Most room' + (srvBest ? ' · ' + srvBest.name : ''), ok: !!srvBest, title: srvBest ? room(srvBest) : 'No server here can take a site' }]
+        .concat(srvAll.map(v => ({ id: String(v.server_id), label: v.name, ok: v.ok, title: v.ok ? room(v) : v.why })))
+        .map(c => { const sel = c.id === String(srvPicked ? srvPicked.server_id : ''); return { label: c.label, title: c.title,
+          bd: sel ? 'var(--brand)' : 'var(--rule)', bg: sel ? 'var(--brand-soft)' : 'var(--paper)', fg: c.ok ? 'var(--ink)' : 'var(--ink-dim)',
+          cursor: c.ok ? 'pointer' : 'not-allowed', op: c.ok ? '1' : '.55', pick: () => { if (c.ok) this.setState({ nsServerId: c.id }); } }; }),
+      nsSrvNote: srvUse ? srvUse.name + ': ' + room(srvUse) + '.' : 'No server here can take a new site right now.',
+      nsSumServerDisp: ours ? 'block' : 'none',
+      nsSumServer: srvUse ? srvUse.name + (srvPicked ? '' : ' (most room)') : 'None available',
+      ...(ours ? { nsProvShow: false, nsCtaDim: s.nsBusy || !srvUse ? '.5' : '1' } : {}),
       nsTempUrlDim: slug ? 'var(--ink)' : 'var(--ink-dim)',
       nsPreviewTitle: name || 'Your new site',
       nsPreviewTitleDim: name ? 'var(--ink)' : 'var(--ink-dim)',
@@ -137,8 +228,11 @@ Object.assign(Component.prototype, {
         pick: () => this.setState({ nsBillingId: a.id })
       })),
       // Starting point: a fresh install or a copy of a site they already have.
-      nsStartShow: sources.length > 0,
-      nsStartCards: [
+      nsStartShow: ours || sources.length > 0,
+      nsStartCards: ours ? [
+        { id: 'wordpress', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
+        { id: 'plain', title: 'Plain site', sub: 'HTML files only: no WordPress, no database.', icon: 'M4 4h16v16H4zM8 9h8M8 13h5' }
+      ].map(c => ({ ...c, ...on(c.id === (s.nsOurStart === 'plain' ? 'plain' : 'wordpress')), pick: () => this.setState({ nsOurStart: c.id }) })) : [
         { id: 'fresh', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
         { id: 'clone', title: 'Copy an existing site', sub: 'Start from one of your sites, content and all.', icon: 'M8 8h11v11H8zM5 16V5h11' }
       ].map(c => ({ ...c, ...on((c.id === 'clone') === isClone),
@@ -147,15 +241,19 @@ Object.assign(Component.prototype, {
       nsCloneLabel: cloneSrc || 'Choose a site to copy…',
       nsCloneLabelDim: cloneSrc ? 'var(--ink)' : 'var(--ink-dim)',
       nsShowWhere: !isClone,
-      nsDcTabs: NS_DC_GROUPS.map(([id, label]) => {
+      nsDcTabs: NS_DC_GROUPS.filter(([id]) => spots.some(d => nsDcGroupOf(d.value) === id)).map(([id, label]) => {
         const sel = id === group, hasPick = nsDcGroupOf(dc.value) === id;
         return { label, dot: hasPick ? 'inline-block' : 'none',
           bg: sel ? 'var(--ink)' : 'transparent', fg: sel ? 'var(--paper)' : 'var(--ink-dim)',
           go: () => this.setState({ nsDcGroup: id }) };
       }),
-      nsDcCards: NS_DATACENTERS.filter(d => nsDcGroupOf(d.value) === group).map(d => {
+      nsDcCards: spots.filter(d => nsDcGroupOf(d.value) === group).map(d => {
         const m = nsDcMeta(d), r = miles[d.title];
-        return { city: m.city, sub: m.country + (m.qual ? ' · ' + m.qual : ''),
+        const okSrv = d.loc ? d.loc.servers.filter(v => v.ok) : [];
+        const slots = okSrv.some(v => v.free === null) ? 'room' : okSrv.reduce((n, v) => n + v.free, 0) + ' free';
+        return { city: m.city, sub: d.loc
+            ? m.country + ' · ' + (okSrv.length ? slots : 'Full')
+            : m.country + (m.qual ? ' · ' + m.qual : ''),
           dist: r ? r.mi.toLocaleString() + ' mi' + (r.nearest ? ' · closest' : '') : '',
           distShow: !!r, distFg: r && r.nearest ? 'var(--ok)' : 'var(--ink-dim)',
           ...on(d.title === dc.title), pick: () => this.nsPickDc(d) };
@@ -167,7 +265,7 @@ Object.assign(Component.prototype, {
         : 'Pick the region closest to most of your visitors. Not sure? Search a city below.',
       nsSumAcc: accLabel,
       nsSumWhere: isClone ? 'Same as the copied site' : meta.city + ', ' + meta.country,
-      nsSumStart: isClone ? (cloneSrc ? 'Copy of ' + cloneSrc : 'Copy of…') : 'Fresh WordPress',
+      nsSumStart: ours ? (s.nsOurStart === 'plain' ? 'Plain site' : 'Fresh WordPress') : isClone ? (cloneSrc ? 'Copy of ' + cloneSrc : 'Copy of…') : 'Fresh WordPress',
       nsNotesCount: (s.nsNotes || '').length ? (s.nsNotes || '').length + ' / 2000' : '',
       nsCtaLabel: s.nsBusy ? 'Creating…' : 'Create site'
     };
@@ -260,7 +358,9 @@ Object.assign(Component.prototype, {
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Aim at the selected datacenter whenever the selection changes.
     const st = this.state;
-    const dc = NS_DATACENTERS.find(d => d.title === st.nsDc) || NS_DATACENTERS[0];
+    // Kinsta's datacenters, or our server locations (nsVals sets both).
+    const spotList = this._nsSpots || NS_DATACENTERS;
+    const dc = spotList.find(d => d.title === (this._nsSpotSel || st.nsDc)) || spotList[0];
     if (g.lastDc !== dc.title) {
       g.lastDc = dc.title;
       g.target = { lon: dc.lng, lat: Math.max(-35, Math.min(45, dc.lat * 0.8)) };
@@ -337,7 +437,7 @@ Object.assign(Component.prototype, {
     }
     // Datacenters. Hover finds the nearest visible one under the pointer.
     let hover = null, best = 12;
-    const pts = NS_DATACENTERS.map(d => ({ d, p: proj(d.lat, d.lng) }));
+    const pts = spotList.map(d => ({ d, p: proj(d.lat, d.lng) }));
     if (g.mouse && !(g.drag && g.drag.moved)) pts.forEach(({ d, p }) => {
       if (p.z <= 0.05) return;
       const dist = Math.hypot(p.x - g.mouse.x, p.y - g.mouse.y);
