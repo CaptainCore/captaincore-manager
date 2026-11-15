@@ -17,6 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * and its hash recorded; `ssh-keys deploy --stale` (after every change and
  * from core's cron) fixes the ones that differ. The CLI adds its own
  * management key itself, so a deploy can never lock CaptainCore out.
+ *
+ * Kinsta (option captaincore_ssh_keys_kinsta: off, a list of user ids while
+ * testing, or 'all'): Kinsta's sshd also reads ~/.ssh/authorized_keys, so the
+ * same block carries personal keys there (no team keys: operators reach
+ * Kinsta through the company key). Environments that share one SSH endpoint
+ * (a WP Freighter host and its tenants, one home folder) get a key only when
+ * its owner can access every site on that endpoint, and the block is written
+ * once, on the endpoint's first environment.
  */
 class PublicKeys extends DB {
 
@@ -167,7 +175,8 @@ class PublicKeys extends DB {
 
 	/** Forget cached access (after keys or access changed in this request). */
 	public static function reset_reach() {
-		self::$reach = null;
+		self::$reach     = null;
+		self::$endpoints = null;
 	}
 
 	/**
@@ -176,8 +185,11 @@ class PublicKeys extends DB {
 	 * with the person's login so the file shows whose key it is.
 	 */
 	public static function lines_for( $environment ) {
+		if ( $environment && (int) $environment->server_id <= 0 ) {
+			return self::kinsta_lines_for( $environment );
+		}
 		$lines = self::authorized_lines();
-		if ( ! $environment || (int) $environment->server_id <= 0 ) {
+		if ( ! $environment ) {
 			return $lines;
 		}
 		$reach = self::reach();
@@ -197,7 +209,7 @@ class PublicKeys extends DB {
 		return hash( 'sha256', implode( "\n", $lines ) );
 	}
 
-	/** Environments on our own servers, with whether each has the keys it should. */
+	/** Environments on our own servers (and Kinsta endpoints in scope), with whether each has the keys it should. */
 	public static function deploy_status() {
 		global $wpdb;
 		$rows = $wpdb->get_results(
@@ -208,22 +220,178 @@ class PublicKeys extends DB {
 		);
 		$out = [];
 		foreach ( $rows as $row ) {
-			$d     = json_decode( (string) $row->details );
-			$want  = self::lines_for( $row );
-			$out[] = [
-				'environment_id' => (int) $row->environment_id,
-				'site'           => $row->site,
-				'name'           => $row->name,
-				'environment'    => $row->environment,
-				'target'         => $row->site . ( strtolower( $row->environment ) === 'production' ? '' : '-' . strtolower( $row->environment ) ),
-				'keys'           => count( $want ),
-				// What the box holds: the daily sync's reading (ssh_keys_live), which
-				// each deploy also updates, else the last deploy's own record.
-				'current'        => ( $d->ssh_keys_live ?? ( $d->ssh_keys_hash ?? '' ) ) === self::lines_hash( $want ),
-				'deployed_at'    => $d->ssh_keys_deployed_at ?? '',
-			];
+			$out[] = self::status_row( $row, self::lines_for( $row ), 'ours' );
+		}
+		foreach ( self::kinsta_endpoints() as $group ) {
+			$rep  = $group['rep'];
+			$want = self::kinsta_lines_for( $rep );
+			$row  = self::status_row( $rep, $want, 'kinsta' );
+			// Endpoints with nothing to hold and no block yet are left alone.
+			if ( $want || ! $row['current'] ) {
+				$out[] = $row + [ 'shared' => count( $group['site_ids'] ) ];
+			}
 		}
 		return $out;
+	}
+
+	private static function status_row( $row, $want, $host ) {
+		$d    = json_decode( (string) $row->details );
+		// What the box holds: the daily sync's reading (ssh_keys_live), which
+		// each deploy also updates, else the last deploy's own record.
+		$have = $d->ssh_keys_live ?? ( $d->ssh_keys_hash ?? '' );
+		return [
+			'environment_id' => (int) $row->environment_id,
+			'site'           => $row->site,
+			'name'           => $row->name,
+			'environment'    => $row->environment,
+			'host'           => $host,
+			'target'         => $row->site . ( strtolower( $row->environment ) === 'production' ? '' : '-' . strtolower( $row->environment ) ),
+			'keys'           => count( $want ),
+			'current'        => $have === self::lines_hash( $want ) || ( ! $want && in_array( $have, [ '', 'none' ], true ) ),
+			'deployed_at'    => $d->ssh_keys_deployed_at ?? '',
+			'drift'          => $d->ssh_keys_drift ?? [],
+		];
+	}
+
+	/** Whether the CLI may write the block on this environment. */
+	public static function managed( $environment ) {
+		if ( ! $environment ) {
+			return false;
+		}
+		if ( (int) $environment->server_id > 0 ) {
+			return true;
+		}
+		return self::endpoint_for( $environment ) !== null;
+	}
+
+	/** Whose personal keys go to Kinsta: true (everyone), or a list of user ids (empty = off). */
+	public static function kinsta_users() {
+		$v = get_site_option( 'captaincore_ssh_keys_kinsta', '' );
+		if ( $v === 'all' ) {
+			return true;
+		}
+		$ids = is_array( $v ) ? $v : preg_split( '/[\s,]+/', (string) $v );
+		return array_values( array_filter( array_map( 'intval', $ids ) ) );
+	}
+
+	/**
+	 * Kinsta SSH endpoints (user@address:port) in scope, per request: each with
+	 * its first environment (where the block is written and recorded), every
+	 * environment on it and the ids of every site on it, inactive ones too.
+	 */
+	private static $endpoints = null;
+	private static $endpoint_of = [];
+
+	private static function kinsta_endpoints() {
+		if ( self::$endpoints !== null ) {
+			return self::$endpoints;
+		}
+		self::$endpoints   = [];
+		self::$endpoint_of = [];
+		$users = self::kinsta_users();
+		if ( $users === [] ) {
+			return self::$endpoints;
+		}
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			"SELECT e.*, s.site, s.name, s.status AS site_status, s.provider
+			 FROM {$wpdb->base_prefix}captaincore_environments e
+			 JOIN {$wpdb->base_prefix}captaincore_sites s ON s.site_id = e.site_id
+			 WHERE ( e.server_id IS NULL OR e.server_id <= 0 ) AND e.address <> '' AND e.port <> ''
+			 ORDER BY e.environment_id"
+		);
+		$groups = [];
+		foreach ( $rows as $row ) {
+			$k = strtolower( trim( $row->username ) . '@' . trim( $row->address ) . ':' . trim( $row->port ) );
+			$groups[ $k ][] = $row;
+		}
+		foreach ( $groups as $k => $envs ) {
+			$active = array_values( array_filter( $envs, function ( $e ) { return $e->site_status === 'active'; } ) );
+			// Kinsta only, and every site on the endpoint must be a Kinsta site.
+			if ( ! $active || count( array_filter( $envs, function ( $e ) { return $e->provider !== 'kinsta'; } ) ) ) {
+				continue;
+			}
+			self::$endpoints[ $k ] = [
+				'rep'             => $active[0],
+				'environment_ids' => array_map( function ( $e ) { return (int) $e->environment_id; }, $envs ),
+				'site_ids'        => array_values( array_unique( array_map( function ( $e ) { return (int) $e->site_id; }, $envs ) ) ),
+			];
+			foreach ( $envs as $e ) {
+				self::$endpoint_of[ (int) $e->environment_id ] = $k;
+			}
+		}
+		return self::$endpoints;
+	}
+
+	/** The Kinsta endpoint in scope an environment is on, or null. */
+	private static function endpoint_for( $environment ) {
+		$all = self::kinsta_endpoints();
+		$k   = self::$endpoint_of[ (int) $environment->environment_id ] ?? null;
+		return $k !== null ? $all[ $k ] : null;
+	}
+
+	/** The personal lines a Kinsta environment's endpoint should hold. */
+	public static function kinsta_lines_for( $environment ) {
+		$users = self::kinsta_users();
+		if ( $users === [] ) {
+			return [];
+		}
+		$group = self::endpoint_for( $environment );
+		if ( ! $group ) {
+			return [];
+		}
+		$reach = self::reach();
+		$lines = [];
+		foreach ( self::where( [ 'kind' => 'personal' ] ) as $key ) {
+			$uid = (int) $key->user_id;
+			if ( $users !== true && ! in_array( $uid, $users, true ) ) {
+				continue;
+			}
+			$sites = $reach[ $uid ] ?? [];
+			if ( $sites !== true && array_diff( $group['site_ids'], (array) $sites ) ) {
+				continue; // cannot access every site sharing this home folder
+			}
+			$user    = get_userdata( $uid );
+			$lines[] = self::line( $key, ( $user ? $user->user_login : 'u' . $uid ) . '-' . $key->title );
+		}
+		return $lines;
+	}
+
+	/** Kinsta environments one person's keys reach (0 while Kinsta is off for them). */
+	public static function user_kinsta_reach_count( $user_id ) {
+		$users = self::kinsta_users();
+		if ( $users === [] || ( $users !== true && ! in_array( (int) $user_id, $users, true ) ) ) {
+			return 0;
+		}
+		$was = get_current_user_id();
+		wp_set_current_user( (int) $user_id );
+		$all   = ( new User )->is_admin();
+		$sites = $all ? [] : array_map( 'intval', (array) ( new Sites )->site_ids() );
+		wp_set_current_user( $was );
+		$n = 0;
+		foreach ( self::kinsta_endpoints() as $g ) {
+			if ( $all || ! array_diff( $g['site_ids'], $sites ) ) {
+				$n++;
+			}
+		}
+		return $n;
+	}
+
+	/**
+	 * The daily sync read the block (ssh_keys_live). When it no longer matches
+	 * what the last deploy wrote, something on the box changed it: keep the
+	 * last few times so a host that wipes the file shows up.
+	 */
+	public static function note_live( $details, $previous_live ) {
+		$live = $details->ssh_keys_live ?? '';
+		$sent = $details->ssh_keys_hash ?? '';
+		if ( $live === '' || $sent === '' || $live === $sent || $live === $previous_live ) {
+			return $details;
+		}
+		$drift   = array_slice( (array) ( $details->ssh_keys_drift ?? [] ), -9 );
+		$drift[] = [ 'at' => current_time( 'mysql' ), 'found' => $live === 'none' ? 'no block' : 'changed block' ];
+		$details->ssh_keys_drift = $drift;
+		return $details;
 	}
 
 	/** CLI targets (<site>[-<env>]) whose keys are not what they should be. */

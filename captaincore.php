@@ -1386,15 +1386,19 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// SSH keys (CLI: `captaincore ssh-keys deploy`). The CLI fetches the
 	// managed lines for an environment on our servers (team keys + the own
-	// keys of everyone with access to the site), writes them, and reports the
+	// keys of everyone with access to the site) or a Kinsta endpoint in scope
+	// (PublicKeys::kinsta_users), writes them, and reports the
 	// hash back so the Manager knows which environments are current.
 	if ( $command === 'authorized-keys' ) {
 		if ( empty( $current_site ) || empty( $environment_id ) ) {
 			return new WP_Error( 'site_required', 'authorized-keys requires a site_id and environment.', [ 'status' => 400 ] );
 		}
-		$env   = CaptainCore\Environments::get( (int) $environment_id );
-		$lines = ( $env && (int) $env->server_id > 0 ) ? CaptainCore\PublicKeys::lines_for( $env ) : [];
-		return [ 'own_server' => $env && (int) $env->server_id > 0, 'keys' => $lines, 'hash' => CaptainCore\PublicKeys::lines_hash( $lines ) ];
+		$env     = CaptainCore\Environments::get( (int) $environment_id );
+		$managed = CaptainCore\PublicKeys::managed( $env );
+		$lines   = $managed ? CaptainCore\PublicKeys::lines_for( $env ) : [];
+		// own_server is the CLI's go-ahead to write (named before Kinsta was in scope).
+		$host    = $env && (int) $env->server_id > 0 ? 'captaincore' : 'kinsta';
+		return [ 'own_server' => $managed, 'managed' => $managed, 'host' => $host, 'keys' => $lines, 'hash' => CaptainCore\PublicKeys::lines_hash( $lines ) ];
 	}
 	// Environments on our servers whose keys differ from what they should hold
 	// (`ssh-keys deploy --stale`, after a change and from core's cron).
@@ -1680,6 +1684,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		// Merge incoming details with existing to preserve server-side keys (audit_summary, screenshot_base, network)
 		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+		$keys_live_before = $details->ssh_keys_live ?? '';
 		if ( isset( $post->data->details ) ) {
 			$incoming_details = json_decode( $post->data->details );
 			if ( $incoming_details ) {
@@ -1693,6 +1698,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				}
 			}
 		}
+		$details = CaptainCore\PublicKeys::note_live( $details, $keys_live_before );
 
 		// Ensure screenshot_base is up to date with latest capture
 		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
@@ -1728,6 +1734,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		// Merge incoming details with existing to preserve server-side keys (audit_summary, screenshot_base, network)
 		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+		$keys_live_before = $details->ssh_keys_live ?? '';
 		if ( isset( $post->data->details ) ) {
 			$incoming_details = json_decode( $post->data->details );
 			if ( $incoming_details ) {
@@ -1741,6 +1748,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				}
 			}
 		}
+		$details = CaptainCore\PublicKeys::note_live( $details, $keys_live_before );
 
 		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
 		if ( ! empty( $capture ) ) {
@@ -7503,7 +7511,7 @@ function captaincore_my_ssh_keys_response( $user_id ) {
 	$keys = array_map( function ( $k ) {
 		return [ 'id' => (int) $k->public_key_id, 'title' => $k->title, 'key_type' => $k->key_type, 'fingerprint' => $k->fingerprint, 'created_at' => $k->created_at ];
 	}, CaptainCore\PublicKeys::for_user( $user_id ) );
-	return [ 'keys' => $keys, 'reach' => CaptainCore\PublicKeys::user_reach_count( $user_id ), 'max' => CaptainCore\PublicKeys::PERSONAL_MAX ];
+	return [ 'keys' => $keys, 'reach' => CaptainCore\PublicKeys::user_reach_count( $user_id ), 'reach_kinsta' => CaptainCore\PublicKeys::user_kinsta_reach_count( $user_id ), 'max' => CaptainCore\PublicKeys::PERSONAL_MAX ];
 }
 
 function captaincore_my_ssh_keys_func( $request ) {

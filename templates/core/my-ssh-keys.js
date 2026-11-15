@@ -3,9 +3,10 @@
 // replicates them (PublicKeys, kind personal) to every environment on our
 // servers whose site that person can access, beside the team keys, and keeps
 // them in step as access changes (`ssh-keys deploy --stale` after each change
-// and from core's cron). Kinsta sites are not touched: there, keys belong to
-// the person's MyKinsta account; customers use each Kinsta site's SFTP password.
-//   GET    /me/ssh-keys        → { keys:[{id,title,key_type,fingerprint,created_at}], reach, max }
+// and from core's cron). Kinsta sites only when the option
+// captaincore_ssh_keys_kinsta names the person (test) or is 'all'; otherwise
+// customers use each Kinsta site's SFTP password.
+//   GET    /me/ssh-keys        → { keys:[{id,title,key_type,fingerprint,created_at}], reach, reach_kinsta, max }
 //   POST   /me/ssh-keys        { title, public_key }
 //   DELETE /me/ssh-keys/{id}
 // The site page's Connect card (our servers) shows the count and links here.
@@ -57,15 +58,18 @@ Object.assign(Component.prototype, {
     const m = this._myKeys;
     const n = m ? m.keys.length : 0;
     const reach = m ? Number(m.reach || 0) : 0;
+    const rk = m ? Number(m.reach_kinsta || 0) : 0;
     return {
       mkLoading: !m,
       mkEmpty: !!m && n === 0,
       mkError: (m && m.error) || '', mkHasError: !!(m && m.error),
       mkRows: (m ? m.keys : []).map(k => ({ title: k.title, meta: k.key_type + ' · ' + k.fingerprint + (k.created_at ? ' · added ' + String(k.created_at).slice(0, 10) : ''),
         remove: () => this.removeMyKey(k) })),
-      mkReach: !m ? '' : reach === 0
+      mkReach: !m ? '' : reach + rk === 0
         ? 'None of your sites run on our servers yet. Keys you add here will reach them when they do.'
-        : 'Your keys sign you in over SSH and SFTP on ' + reach + ' site environment' + (reach === 1 ? '' : 's') + ' on our servers: every one you can access here, as that changes.',
+        : 'Your keys sign you in over SSH and SFTP on ' + (reach ? reach + ' site environment' + (reach === 1 ? '' : 's') + ' on our servers' : '')
+          + (reach && rk ? ' and ' : '') + (rk ? rk + ' Kinsta environment' + (rk === 1 ? '' : 's') : '')
+          + ': every one you can access here, as that changes.',
       mkTitle: s.mkTitle || '', onMkTitle: e => this.setState({ mkTitle: e.target.value }),
       mkText: s.mkText || '', onMkText: e => this.setState({ mkText: e.target.value }),
       mkAdd: () => this.addMyKey(),
