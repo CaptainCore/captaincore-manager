@@ -1318,6 +1318,24 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		return $sv ? [ 'server_id' => (int) $sv->server_id, 'name' => $sv->name, 'address' => $sv->address, 'ssh_port' => (int) $sv->ssh_port, 'ssh_user' => $sv->ssh_user ]
 			: new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
 	}
+	if ( $command === 'host-servers' ) {
+		// Servers to check (`node health --all`): everything not retired.
+		$out = [];
+		foreach ( ( new CaptainCore\Servers )->all( 'server_id', 'ASC' ) as $sv ) {
+			if ( ( $sv->status ?? '' ) === 'retired' ) {
+				continue;
+			}
+			$out[] = [ 'server_id' => (int) $sv->server_id, 'name' => $sv->name, 'address' => $sv->address, 'ssh_port' => (int) $sv->ssh_port, 'ssh_user' => $sv->ssh_user ];
+		}
+		return $out;
+	}
+	if ( $command === 'hosting-health' ) {
+		$sv = CaptainCore\Servers::get( (int) ( $post->server_id ?? 0 ) );
+		if ( ! $sv ) {
+			return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+		}
+		return CaptainCore\HostingHealth::ingest( $sv, $post->report ?? null, substr( (string) ( $post->error ?? '' ), 0, 300 ) );
+	}
 	if ( $command === 'host-site-prepare' ) {
 		if ( empty( $current_site ) ) {
 			return new WP_Error( 'site_required', 'host-site-prepare requires a site_id.', [ 'status' => 400 ] );

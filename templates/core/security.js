@@ -654,7 +654,7 @@ Object.assign(Component.prototype, {
     'needs-human': ['var(--brand-soft)', 'var(--brand-ink)'], benign: ['var(--ok-soft)', 'var(--ok)'], '': ['var(--panel-2)', 'var(--ink-dim)'] },
   SIG_SOURCE_LABEL: { capture: 'Injection', 'core-checksum': 'Core checksum', config: 'Role settings', session: 'Sessions', 'db-scan': 'Database', native: 'Files', 'native-full': 'Files (full)',
     provenance: 'Root files', 'provenance-scan': 'Root files (rules)', 'hidden-plugin': 'Hidden plugin', media: 'Media', wordfence: 'Wordfence',
-    license: 'License', 'domain-change': 'Domain change' },
+    license: 'License', 'domain-change': 'Domain change', hosting: 'Hosting' },
 
   sigQuery(s) {
     const q = { view: s.sigView || 'attention', source: s.sigSource || '', search: s.sigSearch || '', page: s.sigPage || 1 };
@@ -845,7 +845,7 @@ Object.assign(Component.prototype, {
         Number(f.reopened_count) ? 'reopened ' + f.reopened_count + '×' : '', Number(f.priority) ? 'priority' : '', '#' + id].filter(Boolean).join(' · ');
       return {
         sev: sev.charAt(0).toUpperCase() + sev.slice(1), sevBg, sevFg,
-        site: f.site_name || ('site ' + f.site_id), env: f.environment || '', path: f.path, source: this.SIG_SOURCE_LABEL[f.source] || f.source,
+        site: f.site_name || (Number(f.site_id) ? 'site ' + f.site_id : String(f.environment || '').replace(/^server:/, '') + ' (server)'), env: f.environment || '', path: f.path, source: this.SIG_SOURCE_LABEL[f.source] || f.source,
         verdict: v ? (v === 'needs-human' ? 'Needs human' : v.charAt(0).toUpperCase() + v.slice(1)) : (Number(f.priority) ? 'Priority' : 'Unreviewed'),
         vBg: !v && Number(f.priority) ? 'var(--bad-soft)' : vBg, vFg: !v && Number(f.priority) ? 'var(--bad)' : vFg,
         ackShow: !!f.acknowledged_at && f.status === 'open', ackTitle: 'Picked up by ' + who(f.acknowledged_by) + ' · ' + (f.acknowledged_at || '').slice(0, 16),
