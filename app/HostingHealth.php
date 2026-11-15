@@ -75,6 +75,7 @@ class HostingHealth {
 		$synced = MalwareFindings::sync_state( 0, 0, $scope, self::SOURCE, self::to_findings( $scope, $report->server ?? [] ) );
 		$open   = count( (array) ( $report->server ?? [] ) );
 		$cts    = (array) ( $report->containers ?? [] );
+		$usage  = (array) ( $report->usage ?? [] );
 		$envs   = 0;
 		foreach ( $wpdb->get_results( $wpdb->prepare(
 			"SELECT * FROM {$wpdb->base_prefix}captaincore_environments WHERE server_id = %d", (int) $server->server_id ) ) as $env ) {
@@ -90,7 +91,42 @@ class HostingHealth {
 			MalwareFindings::sync_state( (int) $env->site_id, (int) $env->environment_id, $env->environment, self::SOURCE, self::to_findings( 'ct:' . $ct, $items ) );
 			$open += count( $items );
 			$envs++;
+			self::record_usage( $env, $d, $usage[ $ct ] ?? null );
 		}
 		return [ 'server' => count( (array) ( $report->server ?? [] ) ), 'environments' => $envs, 'open' => $open, 'unreachable' => false, 'cleared' => (int) ( $synced['cleared'] ?? 0 ) ];
+	}
+
+	/**
+	 * Storage of an environment on our servers, from the same report: files +
+	 * database bytes in `storage` (what Kinsta's usage sync fills for its
+	 * sites, so the site page and lists show it the same way), and each
+	 * volume's use and cap in details `usage`. Written only when it changed.
+	 */
+	private static function record_usage( $env, $details, $usage ) {
+		if ( ! $usage ) {
+			return;
+		}
+		$usage = json_decode( wp_json_encode( $usage ), true );
+		$out   = [];
+		foreach ( [ 'files', 'database' ] as $role ) {
+			if ( isset( $usage[ $role ]['used'] ) ) {
+				$out[ $role ] = [ 'used' => (int) $usage[ $role ]['used'], 'limit' => (int) ( $usage[ $role ]['limit'] ?? 0 ) ];
+			}
+		}
+		if ( ! $out ) {
+			return;
+		}
+		$storage = array_sum( array_column( $out, 'used' ) );
+		$before  = json_decode( wp_json_encode( $details->usage ?? null ), true );
+		// Volume use moves by a few KB every few minutes: rewrite when it moved 1% or more.
+		$moved   = ! $before || abs( $storage - (int) $env->storage ) > max( 1048576, 0.01 * $storage )
+			|| array_column( (array) $before, 'limit' ) !== array_column( $out, 'limit' );
+		if ( ! $moved ) {
+			return;
+		}
+		$fresh = Environments::get( (int) $env->environment_id ); // re-read: the details may have changed since the list query
+		$d     = json_decode( (string) ( $fresh->details ?? '' ) ) ?: new \stdClass();
+		$d->usage = $out + [ 'at' => time() ];
+		Environments::update( [ 'storage' => (string) $storage, 'details' => wp_json_encode( $d ) ], [ 'environment_id' => (int) $env->environment_id ] );
 	}
 }
