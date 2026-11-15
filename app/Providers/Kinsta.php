@@ -1265,6 +1265,47 @@ class Kinsta {
     }
 
     /**
+     * The environment's PHP version at Kinsta ("8.3"), read live from the
+     * environment's container_info, or a WP_Error.
+     */
+    public static function php_version( $site_id, $environment = 'production' ) {
+        $env = self::resolve_env( $site_id, strtolower( $environment ) );
+        if ( is_wp_error( $env ) ) {
+            return $env;
+        }
+        $engine = (string) ( $env->container_info->php_engine_version ?? '' );
+        return preg_match( '/(\d+\.\d+)/', $engine, $m ) ? $m[1] : '';
+    }
+
+    /** Switch the environment's PHP version. Kinsta answers 202 with an operation id. */
+    public static function set_php_version( $site_id, $environment, $version ) {
+        $env_id = self::resolve_env_id( $site_id, strtolower( $environment ) );
+        if ( is_wp_error( $env_id ) ) {
+            return $env_id;
+        }
+        $response = \CaptainCore\Remote\Kinsta::put( "sites/tools/modify-php-version", [ "environment_id" => $env_id, "php_version" => (string) $version ] );
+        if ( ! $response || empty( $response->operation_id ) ) {
+            $message = $response->message ?? 'No operation id returned.';
+            return new \WP_Error( 'kinsta_php_version_failed', "Kinsta did not accept the PHP change: {$message}", [ 'status' => 502 ] );
+        }
+        return $response;
+    }
+
+    /** Clear the environment's site cache at Kinsta. */
+    public static function clear_cache( $site_id, $environment = 'production' ) {
+        $env_id = self::resolve_env_id( $site_id, strtolower( $environment ) );
+        if ( is_wp_error( $env_id ) ) {
+            return $env_id;
+        }
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/tools/clear-cache", [ "environment_id" => $env_id ] );
+        if ( ! $response || empty( $response->operation_id ) ) {
+            $message = $response->message ?? 'No operation id returned.';
+            return new \WP_Error( 'kinsta_clear_cache_failed', "Kinsta did not clear the cache: {$message}", [ 'status' => 502 ] );
+        }
+        return $response;
+    }
+
+    /**
      * Current status of a Kinsta operation, with the site's own key.
      * Kinsta reports 202 while running, 200 when done and 500 on failure.
      *
@@ -1281,6 +1322,12 @@ class Kinsta {
      * Resolve a CaptainCore site + environment to Kinsta's environment id.
      */
     private static function resolve_env_id( $site_id, $environment = 'production' ) {
+        $env = self::resolve_env( $site_id, $environment );
+        return is_wp_error( $env ) ? $env : $env->id;
+    }
+
+    /** The Kinsta environment object for a CaptainCore site + environment. */
+    private static function resolve_env( $site_id, $environment = 'production' ) {
         $kinsta_env_name = ( $environment == 'production' ) ? 'live' : $environment;
         $site            = \CaptainCore\Sites::get( $site_id );
         $kinsta_site_id  = $site->provider_site_id;
@@ -1297,7 +1344,7 @@ class Kinsta {
 
         $env = self::match_environment( $env_response->site->environments ?? [], $environment, (int) $site_id );
         if ( $env ) {
-            return $env->id;
+            return $env;
         }
         return new \WP_Error( 'kinsta_env_not_found', "Kinsta environment '{$kinsta_env_name}' not found." );
     }

@@ -1695,6 +1695,23 @@ button.ccc-edited:hover{color:var(--ink)}
                 <sc-if value="{{ envCardShow }}" hint-placeholder-val="{{ true }}">
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
                   <div style="padding:12px 16px;border-bottom:1px solid var(--rule)"><h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Settings</h2></div>
+                  <!-- PHP version, Clear cache, Redirects: any role, our servers or Kinsta (site-settings.js) -->
+                  <sc-if value="{{ ssetShow }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ ssetRows }}" as="sr" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule)">
+                        <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sr.k }}</span>
+                        <div style="flex:1"></div>
+                        <sc-if value="{{ sr.hasV }}" hint-placeholder-val="{{ true }}"><span style="font:400 var(--fs-125) var(--mono)">{{ sr.v }}</span></sc-if>
+                        <button type="button" onClick="{{ sr.go }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sr.act }}</button>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ ssetApplying }}" hint-placeholder-val="{{ false }}">
+                      <div class="cc-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule)">Applying a change…</div>
+                    </sc-if>
+                    <sc-if value="{{ ssetHasError }}" hint-placeholder-val="{{ false }}">
+                      <div class="cc-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule);color:var(--bad)">{{ ssetError }}</div>
+                    </sc-if>
+                  </sc-if>
                   <sc-for list="{{ envRows }}" as="r" hint-placeholder-count="5">
                     <div onClick="{{ r.copy }}" title="{{ r.copyTitle }}" style="display:flex;justify-content:space-between;gap:12px;padding:8px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2);color:var(--brand-ink)">
                       <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ r.k }}</span>
@@ -8718,6 +8735,78 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="flex:1"></div>
           <span onClick="{{ eaClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
           <span onClick="{{ eaSubmit }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px">{{ eaSubmitLabel }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ PHP version (any role, site-settings.js) ══ -->
+  <sc-if value="{{ ssetPhpOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ ssetPhpClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" role="dialog" aria-label="{{ ssetPhpTitle }}" style="width:480px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule);background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 7%,var(--paper)),var(--paper) 70%)">
+          <div ref="{{ ssetPhpIllo }}" style="width:64px;height:48px;flex:none"></div>
+          <span style="font:600 var(--fs-15) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis">{{ ssetPhpTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetPhpClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <div role="radiogroup" aria-label="PHP version" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">
+            <sc-for list="{{ ssetPhpVersions }}" as="pv" hint-placeholder-count="3">
+              <div onClick="{{ pv.pick }}" role="radio" style="cursor:pointer;border:1px solid {{ pv.bd }};background:{{ pv.bg }};border-radius:11px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+                <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);flex:none;margin-top:2px;background:var(--paper)">{{ pv.mark }}</span>
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 var(--fs-13) var(--sans)">{{ pv.label }}</span><span class="cc-meta">{{ pv.desc }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel);display:flex;flex-direction:column;gap:6px">
+            <span class="cc-meta">{{ ssetPhpNote }}</span>
+            <span class="cc-meta">Check the site afterwards: some older plugins and themes do not work on newer PHP.</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetPhpClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <span onClick="{{ ssetPhpSubmit }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px;opacity:{{ ssetPhpSubmitOpacity }}">{{ ssetPhpSubmitLabel }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Redirects (any role, our servers, site-settings.js) ══ -->
+  <sc-if value="{{ ssetRdOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ ssetRdClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" role="dialog" aria-label="{{ ssetRdTitle }}" style="width:640px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis">{{ ssetRdTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetRdClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div class="cc-meta" style="padding:10px 18px;border-bottom:1px solid var(--rule)">Visitors are sent on before WordPress loads. End a path with * to match everything under it.</div>
+        <sc-if value="{{ ssetRdEmpty }}" hint-placeholder-val="{{ false }}">
+          <div class="cc-meta" style="padding:14px 18px;border-bottom:1px solid var(--rule)">No redirects yet.</div>
+        </sc-if>
+        <sc-for list="{{ ssetRdRows }}" as="rd" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+            <span style="font:400 var(--fs-13) var(--mono);overflow-wrap:anywhere">{{ rd.from }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">→</span>
+            <span style="font:400 var(--fs-13) var(--mono);flex:1;min-width:0;overflow-wrap:anywhere">{{ rd.to }}</span>
+            <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ rd.code }}</span>
+            <button type="button" onClick="{{ rd.remove }}" style="border:0;background:none;padding:0;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Remove</button>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;flex-wrap:wrap">
+          <input value="{{ ssetRFrom }}" onInput="{{ onSsetRFrom }}" aria-label="From path" placeholder="/old-page" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none;min-width:0;flex:1 1 160px">
+          <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">→</span>
+          <input value="{{ ssetRTo }}" onInput="{{ onSsetRTo }}" aria-label="To path or URL" placeholder="/new-page or https://…" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 10px;outline:none;min-width:0;flex:2 1 220px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ ssetRCodeChips }}" as="rc" hint-placeholder-count="2"><span onClick="{{ rc.pick }}" style="font:500 var(--fs-12) var(--sans);padding:5px 10px;border-radius:999px;cursor:pointer;color:{{ rc.fg }};background:{{ rc.bg }};border:1px solid {{ rc.bd }}">{{ rc.label }}</span></sc-for>
+          </div>
+          <button type="button" onClick="{{ ssetRdAdd }}" class="cc-btn" style="font-size:var(--fs-125)">Add</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <div style="flex:1"></div>
+          <span onClick="{{ ssetRdClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <span onClick="{{ ssetRdSave }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px;opacity:{{ ssetRdSaveOpacity }}">{{ ssetRdSaveLabel }}</span>
         </div>
       </div>
     </div>

@@ -1525,7 +1525,7 @@ class Component extends DCLogic {
     return {
       paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
       ptoOpen: false, epOpen: false, delOpen: false, rmOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
-      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false, eaOpen: false, edOpen: false,
+      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false, eaOpen: false, edOpen: false, ssetPhpOpen: false, ssetRdOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
       // Settings
       provDlgOpen: false, recipeDlgOpen: false, defDlgOpen: false, procDlgOpen: false, procEditOpen: false,
@@ -2619,8 +2619,11 @@ class Component extends DCLogic {
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)
       })),
-      // Customers have nothing left in the card unless the site has subsites.
-      envCardShow: !!isOp || (real ? this.realEnvRows(real, s) : []).some(([k]) => k === 'Subsites'),
+      // PHP version, Clear cache and Redirects (site-settings.js) head the card
+      // for everyone on our servers or Kinsta; otherwise customers only see it
+      // when the site has subsites.
+      ...(this.siteSettingsVals ? this.siteSettingsVals(real, s) : { ssetShow: false }),
+      envCardShow: !!isOp || !!(this.siteSettingsHost && this.siteSettingsHost(real, s)) || (real ? this.realEnvRows(real, s) : []).some(([k]) => k === 'Subsites'),
       ...(this.connectVals ? this.connectVals(credRows, s, real) : {}),
       ...this.overviewDomainVals((real && real.domains
         ? real.domains.map(d => ({ name: (d && d.name) || String(d), did: d && d.domain_id ? String(d.domain_id) : '' }))

@@ -7136,6 +7136,153 @@ function captaincore_hosting_target( $env ) {
 	return $site->site . ( strtolower( $env->environment ) === 'production' ? '' : '-' . strtolower( $env->environment ) );
 }
 
+// ── Site settings every host offers (customers and operators) ───────────────
+// PHP version, clear cache and redirects for one environment, whichever host
+// runs it: our servers (a hosting revision, then host apply / host cache) or
+// Kinsta (the site's own API key). Gated by access to the site, not admin;
+// everything else about our servers stays on the operator Hosting tab.
+const CAPTAINCORE_KINSTA_PHP_VERSIONS = [ '8.2', '8.3', '8.4', '8.5' ];
+
+function captaincore_site_settings_target( $request ) {
+	$site_id = (int) $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$site = CaptainCore\Sites::get( $site_id );
+	$env  = $site ? CaptainCore\Environments::for_site( $site_id, (string) $request['environment'] ) : null;
+	if ( ! $env ) {
+		return new WP_Error( 'not_found', 'Environment not found.', [ 'status' => 404 ] );
+	}
+	if ( (int) $env->server_id > 0 ) {
+		$host = 'captaincore';
+	} elseif ( $site->provider === 'kinsta' && ! empty( $site->provider_site_id ) ) {
+		$host = 'kinsta';
+	} else {
+		return new WP_Error( 'not_supported', 'These settings are not available for this host.', [ 'status' => 400 ] );
+	}
+	return [ 'site' => $site, 'env' => $env, 'host' => $host ];
+}
+
+// What the environment runs now on our servers: the latest revision, or when
+// that one failed to apply (the node puts the site back), the newest revision
+// that did apply. Saves build on this so a failed change is not retried.
+function captaincore_site_settings_base( $env ) {
+	$last = CaptainCore\HostConfigs::latest( $env->environment_id );
+	if ( ! $last || $last->status !== 'failed' ) {
+		return [ CaptainCore\HostConfigs::current( $env ), '' ];
+	}
+	global $wpdb;
+	$row    = $wpdb->get_row( $wpdb->prepare(
+		"SELECT config FROM {$wpdb->base_prefix}captaincore_host_configs WHERE environment_id = %d AND status = 'applied' ORDER BY revision DESC LIMIT 1",
+		(int) $env->environment_id ) );
+	$config = $row ? json_decode( $row->config, true ) : CaptainCore\HostConfigs::default_for( $env );
+	$result = json_decode( (string) $last->result );
+	$why    = (string) ( $result->error ?? '' );
+	$note   = $last->note !== '' ? $last->note : 'The last change';
+	return [ $config, "{$note} did not apply, so nothing changed." . ( $why !== '' ? " The server said: {$why}" : '' ) ];
+}
+
+function captaincore_site_settings_response( $t ) {
+	if ( $t['host'] === 'captaincore' ) {
+		[ $config, $failed ] = captaincore_site_settings_base( $t['env'] );
+		$last    = CaptainCore\HostConfigs::latest( $t['env']->environment_id );
+		$plain   = CaptainCore\HostConfigs::stack( $t['env'] ) === 'plain';
+		return [
+			'host'      => 'captaincore',
+			'php'       => [ 'version' => (string) ( $config['php']['version'] ?? '' ), 'versions' => array_keys( array_filter( CaptainCore\HostConfigs::PHP_IMAGES ) ) ],
+			'cache'     => ! $plain && ! empty( $config['page_cache']['enabled'] ),
+			'redirects' => array_values( (array) ( $config['redirects'] ?? [] ) ),
+			'applying'  => $last && $last->status === 'pending',
+			'error'     => $failed,
+		];
+	}
+	$version  = CaptainCore\Providers\Kinsta::php_version( (int) $t['site']->site_id, $t['env']->environment );
+	$versions = CAPTAINCORE_KINSTA_PHP_VERSIONS;
+	if ( is_string( $version ) && $version !== '' && ! in_array( $version, $versions, true ) ) {
+		array_unshift( $versions, $version );
+	}
+	return [
+		'host'      => 'kinsta',
+		'php'       => [ 'version' => is_string( $version ) ? $version : '', 'versions' => $versions ],
+		'cache'     => true,
+		'redirects' => null,
+		'applying'  => false,
+		'error'     => is_wp_error( $version ) ? 'Could not read the PHP version from Kinsta.' : '',
+	];
+}
+
+function captaincore_site_settings_func( $request ) {
+	$t = captaincore_site_settings_target( $request );
+	return is_wp_error( $t ) ? $t : captaincore_site_settings_response( $t );
+}
+
+// Body: { php_version } or { redirects: [ {from, to, code} ] }.
+function captaincore_site_settings_update_func( $request ) {
+	$t = captaincore_site_settings_target( $request );
+	if ( is_wp_error( $t ) ) {
+		return $t;
+	}
+	$params  = (array) $request->get_json_params();
+	$site_id = (int) $t['site']->site_id;
+	$label   = $t['env']->environment;
+	if ( isset( $params['php_version'] ) ) {
+		$version = (string) $params['php_version'];
+		if ( $t['host'] === 'kinsta' ) {
+			if ( ! in_array( $version, CAPTAINCORE_KINSTA_PHP_VERSIONS, true ) ) {
+				return new WP_Error( 'invalid', "PHP {$version} is not offered.", [ 'status' => 400 ] );
+			}
+			$res = CaptainCore\Providers\Kinsta::set_php_version( $site_id, $label, $version );
+			if ( is_wp_error( $res ) ) {
+				return $res;
+			}
+			CaptainCore\ProcessLog::insert( "Switched {$label} to PHP {$version} at Kinsta", $site_id );
+			return captaincore_site_settings_response( $t ) + [ 'operation_id' => (string) $res->operation_id, 'php_requested' => $version ];
+		}
+		[ $config ] = captaincore_site_settings_base( $t['env'] );
+		$config['php']['version'] = $version;
+		$note = "PHP {$version}";
+	} elseif ( isset( $params['redirects'] ) && $t['host'] === 'captaincore' ) {
+		[ $config ]          = captaincore_site_settings_base( $t['env'] );
+		$config['redirects'] = array_values( (array) $params['redirects'] );
+		$note                = 'Redirects (' . count( $config['redirects'] ) . ')';
+	} else {
+		return new WP_Error( 'invalid', 'Nothing to change.', [ 'status' => 400 ] );
+	}
+	$row = CaptainCore\HostConfigs::save( $t['env'], $config, get_current_user_id(), $note . ', from site settings' );
+	if ( is_wp_error( $row ) ) {
+		return $row;
+	}
+	CaptainCore\ProcessLog::insert( "Started a change to {$label} on our servers: {$note}", $site_id );
+	return captaincore_site_settings_response( $t ) + [ 'token' => CaptainCore\HostConfigs::apply( $t['env'] ) ];
+}
+
+function captaincore_site_cache_clear_func( $request ) {
+	$t = captaincore_site_settings_target( $request );
+	if ( is_wp_error( $t ) ) {
+		return $t;
+	}
+	$site_id = (int) $t['site']->site_id;
+	if ( $t['host'] === 'kinsta' ) {
+		$res = CaptainCore\Providers\Kinsta::clear_cache( $site_id, $t['env']->environment );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		CaptainCore\ProcessLog::insert( 'Cleared the Kinsta cache of ' . $t['env']->environment, $site_id );
+		return [ 'cleared' => null, 'host' => 'kinsta' ];
+	}
+	$res = CaptainCore\Run::execute( [ 'host', 'cache', 'clear', captaincore_hosting_target( $t['env'] ), '--json' ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'cache_unavailable', 'Could not reach the page cache.', [ 'status' => 502 ] );
+	}
+	CaptainCore\ProcessLog::insert( 'Cleared the page cache of ' . $t['env']->environment . ' (' . (int) ( $data->cleared ?? 0 ) . ' saved pages)', $site_id );
+	return [ 'cleared' => (int) ( $data->cleared ?? 0 ), 'host' => 'captaincore' ];
+}
+
 // Local backups (ZFS snapshots) on the node: listed live through the CLI.
 function captaincore_site_hosting_backups_func( $request ) {
 	$env = captaincore_hosting_environment( $request );
@@ -12946,6 +13093,30 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_hosting_remove_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	// Site settings any host offers: customers with access to the site too.
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/host-settings', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_site_settings_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_site_settings_update_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/cache/clear', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_cache_clear_func',
+			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
 
