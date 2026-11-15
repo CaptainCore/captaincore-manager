@@ -217,7 +217,9 @@ class PublicKeys extends DB {
 				'environment'    => $row->environment,
 				'target'         => $row->site . ( strtolower( $row->environment ) === 'production' ? '' : '-' . strtolower( $row->environment ) ),
 				'keys'           => count( $want ),
-				'current'        => ( $d->ssh_keys_hash ?? '' ) === self::lines_hash( $want ),
+				// What the box holds: the daily sync's reading (ssh_keys_live), which
+				// each deploy also updates, else the last deploy's own record.
+				'current'        => ( $d->ssh_keys_live ?? ( $d->ssh_keys_hash ?? '' ) ) === self::lines_hash( $want ),
 				'deployed_at'    => $d->ssh_keys_deployed_at ?? '',
 			];
 		}
@@ -251,6 +253,7 @@ class PublicKeys extends DB {
 		}
 		$details = json_decode( (string) $env->details ) ?: new \stdClass();
 		$details->ssh_keys_hash        = preg_match( '/^[a-f0-9]{64}$/', (string) $hash ) ? $hash : '';
+		$details->ssh_keys_live        = $details->ssh_keys_hash; // what the block holds now
 		$details->ssh_keys_count       = (int) $count;
 		$details->ssh_keys_deployed_at = current_time( 'mysql' );
 		Environments::update( [ 'details' => wp_json_encode( $details ) ], [ 'environment_id' => (int) $environment_id ] );
