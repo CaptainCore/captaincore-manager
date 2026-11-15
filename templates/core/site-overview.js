@@ -75,7 +75,7 @@ Object.assign(Component.prototype, {
     const plain = !!(curEnv && curEnv.details && typeof curEnv.details === 'object' && curEnv.details.start === 'plain');
     const host = url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
     const admin = url && !plain ? url.replace(/\/$/, '') + '/wp-admin' : '';
-    return { dHasUrl: !!url, dUrlHost: host, dUrlTitle: 'Open ' + url, dHasAdmin: !!admin, dAdminTitle: 'Open ' + admin,
+    return { dHasUrl: !!url, dUrlHost: host, dUrlTitle: url, dHasAdmin: !!admin, dAdminTitle: 'Open ' + admin,
       dUrlOpen: () => { if (url) this.safeOpen(url); },
       dAdminOpen: () => { if (admin) this.safeOpen(admin); },
       dUrlCopy: () => { try { navigator.clipboard.writeText(url); } catch (e) {} this.toast('Copied ' + host, { kind: 'success', timeout: 1800 }); } };
