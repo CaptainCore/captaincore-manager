@@ -155,7 +155,8 @@ Object.assign(Component.prototype, {
           network: x.network || null,
           server: x.server || '',
           netType: ({ multisite: 'Multisite', host: 'Freighter host', tenant: 'Freighter tenant' })[(x.network && x.network.type) || ''] || 'Standalone',
-          environmentsRaw: x.environments || [] };
+          environmentsRaw: x.environments || [],
+          health: x.health || null };
       });
       this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: this.decodeHtml(a.name),
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,
@@ -184,7 +185,7 @@ Object.assign(Component.prototype, {
   },
 
   realPinned() {
-    const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
+    const healthOf = x => this.siteHealthOf(x);
     return this.FLEET.slice(0, 4).map(x => { const [health, dot] = healthOf(x);
       return { id: x.id, name: x.name, sub: [x.provider, x.core, x.envs].filter(Boolean).join(' \u00b7 '), health, dot }; });
   },

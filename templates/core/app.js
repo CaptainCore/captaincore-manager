@@ -65,7 +65,7 @@ class Component extends DCLogic {
     dnsRecs: null, dnsDirty: false, zoneBusy: '',
     mgHoverIdx: -1, mgHoverX: 0, mgHoverY: 0,
     fwds: null, fwdAlias: '', fwdDest: '', reg: { auto: true, lock: true, priv: true },
-    ddOpen: '', ddQ: '', ddCat: '',
+    ddOpen: '', ddQ: '', ddCat: '', fStatus: '',
     aq: '', accountId: null, accTab: 'users', accInvites: null, trusted: null,
     invEmail: '', invLevel: 'Full access', billTab: 'invoices', renMonth: '', renSearch: '', renOpen: 0, renHoverIdx: -1, paid: {}, primaryPm: 0, invoiceId: null,
     statG: 'Daily', statR: 'Last 28 days', statShare: 'Off', statPw: '',
@@ -495,7 +495,7 @@ class Component extends DCLogic {
       fg: s.accTab === id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: s.accTab === id ? 'var(--panel-2)' : 'transparent',
       go: () => this.setState({ accTab: id }) }));
-    const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
+    const healthOf = x => this.siteHealthOf(x);
     return {
       accName: acc.name,
       accCanRename: true, accRenaming: false, accNotRenaming: true,
@@ -973,7 +973,7 @@ class Component extends DCLogic {
 
   computeList(s, isOp) {
     if (this._hydrated && s.route === 'sites' && !this._siteFilters && !this._siteFiltersLoading) setTimeout(() => this.loadSiteFilters(), 0);
-    const healthOf = x => x.vuln ? ['Vulnerability', 'var(--bad)'] : x.updates ? ['Updates pending', 'var(--warn)'] : ['Healthy', 'var(--ok)'];
+    const healthOf = x => this.siteHealthOf(x);
     const fleet = isOp ? this.FLEET : this.FLEET.filter(x => x.owned);
     const nq = s.q.trim().toLowerCase();
     const inactive = v => !v || v === 'Any' || v === 'All';
@@ -1010,6 +1010,7 @@ class Component extends DCLogic {
     const passFacets = x => conds.length === 0 || (s.fOp === 'AND' ? conds.every(c => c(x)) : conds.some(c => c(x)));
     const filtered = fleet.filter(x => (!nq || x.name.includes(nq) || x.account.toLowerCase().includes(nq))
       && passFacets(x)
+      && (!s.fStatus || ((x.health || {}).state || 'ok') === s.fStatus)
       && (selLabels.length === 0 || (x.labels || []).some(l => selLabels.includes(l))));
     const facetOpts = (cntMap, cur, key, extraReset) => {
       const items = ['Any', ...Object.keys(cntMap).sort()];
@@ -1067,8 +1068,10 @@ class Component extends DCLogic {
     const pageStart = (pageNum - 1) * PAGE;
     const SITE_COLS = [
       { label: 'Site', k: 'name', val: x => (x.name || '').toLowerCase() },
+      { label: 'Status', k: 'status', val: x => ({ down: 0, attention: 1, removed: 2 })[(x.health || {}).state] ?? 3 },
       { label: 'Environments', k: 'envs', val: x => (x.environmentsRaw && x.environmentsRaw.length) || String(x.envs || '').split('\u00b7').length },
-      { label: 'Provider', k: 'provider', val: x => x.provider || '' },
+      // Customers' sites are all at one host, so the column is operators' only.
+      ...(isOp ? [{ label: 'Provider', k: 'provider', val: x => x.provider || '' }] : []),
       { label: 'Core', k: 'core', val: x => x.core || '' },
       { label: 'Visits / wk', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
     ];
@@ -1081,17 +1084,14 @@ class Component extends DCLogic {
       if (!er) return '';
       return ru + x.site + '_' + x.id + '/' + (er.environment || 'Production').toLowerCase() + '/screenshots/' + er.screenshot_base + '_thumb-' + size + '.jpg';
     };
-    const rows = sorted.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot,
+    const showAcct = isOp || (this.ACCOUNTS || []).length > 1;
+    const rows = sorted.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot, ...this.siteStatusCell(x),
+      acctLine: showAcct ? x.account : '',
       mono: (x.name || '?').slice(0, 2).toUpperCase(),
       removedChip: !!x.removed,
       thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
       thumbLarge: thumbOf(x, 800), hasThumbLarge: !!thumbOf(x, 800),
-      envChips: ((x.environmentsRaw && x.environmentsRaw.length)
-        ? x.environmentsRaw.map(e => e.environment)
-        : String(x.envs || 'Prod').split(' \u00b7 ').map(l => l === 'Prod' ? 'Production' : l)
-      ).map(en => ({
-        label: en === 'Production' ? 'Prod' : en,
-        go: (ev) => { ev.stopPropagation(); this.openSite(x.id, en); } })),
+      ...this.siteEnvChips(x),
       envCards: ((x.environmentsRaw && x.environmentsRaw.length) ? x.environmentsRaw : [{ environment: 'Production', core: x.core, home_url: x.home_url, visits: x.visits, storage: '', screenshot_base: '' }]).map(e => {
         const en = e.environment || 'Production';
         const ru = (window.CC_BOOT && window.CC_BOOT.remoteUploadUri) || '';
@@ -1355,11 +1355,11 @@ class Component extends DCLogic {
         else { if (this._hydrated) { this.submitManualSite(); return; }
           this.runJob('connect-site', (st.nsName || st.nsAddr || 'new site') + ' · ' + st.nsEnvs); }
         this.setState({ nsOpen: false, nsName: '', nsNotes: '', nsImportSel: {}, nsShared: [], nsCustomerId: '', nsBillingId: '', dockOpen: true }); },
-      viewTable: s.view === 'table', viewCards: s.view === 'cards', viewList: s.view === 'list',
-      tblBg: s.view === 'table' ? 'var(--panel-2)' : 'transparent', tblFg: s.view === 'table' ? 'var(--ink)' : 'var(--ink-dim)',
-      crdBg: s.view === 'cards' ? 'var(--panel-2)' : 'transparent', crdFg: s.view === 'cards' ? 'var(--ink)' : 'var(--ink-dim)',
-      lstBg: s.view === 'list' ? 'var(--panel-2)' : 'transparent', lstFg: s.view === 'list' ? 'var(--ink)' : 'var(--ink-dim)',
-      setViewTable: () => this.setState({ view: 'table' }), setViewCards: () => this.setState({ view: 'cards' }),
+      ...this.sitesViewVals(s),
+      ...this.statusChipVals(s, fleet),
+      siteGrid: isOp ? '36px 48px minmax(0,2fr) minmax(0,1.25fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.7fr) minmax(0,0.7fr)' : '36px 48px minmax(0,2fr) minmax(0,1.3fr) minmax(0,1fr) minmax(0,0.7fr) minmax(0,0.7fr)',
+      siteProvCol: !!isOp,
+      setViewTable: () => this.setState({ view: 'table', viewForced: true }), setViewCards: () => this.setState({ view: 'cards' }),
       setViewList: () => this.setState({ view: 'list' }),
       viewCtx: (e) => this.openSitesViewMenu(e),
       ...this.siteRequestsVals(s),

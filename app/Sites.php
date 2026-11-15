@@ -231,6 +231,21 @@ class Sites extends DB {
                 $servers[ (int) $row->site_id ] = $row->name;
             }
         }
+        // What the Sites list's Status column needs, in two queries for the
+        // whole list: open uptime outages (monitor_incidents) and production
+        // environments whose backup check failed (backup_health, written by
+        // `captaincore backup verify` after each backup; stale = no snapshot
+        // in 36 hours).
+        global $wpdb;
+        $outages = [];
+        foreach ( (array) $wpdb->get_results( "SELECT site_id, MIN(started_at) AS since, COUNT(*) AS n FROM {$wpdb->base_prefix}captaincore_monitor_incidents WHERE status = 'open' GROUP BY site_id" ) as $row ) {
+            $outages[ (int) $row->site_id ] = $row;
+        }
+        $is_admin      = ( new User )->is_admin();
+        $backup_failed = [];
+        foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health_issues[0]')) AS issue FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health')) = 'failed'" ) as $row ) {
+            $backup_failed[ (int) $row->site_id ] = (string) $row->issue;
+        }
         foreach( $this->sites as $site_id ) {
             $site                    = self::get( $site_id );
             $site->server            = $servers[ (int) $site_id ] ?? "";
@@ -269,6 +284,8 @@ class Sites extends DB {
                 ];
             }
             
+            $site->health            = self::list_health( $site, $outages[ (int) $site_id ] ?? null, $backup_failed[ (int) $site_id ] ?? null, $is_admin );
+
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
                 $site->outdated = true;
@@ -285,6 +302,29 @@ class Sites extends DB {
 	        usort($sites, function($a, $b) { return strcmp($a->name, $b->name); });
 	        return $sites;
 	    }
+
+    /**
+     * One status per site for the Sites list: state down | attention |
+     * removed | ok, a short label and, for an outage, when it started.
+     */
+    private static function list_health( $site, $outage, $backup_issue, $is_admin = false ) {
+        if ( ! empty( $site->removed ) ) {
+            return [ 'state' => 'removed', 'label' => 'Removal requested' ];
+        }
+        if ( $outage ) {
+            return [ 'state' => 'down', 'label' => 'Down', 'since' => $outage->since ];
+        }
+        if ( $backup_issue !== null ) {
+            $stale = stripos( $backup_issue, 'stale' ) !== false;
+            return [ 'state' => 'attention', 'label' => $stale ? 'Backups behind' : 'Backups failing', 'detail' => $backup_issue ];
+        }
+        // A sync that cannot connect is ours to fix, so only operators see it.
+        $errors = $is_admin ? ( $site->connection_errors ?? '' ) : '';
+        if ( ( is_string( $errors ) && trim( $errors ) !== '' ) || ( is_array( $errors ) && ! empty( $errors ) ) ) {
+            return [ 'state' => 'attention', 'label' => "Can't connect", 'detail' => is_string( $errors ) ? $errors : 'Connection errors on the last sync' ];
+        }
+        return [ 'state' => 'ok', 'label' => 'No issues' ];
+    }
 
     public function fetch_sites_matching_filters( $filters = [] ) {
         $allowed_site_ids = $this->sites;
