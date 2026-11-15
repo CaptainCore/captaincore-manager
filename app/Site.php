@@ -1562,11 +1562,15 @@ class Site {
             }
 
             $environment->fathom_analytics = ( ! empty( $details->fathom ) ? $details->fathom : [] );
-            // Our own servers (provider captaincore, server_id set) take SSH as the site user on the container's port.
-            if ( $site->provider == 'kinsta' || $site->provider == 'rocketdotnet' || ( $site->provider == 'captaincore' && (int) ( $environment->server_id ?? 0 ) > 0 ) ) {
+            // Who hosts this environment: one of our servers (server_id set),
+            // else the site's provider. A Kinsta site's Development can be ours.
+            $host              = Environments::host( $environment, $site );
+            $environment->host = $host;
+            // Our own servers take SSH as the site user on the container's port.
+            if ( in_array( $host, [ 'kinsta', 'rocketdotnet', 'captaincore' ], true ) && ( $host !== 'captaincore' || (int) ( $environment->server_id ?? 0 ) > 0 ) ) {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
             }
-            if ( $site->provider == 'kinsta' and $environment->database_username ) {
+            if ( $host == 'kinsta' and $environment->database_username ) {
                 $address_array = explode( ".", $environment->address );
                 $kinsta_ending = array_pop( $address_array );
                 if ( $kinsta_ending != "com" && $kinsta_ending != "cloud" ) {

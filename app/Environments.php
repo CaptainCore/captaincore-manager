@@ -31,6 +31,19 @@ class Environments extends DB {
         return $name === strtolower( $name ) || $name === strtoupper( $name ) && strlen( $name ) > 3 ? ucfirst( strtolower( $name ) ) : $name;
     }
 
+    /**
+     * Who hosts an environment: "captaincore" when it runs on one of our
+     * servers (server_id), else the site's provider. One site can mix them:
+     * Production and Staging at Kinsta, Development on our servers.
+     */
+    public static function host( $environment, $site = null ) {
+        if ( (int) ( $environment->server_id ?? 0 ) > 0 ) {
+            return 'captaincore';
+        }
+        $site = $site ?: Sites::get( (int) ( $environment->site_id ?? 0 ) );
+        return $site ? (string) $site->provider : '';
+    }
+
     /** A site's environment by name, whatever its case. */
     public static function for_site( $site_id, $name ) {
         foreach ( self::where( [ 'site_id' => (int) $site_id ] ) as $env ) {

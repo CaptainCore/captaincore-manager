@@ -202,7 +202,8 @@ Object.assign(Component.prototype, {
     if (!real || !real.site) return off;
     const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || 'operator') === 'operator';
     const envRow = (real.envs || []).find(e => e.environment === (s.env || 'Production')) || {};
-    const own = real.site.provider === 'captaincore';
+    // Per environment: a Kinsta site can have an environment on our servers.
+    const own = envRow.host ? envRow.host === 'captaincore' : real.site.provider === 'captaincore';
     if (!isOp || !own) return off;
     const vals = { hostShow: true };
     if (this.siteLeaf(s.siteTab) !== 'hosting') return vals;

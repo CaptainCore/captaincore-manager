@@ -2517,7 +2517,8 @@ class Component extends DCLogic {
       // Swap rides Kinsta's pre-push backup of production, so it needs a
       // Kinsta-linked site with both environments.
       canSwap: real && real.envs ? (real.site || {}).provider === 'kinsta' && !!(real.site || {}).provider_site_id
-        && real.envs.some(e => e.environment === 'Staging') && real.envs.some(e => e.environment === 'Production') : true,
+        && real.envs.some(e => e.environment === 'Staging' && (e.host || 'kinsta') === 'kinsta')
+        && real.envs.some(e => e.environment === 'Production' && (e.host || 'kinsta') === 'kinsta') : true,
       setEnvProd: () => this.setEnv('Production'), setEnvStag: () => this.setEnv('Staging'),
       // One tab per environment, as the Manager orders them (Production,
       // Staging, then the rest); Production alone until the site loads.

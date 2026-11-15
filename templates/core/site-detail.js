@@ -292,7 +292,8 @@ Object.assign(Component.prototype, {
   envDomainsVals(real, s) {
     if (s.siteTab !== 'sitedomains' || !real) return { sdSupported: false, sdUnsupported: false, sdRows: [], sdLoading: false, sdHasError: false, sdError: '' };
     const f = this.FLEET.find(x => String(x.id) === String(real.siteId));
-    const provider = ((real.site && real.site.provider) || (f && f.provider) || '').toLowerCase();
+    const envHost = (this.currentEnv(real, s) || {}).host;
+    const provider = (envHost || (real.site && real.site.provider) || (f && f.provider) || '').toLowerCase();
     const supported = provider === 'kinsta' || provider === 'rocketdotnet';
     if (!supported) return { sdSupported: false, sdUnsupported: true, sdRows: [], sdLoading: false, sdHasError: false, sdError: '' };
     const e = this.currentEnv(real, s) || {};
@@ -417,11 +418,22 @@ Object.assign(Component.prototype, {
       onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
   },
 
+  // Production (and Staging, when there is one) on our own servers: deploys
+  // between them go through the node, not the site's provider. Decided per
+  // environment, since a Kinsta site can have environments of ours too.
+  ownHostPair(real) {
+    if (!real || !real.site) return false;
+    const host = e => (e && e.host) || real.site.provider;
+    const prod = (real.envs || []).find(e => e.environment === 'Production');
+    const stag = (real.envs || []).find(e => e.environment === 'Staging');
+    return !!prod && host(prod) === 'captaincore' && (!stag || host(stag) === 'captaincore');
+  },
+
   realPush(real, direction) {
     if (!real.envs) return;
     const prod = real.envs.find(e => e.environment === 'Production');
     const stag = real.envs.find(e => e.environment === 'Staging');
-    if (real.site && real.site.provider === 'captaincore') {
+    if (this.ownHostPair(real)) {
       if (direction === 'down' && !stag) { this.realHostDeploy(real, 'staging', {}, 'production → new staging'); return; }
       if (!prod || !stag) { this.toast('This site has no ' + (prod ? 'staging' : 'production') + ' environment', { kind: 'error' }); return; }
       const what = this.state.depWhat || 'both';
@@ -485,7 +497,7 @@ Object.assign(Component.prototype, {
     const label = from + ' → ' + to;
     // A pull on a site with no Staging row creates one (realPullToNewStaging).
     const newStaging = dir === 'down' && !!(real && real.envs) && !real.envs.some(e => e.environment === 'Staging');
-    const ownHost = !!(real && real.site && real.site.provider === 'captaincore');
+    const ownHost = this.ownHostPair(real);
     return {
       depOpen: !!dir,
       depTitle: dir === 'up' ? 'Push to production' : dir === 'down' ? 'Pull to staging' : swap ? 'Swap staging and production' : 'Push to another site',
