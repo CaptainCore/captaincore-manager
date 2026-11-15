@@ -1608,6 +1608,9 @@ button.ccc-edited:hover{color:var(--ink)}
                   </sc-if>
                   <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
+                  <sc-if value="{{ envDeployShow }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ envDeployOpen }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M4 7h13 M14 4l3 3-3 3 M20 17H7 M10 14l-3 3 3 3"></path></svg>Deploy between environments…</span>
+                  </sc-if>
                 </section>
                 <!-- System tools — v1 Scripts-tab parity, rehomed here (tools.js) -->
                 <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:12px 16px;display:flex;flex-direction:column;gap:9px">
@@ -8436,6 +8439,63 @@ button.ccc-edited:hover{color:var(--ink)}
             </sc-if>
           </div>
         </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Deploy between environments (operators, environments.js) ══ -->
+  <sc-if value="{{ edOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ edClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule);background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 7%,var(--paper)),var(--paper) 70%)">
+          <div ref="{{ edIllo }}" style="width:64px;height:48px;flex:none"></div>
+          <span style="font:600 var(--fs-15) var(--sans)">{{ edTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ edClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Copy</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ edFroms }}" as="fr" hint-placeholder-count="2">
+                <div onClick="{{ fr.pick }}" style="cursor:pointer;border:1px solid {{ fr.bd }};background:{{ fr.bg }};border-radius:10px;padding:7px 11px;display:flex;gap:8px;align-items:center">
+                  <span style="width:14px;height:14px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 9px var(--sans);color:var(--brand-ink);background:var(--paper)">{{ fr.mark }}</span>
+                  <span style="font:600 var(--fs-13) var(--sans)">{{ fr.label }}</span><span class="cc-meta">{{ fr.desc }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Onto</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ edTos }}" as="to" hint-placeholder-count="2">
+                <div onClick="{{ to.pick }}" style="cursor:pointer;border:1px solid {{ to.bd }};background:{{ to.bg }};border-radius:10px;padding:7px 11px;display:flex;gap:8px;align-items:center">
+                  <span style="width:14px;height:14px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 9px var(--sans);color:var(--brand-ink);background:var(--paper)">{{ to.mark }}</span>
+                  <span style="font:600 var(--fs-13) var(--sans)">{{ to.label }}</span><span class="cc-meta">{{ to.desc }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ edShowWhat }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ edWhats }}" as="wh" hint-placeholder-count="3">
+                <div onClick="{{ wh.pick }}" style="cursor:pointer;border:1px solid {{ wh.bd }};background:{{ wh.bg }};border-radius:10px;padding:6px 11px;font:500 var(--fs-13) var(--sans)">{{ wh.label }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel)">
+            <sc-if value="{{ edWarn }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-13)/1.5 var(--sans);color:var(--warn)">{{ edNote }}</span></sc-if>
+            <sc-if value="{{ edCanGo }}" hint-placeholder-val="{{ true }}"><span class="cc-meta">{{ edNote }}</span></sc-if>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <span class="cc-meta">Runs in the jobs dock.</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ edClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <sc-if value="{{ edCanGo }}" hint-placeholder-val="{{ true }}">
+            <span onClick="{{ edGo }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px">{{ edGoLabel }}</span>
+          </sc-if>
+        </div>
       </div>
     </div>
   </sc-if>

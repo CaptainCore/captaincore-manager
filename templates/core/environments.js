@@ -71,6 +71,86 @@ Object.assign(Component.prototype, {
       .catch(e => this.setState({ eaLinking: false, eaLinkMsg: (e && e.message) || 'Could not reach Kinsta.' }));
   },
 
+  // ── Deploy between environments ──────────────────────────────
+  // The Manager decides how (captaincore_environment_deploy_plan); the same
+  // rule here explains it before anything runs.
+  envDeployPlan(real, from, to) {
+    if (!real || !from || !to || from === to) return '';
+    const host = e => (e && e.host) || (real.site && real.site.provider) || '';
+    const f = (real.envs || []).find(e => e.environment === from), t = (real.envs || []).find(e => e.environment === to);
+    if (!f || !t) return '';
+    if (host(t) === 'captaincore') return host(f) === 'captaincore' && String(f.server_id || '') === String(t.server_id || '') ? 'node' : 'backup';
+    if (host(f) === host(t) && host(t) === (real.site && real.site.provider) && host(t) !== 'captaincore') return 'provider';
+    return 'none';
+  },
+
+  openEnvDeploy() {
+    const real = this._detail;
+    if (!real || !real.envs || real.envs.length < 2) return;
+    const names = real.envs.map(e => e.environment);
+    const to = names.find(n => n !== 'Production' && (real.envs.find(e => e.environment === n) || {}).host === 'captaincore') || names[1];
+    this.setState({ edOpen: true, edFrom: 'Production', edTo: to, edWhat: 'both', edBusy: false });
+  },
+
+  submitEnvDeploy() {
+    const real = this._detail, s = this.state;
+    if (!real || s.edBusy) return;
+    const plan = this.envDeployPlan(real, s.edFrom, s.edTo);
+    if (!plan || plan === 'none') return;
+    const name = (real.site && real.site.name) || '';
+    const label = s.edFrom.toLowerCase() + ' → ' + s.edTo.toLowerCase() + ' on ' + name;
+    if (plan === 'provider') {
+      const f = real.envs.find(e => e.environment === s.edFrom), t = real.envs.find(e => e.environment === s.edTo);
+      this.setState({ edOpen: false });
+      this.realPushTo(real, f.environment_id, t.environment_id, label, { siteId: real.siteId, environment: t.environment, name });
+      return;
+    }
+    this.setState({ edBusy: true });
+    this.startJob({ label: 'deploy', target: label, command: plan === 'node' ? 'host deploy' : 'host refresh', siteId: real.siteId, environment: s.edTo, expand: true,
+      dispatch: () => this.api('/sites/' + real.siteId + '/environments/deploy', { method: 'POST', body: { from: s.edFrom, to: s.edTo, what: plan === 'node' ? s.edWhat : 'both' } })
+        .then(res => { if (!res || res.code) throw new Error((res && res.message) || 'Could not start the deploy'); return res; }),
+      onFinish: () => { this._detail = null; this.loadSiteDetail(real.siteId); } });
+    this.setState({ edOpen: false, edBusy: false });
+  },
+
+  envDeployVals(s) {
+    const real = this._detail;
+    const show = this.envIsOp() && !!(real && real.envs && real.envs.length > 1);
+    const base = { envDeployShow: show, envDeployOpen: () => this.openEnvDeploy() };
+    if (!s.edOpen || !show) return { ...base, edOpen: false };
+    const plan = this.envDeployPlan(real, s.edFrom, s.edTo);
+    const provider = (real.site && real.site.provider) || '';
+    const where = e => e.host === 'captaincore' ? 'on our servers' : (e.host || provider);
+    const chip = on => ({ bd: on ? 'var(--brand)' : 'var(--rule)', bg: on ? 'var(--brand-soft)' : 'var(--paper)', mark: on ? '✓' : '' });
+    const pick = (key, name) => () => this.setState(st => {
+      const next = { [key]: name };
+      if (key === 'edFrom' && st.edTo === name) next.edTo = (real.envs.find(e => e.environment !== name) || {}).environment;
+      if (key === 'edTo' && st.edFrom === name) next.edFrom = (real.envs.find(e => e.environment !== name) || {}).environment;
+      return next;
+    });
+    const f = s.edFrom || '', t = s.edTo || '';
+    const notes = {
+      node: 'Copies ' + f + ' onto ' + t + ' on the same server. A local backup of ' + t + ' is taken first, and ' + t + ' keeps its own address and search engine setting.',
+      backup: 'Replaces ' + t + ' with ' + f + '\'s latest backup (files and database). A local backup of ' + t + ' is taken first, and ' + t + ' keeps its own address and settings: back up ' + f + ' first for a fresher copy.',
+      provider: ucfirstSafe(provider) + ' pushes ' + f + ' to ' + t + ', the same as a push in its dashboard. It can take several minutes.',
+      none: 'Copying from our servers to ' + ucfirstSafe(provider) + ' is not possible yet.'
+    };
+    function ucfirstSafe(x) { x = String(x || 'the host'); return x.charAt(0).toUpperCase() + x.slice(1); }
+    return {
+      ...base, edOpen: true, edIllo: this.illo('container'),
+      edTitle: 'Deploy between environments',
+      edFroms: real.envs.map(e => ({ label: e.environment, desc: where(e), ...chip(f === e.environment), pick: pick('edFrom', e.environment) })),
+      edTos: real.envs.map(e => ({ label: e.environment, desc: where(e), ...chip(t === e.environment), pick: pick('edTo', e.environment) })),
+      edShowWhat: plan === 'node',
+      edWhats: [['both', 'Files and database'], ['files', 'Files'], ['database', 'Database']].map(([v, l]) => ({ label: l, ...chip((s.edWhat || 'both') === v), pick: () => this.setState({ edWhat: v }) })),
+      edNote: notes[plan] || '', edWarn: plan === 'none',
+      edCanGo: !!plan && plan !== 'none',
+      edGoLabel: plan === 'backup' ? 'Replace ' + t : 'Deploy to ' + t,
+      edClose: () => this.setState({ edOpen: false }),
+      edGo: () => this.submitEnvDeploy()
+    };
+  },
+
   envAddVals(s) {
     const real = this._detail;
     const show = this.envIsOp() && !!(real && real.envs && real.site);

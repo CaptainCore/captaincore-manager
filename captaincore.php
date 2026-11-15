@@ -7164,6 +7164,64 @@ function captaincore_site_hosting_backups_action_func( $request ) {
 	return [ 'token' => CaptainCore\Run::task( $argv ) ];
 }
 
+// How one environment of a site is copied onto another, by who hosts each:
+// both on the same one of our servers → the node copies (host deploy, files
+// and/or database); onto one of ours from anywhere else → the source's
+// latest backup replaces it (host refresh); both at the site's provider →
+// the provider's own push (the browser calls /sites/environments/push).
+// From ours to a provider is not possible yet.
+function captaincore_environment_deploy_plan( $site, $from_env, $to_env ) {
+	$fh = CaptainCore\Environments::host( $from_env, $site );
+	$th = CaptainCore\Environments::host( $to_env, $site );
+	if ( $th === 'captaincore' ) {
+		if ( $fh === 'captaincore' && (int) $from_env->server_id === (int) $to_env->server_id ) {
+			return 'node';
+		}
+		return 'backup';
+	}
+	if ( $fh === $th && $th === $site->provider && $fh !== 'captaincore' ) {
+		return 'provider';
+	}
+	return '';
+}
+
+function captaincore_site_environments_deploy_func( $request ) {
+	$site = CaptainCore\Sites::get( (int) $request['id'] );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	$params   = $request->get_json_params();
+	$from_env = CaptainCore\Environments::for_site( $site->site_id, (string) ( $params['from'] ?? '' ) );
+	$to_env   = CaptainCore\Environments::for_site( $site->site_id, (string) ( $params['to'] ?? '' ) );
+	$what     = (string) ( $params['what'] ?? 'both' );
+	if ( ! $from_env || ! $to_env || (int) $from_env->environment_id === (int) $to_env->environment_id
+		|| ! CaptainCore\Environments::valid_name( $from_env->environment ) || ! CaptainCore\Environments::valid_name( $to_env->environment ) ) {
+		return new WP_Error( 'invalid', 'Pick two different environments of this site.', [ 'status' => 400 ] );
+	}
+	if ( ! in_array( $what, [ 'both', 'files', 'database' ], true ) ) {
+		return new WP_Error( 'invalid', 'Deploy files, database or both.', [ 'status' => 400 ] );
+	}
+	$plan = captaincore_environment_deploy_plan( $site, $from_env, $to_env );
+	$from = strtolower( $from_env->environment );
+	$to   = strtolower( $to_env->environment );
+	if ( $plan === 'node' ) {
+		CaptainCore\ProcessLog::insert( "Deploy {$from} to {$to} ({$what})", (int) $site->site_id );
+		return [ 'method' => 'node', 'token' => CaptainCore\Run::task( [ 'host', 'deploy', $site->site, '--from=' . $from, '--to=' . $to, '--what=' . $what ] ) ];
+	}
+	if ( $plan === 'backup' ) {
+		if ( $what !== 'both' ) {
+			return new WP_Error( 'invalid', 'Copying across hosts replaces files and database together.', [ 'status' => 400 ] );
+		}
+		$target = $site->site . ( $to === 'production' ? '' : '-' . $to );
+		CaptainCore\ProcessLog::insert( "Refresh {$to} from {$from}'s latest backup", (int) $site->site_id );
+		return [ 'method' => 'backup', 'token' => CaptainCore\Run::task( [ 'host', 'refresh', $target, '--from=' . $from ] ) ];
+	}
+	if ( $plan === 'provider' ) {
+		return [ 'method' => 'provider', 'source_environment_id' => (int) $from_env->environment_id, 'target_environment_id' => (int) $to_env->environment_id ];
+	}
+	return new WP_Error( 'unsupported', "Copying {$from_env->environment} (on our servers) to {$to_env->environment} at " . ucfirst( (string) $site->provider ) . ' is not possible yet.', [ 'status' => 400 ] );
+}
+
 // Staging on our own servers: create it, or deploy between the two
 // environments. Both return a CLI job token the dashboard streams.
 function captaincore_site_hosting_deploy_func( $request ) {
@@ -12729,6 +12787,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-z][a-z0-9]{0,19})/backups/(?P<backup_id>[0-9a-f]{8,64})/restore-to-server', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_backup_restore_to_server_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments/deploy', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_environments_deploy_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
