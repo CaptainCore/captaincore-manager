@@ -772,7 +772,7 @@ class HostConfigs extends DB {
 		return [
 			'container' => $d->container ?? '', 'ip' => $d->container_ip ?? '', 'ssh_port' => (int) $env->port,
 			'environment' => $env->environment,
-			'image'     => self::PHP_IMAGES[ $config['php']['version'] ] ?? '', 'memory_mib' => (int) $config['memory_mb'], 'disk_gib' => 10,
+			'image'     => self::PHP_IMAGES[ $config['php']['version'] ] ?? '', 'memory_mib' => (int) $config['memory_mb'], 'disk_gib' => 50,
 			'primary'   => $primary, 'start' => $d->start ?? 'wordpress', 'title' => $site ? $site->site : 'New site',
 			'admin_user' => $d->wp_admin->user ?? 'admin', 'admin_email' => $d->wp_admin->email ?? '',
 		] + ( ( $d->start ?? '' ) === 'restore' && ! empty( $d->restore ) ? [ 'restore' => $d->restore ] : [] );
