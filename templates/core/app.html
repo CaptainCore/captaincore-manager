@@ -85,6 +85,22 @@
 .cc-btn .i{width:14px;height:14px;display:inline-block}
 .cc-pill{display:inline-flex;align-items:center;gap:6px;font:600 var(--fs-115) var(--sans);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .cc-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+/* Site page: environment pill and menu, section tabs, health cards. */
+.cc-env-pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px 0 10px;border-radius:999px;border:1px solid var(--rule);font:600 var(--fs-13) var(--sans);cursor:pointer;white-space:nowrap;transition:filter .12s}
+.cc-env-pill:hover{filter:brightness(.97)}
+.cc-env-item{width:100%;display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;border-radius:8px;cursor:pointer;text-align:left;font:inherit}
+.cc-env-item:hover{background:var(--panel-2)!important}
+.cc-site-tabs{display:flex;gap:24px;margin-top:20px;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.cc-site-tabs::-webkit-scrollbar{display:none}
+.cc-site-tabs button{border:0;border-bottom:2px solid transparent;background:none;padding:9px 0 11px;margin-bottom:-1px;font:500 var(--fs-14) var(--sans);cursor:pointer;white-space:nowrap;flex:none}
+.cc-site-tabs button:hover{color:var(--ink)!important}
+.cc-health{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
+.cc-health-card{display:flex;flex-direction:column;gap:5px;background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:13px 15px;min-width:0;transition:box-shadow .12s}
+.cc-health-card[style*="pointer"]:hover{box-shadow:0 0 0 1px var(--brand)}
+.cc-health-k{display:flex;align-items:center;gap:7px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.cc-health-v{font:700 19px/1.2 var(--sans);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-health-sub{font:400 var(--fs-12) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){.cc-site-tabs{gap:20px;-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:28px}.cc-health{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cc-health-card:last-child{grid-column:1 / -1}.cc-health-v{font-size:17px}}
 /* Server page: container cards. */
 .cc-ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:14px 16px 16px}
 .cc-ct-tile{position:relative;display:flex;flex-direction:column;gap:11px;padding:14px 14px 12px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);cursor:pointer;min-width:0;overflow:hidden;transition:border-color .15s,box-shadow .15s,transform .15s}
@@ -1413,15 +1429,32 @@ button.ccc-edited:hover{color:var(--ink)}
             </div>
           </sc-if>
           <sc-if value="{{ siteFound }}" hint-placeholder-val="{{ true }}">
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">
-            <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em">{{ dName }}</h1>
-            <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px">
-              <sc-for list="{{ envTabs }}" as="et" hint-placeholder-count="2">
-                <span onClick="{{ et.pick }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);background:{{ et.bg }};color:{{ et.fg }};white-space:nowrap">{{ et.label }}</span>
-              </sc-for>
-              <sc-if value="{{ envAddShow }}" hint-placeholder-val="{{ false }}">
-                <span onClick="{{ envAddOpenDlg }}" title="Add an environment" style="padding:5px 9px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">+</span>
-              </sc-if>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px">
+            <sc-if value="{{ dHasThumb }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ dThumb }}" alt="" class="cc-hide-sm" style="width:104px;height:66px;object-fit:cover;object-position:top;border-radius:9px;border:1px solid var(--rule);background:var(--panel-2);flex:none">
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+              <h1 style="margin:0;font:600 25px var(--sans);letter-spacing:-.02em;overflow-wrap:anywhere">{{ dName }}</h1>
+              <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <button type="button" onClick="{{ envSwToggle }}" aria-haspopup="menu" aria-expanded="{{ envSwOpen }}" class="cc-env-pill" style="{{ envSwStyle }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ envSwDot }};flex:none"></span>{{ envSwName }}<sc-if value="{{ envSwHasWhere }}" hint-placeholder-val="{{ true }}"><span style="font-weight:400;opacity:.85">· {{ envSwWhere }}</span></sc-if><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+                <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ dMetaPre }}<sc-if value="{{ dAcctIsLink }}" hint-placeholder-val="{{ false }}"><span onClick="{{ dAcctGo }}" title="Open account" style="color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ dAcct }}</span></sc-if><sc-if value="{{ dAcctPlain }}" hint-placeholder-val="{{ true }}">{{ dAcct }}</sc-if>{{ dMetaPost }}</span>
+                <sc-if value="{{ envSwOpen }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ ddClose }}" style="position:fixed;inset:0;z-index:39"></div>
+                  <div role="menu" style="position:absolute;top:42px;left:0;z-index:40;width:340px;max-width:calc(100vw - 32px);background:var(--paper);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);padding:6px;animation:ccfade .12s ease">
+                    <sc-for list="{{ envSwItems }}" as="ei" hint-placeholder-count="2">
+                      <button type="button" role="menuitem" onClick="{{ ei.pick }}" class="cc-env-item" style="background:{{ ei.rowBg }}">
+                        <span style="width:9px;height:9px;border-radius:50%;background:{{ ei.dot }};flex:none"></span>
+                        <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font:600 var(--fs-14) var(--sans);color:var(--ink)">{{ ei.name }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ei.sub }}</span></span>
+                        <span style="font:600 var(--fs-11) var(--sans);color:var(--ink-dim);background:var(--panel-2);border-radius:5px;padding:2px 7px;flex:none">{{ ei.where }}</span>
+                        <span style="width:14px;font:600 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">{{ ei.mark }}</span>
+                      </button>
+                    </sc-for>
+                    <sc-if value="{{ envAddShow }}" hint-placeholder-val="{{ false }}">
+                      <div style="border-top:1px solid var(--rule);margin:6px 4px 0;padding:6px 0 2px"><button type="button" onClick="{{ envAddOpenDlg }}" class="cc-env-item" style="background:transparent;color:var(--brand-ink);font:600 var(--fs-13) var(--sans)">+ Add an environment</button></div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
             </div>
             <div style="flex:1"></div>
             <div style="display:flex;align-items:center;gap:8px">
@@ -1443,7 +1476,6 @@ button.ccc-edited:hover{color:var(--ink)}
               </sc-if>
             </div>
           </div>
-          <div style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim);margin-top:6px">{{ dMetaPre }}<sc-if value="{{ dAcctIsLink }}" hint-placeholder-val="{{ false }}"><span onClick="{{ dAcctGo }}" title="Open account" style="color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ dAcct }}</span></sc-if><sc-if value="{{ dAcctPlain }}" hint-placeholder-val="{{ true }}">{{ dAcct }}</sc-if>{{ dMetaPost }}</div>
           <sc-if value="{{ rmMarked }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;align-items:center;gap:12px;margin-top:14px;border:1px solid var(--bad);background:var(--bad-soft);border-radius:11px;padding:12px 16px;flex-wrap:wrap">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--bad)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
@@ -1451,9 +1483,9 @@ button.ccc-edited:hover{color:var(--ink)}
               <button onClick="{{ rmCancel }}" style="border:1px solid var(--bad);background:var(--paper);color:var(--bad);font:600 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer;flex:none" style-hover="filter:brightness(.97)">Cancel removal request</button>
             </div>
           </sc-if>
-          <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:3px;margin-top:18px">
+          <div class="cc-site-tabs" role="tablist">
             <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="5">
-              <span onClick="{{ t.go }}" style="padding:5px 13px;border-radius:7px;cursor:pointer;font:500 var(--fs-14) var(--sans);color:{{ t.fg }};background:{{ t.bg }}" style-hover="color:var(--ink)">{{ t.label }}</span>
+              <button type="button" role="tab" onClick="{{ t.go }}" style="color:{{ t.fg }};border-bottom-color:{{ t.line }};font-weight:{{ t.fw }}">{{ t.label }}</button>
             </sc-for>
           </div>
           <!-- Leaf picker for the active group, on its OWN line (hidden for
@@ -1469,25 +1501,21 @@ button.ccc-edited:hover{color:var(--ink)}
           </sc-if>
 
           <sc-if value="{{ tabOverview }}" hint-placeholder-val="{{ true }}">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-top:16px">
-              <sc-for list="{{ statTiles }}" as="t" hint-placeholder-count="4">
-                <div onClick="{{ t.go }}" title="{{ t.tip }}" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s" style-hover="border-color:var(--brand)">
-                  <div style="display:flex;align-items:center;gap:7px;font:500 var(--fs-14) var(--sans);color:var(--ink-dim)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="{{ t.icon }}"></path></svg>
-                    <span>{{ t.k }}</span>
-                  </div>
-                  <div style="font:800 24px/1.1 var(--sans);letter-spacing:-.8px;margin-top:8px">{{ t.v }}</div>
-                  <div style="font:600 var(--fs-125) var(--sans);margin-top:5px;color:{{ t.deltaFg }}">{{ t.delta }}</div>
+            <div class="cc-health">
+              <sc-for list="{{ hCards }}" as="hc" hint-placeholder-count="5">
+                <div onClick="{{ hc.go }}" class="cc-health-card" style="border-color:{{ hc.bd }};cursor:{{ hc.cursor }}">
+                  <span class="cc-health-k"><span style="width:8px;height:8px;border-radius:50%;background:{{ hc.dot }};flex:none"></span>{{ hc.k }}</span>
+                  <span class="cc-health-v">{{ hc.v }}</span>
+                  <sc-if value="{{ hc.hasBars }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:flex-end;gap:2px;height:22px;margin-top:2px">
+                      <sc-for list="{{ visitBars }}" as="b" hint-placeholder-count="14">
+                        <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px;min-height:2px"></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <span class="cc-health-sub" style="color:{{ hc.subFg }}">{{ hc.sub }}</span>
                 </div>
               </sc-for>
-              <div onClick="{{ openStats }}" title="Open full stats" style="background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:14px 17px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:10px" style-hover="border-color:var(--brand)">
-                <div style="font:500 var(--fs-14) var(--sans);color:var(--ink-dim)">Visits · 14d</div>
-                <div style="flex:1;display:flex;align-items:flex-end;gap:3px;min-height:38px">
-                  <sc-for list="{{ visitBars }}" as="b" hint-placeholder-count="14">
-                    <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:3px 3px 2px 2px;min-height:3px"></div>
-                  </sc-for>
-                </div>
-              </div>
             </div>
             <!-- Network sites: multisite subsites, WP Freighter tenants (network.js) -->
             <sc-if value="{{ netTenantShow }}" hint-placeholder-val="{{ false }}">

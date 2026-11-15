@@ -1539,6 +1539,15 @@ class Site {
         $environments = Environments::fetch_environments( $this->site_id );
         $is_admin     = ( new User )->is_admin();
         $upload_uri   = rtrim( (string) get_option( 'options_remote_upload_uri' ), '/' );
+        // Open uptime outages per environment (the CLI's monitor run keeps
+        // captaincore_monitor_incidents), for the Uptime card on the site page.
+        global $wpdb;
+        $outages = [];
+        foreach ( (array) $wpdb->get_results( $wpdb->prepare(
+            "SELECT environment_id, started_at, http_code, error FROM {$wpdb->base_prefix}captaincore_monitor_incidents
+             WHERE site_id = %d AND status = 'open' ORDER BY started_at ASC", $this->site_id ) ) as $row ) {
+            $outages[ (int) $row->environment_id ] = $outages[ (int) $row->environment_id ] ?? $row;
+        }
        
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
@@ -1613,6 +1622,13 @@ class Site {
             $environment->quicksave_search = '';
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
             $environment->monitor_enabled  = intval( $environment->monitor_enabled );
+            $outage                        = $outages[ (int) $environment->environment_id ] ?? null;
+            $environment->uptime           = [
+                'monitored' => (bool) $environment->monitor_enabled,
+                'down'      => (bool) $outage,
+                'since'     => $outage ? $outage->started_at : null,
+                'code'      => $outage ? (int) $outage->http_code : null,
+            ];
             $environment->updates_enabled  = intval( $environment->updates_enabled );
             $environment->updates_exclude_plugins = !empty($environment->updates_exclude_plugins) ? explode(",", $environment->updates_exclude_plugins) : [];
             $environment->updates_exclude_themes  = !empty($environment->updates_exclude_themes) ? explode(",", $environment->updates_exclude_themes) : [];

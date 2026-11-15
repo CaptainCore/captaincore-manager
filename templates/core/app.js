@@ -2345,6 +2345,7 @@ class Component extends DCLogic {
     const tabs = this.SITE_TAB_GROUPS.filter(g => g.id !== 'hosting' || hostingVals.hostShow).map(g => ({ label: g.label,
       fg: g.id === group.id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: g.id === group.id ? 'var(--panel-2)' : 'transparent',
+      line: g.id === group.id ? 'var(--brand)' : 'transparent', fw: g.id === group.id ? 600 : 500,
       // Entering a group lands on its first leaf, unless the current leaf
       // already belongs to it (clicking the active tab is then a no-op).
       go: () => this.goSiteTab(g.id === group.id ? leaf : g.leaves[0][0]) }));
@@ -2506,18 +2507,16 @@ class Component extends DCLogic {
       // Split so the account name can be its own clickable segment. Design-mode
       // fixtures carry an account name but no id, so the link only renders when
       // there is somewhere to go; otherwise the name stays plain text.
-      dMetaPre: site.provider + ' · ',
+      // The environment pill carries the host and the health cards the
+      // versions, visits and storage, so the line under the name is the account.
+      dMetaPre: '',
       dAcct: site.account,
       dAcctIsLink: !!( site.account && site.accountId ),
       dAcctPlain: !( site.account && site.accountId ),
       dAcctGo: () => this.openAccount(site.accountId),
       // The selected environment's own facts (another environment can run
       // another WordPress, at another host); the site's when it has none.
-      dMetaPost: (isPlain ? ' · Plain site · ' : ' · WP ' + ((curEnv && curEnv.core) || site.core) + ' · ')
-        + (curEnv && s.env !== 'Production' ? (curEnv.visits ? Number(curEnv.visits).toLocaleString() + ' visits/wk · ' : '')
-          + (curEnv.storage ? this.fmtStorage(curEnv.storage) + ' · ' : '')
-          : site.visits + ' visits/wk · ' + site.storage + ' · ')
-        + s.env + (curEnv && curEnv.host && real && real.site && curEnv.host !== real.site.provider ? ' (on our servers)' : ''),
+      dMetaPost: isPlain ? (site.account ? ' · ' : '') + 'Plain site' : '',
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
       // Swap rides Kinsta's pre-push backup of production, so it needs a
@@ -2546,6 +2545,7 @@ class Component extends DCLogic {
       ...this.computeDeployConfirm(real, s, site),
       ...this.computePushToOther(real, s, site),
       dTabs: tabs,
+      ...(this.siteHeadVals ? this.siteHeadVals(real, s, site, curEnv) : {}),
       dSegs: siteSegs, dSegsShow: siteSegs.length > 0,
       // Flags key off the normalized LEAF, so a legacy 'addons' link still
       // renders the plugins list.
@@ -2562,17 +2562,7 @@ class Component extends DCLogic {
       ...this.envDomainsVals(real, s),
       credRows,
       ...this.sftpCopyVals(real, s),
-      statTiles: [
-        { k: 'Visits / wk', v: site.visits, delta: real ? '' : '+8%', deltaFg: 'var(--ok)', act: 'stats', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
-        // Counts come from the overview prefetch (loadOverviewCounts). Until it
-        // lands the tile shows an ellipsis, not the old permanent em-dash —
-        // and an empty list is a real zero, which `real.backups ? …` swallowed.
-        { k: 'Backups', v: real ? this.statCount(real.backups) : '1,284',
-          delta: real && real.backupsSince ? 'since ' + real.backupsSince : 'nightly + PITR',
-          deltaFg: 'var(--ink-dim)', act: 'backups', icon: 'M21 8v13H3V8 M1 3h22v5H1 M10 12h4' },
-        { k: 'Versions', v: real ? this.statCount(real.qs) : '412', delta: 'quicksaves + updates', deltaFg: 'var(--ink-dim)', act: 'versions', icon: 'M6 3v12 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M18 9a9 9 0 0 1-9 9' },
-        { k: 'Timeline', v: real ? (Array.isArray(real.timeline) ? String(real.timeline.length) : '—') : '86', delta: real ? 'process log' : 'last note 2h ago', deltaFg: 'var(--ink-dim)', act: 'timeline', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 3' }
-      ].map(t => ({ ...t, tip: 'Open ' + t.act, go: () => this.goSiteTab(t.act) })),
+      // The Overview's health cards (hCards) come from siteHeadVals (site-overview.js).
       openStats: () => this.goSiteTab('stats'),
       statG: s.statG, statR: s.statR,
       ddStatGOpen: s.ddOpen === 'statG',

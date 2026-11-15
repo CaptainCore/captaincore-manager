@@ -117,9 +117,13 @@ Object.assign(Component.prototype, {
     ]).then(([qs, logs]) => {
       if (this._detail !== real || real.qsEnv !== env) return;
       const updatesByHash = {};
+      let lastUpdate = null;
       (Array.isArray(logs) ? logs : []).forEach(l => {
         if (l && l.hash_after) updatesByHash[l.hash_after] = l;
+        if (l && Number(l.created_at) > Number((lastUpdate || {}).created_at || 0)) lastUpdate = l;
       });
+      // The newest managed update run, for the Overview's Updates card.
+      real.lastUpdate = lastUpdate;
       real.qs = (Array.isArray(qs) ? qs : []).map(row => {
         const upd = updatesByHash[row.hash];
         const comps = (Number(row.theme_count) || 0) + (Number(row.plugin_count) || 0);
