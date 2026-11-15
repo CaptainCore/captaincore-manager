@@ -63,6 +63,10 @@ Object.assign(Component.prototype, {
       envSwToggle: () => this.setState(st => ({ ddOpen: st.ddOpen === 'env' ? '' : 'env', ddQ: '' })),
       dThumb: thumb, dHasThumb: this.thumbReady(thumb),
       ...this.headLinkVals(curEnv),
+      // The account is an icon (its name in the tooltip) so a long name never
+      // crowds the header; it opens the account when there is one to open.
+      dAcctIcon: !!site.account, dAcctTitle: site.account ? 'Account: ' + site.account : '',
+      dAcctCursor: site.accountId ? 'pointer' : 'default',
       ...this.healthCardVals(real, s, site, curEnv)
     };
   },

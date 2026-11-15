@@ -2516,7 +2516,7 @@ class Component extends DCLogic {
       dAcctGo: () => this.openAccount(site.accountId),
       // The selected environment's own facts (another environment can run
       // another WordPress, at another host); the site's when it has none.
-      dMetaPost: isPlain ? (site.account ? ' · ' : '') + 'Plain site' : '',
+      dMetaPost: isPlain ? 'Plain site' : '', dHasMetaPost: isPlain,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
       // Swap rides Kinsta's pre-push backup of production, so it needs a
