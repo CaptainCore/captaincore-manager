@@ -62,14 +62,30 @@ Object.assign(Component.prototype, {
       envSwDot: dot, envSwOpen: open, envSwItems: items, envSwCount: items.length > 1 ? items.length + ' environments' : '',
       envSwToggle: () => this.setState(st => ({ ddOpen: st.ddOpen === 'env' ? '' : 'env', ddQ: '' })),
       dThumb: thumb, dHasThumb: this.thumbReady(thumb),
+      ...this.headLinkVals(curEnv),
       ...this.healthCardVals(real, s, site, curEnv)
     };
   },
 
-  // Connect card: the site's two addresses on top, then SFTP / SSH /
+  // The environment's address and WordPress admin sit in the header under the
+  // name (they follow the environment switcher): each opens in a new tab, and
+  // the address has a copy button.
+  headLinkVals(curEnv) {
+    const url = curEnv && curEnv.home_url ? String(curEnv.home_url) : '';
+    const plain = !!(curEnv && curEnv.details && typeof curEnv.details === 'object' && curEnv.details.start === 'plain');
+    const host = url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+    const admin = url && !plain ? url.replace(/\/$/, '') + '/wp-admin' : '';
+    return { dHasUrl: !!url, dUrlHost: host, dUrlTitle: 'Open ' + url, dHasAdmin: !!admin, dAdminTitle: 'Open ' + admin,
+      dUrlOpen: () => { if (url) this.safeOpen(url); },
+      dAdminOpen: () => { if (admin) this.safeOpen(admin); },
+      dUrlCopy: () => { try { navigator.clipboard.writeText(url); } catch (e) {} this.toast('Copied ' + host, { kind: 'success', timeout: 1800 }); } };
+  },
+
+  // Connect card: SFTP / SSH /
   // Database tabs over the Credentials rows (credRows from app.js, each row
   // keeps its copy, reveal and open handlers). Unknown keys go under SFTP.
   connectVals(credRows, s, real) {
+    // Site URL and WP admin live in the header (headLinkVals).
     const LINKS = ['Site URL', 'WP admin'], SSH = ['SSH'], DB = ['Database', 'DB user', 'DB password'];
     const rows = credRows || [];
     const groups = {
@@ -81,7 +97,6 @@ Object.assign(Component.prototype, {
     const tab = names.includes(s.connTab) ? s.connTab : (names[0] || 'SFTP');
     const notes = { SFTP: 'For any SFTP app, such as FileZilla or Transmit.', SSH: 'Connect from a terminal.', Database: 'Changes here are live. Take a backup first.' };
     return {
-      connLinks: rows.filter(r => LINKS.includes(r.k)),
       connTabs: names.map(t => ({ label: t, pressed: t === tab ? 'true' : 'false',
         bg: t === tab ? 'var(--paper)' : 'transparent', fg: t === tab ? 'var(--ink)' : 'var(--ink-dim)',
         sh: t === tab ? '0 1px 2px rgba(0,0,0,.12)' : 'none', pick: () => this.setState({ connTab: t }) })),
