@@ -31,6 +31,9 @@ class HostConfigs extends DB {
 		'8.5' => 'cc-wp-php85',
 	];
 
+	/** Scheduled task presets; daily and weekly (Mondays) take an HH:MM time in UTC. */
+	const CRON_SCHEDULES = [ 'every-5-minutes', 'every-15-minutes', 'hourly', 'daily', 'weekly' ];
+
 	const LIMITS = [
 		'workers'             => [ 1, 8 ],
 		'max_workers'         => [ 1, 16 ],
@@ -315,6 +318,40 @@ class HostConfigs extends DB {
 			return new \WP_Error( 'invalid', 'At most 20 SSH keys per environment.', [ 'status' => 400 ] );
 		}
 
+		// Scheduled tasks: one command each on a preset schedule, run as the
+		// site user in ~/public (host apply: a systemd timer per task). They run
+		// only while `cron` is on.
+		$out['cron_jobs'] = [];
+		$cron_names       = [];
+		foreach ( (array) ( $in['cron_jobs'] ?? [] ) as $j ) {
+			$j    = (array) $j;
+			$name = strtolower( trim( (string) ( $j['name'] ?? '' ) ) );
+			if ( ! preg_match( '/^[a-z][a-z0-9-]{0,19}$/', $name ) || isset( $cron_names[ $name ] ) ) {
+				return new \WP_Error( 'invalid', "Task name \"{$name}\" must be unique, start with a letter and use a-z, 0-9 and dashes (20 at most).", [ 'status' => 400 ] );
+			}
+			$schedule = (string) ( $j['schedule'] ?? '' );
+			if ( ! in_array( $schedule, self::CRON_SCHEDULES, true ) ) {
+				return new \WP_Error( 'invalid', "The {$name} task needs a schedule: " . implode( ', ', self::CRON_SCHEDULES ) . '.', [ 'status' => 400 ] );
+			}
+			$command = trim( (string) ( $j['command'] ?? '' ) );
+			if ( $command === '' || strlen( $command ) > 500 || preg_match( '/[\x00-\x1f\x7f]/', $command ) ) {
+				return new \WP_Error( 'invalid', "The {$name} task needs a command on one line (500 characters at most).", [ 'status' => 400 ] );
+			}
+			$task = [ 'name' => $name, 'schedule' => $schedule, 'command' => $command, 'enabled' => ! isset( $j['enabled'] ) || ! empty( $j['enabled'] ) ];
+			if ( in_array( $schedule, [ 'daily', 'weekly' ], true ) ) {
+				$at = (string) ( $j['at'] ?? '03:00' );
+				if ( ! preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $at ) ) {
+					return new \WP_Error( 'invalid', "The {$name} task's time must be HH:MM (UTC).", [ 'status' => 400 ] );
+				}
+				$task['at'] = $at;
+			}
+			$cron_names[ $name ] = true;
+			$out['cron_jobs'][]  = $task;
+		}
+		if ( count( $out['cron_jobs'] ) > 10 ) {
+			return new \WP_Error( 'invalid', 'At most 10 scheduled tasks per environment.', [ 'status' => 400 ] );
+		}
+
 		// Apps: long-running programs beside the site (a chat or realtime
 		// server), each a systemd service in the container that runs as the
 		// site user, reached at a path of the site or a hostname of its own.
@@ -402,6 +439,7 @@ class HostConfigs extends DB {
 		$config['page_cache'] = self::sanitize_page_cache( $config['page_cache'] ?? null, $none );
 		$config['apps']      = $config['apps'] ?? [];
 		$config['ssh_keys']  = $config['ssh_keys'] ?? [];
+		$config['cron_jobs'] = $config['cron_jobs'] ?? [];
 		return $config;
 	}
 

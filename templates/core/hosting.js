@@ -197,6 +197,54 @@ Object.assign(Component.prototype, {
     this.hostBackupJob('restore', b.name, what, 'restore ' + words);
   },
 
+  // ── Scheduled tasks card ────────────────────────────────────────────────
+  // Hosting setting cron_jobs: {name, schedule (preset), at (HH:MM UTC for
+  // daily/weekly), command, enabled}. host apply makes a systemd timer each,
+  // run as the site user in ~/public, and only while the cron switch is on.
+  hostCronLabel(j) {
+    const at = j.at || '03:00';
+    return { 'every-5-minutes': 'Every 5 minutes', 'every-15-minutes': 'Every 15 minutes', hourly: 'Every hour',
+      daily: 'Daily at ' + at + ' UTC', weekly: 'Mondays at ' + at + ' UTC' }[j.schedule] || j.schedule;
+  },
+
+  hostTaskVals(c, d, s, set) {
+    const runs = (d.result && d.result.cron_jobs) || {};
+    const sched = s.hostTSched || 'daily';
+    return {
+      hostTaskRows: (c.cron_jobs || []).map((j, i) => {
+        const r = runs[j.name];
+        const ran = r && r.last_run;
+        return { name: j.name, command: j.command, when: this.hostCronLabel(j),
+          last: !ran ? 'No run yet' : (r.result === 'success' ? 'Ran ' : 'Failed (exit ' + (r.exit || '?') + ') ') + r.last_run,
+          lastFg: ran && r.result !== 'success' ? 'var(--bad)' : 'var(--ink-dim)',
+          onMark: j.enabled !== false ? '✓' : '',
+          toggle: () => set(cc => { cc.cron_jobs[i].enabled = cc.cron_jobs[i].enabled === false; }),
+          remove: () => set(cc => { cc.cron_jobs.splice(i, 1); }) };
+      }),
+      hostTaskEmpty: !(c.cron_jobs || []).length,
+      hostTaskCronOff: c.cron === false,
+      hostTName: s.hostTName || '', onHostTName: e => this.setState({ hostTName: e.target.value }),
+      hostTCmd: s.hostTCmd || '', onHostTCmd: e => this.setState({ hostTCmd: e.target.value }),
+      hostTAt: s.hostTAt || '03:00', onHostTAt: e => this.setState({ hostTAt: e.target.value }),
+      hostTNeedsAt: sched === 'daily' || sched === 'weekly',
+      hostTSchedChips: [['every-5-minutes', '5 min'], ['every-15-minutes', '15 min'], ['hourly', 'Hourly'], ['daily', 'Daily'], ['weekly', 'Weekly']].map(([k, label]) => ({ label,
+        fg: sched === k ? 'var(--brand-ink)' : 'var(--ink-dim)', bg: sched === k ? 'var(--brand-soft)' : 'transparent',
+        bd: sched === k ? 'var(--brand)' : 'var(--rule)', pick: () => this.setState({ hostTSched: k }) })),
+      hostAddTask: () => {
+        const name = (this.state.hostTName || '').trim().toLowerCase(), command = (this.state.hostTCmd || '').trim();
+        const at = (this.state.hostTAt || '03:00').trim();
+        if (!/^[a-z][a-z0-9-]{0,19}$/.test(name)) { this.toast('Name: a-z, 0-9 and dashes, starting with a letter', { kind: 'error' }); return; }
+        if ((c.cron_jobs || []).some(j => j.name === name)) { this.toast('There is already a task called ' + name, { kind: 'error' }); return; }
+        if (!command || command.length > 500) { this.toast('Enter the command to run (one line)', { kind: 'error' }); return; }
+        if ((sched === 'daily' || sched === 'weekly') && !/^([01]\d|2[0-3]):[0-5]\d$/.test(at)) { this.toast('Time is HH:MM in UTC', { kind: 'error' }); return; }
+        const task = { name, schedule: sched, command, enabled: true };
+        if (sched === 'daily' || sched === 'weekly') task.at = at;
+        set(cc => { cc.cron_jobs = cc.cron_jobs || []; cc.cron_jobs.push(task); });
+        this.setState({ hostTName: '', hostTCmd: '' });
+      }
+    };
+  },
+
   computeHosting(real, s) {
     const off = { hostShow: false };
     if (!real || !real.site) return off;
@@ -261,7 +309,7 @@ Object.assign(Component.prototype, {
         .concat(d.stack === 'plain' ? [] : [{ name: 'MariaDB', illo: this.illo('database') }]),
       hostIcoArrow: this.icon('arrow'), hostBkIllo: this.illo('backups'),
       hostIcoDomains: this.icon('globe'), hostIcoPhp: this.icon('code'), hostIcoRedirects: this.icon('redirect'), hostIcoAccess: this.icon('shield'),
-      hostIcoTools: this.icon('wrench'), hostIcoBackups: this.icon('layers'), hostIcoHistory: this.icon('history'),
+      hostIcoTools: this.icon('wrench'), hostIcoBackups: this.icon('layers'), hostIcoHistory: this.icon('history'), hostIcoTasks: this.icon('clock'),
       hostHasCt: !!(d.container && d.server),
       hostOpenCt: () => { if (d.container && d.server) this.openContainer(d.server.server_id, d.container); },
       hostServer: d.server ? d.server.name + ' · ' + d.server.address : '',
@@ -329,6 +377,8 @@ Object.assign(Component.prototype, {
         set(cc => { cc.ip_deny = cc.ip_deny || []; if (!cc.ip_deny.includes(v)) cc.ip_deny.push(v); });
         this.setState({ hostDenyIn: '' });
       },
+      // Scheduled tasks (cron_jobs): last runs come from the latest apply's result.
+      ...this.hostTaskVals(c, d, s, set),
       hostPpOn: !!(c.password_protect && c.password_protect.enabled), hostPpMark: c.password_protect && c.password_protect.enabled ? '✓' : '',
       toggleHostPp: () => set(cc => { cc.password_protect = cc.password_protect || {}; cc.password_protect.enabled = !cc.password_protect.enabled; }),
       hostPpUser: (c.password_protect && c.password_protect.username) || '',
