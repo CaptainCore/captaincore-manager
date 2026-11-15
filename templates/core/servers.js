@@ -509,6 +509,63 @@ Object.assign(Component.prototype, {
     try { return localStorage.getItem('cc.servers.ctView') || 'grid'; } catch (e) { return 'grid'; }
   },
 
+  // Right-click a container on the server page. What it offers depends on
+  // what the container is: a site's (open the site, restart, Remove from this
+  // server, the same job as the Hosting tab), a removed site or an old root
+  // (Delete now instead of in 7 days) or a scratch container no site uses
+  // (Delete, which parks it first). Deletes go through
+  // POST /servers/{id}/containers/{ct}/purge (the CLI's `node purge`).
+  containerCtxEntries(serverId, c, what) {
+    const linked = !!c.site && !what;
+    const build = /^build-php8\d$/.test(c.name);
+    const running = c.status === 'Running';
+    const env = linked ? (c.site.environment || 'Production') : '';
+    const where = linked ? c.site.name + (env !== 'Production' ? ' · ' + env.toLowerCase() : '') : '';
+    const refresh = () => { this.loadServerStats(); this.loadServers(true); };
+    const purge = async () => {
+      const msg = what
+        ? 'Delete ' + c.name + ' now? ' + what.replace(/, deleted .*$/, '') + '. It and its local backups on this server are deleted now instead of in 7 days. Off-site backups stay. This cannot be undone.'
+        : 'Delete ' + c.name + '? No site uses it. It is stopped and deleted with its files, database and local backups. This cannot be undone.';
+      if (!(await this.uiConfirm(msg, { label: 'Delete' }))) return;
+      const tid = this.toast('Deleting ' + c.name + '…', { kind: 'loading' });
+      this.api('/servers/' + serverId + '/containers/' + encodeURIComponent(c.name) + '/purge', { method: 'POST', body: { confirm: c.name } }).then(res => {
+        if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not delete ' + c.name, { kind: 'error', timeout: 8000 }); return; }
+        this.updateToast(tid, c.name + ' deleted', { kind: 'success' });
+        refresh();
+      }).catch(e => this.updateToast(tid, (e && e.message) || 'Could not delete ' + c.name, { kind: 'error' }));
+    };
+    const remove = async () => {
+      const prod = env === 'Production';
+      const msg = 'Remove ' + where + ' from this server? A last local backup is taken, then the container is stopped' + (prod ? ', the site goes offline and is marked inactive in the fleet' : ' and the environment goes offline') + '. The container is kept for 7 days (right-click it again to delete it sooner). Off-site backups stay.';
+      if (!(await this.uiConfirm(msg, { label: 'Remove' }))) return;
+      const siteId = String(c.site.site_id);
+      this.startJob({ label: 'remove', target: where, command: 'host site remove', siteId, environment: env,
+        dispatch: () => this.api('/sites/' + siteId + '/hosting/remove', { method: 'POST', body: { environment: env, confirm: c.site.name } }),
+        onFinish: () => {
+          if (prod) this.FLEET = (this.FLEET || []).filter(f => String(f.id) !== siteId);
+          refresh();
+        } });
+    };
+    const restart = () => {
+      const tid = this.toast('Restarting ' + c.name + '…', { kind: 'loading' });
+      this.api('/servers/' + serverId + '/containers/' + encodeURIComponent(c.name) + '/restart', { method: 'POST', body: { what: 'container' } }).then(res => {
+        if (!res || res.code) { this.updateToast(tid, (res && res.message) || 'Could not restart ' + c.name, { kind: 'error', timeout: 8000 }); return; }
+        this.updateToast(tid, c.name + ' restarted', { kind: 'success' });
+        refresh();
+      }).catch(e => this.updateToast(tid, (e && e.message) || 'Could not restart ' + c.name, { kind: 'error' }));
+    };
+    return [
+      { label: 'Open container', act: () => this.openContainer(serverId, c.name) },
+      ...(linked ? [{ label: 'Open site', act: () => { this.setState({ env }); this.openSite(String(c.site.site_id)); } }] : []),
+      ...(linked && running ? [{ label: 'Restart container', act: restart }] : []),
+      { label: 'Copy name', act: () => this.ctxCopy(c.name, 'Container name') },
+      ...(c.ip ? [{ label: 'Copy IP', act: () => this.ctxCopy(c.ip, 'IP') }] : []),
+      ...(linked ? [{ label: 'Remove from this server…', danger: true, act: remove }] : []),
+      ...(what ? [{ label: 'Delete now…', danger: true, act: purge }] : []),
+      ...(!linked && !what && !build ? [{ label: 'Delete container…', danger: true, act: purge }] : [])
+    ];
+  },
+
   serverCtVals(s, d) {
     const view = this.serverCtView();
     const C1 = 'var(--chart-1)';
@@ -527,6 +584,7 @@ Object.assign(Component.prototype, {
       const tone = running ? 'var(--ok)' : what ? 'var(--ink-dim)' : 'var(--warn)';
       return { tier: what ? 2 : c.site ? 0 : 1, sortName: (c.site ? c.site.name + ' ' + (env || '') : c.name).toLowerCase(),
         name: c.name, illo: this.illo('container'), openCt: () => this.openContainer(s.serverId, c.name),
+        ctx: (e) => this.openCtxMenu(e, this.containerCtxEntries(s.serverId, c, what)),
         key: (e) => { if (e.key === 'Enter' && e.target === e.currentTarget) { e.preventDefault(); this.openContainer(s.serverId, c.name); } },
         site: what || (c.site ? c.site.name + (env ? ' · ' + env.toLowerCase() : '') : 'Not linked to a site'),
         siteName: what || (c.site ? c.site.name : 'Not linked to a site'), envLabel: what ? '' : env, hasEnv: !what && !!env,

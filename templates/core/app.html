@@ -5126,7 +5126,7 @@ button.ccc-edited:hover{color:var(--ink)}
               <sc-if value="{{ sdCtGrid }}" hint-placeholder-val="{{ true }}">
                 <div class="cc-ct-grid">
                   <sc-for list="{{ sdCts }}" as="ct" hint-placeholder-count="6">
-                    <div class="cc-ct-tile" onClick="{{ ct.openCt }}" onKeyDown="{{ ct.key }}" role="link" tabindex="0" title="Open {{ ct.name }}" style="--h:{{ ct.hue }};opacity:{{ ct.dim }}">
+                    <div class="cc-ct-tile" onClick="{{ ct.openCt }}" onContextMenu="{{ ct.ctx }}" onKeyDown="{{ ct.key }}" role="link" tabindex="0" title="Open {{ ct.name }}" style="--h:{{ ct.hue }};opacity:{{ ct.dim }}">
                       <div style="display:flex;align-items:flex-start;gap:10px;min-width:0">
                         <div ref="{{ ct.illo }}" style="width:44px;height:33px;flex:none"></div>
                         <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
@@ -5149,6 +5149,7 @@ button.ccc-edited:hover{color:var(--ink)}
                 <div style="display:grid;grid-template-columns:minmax(200px,1.6fr) 90px 80px minmax(170px,1.2fr) minmax(150px,1fr) 110px 70px;min-width:900px">
                   <span style="padding:8px 16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Container</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Status</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">CPU</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Memory</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Disk</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">IP</span><span style="padding:8px 6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">SSH</span>
                   <sc-for list="{{ sdCts }}" as="ct" hint-placeholder-count="2">
+                    <div onContextMenu="{{ ct.ctx }}" style="display:contents">
                     <div style="padding:10px 16px;border-top:1px solid var(--rule);display:flex;align-items:center;gap:10px;min-width:0"><div ref="{{ ct.illo }}" style="width:40px;height:30px"></div><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span onClick="{{ ct.openCt }}" style="font:600 var(--fs-13) var(--mono);cursor:pointer;color:var(--ink);align-self:flex-start" style-hover="color:var(--brand-ink);text-decoration:underline">{{ ct.name }} →</span><span onClick="{{ ct.open }}" style="font:400 var(--fs-12) var(--sans);color:{{ ct.siteFg }};cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ct.site }}</span></div></div>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:500 var(--fs-12) var(--sans);color:{{ ct.statusFg }}">{{ ct.status }}</span>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-13) var(--sans);font-variant-numeric:tabular-nums">{{ ct.cpu }}</span>
@@ -5156,6 +5157,7 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--sans)">{{ ct.disk }}</span>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--mono)">{{ ct.ip }}</span>
                     <span style="padding:10px 6px;border-top:1px solid var(--rule);font:400 var(--fs-12) var(--mono)">{{ ct.ssh }}</span>
+                    </div>
                   </sc-for>
                 </div>
               </div>

@@ -7780,6 +7780,45 @@ function captaincore_servers_container_restart_func( $request ) {
 	return [ 'restarted' => $what, 'health' => (string) ( $data->health ?? '' ) ];
 }
 
+// Servers → right-click a container → Delete now: a parked container (a
+// removed site) or an old root (what a rebuild replaced) is deleted with its
+// volumes instead of waiting its 7 days; a container no site environment uses
+// (scratch) is parked first, then deleted. A container a site still runs in
+// is refused: that goes through Remove from this server (a last backup, DNS,
+// the site marked inactive). The body repeats the container name.
+function captaincore_servers_container_purge_func( $request ) {
+	$id = (int) $request['id'];
+	$ct = (string) $request['ct'];
+	if ( ! CaptainCore\Servers::get( $id ) ) {
+		return new WP_Error( 'not_found', 'Server not found.', [ 'status' => 404 ] );
+	}
+	if ( (string) ( $request->get_json_params()['confirm'] ?? '' ) !== $ct ) {
+		return new WP_Error( 'confirm', 'Confirm with the container name.', [ 'status' => 400 ] );
+	}
+	if ( preg_match( '/^build-php8\d$/', $ct ) ) {
+		return new WP_Error( 'invalid', 'An image build is not a site container.', [ 'status' => 400 ] );
+	}
+	$parked = (bool) preg_match( '/-(removed-\d{8}|oldroot-\d{14})$/', $ct );
+	if ( ! $parked && captaincore_server_container_env( $id, $ct ) ) {
+		return new WP_Error( 'in_use', 'A site runs in this container. Use Remove from this server instead.', [ 'status' => 409 ] );
+	}
+	$args = [ 'node', 'purge', (string) $id, $ct, '--json' ];
+	if ( ! $parked ) {
+		$args[] = '--park';
+	}
+	$res = CaptainCore\Run::execute( $args );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ) );
+	if ( ! $data || ( $data->status ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'purge_failed', 'Could not delete ' . $ct . ': ' . ( $data->error ?? substr( (string) ( $res['response'] ?? '' ), 0, 300 ) ), [ 'status' => 502 ] );
+	}
+	CaptainCore\ActivityLog::log( 'deleted', 'server', $id, $ct, 'Deleted container ' . $ct . ' and its volumes' );
+	return [ 'purged' => array_values( (array) ( $data->purged ?? [] ) ), 'container' => (string) ( $data->container ?? $ct ) ];
+}
+
 // Container page → Install WordPress on a plain site: the CLI's
 // `host wordpress install` (backup, MariaDB on, files moved aside, install,
 // `/api host-wordpress-installed`, apply, sync) as a job the dashboard streams.
@@ -13148,6 +13187,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/restart', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_servers_container_restart_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/servers/(?P<id>[\d]+)/containers/(?P<ct>[a-z0-9][a-z0-9-]{0,62})/purge', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_servers_container_purge_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
