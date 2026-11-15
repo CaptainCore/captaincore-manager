@@ -1401,6 +1401,9 @@ button.ccc-edited:hover{color:var(--ink)}
               <sc-for list="{{ envTabs }}" as="et" hint-placeholder-count="2">
                 <span onClick="{{ et.pick }}" style="padding:5px 12px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);background:{{ et.bg }};color:{{ et.fg }};white-space:nowrap">{{ et.label }}</span>
               </sc-for>
+              <sc-if value="{{ envAddShow }}" hint-placeholder-val="{{ false }}">
+                <span onClick="{{ envAddOpenDlg }}" title="Add an environment" style="padding:5px 9px;border-radius:7px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">+</span>
+              </sc-if>
             </div>
             <div style="flex:1"></div>
             <div style="display:flex;align-items:center;gap:8px">
@@ -8433,6 +8436,74 @@ button.ccc-edited:hover{color:var(--ink)}
             </sc-if>
           </div>
         </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Add an environment (operators, environments.js) ══ -->
+  <sc-if value="{{ eaOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ eaClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:8vh 20px">
+      <div onClick="{{ stopProp }}" style="width:560px;max-width:calc(100vw - 40px);max-height:84vh;overflow-y:auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);animation:ccfade .15s ease">
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--rule);background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 7%,var(--paper)),var(--paper) 70%)">
+          <div ref="{{ eaIllo }}" style="width:64px;height:48px;flex:none"></div>
+          <span style="font:600 var(--fs-15) var(--sans);min-width:0;overflow:hidden;text-overflow:ellipsis">{{ eaTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ eaClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <sc-if value="{{ eaIsKinsta }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel)">
+              <span style="font:500 var(--fs-13) var(--sans)">Environments at Kinsta</span>
+              <span class="cc-meta">Premium environments made in MyKinsta are linked here under their own names when the site syncs with Kinsta.</span>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span onClick="{{ eaLink }}" class="cc-btn" style="font-size:var(--fs-125)">{{ eaLinkLabel }}</span>
+                <sc-if value="{{ eaHasLinkMsg }}" hint-placeholder-val="{{ false }}"><span class="cc-meta">{{ eaLinkMsg }}</span></sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <span style="font:600 var(--fs-13) var(--sans)">New environment on our servers</span>
+          <label style="display:flex;flex-direction:column;gap:6px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Name
+            <input value="{{ eaName }}" onInput="{{ onEaName }}" style="height:36px;border:1px solid var(--rule);border-radius:9px;background:var(--paper);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:0 11px;outline:none">
+            <span class="cc-meta" style="font-weight:400">{{ eaNameHint }}</span></label>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Copy of</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ eaFroms }}" as="fr" hint-placeholder-count="2">
+                <div onClick="{{ fr.pick }}" style="cursor:pointer;border:1px solid {{ fr.bd }};background:{{ fr.bg }};border-radius:10px;padding:7px 11px;display:flex;gap:8px;align-items:center">
+                  <span style="width:14px;height:14px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 9px var(--sans);color:var(--brand-ink);background:var(--paper)">{{ fr.mark }}</span>
+                  <span style="font:600 var(--fs-13) var(--sans)">{{ fr.label }}</span><span class="cc-meta">{{ fr.desc }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span class="cc-meta" style="font-weight:400">From its latest backup (the nightly one, or Back up now first for a fresher copy).</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Server</span>
+            <sc-if value="{{ eaLoading }}" hint-placeholder-val="{{ false }}"><span class="cc-meta">Loading servers…</span></sc-if>
+            <sc-if value="{{ eaNoServers }}" hint-placeholder-val="{{ false }}"><span class="cc-meta">No active servers. Add one under Servers first.</span></sc-if>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+              <sc-for list="{{ eaServers }}" as="sv" hint-placeholder-count="1">
+                <div onClick="{{ sv.pick }}" style="cursor:pointer;border:1px solid {{ sv.bd }};background:{{ sv.bg }};border-radius:11px;padding:10px 12px;display:flex;gap:9px;align-items:flex-start">
+                  <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);flex:none;margin-top:2px;background:var(--paper)">{{ sv.mark }}</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 var(--fs-13) var(--sans)">{{ sv.label }}</span><span class="cc-meta">{{ sv.desc }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:11px;padding:11px 13px;background:var(--panel)">
+            <span class="cc-meta">It starts quiet: outgoing email off, hidden from search engines, the same logins as the copy. Change any of it on its Hosting tab.</span>
+            <div onClick="{{ eaCronToggle }}" style="display:flex;align-items:center;gap:9px;cursor:pointer">
+              <span style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ eaCronBg }};color:white;font:700 10px var(--sans);flex:none">{{ eaCronMark }}</span>
+              <span style="font:400 var(--fs-13) var(--sans)">Run WordPress cron (scheduled posts, renewals, emails)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule);background:var(--panel)">
+          <span class="cc-meta">Runs in the jobs dock.</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ eaClose }}" class="cc-btn" style="border-color:transparent;background:transparent">Cancel</span>
+          <span onClick="{{ eaSubmit }}" class="cc-btn primary" style="font-size:var(--fs-13);padding:7px 14px">{{ eaSubmitLabel }}</span>
+        </div>
       </div>
     </div>
   </sc-if>

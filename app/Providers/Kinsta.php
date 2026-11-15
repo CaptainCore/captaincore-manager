@@ -423,9 +423,19 @@ class Kinsta {
         foreach ( $envs as $e ) {
             $by_id[ (string) ( $e->id ?? '' ) ] = $e;
         }
-        $locals = $site_id ? \CaptainCore\Environments::fetch_environments( $site_id ) : [];
+        $all    = $site_id ? \CaptainCore\Environments::fetch_environments( $site_id ) : [];
         $map    = [];
         $used   = [];
+        // Environments on our servers are never Kinsta's, but their names
+        // are taken: a premium "Development" beside ours is Development2.
+        $locals = [];
+        foreach ( $all as $l ) {
+            if ( (int) ( $l->server_id ?? 0 ) > 0 ) {
+                $used[ strtolower( $l->environment ) ] = true;
+            } else {
+                $locals[] = $l;
+            }
+        }
         $claim  = function ( $kid, $name ) use ( &$map, &$used ) {
             $map[ $kid ] = $name;
             $used[ strtolower( $name ) ] = true;

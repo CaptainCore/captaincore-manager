@@ -1525,7 +1525,7 @@ class Component extends DCLogic {
     return {
       paletteOpen: false, helpOpen: false, qsDialog: '', bkDialog: '', deployConfirm: '',
       ptoOpen: false, epOpen: false, delOpen: false, rmOpen: false, nsOpen: false, ndOpen: false, naOpen: false,
-      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false,
+      zoneOpen: false, nsvOpen: false, ctOpen: false, tpOpen: false, cookOpen: false, cxLogOpen: false, asOpen: false, rsOpen: false, eaOpen: false,
       bpPid: 0, rgHash: '', rgDetail: null, toolDlg: '',
       // Settings
       provDlgOpen: false, recipeDlgOpen: false, defDlgOpen: false, procDlgOpen: false, procEditOpen: false,
@@ -2511,7 +2511,13 @@ class Component extends DCLogic {
       dAcctIsLink: !!( site.account && site.accountId ),
       dAcctPlain: !( site.account && site.accountId ),
       dAcctGo: () => this.openAccount(site.accountId),
-      dMetaPost: (isPlain ? ' · Plain site · ' : ' · WP ' + site.core + ' · ') + site.visits + ' visits/wk · ' + site.storage + ' · ' + s.env,
+      // The selected environment's own facts (another environment can run
+      // another WordPress, at another host); the site's when it has none.
+      dMetaPost: (isPlain ? ' · Plain site · ' : ' · WP ' + ((curEnv && curEnv.core) || site.core) + ' · ')
+        + (curEnv && s.env !== 'Production' ? (curEnv.visits ? Number(curEnv.visits).toLocaleString() + ' visits/wk · ' : '')
+          + (curEnv.storage ? this.fmtStorage(curEnv.storage) + ' · ' : '')
+          : site.visits + ' visits/wk · ' + site.storage + ' · ')
+        + s.env + (curEnv && curEnv.host && real && real.site && curEnv.host !== real.site.provider ? ' (on our servers)' : ''),
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
       // Swap rides Kinsta's pre-push backup of production, so it needs a
@@ -3603,6 +3609,7 @@ class Component extends DCLogic {
       ...(this.chatVals ? this.chatVals(s) : {}),
       ...(this.chatTriageVals ? this.chatTriageVals(s) : {}),
       ...(this.restoreVals ? this.restoreVals(s) : {}),
+      ...(this.envAddVals ? this.envAddVals(s) : {}),
       goProfile: this.go('profile'),
       // Inline refs re-fire ref(null) + ref(el) on EVERY render, so "is this a
       // fresh mount" must compare against a slot the null call never clears
