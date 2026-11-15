@@ -1771,6 +1771,8 @@ class Component extends DCLogic {
     const site = {
       name, domain,
       clone_site_id: cloneSrc ? String(cloneSrc.providerSiteId) : '',
+      // Kinsta's plain site: no WordPress installed.
+      start: !cloning && st.nsStart === 'empty' ? 'empty' : '',
       provider_id: String(st.nsProviderId || NS_KINSTA_PROVIDER),
       datacenter: (NS_DATACENTERS.find(d => d.title === st.nsDc) || {}).value || 'us-ashburn-1',
       // run() reads shared_with via array_column(…, "account_id") — send objects.

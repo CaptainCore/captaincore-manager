@@ -265,7 +265,7 @@ class Kinsta {
         return ! empty( self::company_users( $provider_id ) );
     }
 
-    // Builds and sends the Kinsta create request (plain add or clone). Shared
+    // Builds and sends the Kinsta create request (WordPress, empty or clone). Shared
     // by the initial create, the rate-limit re-post, and the one-shot retry
     // after an operation "failed in the background" — keep the payloads here
     // so the three callers cannot drift apart.
@@ -295,6 +295,17 @@ class Kinsta {
             ] );
         }
 
+        // An empty site (no WordPress, for a migration or a site built
+        // elsewhere): Kinsta's dedicated endpoint, which answers with an
+        // operation_id like the WordPress create.
+        if ( ( $site->start ?? '' ) === 'empty' ) {
+            return \CaptainCore\Remote\Kinsta::post( "sites/plain", [
+                "company"      => $company_id,
+                "display_name" => $site->name,
+                "region"       => $site->datacenter,
+            ] );
+        }
+
         return \CaptainCore\Remote\Kinsta::post( "sites", [
             "company"                => $company_id,
             "display_name"           => $site->name,
@@ -320,9 +331,11 @@ class Kinsta {
         $response      = self::create_site_request( $site );
         $site->command = "new-site";
         $site->intial_response = $response;
-        $site->message = empty( $site->clone_site_id )
-            ? "Creating site $site->name at Kinsta datacenter $site->datacenter"
-            : "Creating site $site->name at Kinsta via site clone";
+        $site->message = ! empty( $site->clone_site_id )
+            ? "Creating site $site->name at Kinsta via site clone"
+            : ( ( $site->start ?? '' ) === 'empty'
+                ? "Creating empty site $site->name (no WordPress) at Kinsta datacenter $site->datacenter"
+                : "Creating site $site->name at Kinsta datacenter $site->datacenter" );
 
         // No customer named: create the site's account now rather than when
         // the chain links the site minutes later, so DNS zones and invites can

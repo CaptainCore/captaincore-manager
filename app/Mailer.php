@@ -1750,7 +1750,7 @@ class Mailer {
      * Notes a customer left in the New site dialog, for the team. Sent once
      * the provider accepted the create, so it always names a real site.
      *
-     * @param object $site    name, domain, datacenter, clone (source name or '').
+     * @param object $site    name, domain, datacenter, clone (source name or ''), start ('empty' for no WordPress).
      * @param string $notes   What they wrote (already trimmed and capped).
      * @param string $account The account the site was created in.
      * @param object $user    User::fetch() of the creator.
@@ -1769,7 +1769,7 @@ class Mailer {
             $rows .= $row( 'Domain', $site->domain );
         }
         $rows .= $row( 'Account', $account ?: 'New account' );
-        $rows .= $row( 'Start', empty( $site->clone ) ? 'Fresh WordPress' : 'Copy of ' . $site->clone );
+        $rows .= $row( 'Start', ! empty( $site->clone ) ? 'Copy of ' . $site->clone : ( ( $site->start ?? '' ) === 'empty' ? 'Empty site (no WordPress)' : 'Fresh WordPress' ) );
         if ( empty( $site->clone ) && ! empty( $site->datacenter ) ) {
             $rows .= $row( 'Datacenter', $site->datacenter );
         }

@@ -184,7 +184,7 @@ Object.assign(Component.prototype, {
     let hint = '', hintColor = 'var(--ink-dim)';
     if (len > 32) { hint = 'Site names can be at most 32 characters.'; hintColor = 'var(--bad)'; }
     else if (len > 0 && len < 5) { hint = 'Site names need at least 5 characters. Add a word or two.'; hintColor = 'var(--bad)'; }
-    else if (len) hint = 'Shown in your dashboard and used as the WordPress site title.';
+    else if (len) hint = s.nsStart === 'empty' && s.nsHost !== 'ours' ? 'Shown in your dashboard.' : 'Shown in your dashboard and used as the WordPress site title.';
     return {
       nsDialogW: s.nsPath === 'kinsta' ? 900 : 620,
       nsShowTabs: isOp,
@@ -227,16 +227,18 @@ Object.assign(Component.prototype, {
         ...on(String(accId) === a.id),
         pick: () => this.setState({ nsBillingId: a.id })
       })),
-      // Starting point: a fresh install or a copy of a site they already have.
-      nsStartShow: ours || sources.length > 0,
+      // Starting point: a fresh install, an empty site (Kinsta's plain site,
+      // no WordPress, for a migration) or a copy of a site they already have.
+      nsStartShow: true,
       nsStartCards: ours ? [
         { id: 'wordpress', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
         { id: 'plain', title: 'Plain site', sub: 'HTML files only: no WordPress, no database.', icon: 'M4 4h16v16H4zM8 9h8M8 13h5' }
       ].map(c => ({ ...c, ...on(c.id === (s.nsOurStart === 'plain' ? 'plain' : 'wordpress')), pick: () => this.setState({ nsOurStart: c.id }) })) : [
         { id: 'fresh', title: 'Fresh WordPress', sub: 'A clean install, ready to build on.', icon: 'M12 3v18M3 12h18' },
-        { id: 'clone', title: 'Copy an existing site', sub: 'Start from one of your sites, content and all.', icon: 'M8 8h11v11H8zM5 16V5h11' }
-      ].map(c => ({ ...c, ...on((c.id === 'clone') === isClone),
-        pick: () => this.setState(c.id === 'fresh' ? { nsStart: 'fresh', nsClone: 'None (fresh install)' } : { nsStart: 'clone' }) })),
+        { id: 'empty', title: 'Empty site', sub: 'No WordPress. For moving a site in or building it yourself.', icon: 'M4 4h16v16H4z' },
+        ...(sources.length ? [{ id: 'clone', title: 'Copy an existing site', sub: 'Start from one of your sites, content and all.', icon: 'M8 8h11v11H8zM5 16V5h11' }] : [])
+      ].map(c => ({ ...c, ...on(c.id === (isClone ? 'clone' : s.nsStart === 'empty' ? 'empty' : 'fresh')),
+        pick: () => this.setState(c.id === 'clone' ? { nsStart: 'clone' } : { nsStart: c.id, nsClone: 'None (fresh install)' }) })),
       nsIsClone: isClone,
       nsCloneLabel: cloneSrc || 'Choose a site to copy…',
       nsCloneLabelDim: cloneSrc ? 'var(--ink)' : 'var(--ink-dim)',
@@ -265,7 +267,7 @@ Object.assign(Component.prototype, {
         : 'Pick the region closest to most of your visitors. Not sure? Search a city below.',
       nsSumAcc: accLabel,
       nsSumWhere: isClone ? 'Same as the copied site' : meta.city + ', ' + meta.country,
-      nsSumStart: ours ? (s.nsOurStart === 'plain' ? 'Plain site' : 'Fresh WordPress') : isClone ? (cloneSrc ? 'Copy of ' + cloneSrc : 'Copy of…') : 'Fresh WordPress',
+      nsSumStart: ours ? (s.nsOurStart === 'plain' ? 'Plain site' : 'Fresh WordPress') : isClone ? (cloneSrc ? 'Copy of ' + cloneSrc : 'Copy of…') : s.nsStart === 'empty' ? 'Empty site' : 'Fresh WordPress',
       nsNotesCount: (s.nsNotes || '').length ? (s.nsNotes || '').length + ' / 2000' : '',
       nsCtaLabel: s.nsBusy ? 'Creating…' : 'Create site'
     };

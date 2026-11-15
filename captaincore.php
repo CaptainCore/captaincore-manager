@@ -4646,7 +4646,9 @@ function captaincore_provider_new_site_func( $request ) {
 		"name"          => $site->name,
 		"domain"        => $site->domain,
 		"datacenter"    => empty( $site->datacenter ) ? "" : $site->datacenter,
-		"clone_site_id" => empty( $site->clone_site_id ) ? "" : $site->clone_site_id,
+		"clone_site_id" => empty( $site->clone_site_id ) || ( $site->start ?? '' ) === 'empty' ? "" : $site->clone_site_id,
+		// empty: Kinsta's plain site, no WordPress (Kinsta::create_site_request).
+		"start"         => ( $site->start ?? '' ) === 'empty' ? "empty" : "",
 		"provider_id"   => empty( $site->provider_id ) ? "" : $site->provider_id,
 		"account_id"    => empty( $site->account_id ) ? "" : $site->account_id,
 		"customer_id"   => empty( $site->customer_id ) ? "" : (int) $site->customer_id,
@@ -4662,7 +4664,7 @@ function captaincore_provider_new_site_func( $request ) {
 		$account_id = ! empty( $site->customer_id ) ? $site->customer_id : ( $result['customer_id'] ?? $site->account_id );
 		$account    = $account_id ? ( new CaptainCore\Accounts )->get( $account_id ) : null;
 		CaptainCore\Mailer::send_new_site_notes(
-			[ 'name' => $site->name, 'domain' => $site->domain, 'datacenter' => $site->datacenter, 'clone' => $clone_name ],
+			[ 'name' => $site->name, 'domain' => $site->domain, 'datacenter' => $site->datacenter, 'clone' => $clone_name, 'start' => $site->start ],
 			$notes,
 			$account->name ?? '',
 			$user
