@@ -1086,6 +1086,80 @@ class Chat {
 	 * Gravatar answer 404 when there is no picture, so clients keep the
 	 * initials. Built here so a browser never needs anyone's email.
 	 */
+	/**
+	 * Customers signed in to the dashboard, for the operators' Customers
+	 * tab: everyone with an unexpired login session, plus anyone seen in
+	 * the last $days days. Who is connected right now comes from the relay
+	 * (customer.presence frames); this list is everyone else, with when they
+	 * were last seen (ChatRelay::token stamps it) and their open
+	 * conversation, if any.
+	 */
+	public static function signed_in_customers( $days = 7, $limit = 300 ) {
+		global $wpdb;
+		$now  = time();
+		$cut  = $now - max( 1, (int) $days ) * DAY_IN_SECONDS;
+		$list = [];
+		foreach ( $wpdb->get_results( "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'session_tokens'" ) as $row ) {
+			$sessions = maybe_unserialize( $row->meta_value );
+			if ( ! is_array( $sessions ) ) {
+				continue;
+			}
+			$login = 0;
+			foreach ( $sessions as $sess ) {
+				if ( is_array( $sess ) && (int) ( $sess['expiration'] ?? 0 ) > $now ) {
+					$login = max( $login, (int) ( $sess['login'] ?? 0 ) );
+				}
+			}
+			if ( $login ) {
+				$list[ (int) $row->user_id ] = [ 'login' => $login, 'seen' => 0 ];
+			}
+		}
+		$seen = $wpdb->get_results( $wpdb->prepare(
+			"SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'captaincore_last_seen' AND CAST(meta_value AS UNSIGNED) >= %d",
+			$cut
+		) );
+		foreach ( $seen as $row ) {
+			$id                  = (int) $row->user_id;
+			$list[ $id ]         = $list[ $id ] ?? [ 'login' => 0, 'seen' => 0 ];
+			$list[ $id ]['seen'] = (int) $row->meta_value;
+		}
+		$list = array_filter( $list, function ( $v, $id ) {
+			return ! self::is_operator( $id );
+		}, ARRAY_FILTER_USE_BOTH );
+		uasort( $list, function ( $a, $b ) {
+			return max( $b['seen'], $b['login'] ) <=> max( $a['seen'], $a['login'] );
+		} );
+		$list = array_slice( $list, 0, max( 1, (int) $limit ), true );
+		if ( ! $list ) {
+			return [ 'customers' => [] ];
+		}
+		$ids   = array_keys( $list );
+		$in    = implode( ',', array_map( 'intval', $ids ) );
+		$convs = [];
+		$table = $wpdb->base_prefix . 'captaincore_chat_conversations';
+		foreach ( $wpdb->get_results( "SELECT user_id, chat_conversation_id AS id, status FROM {$table} WHERE user_id IN ({$in}) AND status IN ('open','snoozed') ORDER BY last_message_at DESC" ) as $c ) {
+			$convs[ (int) $c->user_id ] = $convs[ (int) $c->user_id ] ?? [ 'id' => (int) $c->id, 'status' => $c->status ];
+		}
+		$out = [];
+		foreach ( $list as $id => $v ) {
+			$user = get_userdata( $id );
+			if ( ! $user ) {
+				continue;
+			}
+			$out[] = [
+				'id'           => $id,
+				'name'         => (string) $user->display_name,
+				'email'        => (string) $user->user_email,
+				'avatar'       => self::avatar( $id ),
+				'signed_in'    => $v['login'] > 0,
+				'login'        => $v['login'],
+				'seen'         => $v['seen'],
+				'conversation' => $convs[ $id ] ?? null,
+			];
+		}
+		return [ 'customers' => $out ];
+	}
+
 	public static function avatar( $user_id, $email = '' ) {
 		static $cache = [];
 		$key = $user_id > 0 ? 'u' . $user_id : 'e' . strtolower( trim( (string) $email ) );

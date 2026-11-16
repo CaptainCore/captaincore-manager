@@ -12440,6 +12440,17 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Operators' Customers tab: who is signed in to the dashboard.
+	register_rest_route(
+		'captaincore/v1', '/chat/customers', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $r ) {
+				return CaptainCore\Chat::signed_in_customers( (int) ( $r->get_param( 'days' ) ?: 7 ) );
+			},
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/chat/triage/pending', [
 			'methods'             => 'GET',

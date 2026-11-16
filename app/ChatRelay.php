@@ -162,13 +162,20 @@ class ChatRelay {
 			return new \WP_Error( 'chat_offline', 'Live chat is not configured.', [ 'status' => 503 ] );
 		}
 		$now     = time();
+		$is_op   = Chat::is_operator( (int) $user->ID );
+		// The dashboard fetches a token on every load and every ~10 minutes
+		// while open, which makes it a cheap "last seen" for the operators'
+		// customer list (Chat::signed_in_customers). One write a minute at most.
+		if ( ! $is_op && $now - (int) get_user_meta( $user->ID, 'captaincore_last_seen', true ) >= 60 ) {
+			update_user_meta( $user->ID, 'captaincore_last_seen', $now );
+		}
 		$claims  = [
 			'iss'      => self::issuer(),
 			'aud'      => self::relay_url(),
 			'sub'      => (int) $user->ID,
 			'name'     => (string) $user->display_name,
 			'email'    => (string) $user->user_email,
-			'role'     => Chat::is_operator( (int) $user->ID ) ? 'operator' : 'customer',
+			'role'     => $is_op ? 'operator' : 'customer',
 			'accounts' => [],
 			'sites'    => [],
 			'iat'      => $now,

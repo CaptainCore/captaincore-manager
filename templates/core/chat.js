@@ -26,7 +26,7 @@ Object.assign(Component.prototype, {
     this.chatLoadList();
     if (cb.operator) this.chatPushInit();
     if (cb.operator) this.chatAlertInit();
-    if (cb.operator) this.chatFocusInit();
+    this.chatFocusInit(); // operators: inbox in use; customers: tab in front (Customers tab)
     if (cb.live) this.chatConnect();
     else this._chatPoll = setInterval(() => { this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true); }, 30000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) this.chatMarkRead(); });
@@ -647,6 +647,7 @@ Object.assign(Component.prototype, {
           // connecting after the first load) were missed: refetch what's on screen.
           this.chatLoadList(true); if (c.id) this.chatLoadConv(c.id, true);
           c.everLive = true;
+          if (this.chatBoot().operator && this.chatPeopleReady) this.chatPeopleReady(m);
           c.focusSent = null;
           this.chatFocusTick();
           // Tokens last 10 minutes; refresh in place every 8.
@@ -694,6 +695,7 @@ Object.assign(Component.prototype, {
   chatOnEvent(ev) {
     const c = this._chat;
     const cb = this.chatBoot();
+    if (ev.type === 'customer.presence') { if (cb.operator && this.chatPeopleOnEvent) this.chatPeopleOnEvent(ev); return; }
     if (cb.operator && this.chatTriageOnEvent) this.chatTriageOnEvent(ev);
     if (ev.type === 'conversation.created' || ev.type === 'conversation.updated' || ev.type === 'message.created') {
       if (ev.conversation) this.chatMergeConv(ev.conversation, ev.type === 'conversation.created');
@@ -1033,9 +1035,10 @@ Object.assign(Component.prototype, {
     (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
   },
 
-  // ── focus frames (operators) ──────────────────────────────────────────
+  // ── focus frames ──────────────────────────────────────────────────────
   // The relay reports operators who have the inbox on screen and in use
   // (visible tab, input in the last 5 minutes), and their phones stay quiet.
+  // Customers send the same frame for the operators' Customers tab.
 
   chatFocusInit() {
     const c = this._chat;
@@ -1048,8 +1051,12 @@ Object.assign(Component.prototype, {
 
   chatFocusTick() {
     const c = this._chat;
-    if (!c || !this.chatBoot().operator || !c.ws || c.ws.readyState !== 1) return;
-    const active = this.state.route === 'chat' && !document.hidden && Date.now() - (c.lastInput || 0) < 5 * 60 * 1000;
+    if (!c || !c.ws || c.ws.readyState !== 1) return;
+    // Customers: the dashboard tab is in front and was used in the last 10
+    // minutes (operators see them as online, else away).
+    const active = this.chatBoot().operator
+      ? this.state.route === 'chat' && !document.hidden && Date.now() - (c.lastInput || 0) < 5 * 60 * 1000
+      : !document.hidden && Date.now() - (c.lastInput || 0) < 10 * 60 * 1000;
     if (c.focusSent === active) return;
     c.focusSent = active;
     c.ws.send(JSON.stringify({ type: 'focus', active }));

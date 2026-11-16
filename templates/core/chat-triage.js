@@ -29,11 +29,14 @@ Object.assign(Component.prototype, {
     const t = this.cctState();
     if (!c || !t) return;
     this.cctKeysInit();
+    if (this.chatPeopleClose) this.chatPeopleClose();
     this.setState({ chatTriage: true });
     this.cctLoad(t.loaded);
   },
 
+  // The Inbox tab: leaves Triage and Customers.
   chatTriageClose() {
+    if (this.chatPeopleClose) this.chatPeopleClose();
     this.setState({ chatTriage: false });
   },
 
@@ -390,11 +393,19 @@ Object.assign(Component.prototype, {
     requestAnimationFrame(restore);
   },
 
+  // The Customers tab's values ride along here (chat-people.js).
   chatTriageVals(s) {
+    const people = this.chatPeopleVals ? this.chatPeopleVals(s) : {};
+    const v = Object.assign(this.chatTriageValsCore(s, !!people.chatPeopleOn), people);
+    return v;
+  },
+
+  chatTriageValsCore(s, peopleOn) {
     const t = this._chat && this._chat.tri;
-    const on = !!(t && s.route === 'chat' && s.chatTriage);
-    const base = { chatTriageOn: on, chatInboxHide: on ? '1' : '0', chatTabInbox: () => this.chatTriageClose(), chatTabTriage: () => this.chatTriageOpen(),
-      chatTabInboxBg: on ? 'transparent' : 'var(--paper)', chatTabInboxFg: on ? 'var(--ink-dim)' : 'var(--ink)', chatTabInboxShadow: on ? 'none' : 'var(--shadow-sm)',
+    const on = !!(t && s.route === 'chat' && s.chatTriage) && !peopleOn;
+    const inbox = !on && !peopleOn;
+    const base = { chatTriageOn: on, chatInboxHide: inbox ? '0' : '1', chatTabInbox: () => this.chatTriageClose(), chatTabTriage: () => this.chatTriageOpen(),
+      chatTabInboxBg: inbox ? 'var(--paper)' : 'transparent', chatTabInboxFg: inbox ? 'var(--ink)' : 'var(--ink-dim)', chatTabInboxShadow: inbox ? 'var(--shadow-sm)' : 'none',
       chatTabTriageBg: on ? 'var(--paper)' : 'transparent', chatTabTriageFg: on ? 'var(--ink)' : 'var(--ink-dim)', chatTabTriageShadow: on ? 'var(--shadow-sm)' : 'none' };
     if (!on) return Object.assign(base, { cctTabs: [], cctRows: [], cctMoves: [] });
     const counts = {};

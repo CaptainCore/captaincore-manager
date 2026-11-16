@@ -35,6 +35,7 @@ Object.assign(Component.prototype, {
     let path = base + seg;
     if (s.route === 'site' && s.siteId) { path += '/' + s.siteId; if (s.siteTab && s.siteTab !== 'overview') path += '/' + s.siteTab; }
     else if (s.route === 'relay' && s.relayId) { path += '/' + s.relayId; }
+    else if (s.route === 'chat' && s.chatPeople) { path += '/customers'; }
     else if (s.route === 'chat' && s.chatTriage) { path += '/triage'; }
     else if ((s.route === 'chat' || s.route === 'support') && s.chatId) { path += '/' + s.chatId; }
     else if (s.route === 'domain' && s.domainId) { path += '/' + s.domainId; }
@@ -68,9 +69,12 @@ Object.assign(Component.prototype, {
       else if (cb.enabled) this.setState({ route: 'support', chatWidgetOpen: false });
       else this.setState({ route: 'home' });
       // /chat/triage: the operators' Triage view (chat-triage.js).
+      // /chat/customers: who is signed in (chat-people.js).
       if (cb.operator && parts[1] === 'triage' && this.chatTriageOpen) this.chatTriageOpen();
+      else if (cb.operator && parts[1] === 'customers' && this.chatPeopleOpen) this.chatPeopleOpen();
       else {
         if (cb.operator && this.state.chatTriage) this.setState({ chatTriage: false });
+        if (cb.operator && this.state.chatPeople && this.chatPeopleClose) this.chatPeopleClose();
         if (cb.enabled && this.chatOpen) this.chatOpen(parts[1] || 0);
       }
     } else if (head === 'ai-relay' && parts[1]) {
