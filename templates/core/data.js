@@ -235,7 +235,7 @@ Object.assign(Component.prototype, {
     return [
       { k: 'WP core', v: onLatest + '% on ' + latest },
       { k: 'Providers', v: provLine },
-      { k: 'Traffic', v: visits + ' visits/wk' },
+      { k: 'Traffic', v: visits + ' visits/yr' },
       { k: 'Storage', v: this.fmtStorage(t.storage) }
     ];
   }

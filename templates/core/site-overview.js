@@ -11,7 +11,7 @@
 //   Updates      managed updates on/off and the newest update run
 //                (update-logs, kept as real.lastUpdate by loadQuicksaves)
 //   WordPress    the environment's WordPress, PHP and storage
-//   Visits       visits per week with the 14-day bars
+//   Visits       pageviews over the last 12 months (usage-update's Fathom total)
 // Each card opens the tab with the detail. Design mode (no real data) keeps
 // sample values so the template renders.
 Object.assign(Component.prototype, {
@@ -158,7 +158,7 @@ Object.assign(Component.prototype, {
     if (!real) {
       return { hCards: [card('Uptime', 'Up', 'Uptime monitor on', OK), card('Last backup', '6 hours ago', '30 kept', OK, 'backups'),
         card('Updates', 'Ran 2 days ago', '3 plugins updated', OK, 'versions'), card('WordPress', site.core || '6.9', 'PHP 8.3', DIM, 'plugins'),
-        { ...card('Visits', site.visits + ' / wk', 'Last 14 days', DIM, 'stats'), hasBars: true }] };
+        { ...card('Visits', site.visits + ' / yr', 'Last 12 months', DIM, 'stats'), hasBars: true }] };
     }
     if (!real.envs) return { hCards: ['Uptime', 'Last backup', 'Updates', 'WordPress', 'Visits'].map(k => card(k, '…', ' ', DIM)) };
     const e = curEnv || {};
@@ -216,11 +216,12 @@ Object.assign(Component.prototype, {
     const php = d.php_version || e.php_version;
     const wp = card('WordPress', e.core || site.core || '—', [php ? 'PHP ' + php : '', e.storage ? this.fmtStorage(e.storage) : (s.env === 'Production' ? site.storage : '')].filter(Boolean).join(' · ') || ' ', DIM, 'plugins');
     // Visits
-    // The 14-day bars are the site's (production) traffic, so other
-    // environments show their own weekly count only.
+    // e.visits is the CLI's usage-update figure: Fathom pageviews summed over
+    // the last 12 months (the plan's visit usage), so it reads per year. No
+    // bars: there is no stored daily series, and the Stats tab has the real one.
     const prod = s.env === 'Production';
     const raw = e.visits != null && e.visits !== '' && Number(e.visits) > 0 ? Number(e.visits).toLocaleString() : (prod && site.visits && site.visits !== '\u2014' ? site.visits : '');
-    const vis = raw ? { ...card('Visits', raw + ' / wk', prod ? 'Last 14 days' : 'This environment', DIM, 'stats'), hasBars: prod }
+    const vis = raw ? { ...card('Visits', raw + ' / yr', prod ? 'Last 12 months' : 'This environment, 12 months', DIM, 'stats') }
       : card('Visits', '—', 'No visit data yet', DIM, 'stats');
     // A plain site has no WordPress to update or report on: what it is, and the
     // space its files use (the server reports usage with each health check).

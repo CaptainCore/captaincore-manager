@@ -1084,7 +1084,7 @@ class Component extends DCLogic {
       // Customers' sites are all at one host, so the column is operators' only.
       ...(isOp ? [{ label: 'Provider', k: 'provider', val: x => x.provider || '' }] : []),
       { label: 'Core', k: 'core', val: x => x.core || '' },
-      { label: 'Visits / wk', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
+      { label: 'Visits / yr', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
     ];
     const sorted = this.sortRows('sitesSort', SITE_COLS, filtered).slice(pageStart, pageStart + PAGE);
     const thumbOf = (x, size) => {
@@ -2635,9 +2635,9 @@ class Component extends DCLogic {
       // Uptime monitor and Managed updates are operator-only rows: operators
       // get the monitor as a switch row (umShow) plus the Managed updates
       // value and its Update settings link; everyone else sees neither.
-      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']])
+      envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / yr', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']])
         // WordPress, PHP, storage and visits are on the health cards now.
-        .filter(([k]) => !['Uptime monitor', 'WordPress', 'PHP', 'Storage', 'Visits / wk'].includes(k) && (k === 'Managed updates' ? isOp && !isPlain : true)).map(([k, v]) => ({
+        .filter(([k]) => !['Uptime monitor', 'WordPress', 'PHP', 'Storage', 'Visits / yr'].includes(k) && (k === 'Managed updates' ? isOp && !isPlain : true)).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)

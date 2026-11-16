@@ -151,7 +151,7 @@ Object.assign(Component.prototype, {
       ['WordPress', e.core || '—'],
       ['PHP', det.php_version || ''],
       ['Storage', this.fmtStorage(e.storage)],
-      ['Visits / wk', e.visits ? Number(e.visits).toLocaleString() : '—'],
+      ['Visits / yr', e.visits ? Number(e.visits).toLocaleString() : '—'],
       ['Uptime monitor', e.monitor_enabled ? 'On' : 'Off'],
       ['Managed updates', !e.updates_enabled || e.updates_enabled === '0' ? 'Off'
         : (n => n ? 'On · ' + n + ' excluded' : 'On')(this.envExcluded(e, 'plugins').length + this.envExcluded(e, 'themes').length)]

@@ -1384,7 +1384,7 @@ button.ccc-edited:hover{color:var(--ink)}
                     <span style="width:8px;height:8px;border-radius:50%;background:{{ s.dot }};flex:none" title="{{ s.health }}"></span>
                   </div>
                   <div title="{{ s.stTitle }}" style="font:var(--fs-125) var(--sans);font-weight:{{ s.stWeight }};color:{{ s.stFg }}">{{ s.stText }}</div>
-                  <div style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ s.provider }} · WP {{ s.core }} · {{ s.visits }} visits/wk</div>
+                  <div style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ s.provider }} · WP {{ s.core }} · {{ s.visits }} visits/yr</div>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
                     <span style="display:flex;gap:5px;flex-wrap:wrap">
                       <sc-for list="{{ s.envChips }}" as="ec" hint-placeholder-count="2">
@@ -1432,7 +1432,7 @@ button.ccc-edited:hover{color:var(--ink)}
                         </div>
                         <span onClick="{{ e.visit }}" style="font:400 var(--fs-13) var(--mono);color:var(--brand-ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;align-self:flex-start" style-hover="text-decoration:underline">{{ e.url }} ↗</span>
                         <div style="display:flex;gap:18px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">
-                          <span><span style="font:600 var(--fs-13) var(--mono);color:var(--ink)">{{ e.visits }}</span> visits/wk</span>
+                          <span><span style="font:600 var(--fs-13) var(--mono);color:var(--ink)">{{ e.visits }}</span> visits/yr</span>
                           <span><span style="font:600 var(--fs-13) var(--mono);color:var(--ink)">{{ e.storage }}</span> storage</span>
                         </div>
                       </div>
