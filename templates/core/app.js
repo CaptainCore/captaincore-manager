@@ -2349,7 +2349,10 @@ class Component extends DCLogic {
     const leaf = this.siteLeaf(s.siteTab);
     const group = this.siteGroupOf(leaf);
     const hostingVals = this.computeHosting ? this.computeHosting(real, s) : { hostShow: false };
-    const tabs = this.SITE_TAB_GROUPS.filter(g => g.id !== 'hosting' || hostingVals.hostShow).map(g => ({ label: g.label,
+    // A plain environment has no plugins, themes or WordPress users to list.
+    const plainTabs = this.envIsPlain(real && real.envs ? real.envs.find(e => e.environment === s.env) : null);
+    const tabs = this.SITE_TAB_GROUPS.filter(g => (g.id !== 'hosting' || hostingVals.hostShow)
+      && !(plainTabs && ['Inventory', 'Users'].includes(g.label))).map(g => ({ label: g.label,
       fg: g.id === group.id ? 'var(--ink)' : 'var(--ink-dim)',
       bg: g.id === group.id ? 'var(--panel-2)' : 'transparent',
       line: g.id === group.id ? 'var(--brand)' : 'transparent', fw: g.id === group.id ? 600 : 500,
@@ -2507,10 +2510,14 @@ class Component extends DCLogic {
     // A plain site on our own servers (HTML files, no WordPress): no WordPress
     // login, no sync-data (it reads WordPress over SSH), no WP version.
     const curEnv = real && real.envs ? real.envs.find(e => e.environment === s.env) : null;
-    const isPlain = !!(curEnv && curEnv.details && typeof curEnv.details === 'object' && curEnv.details.start === 'plain');
+    const isPlain = this.envIsPlain(curEnv);
     return {
       dName: site.name,
       dIsWp: !isPlain,
+      // On a plain environment the quick pushes (provider pushes of WordPress)
+      // go; the card stays for operators, whose Deploy between environments
+      // still works for the site's other environments.
+      dDeployCardShow: !isPlain || (this.envIsOp() && !!(real && real.envs && real.envs.length > 1)),
       // Split so the account name can be its own clickable segment. Design-mode
       // fixtures carry an account name but no id, so the link only renders when
       // there is somewhere to go; otherwise the name stays plain text.
@@ -2612,7 +2619,7 @@ class Component extends DCLogic {
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
       ...(this.computeRemoval ? this.computeRemoval(s, real ? site : null, isOp) : { rmMarked: false, rmCanDelete: false, rmRequestShow: false, delOpen: false, rmOpen: false, closeRm: () => {}, rmGo: () => {}, rmEnvs: [], rmEnvCount: '' }),
-      usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator',
+      usShow: !!real && (window.CC_BOOT || {}).dcRole === 'operator' && !isPlain,
       ...(this.computeUptimeMonitor ? this.computeUptimeMonitor(real, s, isOp) : { umShow: false }),
       openUpdSettings: () => this.openUpdSettings(real, s),
       ...this.updSettingsVals(real, s),
@@ -2621,7 +2628,7 @@ class Component extends DCLogic {
       // value and its Update settings link; everyone else sees neither.
       envRows: (real ? this.realEnvRows(real, s) : [['WordPress', site.core], ['PHP', '8.3.8'], ['Storage', site.storage], ['Visits / wk', site.visits], ['Uptime monitor', 'On · 99.98%'], ['Managed updates', site.updates ? site.updates + ' pending' : 'Up to date']])
         // WordPress, PHP, storage and visits are on the health cards now.
-        .filter(([k]) => !['Uptime monitor', 'WordPress', 'PHP', 'Storage', 'Visits / wk'].includes(k) && (k === 'Managed updates' ? isOp : true)).map(([k, v]) => ({
+        .filter(([k]) => !['Uptime monitor', 'WordPress', 'PHP', 'Storage', 'Visits / wk'].includes(k) && (k === 'Managed updates' ? isOp && !isPlain : true)).map(([k, v]) => ({
         k, v,
         copyTitle: s.copied === 'env:' + k ? 'Copied' : 'Copy ' + k,
         copy: () => copyField('env:' + k, v)

@@ -1666,11 +1666,13 @@ button.ccc-edited:hover{color:var(--ink)}
                 </sc-if>
               </div>
               <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+                <sc-if value="{{ dDeployCardShow }}" hint-placeholder-val="{{ true }}">
                 <section class="cc-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
                   <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Deploy</h2>
                   <sc-if value="{{ envDeployShow }}" hint-placeholder-val="{{ false }}">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button type="button" onClick="{{ envDeployOpen }}" class="cc-btn primary">Deploy between environments…</button><span class="cc-meta">Pick any two. A backup of the target is taken first.</span></div>
                   </sc-if>
+                  <sc-if value="{{ dIsWp }}" hint-placeholder-val="{{ true }}">
                   <div class="cc-deploy-quick">
                   <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
                     <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
@@ -1681,7 +1683,9 @@ button.ccc-edited:hover{color:var(--ink)}
                   <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
                   </div>
+                  </sc-if>
                 </section>
+                </sc-if>
                 <section class="cc-card" style="padding:6px 0 4px">
                   <h2 style="margin:0;padding:8px 16px 4px;font:600 var(--fs-14) var(--sans)">Tools</h2>
                   <sc-for list="{{ siteToolsMain }}" as="tl" hint-placeholder-count="3">
@@ -1691,7 +1695,9 @@ button.ccc-edited:hover{color:var(--ink)}
                     <button type="button" onClick="{{ tl.go }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tl.icon }}"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">{{ tl.label }}</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ tl.desc }}</span></span></button>
                   </sc-for>
                   <div style="display:flex;flex-direction:column;gap:9px;padding:8px 16px 12px;border-top:1px solid var(--rule);margin-top:4px">
+                    <sc-if value="{{ toolsHasMore }}" hint-placeholder-val="{{ true }}">
                     <span onClick="{{ toolsMoreToggle }}" style="font:600 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">{{ toolsMoreLabel }}</span>
+                    </sc-if>
                   <!-- Removal: customers can only REQUEST; the hard delete is
                        operator-only in the UI and enforced server-side. -->
                   <sc-if value="{{ rmRequestShow }}" hint-placeholder-val="{{ true }}">

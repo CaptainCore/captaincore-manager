@@ -7397,6 +7397,13 @@ function captaincore_site_hosting_backups_action_func( $request ) {
 // the provider's own push (the browser calls /sites/environments/push).
 // From ours to a provider is not possible yet.
 function captaincore_environment_deploy_plan( $site, $from_env, $to_env ) {
+	// A plain site (HTML files, no WordPress) has nothing to copy, and a copy
+	// onto one would replace its pages with WordPress.
+	foreach ( [ $from_env, $to_env ] as $e ) {
+		if ( (int) $e->server_id > 0 && CaptainCore\HostConfigs::stack( $e ) === 'plain' ) {
+			return 'plain';
+		}
+	}
 	$fh = CaptainCore\Environments::host( $from_env, $site );
 	$th = CaptainCore\Environments::host( $to_env, $site );
 	if ( $th === 'captaincore' ) {
@@ -7441,6 +7448,9 @@ function captaincore_site_environments_deploy_func( $request ) {
 		$target = $site->site . ( $to === 'production' ? '' : '-' . $to );
 		CaptainCore\ProcessLog::insert( "Refresh {$to} from {$from}'s latest backup", (int) $site->site_id );
 		return [ 'method' => 'backup', 'token' => CaptainCore\Run::task( [ 'host', 'refresh', $target, '--from=' . $from ] ) ];
+	}
+	if ( $plan === 'plain' ) {
+		return new WP_Error( 'plain', 'A plain site (HTML files, no WordPress) cannot be deployed to or from. Upload its files over SFTP instead.', [ 'status' => 400 ] );
 	}
 	if ( $plan === 'provider' ) {
 		return [ 'method' => 'provider', 'source_environment_id' => (int) $from_env->environment_id, 'target_environment_id' => (int) $to_env->environment_id ];

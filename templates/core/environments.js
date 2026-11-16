@@ -94,6 +94,9 @@ Object.assign(Component.prototype, {
     const host = e => (e && e.host) || (real.site && real.site.provider) || '';
     const f = (real.envs || []).find(e => e.environment === from), t = (real.envs || []).find(e => e.environment === to);
     if (!f || !t) return '';
+    // A plain site has no WordPress to copy, and copying WordPress onto one
+    // would replace its pages: the Manager refuses both (deploy_plan).
+    if (this.envIsPlain(f) || this.envIsPlain(t)) return 'plain';
     if (host(t) === 'captaincore') return host(f) === 'captaincore' && String(f.server_id || '') === String(t.server_id || '') ? 'node' : 'backup';
     if (host(f) === host(t) && host(t) === (real.site && real.site.provider) && host(t) !== 'captaincore') return 'provider';
     return 'none';
@@ -111,7 +114,7 @@ Object.assign(Component.prototype, {
     const real = this._detail, s = this.state;
     if (!real || s.edBusy) return;
     const plan = this.envDeployPlan(real, s.edFrom, s.edTo);
-    if (!plan || plan === 'none') return;
+    if (!plan || plan === 'none' || plan === 'plain') return;
     const name = (real.site && real.site.name) || '';
     const label = s.edFrom.toLowerCase() + ' → ' + s.edTo.toLowerCase() + ' on ' + name;
     if (plan === 'provider') {
@@ -148,7 +151,8 @@ Object.assign(Component.prototype, {
       node: 'Copies ' + f + ' onto ' + t + ' on the same server. A local backup of ' + t + ' is taken first, and ' + t + ' keeps its own address and search engine setting.',
       backup: 'Replaces ' + t + ' with ' + f + '\'s latest backup (files and database). A local backup of ' + t + ' is taken first, and ' + t + ' keeps its own address and settings: back up ' + f + ' first for a fresher copy.',
       provider: ucfirstSafe(provider) + ' pushes ' + f + ' to ' + t + ', the same as a push in its dashboard. It can take several minutes.',
-      none: 'Copying from our servers to ' + ucfirstSafe(provider) + ' is not possible yet.'
+      none: 'Copying from our servers to ' + ucfirstSafe(provider) + ' is not possible yet.',
+      plain: (this.envIsPlain(real.envs.find(e => e.environment === f)) ? f : t) + ' is a plain site (HTML files, no WordPress), so there is nothing to copy between it and WordPress. Upload its files over SFTP instead.'
     };
     function ucfirstSafe(x) { x = String(x || 'the host'); return x.charAt(0).toUpperCase() + x.slice(1); }
     return {
@@ -158,8 +162,8 @@ Object.assign(Component.prototype, {
       edTos: real.envs.map(e => ({ label: e.environment, desc: where(e), ...chip(t === e.environment), pick: pick('edTo', e.environment) })),
       edShowWhat: plan === 'node',
       edWhats: [['both', 'Files and database'], ['files', 'Files'], ['database', 'Database']].map(([v, l]) => ({ label: l, ...chip((s.edWhat || 'both') === v), pick: () => this.setState({ edWhat: v }) })),
-      edNote: notes[plan] || '', edWarn: plan === 'none',
-      edCanGo: !!plan && plan !== 'none',
+      edNote: notes[plan] || '', edWarn: plan === 'none' || plan === 'plain',
+      edCanGo: !!plan && plan !== 'none' && plan !== 'plain',
       edGoLabel: plan === 'backup' ? 'Replace ' + t : 'Deploy to ' + t,
       edClose: () => this.setState({ edOpen: false }),
       edGo: () => this.submitEnvDeploy()

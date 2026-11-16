@@ -257,6 +257,15 @@ Object.assign(Component.prototype, {
         go: on(() => { this.setState({ siteTab: 'sitedomains' }); this.loadEnvDomains(); }) });
     }
 
+    // A plain environment (HTML files on our servers) has none of these: every
+    // tool above works on WordPress, and its domains live in its hosting
+    // settings, not at the site's provider.
+    const curEnv = real && real.envs ? real.envs.find(e => e.environment === s.env) : null;
+    if (this.envIsPlain(curEnv)) {
+      tools.length = 0;
+      if (isOp) tools.push({ k: 'hosting', label: 'Hosting settings', desc: 'Domains, redirects, password protection and backups on the server', primary: true,
+        icon: 'M3 5h18v6H3z M3 13h18v6H3z M7 8h.01 M7 16h.01', go: on(() => this.goSiteTab('hosting')) });
+    }
     const dlg = s.toolDlg || '';
     return {
       // The Overview's Tools card shows the everyday tools with a line each
@@ -265,6 +274,7 @@ Object.assign(Component.prototype, {
       siteToolsMain: tools.filter(t => t.primary),
       siteToolsMore: s.toolsMore ? tools.filter(t => !t.primary) : [],
       toolsMoreLabel: s.toolsMore ? 'Fewer tools' : 'More tools (' + tools.filter(t => !t.primary).length + ')',
+      toolsHasMore: tools.some(t => !t.primary),
       toolsMoreToggle: () => this.setState(st => ({ toolsMore: !st.toolsMore })),
       ...this.computeScheduled(real, s),
       // ── Apply HTTPS ──

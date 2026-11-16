@@ -74,9 +74,15 @@ Object.assign(Component.prototype, {
   // The environment's address and WordPress admin sit in the header under the
   // name (they follow the environment switcher): each opens in a new tab, and
   // the address has a copy button.
+  // A plain site on our servers: HTML files, no WordPress or database. Its
+  // pages leave out everything that reads or changes WordPress.
+  envIsPlain(env) {
+    return !!(env && env.details && typeof env.details === 'object' && env.details.start === 'plain');
+  },
+
   headLinkVals(curEnv) {
     const url = curEnv && curEnv.home_url ? String(curEnv.home_url) : '';
-    const plain = !!(curEnv && curEnv.details && typeof curEnv.details === 'object' && curEnv.details.start === 'plain');
+    const plain = this.envIsPlain(curEnv);
     const host = url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
     const admin = url && !plain ? url.replace(/\/$/, '') + '/wp-admin' : '';
     return { dHasUrl: !!url, dUrlHost: host, dUrlTitle: url, dHasAdmin: !!admin, dAdminTitle: 'Open ' + admin,
@@ -216,6 +222,16 @@ Object.assign(Component.prototype, {
     const raw = e.visits != null && e.visits !== '' && Number(e.visits) > 0 ? Number(e.visits).toLocaleString() : (prod && site.visits && site.visits !== '\u2014' ? site.visits : '');
     const vis = raw ? { ...card('Visits', raw + ' / wk', prod ? 'Last 14 days' : 'This environment', DIM, 'stats'), hasBars: prod }
       : card('Visits', '—', 'No visit data yet', DIM, 'stats');
+    // A plain site has no WordPress to update or report on: what it is, and the
+    // space its files use (the server reports usage with each health check).
+    if (this.envIsPlain(e)) {
+      const op = (window.CC_BOOT || {}).dcRole === 'operator';
+      const u = d.usage && d.usage.files && Number(d.usage.files.limit) > 0 ? d.usage.files : null;
+      const storage = u
+        ? card('Storage', this.fmtBytes(Number(u.used)), 'of ' + this.fmtBytes(Number(u.limit)) + ' for files', Number(u.used) / Number(u.limit) > 0.85 ? WARN : DIM, op ? 'hosting' : null)
+        : card('Storage', e.storage ? this.fmtStorage(e.storage) : '—', 'Files on the server', DIM, op ? 'hosting' : null);
+      return { hCards: [uptime, backup, card('Site', 'Plain HTML', 'No WordPress or database', DIM, op ? 'hosting' : null), storage, vis] };
+    }
     return { hCards: [uptime, backup, updates, wp, vis] };
   }
 });
