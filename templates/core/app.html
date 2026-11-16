@@ -1598,8 +1598,8 @@ button.ccc-edited:hover{color:var(--ink)}
                   <span class="cc-health-v">{{ hc.v }}</span>
                   <sc-if value="{{ hc.hasBars }}" hint-placeholder-val="{{ false }}">
                     <div style="display:flex;align-items:flex-end;gap:2px;height:22px;margin-top:2px">
-                      <sc-for list="{{ visitBars }}" as="b" hint-placeholder-count="14">
-                        <div style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px;min-height:2px"></div>
+                      <sc-for list="{{ hc.bars }}" as="b" hint-placeholder-count="12">
+                        <div title="{{ b.tip }}" style="flex:1;height:{{ b.h }}%;background:{{ b.bg }};border-radius:2px;min-height:2px"></div>
                       </sc-for>
                     </div>
                   </sc-if>

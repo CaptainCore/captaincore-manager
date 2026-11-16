@@ -2194,6 +2194,35 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$update_data['visits'] = $current_environment->visits;
 		}
 
+		// The months the visit total was summed from (the same Fathom
+		// request), for the Overview card's bars. Kept in details with one
+		// JSON_SET so nothing else stored there is rewritten (JSON_EXTRACT,
+		// not CAST AS JSON, which MariaDB lacks).
+		$monthly = $update_data['visits_monthly'] ?? null;
+		unset( $update_data['visits_monthly'] );
+		if ( is_array( $monthly ) && $current_environment ) {
+			$months = [];
+			foreach ( $monthly as $row ) {
+				$row = (array) $row;
+				$m   = (string) ( $row['m'] ?? '' );
+				if ( preg_match( '/^\d{4}-\d{2}$/', $m ) ) {
+					$months[ $m ] = max( 0, (int) ( $row['v'] ?? 0 ) );
+				}
+			}
+			ksort( $months );
+			$months = array_slice( $months, -13, null, true );
+			if ( $months && array_sum( $months ) > 0 ) {
+				$list = [];
+				foreach ( $months as $m => $v ) {
+					$list[] = [ 'm' => $m, 'v' => $v ];
+				}
+				global $wpdb;
+				$wpdb->query( $wpdb->prepare(
+					"UPDATE {$wpdb->base_prefix}captaincore_environments SET details = JSON_SET(IF(JSON_VALID(details), details, '{}'), '$.visits_monthly', JSON_EXTRACT(%s, '$')) WHERE environment_id = %d",
+					wp_json_encode( $list ), (int) $current_environment->environment_id ) );
+			}
+		}
+
 		( new CaptainCore\Environments )->update( $update_data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [

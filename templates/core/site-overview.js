@@ -11,7 +11,7 @@
 //   Updates      managed updates on/off and the newest update run
 //                (update-logs, kept as real.lastUpdate by loadQuicksaves)
 //   WordPress    the environment's WordPress, PHP and storage
-//   Visits       pageviews over the last 12 months (usage-update's Fathom total)
+//   Visits       pageviews over the last 12 months (usage-update's Fathom total) with monthly bars
 // Each card opens the tab with the detail. Design mode (no real data) keeps
 // sample values so the template renders.
 Object.assign(Component.prototype, {
@@ -154,11 +154,14 @@ Object.assign(Component.prototype, {
     const card = (k, v, sub, tone, go) => ({ k, v, sub, dot: tone,
       bd: tone === BAD ? 'color-mix(in srgb,var(--bad) 55%,var(--rule))' : tone === WARN ? 'color-mix(in srgb,var(--warn) 50%,var(--rule))' : 'var(--rule)',
       subFg: tone === BAD ? 'var(--bad)' : tone === WARN ? 'color-mix(in srgb,var(--warn) 70%,var(--ink))' : 'var(--ink-dim)',
-      go: go ? () => this.goSiteTab(go) : () => {}, cursor: go ? 'pointer' : 'default', hasBars: false });
+      go: go ? () => this.goSiteTab(go) : () => {}, cursor: go ? 'pointer' : 'default', hasBars: false, bars: [] });
+    const barsOf = list => { const max = Math.max(1, ...list.map(x => x.v)); return list.map((x, i) => ({ h: Math.max(4, Math.round(x.v / max * 100)), tip: x.label + ': ' + x.v.toLocaleString() + ' pageviews',
+      bg: i === list.length - 1 ? 'var(--brand)' : 'color-mix(in srgb, var(--brand) 38%, transparent)' })); };
     if (!real) {
       return { hCards: [card('Uptime', 'Up', 'Uptime monitor on', OK), card('Last backup', '6 hours ago', '30 kept', OK, 'backups'),
         card('Updates', 'Ran 2 days ago', '3 plugins updated', OK, 'versions'), card('WordPress', site.core || '6.9', 'PHP 8.3', DIM, 'plugins'),
-        { ...card('Visits', site.visits + ' / yr', 'Last 12 months', DIM, 'stats'), hasBars: true }] };
+        { ...card('Visits', site.visits + ' / yr', 'Last 12 months', DIM, 'stats'), hasBars: true,
+          bars: barsOf([35, 42, 38, 55, 48, 60, 52, 45, 66, 58, 72, 64].map((v, i) => ({ v: v * 900, label: 'Month ' + (i + 1) }))) }] };
     }
     if (!real.envs) return { hCards: ['Uptime', 'Last backup', 'Updates', 'WordPress', 'Visits'].map(k => card(k, '…', ' ', DIM)) };
     const e = curEnv || {};
@@ -217,11 +220,15 @@ Object.assign(Component.prototype, {
     const wp = card('WordPress', e.core || site.core || '—', [php ? 'PHP ' + php : '', e.storage ? this.fmtStorage(e.storage) : (s.env === 'Production' ? site.storage : '')].filter(Boolean).join(' · ') || ' ', DIM, 'plugins');
     // Visits
     // e.visits is the CLI's usage-update figure: Fathom pageviews summed over
-    // the last 12 months (the plan's visit usage), so it reads per year. No
-    // bars: there is no stored daily series, and the Stats tab has the real one.
+    // the last 12 months (the plan's visit usage), so it reads per year. The
+    // bars are the months that same Fathom request returned (details
+    // visits_monthly, [{m:'YYYY-MM', v}]), the current month last and partial.
     const prod = s.env === 'Production';
     const raw = e.visits != null && e.visits !== '' && Number(e.visits) > 0 ? Number(e.visits).toLocaleString() : (prod && site.visits && site.visits !== '\u2014' ? site.visits : '');
-    const vis = raw ? { ...card('Visits', raw + ' / yr', prod ? 'Last 12 months' : 'This environment, 12 months', DIM, 'stats') }
+    const months = (Array.isArray(d.visits_monthly) ? d.visits_monthly : []).filter(x => x && /^\d{4}-\d{2}$/.test(x.m)).slice(-12)
+      .map(x => ({ v: Number(x.v) || 0, label: new Date(x.m + '-15T00:00:00Z').toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' }) }));
+    const bars = months.length >= 2 ? barsOf(months) : [];
+    const vis = raw ? { ...card('Visits', raw + ' / yr', prod ? 'Last 12 months' : 'This environment, 12 months', DIM, 'stats'), hasBars: bars.length > 0, bars }
       : card('Visits', '—', 'No visit data yet', DIM, 'stats');
     // A plain site has no WordPress to update or report on: what it is, and the
     // space its files use (the server reports usage with each health check).
