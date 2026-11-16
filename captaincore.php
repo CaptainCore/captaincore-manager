@@ -3642,10 +3642,15 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 			if ( ! in_array( $subcommand, [ 'ssh' ], true ) ) {
 				return new WP_Error( 'invalid_command', 'Unsupported manage command.', [ 'status' => 400 ] );
 			}
-			// Flag name kept to a safe charset; the input value passes raw (argv
-			// elements are never re-parsed).
-			$flag = preg_replace( '/[^a-z0-9_-]/i', '', (string) $arguments['value'] );
-			$args = array_merge( [ $subcommand ], $sites, [ '--' . $flag . '=' . stripslashes( $arguments['input'] ) ] );
+			// Only --command (a WP-CLI or shell line run on the verified site).
+			// Any flag name used to pass through, and `ssh --script=<path>` reads
+			// a local file on the CLI server and pipes it into the site, so a
+			// customer could stream the server's configs into their own site.
+			// The input value passes raw (argv elements are never re-parsed).
+			if ( ( $arguments['value'] ?? '' ) !== 'command' ) {
+				return new WP_Error( 'invalid_command', 'Unsupported manage option.', [ 'status' => 400 ] );
+			}
+			$args = array_merge( [ $subcommand ], $sites, [ '--command=' . stripslashes( $arguments['input'] ) ] );
 		}
 	}
 	if ( $cmd == 'quicksave_file_diff' ) {
