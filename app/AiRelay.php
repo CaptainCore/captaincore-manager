@@ -1195,6 +1195,12 @@ class AiRelay {
 			$view['provider_action_id'] = (int) $project->provider_action_id;
 			$view['unreviewed']         = self::unreviewed_count( $project );
 			$view['needs_review']       = $view['unreviewed'] > 0 && in_array( $project->status, [ 'building', 'preview' ], true );
+			// Who spoke last in the thread (internal notes left out): 'staff'
+			// means the build is waiting on the customer.
+			global $wpdb;
+			$view['last_author']        = (string) $wpdb->get_var( $wpdb->prepare(
+				"SELECT author FROM {$wpdb->prefix}captaincore_ai_relay_messages WHERE ai_relay_project_id = %d AND author IN ('customer', 'staff') ORDER BY ai_relay_message_id DESC LIMIT 1",
+				$project->ai_relay_project_id ) );
 		}
 		return $view;
 	}

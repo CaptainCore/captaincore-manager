@@ -162,10 +162,20 @@ Object.assign(Component.prototype, {
     const human = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
 
     // ── Sites page cards ──
-    const out = { rlShow: false, rlRows: [], showRelay: s.route === 'relay' };
+    const out = { rlShow: false, rlRows: [], rlWaitShow: false, rlWaitRows: [], showRelay: s.route === 'relay' };
     if (this._hydrated && s.route === 'sites' && this._relayProjects === undefined && !this._rlLoading)
       setTimeout(() => this.loadRelayProjects(), 0);
-    const list = (this._relayProjects || []).filter(p => p.status === 'building' || p.status === 'preview');
+    const all = (this._relayProjects || []).filter(p => p.status === 'building' || p.status === 'preview');
+    // Operators only get a card for a build that needs them: the customer
+    // spoke last (or nobody has yet). Builds waiting on the customer (staff
+    // spoke last, so whatever they sent was answered) shrink to one line.
+    const waiting = isOp ? all.filter(p => p.last_author === 'staff') : [];
+    const list = all.filter(p => !waiting.includes(p));
+    if (waiting.length) {
+      out.rlWaitShow = true;
+      out.rlWaitRows = waiting.map((p, i) => ({ id: 'rlw' + p.id, name: p.name, sep: i < waiting.length - 1 ? ',' : '',
+        tip: (p.account || '') + ' · ' + p.status_label + ' · last reply ' + when(p.last_message_at), open: () => this.openRelay(p.id) }));
+    }
     if (list.length) {
       out.rlShow = true;
       out.rlRows = list.map(p => {

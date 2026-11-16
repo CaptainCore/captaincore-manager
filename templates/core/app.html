@@ -1282,6 +1282,14 @@ button.ccc-edited:hover{color:var(--ink)}
               </sc-for>
             </div>
           </sc-if>
+          <sc-if value="{{ rlWaitShow }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:10px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px">
+              <span>AI Relay, waiting on the customer:</span>
+              <sc-for list="{{ rlWaitRows }}" as="w" hint-placeholder-count="1">
+                <span><a onClick="{{ w.open }}" title="{{ w.tip }}" style="color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="text-decoration-color:var(--ink)">{{ w.name }}</a>{{ w.sep }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
           <!-- ══ Site requests queue (customer submissions; operators step them Requested → Preparing → Ready) ══ -->
           <sc-if value="{{ srShow }}" hint-placeholder-val="{{ false }}">
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
