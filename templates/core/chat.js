@@ -106,11 +106,16 @@ Object.assign(Component.prototype, {
     id = parseInt(id, 10) || 0;
     if (c.id === id && c.conv) return;
     this.chatDraftFlush();
+    // A browser-kept draft still waiting on its 400ms timer is written now.
+    if (c.localTimer) { clearTimeout(c.localTimer); c.localTimer = null; try { const v = this.state.chatBody || '', k = this.chatLocalKey(c.id); if (v.trim()) localStorage.setItem(k, v.slice(0, 20000)); else localStorage.removeItem(k); } catch (e) {} }
     c.dftSeed = ''; c.dftRemote = false; c.logs = [];
     c.id = id; c.conv = null; c.convErr = ''; c.convLoading = !!id; c.scrollPin = true; c.newDraft = false; c.edit = null;
     this.chatClearFiles();
-    this._chatClear = true;
-    this.setState({ chatId: id ? String(id) : '', chatBody: '', chatMode: 'reply' });
+    // A draft kept in this browser comes back (customers; an operator's new
+    // conversation). An operator's reply draft comes from the server.
+    const local = !this.chatBoot().operator || !id ? this.chatLocalRestore(id) : '';
+    this._chatClear = !local;
+    this.setState({ chatId: id ? String(id) : '', chatBody: local, chatMode: 'reply' });
     if (id) this.chatLoadConv(id);
   },
 
@@ -227,6 +232,7 @@ Object.assign(Component.prototype, {
     const note = cb.operator && s.chatMode === 'note';
     this.setState({ chatSending: true });
     const opNew = cb.operator && !c.id;
+    const typedIn = c.id;
     if (opNew && !c.newTo) { this.setState({ chatSending: false }); this.toast('Choose who to message first.', { kind: 'info' }); return; }
     const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, c.id && c.logs.length ? { log_refs: c.logs.map(l => l.id + ':' + l.site_id).join(',') } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
       opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {});
@@ -253,6 +259,7 @@ Object.assign(Component.prototype, {
         this.chatOnMessage(r.message);
       }
       c.scrollPin = true;
+      this.chatLocalDrop(typedIn);
       this._chatClear = true;
       this.chatClearFiles();
       c.logs = [];
@@ -1754,6 +1761,7 @@ Object.assign(Component.prototype, {
     c.conv.draft = draft;
     // The same draft again (a refetch) or the echo of our own save: nothing new.
     if (draft && ((prev && prev.body === draft.body && prev.updated_at === draft.updated_at) || draft.body === c.dftSeed)) return;
+    if (draft && draft.user_id === this.chatBoot().userId && !draft.agent && (c.dftMine || []).includes(draft.body) && (this.state.chatBody || '').trim()) return;
     const cur = this.state.chatBody || '';
     const untouched = !cur.trim() || cur === c.dftSeed;
     c.dftRemote = false;
@@ -1774,26 +1782,61 @@ Object.assign(Component.prototype, {
     this.setState({ chatBody: draft.body, chatMode: draft.kind === 'note' ? 'note' : 'reply' });
   },
 
-  // A change in the reply box while a draft is waiting saves back to it
-  // (1.2s after typing stops). An emptied box leaves the draft alone:
-  // Discard is the way to drop it.
+  // Whatever is typed in the reply box is kept as the conversation's draft
+  // (1.2s after typing stops, and right away when switching conversations
+  // or leaving the page), so it survives a switch, a reload or another
+  // device. A draft someone else (or an agent) wrote is edited in place.
+  // Emptying the box drops only your own draft: an agent's stays until
+  // Discard.
   chatDraftEdited(text) {
     const c = this._chat;
-    if (!c || !c.conv || !c.conv.draft || c.dftRemote || (!String(text).trim() && !(c.logs || []).length)) return;
-    c.dftPending = { id: c.conv.conversation.id, body: String(text), kind: this.state.chatMode === 'note' ? 'note' : 'comment', log_refs: (c.logs || []).map(l => l.id + ':' + l.site_id).join(',') };
+    if (!c || !c.conv || c.dftRemote) return;
+    const cb = this.chatBoot();
+    const d = c.conv.draft;
+    const empty = !String(text).trim() && !(c.logs || []).length;
+    if (empty && !(d && d.user_id === cb.userId && !d.agent)) { if (c.dftPending && c.dftPending.id === c.conv.conversation.id) { clearTimeout(c.dftTimer); c.dftPending = null; } return; }
+    c.dftPending = { id: c.conv.conversation.id, body: String(text), kind: this.state.chatMode === 'note' ? 'note' : 'comment', log_refs: (c.logs || []).map(l => l.id + ':' + l.site_id).join(','), drop: empty };
     clearTimeout(c.dftTimer);
     c.dftTimer = setTimeout(() => this.chatDraftFlush(), 1200);
+    if (!this._dftUnload) {
+      this._dftUnload = true;
+      window.addEventListener('pagehide', () => this.chatDraftFlush(true));
+    }
   },
 
-  chatDraftFlush() {
+  // keepalive: the page is going away, so the request has to outlive it.
+  chatDraftFlush(keepalive) {
     const c = this._chat;
     if (!c || !c.dftPending) return;
     clearTimeout(c.dftTimer);
     const p = c.dftPending;
     c.dftPending = null;
-    if (c.conv && c.conv.conversation.id === p.id) c.dftSeed = p.body;
-    this.api('/chat/conversations/' + p.id + '/draft', { method: 'PUT', body: { body: p.body, kind: p.kind, log_refs: p.log_refs } }).then(r => {
-      if (r && r.draft && c.conv && c.conv.conversation.id === p.id && c.conv.draft) c.conv.draft = r.draft;
+    if (c.conv && c.conv.conversation.id === p.id) c.dftSeed = p.drop ? '' : p.body;
+    // Our own saves come back as draft.updated; remember them so the echo
+    // isn't mistaken for someone else's newer draft.
+    c.dftMine = (c.dftMine || []).concat(p.body).slice(-8);
+    const path = '/chat/conversations/' + p.id + '/draft';
+    const body = { body: p.body, kind: p.kind, log_refs: p.log_refs };
+    if (keepalive) {
+      const boot = window.CC_BOOT || {};
+      try {
+        fetch(boot.restRoot + 'captaincore/v1' + path, { method: p.drop ? 'DELETE' : 'PUT', keepalive: true, credentials: 'same-origin',
+          headers: { 'X-WP-Nonce': boot.nonce, 'Content-Type': 'application/json' }, body: p.drop ? undefined : JSON.stringify(body) });
+      } catch (e) {}
+      return;
+    }
+    const mine = () => c.conv && c.conv.conversation.id === p.id;
+    const row = c.list.find(x => x.id === p.id);
+    if (p.drop) {
+      this.api(path, { method: 'DELETE' }).then(() => { if (mine()) c.conv.draft = null; if (row) row.draft = ''; this.setState({}); }).catch(() => {});
+      return;
+    }
+    this.api(path, { method: 'PUT', body }).then(r => {
+      if (r && r.draft) {
+        if (mine()) c.conv.draft = r.draft;
+        if (row) row.draft = r.draft.kind;
+        this.setState({});
+      }
     }).catch(() => {});
   },
 
@@ -1826,7 +1869,7 @@ Object.assign(Component.prototype, {
     const who = String(conv.customer_name || 'The customer').split(' ')[0];
     return {
       chatDraftShow: true,
-      chatDraftLabel: (d.kind === 'note' ? 'Draft note by ' : 'Draft by ') + (d.by || 'Someone') + ' · ' + (this.chatAgo(d.created_at) === 'now' ? 'just now' : /^\d/.test(this.chatAgo(d.created_at)) ? this.chatAgo(d.created_at) + ' ago' : this.chatAgo(d.created_at)),
+      chatDraftLabel: (d.user_id === this.chatBoot().userId && !d.agent ? (d.kind === 'note' ? 'Your draft note' : 'Your draft') + ' · saved ' : (d.kind === 'note' ? 'Draft note by ' : 'Draft by ') + (d.by || 'Someone') + ' · ') + ((t => this.chatAgo(t) === 'now' ? 'just now' : /^\d/.test(this.chatAgo(t)) ? this.chatAgo(t) + ' ago' : this.chatAgo(t))(d.user_id === this.chatBoot().userId && !d.agent ? (d.updated_at || d.created_at) : d.created_at)),
       chatDraftTitle: 'Written ' + new Date(d.created_at * 1000).toLocaleString() + (d.updated_at > d.created_at ? ', last changed ' + new Date(d.updated_at * 1000).toLocaleString() : '') + '. Sending clears it.',
       chatDraftWarn: since ? who + ' wrote ' + (since === 1 ? 'again' : since + ' more times') + ' since' : '',
       chatDraftHasWarn: since > 0,
@@ -2192,7 +2235,34 @@ Object.assign(Component.prototype, {
     t.style.height = 'auto';
     t.style.height = Math.min(t.scrollHeight, 180) + 'px';
     this.chatTyping(v);
-    if (isOp) this.chatDraftEdited(v);
+    const c = this._chat;
+    if (isOp && c && c.id) this.chatDraftEdited(v);
+    else this.chatLocalDraft(v);
+  },
+
+  // Drafts kept in this browser: a customer's (any conversation) and a new
+  // conversation an operator hasn't sent yet. Operators' replies are kept
+  // on the server instead (chatDraftEdited).
+  chatLocalKey(id) {
+    return 'ccChatDraft:' + (this.chatBoot().userId || 0) + ':' + (id || 'new');
+  },
+  chatLocalDraft(v) {
+    const c = this._chat;
+    if (!c) return;
+    const key = this.chatLocalKey(c.id);
+    clearTimeout(c.localTimer);
+    c.localTimer = setTimeout(() => {
+      c.localTimer = null;
+      try { if (String(v).trim()) localStorage.setItem(key, String(v).slice(0, 20000)); else localStorage.removeItem(key); } catch (e) {}
+    }, 400);
+  },
+  chatLocalRestore(id) {
+    try { return localStorage.getItem(this.chatLocalKey(id)) || ''; } catch (e) { return ''; }
+  },
+  chatLocalDrop(id) {
+    const c = this._chat;
+    if (c) clearTimeout(c.localTimer);
+    try { localStorage.removeItem(this.chatLocalKey(id)); } catch (e) {}
   },
 
   chatInputRef(el) {
@@ -2349,7 +2419,7 @@ Object.assign(Component.prototype, {
       chatPushGo: e => this.chatPushButton(e),
       chatNewGo: () => this.chatNewForCustomer(),
       chatOpNew: opNew,
-      chatNewCancel: () => { c.newDraft = false; c.newTo = null; this.setState({ chatBody: '' }); },
+      chatNewCancel: () => { c.newDraft = false; c.newTo = null; this.chatLocalDrop(0); this._chatClear = true; this.setState({ chatBody: '' }); },
       chatToPicked: !!newTo, chatToUnpicked: opNew && !newTo,
       chatToName: newTo ? newTo.name : '', chatToEmail: newTo ? newTo.email : '',
       chatToClear: () => { c.newTo = null; c.newSite = ''; this._chatToFocus = true; this.setState({}); },
