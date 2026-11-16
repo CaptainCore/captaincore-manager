@@ -2036,6 +2036,19 @@ class Chat {
 		}
 		$keep = $old && $agent === '' && ( ! isset( $input['keep_author'] ) || ! empty( $input['keep_author'] ) );
 		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
+		// A save that reaches us after the message it became: the box saves
+		// 1.2s after typing stops, so Enter can race that save, and a save
+		// landing after post_message cleared the draft would bring it back.
+		// The operator's own latest message with this very text, sent in the
+		// last 10 minutes, means it was already sent.
+		if ( $agent === '' ) {
+			$last = $wpdb->get_row( $wpdb->prepare(
+				"SELECT body, created_at FROM $m WHERE chat_conversation_id = %d AND author_user_id = %d AND kind IN ('comment', 'note') ORDER BY chat_message_id DESC LIMIT 1",
+				$cid, (int) $user_id ) );
+			if ( $last && trim( (string) $last->body ) === trim( $body ) && strtotime( $last->created_at . ' UTC' ) >= time() - 600 ) {
+				return [ 'draft' => self::draft( $cid ), 'sent' => true ];
+			}
+		}
 		$wpdb->replace( $t, [
 			'chat_conversation_id' => $cid,
 			'kind'                 => $kind,

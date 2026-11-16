@@ -233,6 +233,10 @@ Object.assign(Component.prototype, {
     this.setState({ chatSending: true });
     const opNew = cb.operator && !c.id;
     const typedIn = c.id;
+    // A draft save still waiting on its timer would land after this message
+    // and bring the draft back; one already in flight is ignored when it
+    // answers (c.dftGen), and the server refuses a save of text just sent.
+    if (cb.operator && c.id) { clearTimeout(c.dftTimer); c.dftPending = null; c.dftGen = (c.dftGen || 0) + 1; }
     if (opNew && !c.newTo) { this.setState({ chatSending: false }); this.toast('Choose who to message first.', { kind: 'info' }); return; }
     const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, c.id && c.logs.length ? { log_refs: c.logs.map(l => l.id + ':' + l.site_id).join(',') } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
       opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {});
@@ -1824,6 +1828,7 @@ Object.assign(Component.prototype, {
       } catch (e) {}
       return;
     }
+    const gen = c.dftGen || 0;
     const mine = () => c.conv && c.conv.conversation.id === p.id;
     const row = c.list.find(x => x.id === p.id);
     if (p.drop) {
@@ -1831,6 +1836,9 @@ Object.assign(Component.prototype, {
       return;
     }
     this.api(path, { method: 'PUT', body }).then(r => {
+      // A message went out while this save was on its way: the server's
+      // draft.updated says what is left, not this answer.
+      if ((c.dftGen || 0) !== gen) return;
       if (r && r.draft) {
         if (mine()) c.conv.draft = r.draft;
         if (row) row.draft = r.draft.kind;

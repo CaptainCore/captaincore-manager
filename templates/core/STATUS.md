@@ -3954,6 +3954,9 @@ Text typed in the reply box used to be saved only when the conversation already 
 ### Chat: one Active tab (2026-11-16)
 The operator inbox had Waiting and Open tabs, and Waiting was only a slice of Open, so Austin kept switching between them. They are one **Active** tab now (filter `open`, the default), newest activity first, counting every open conversation. Rows waiting on us keep their "Waiting 5d" chip; the plain "Open" chip is hidden in Active since every row there is open. The server still takes `status=waiting` (counts.waiting drives the app badge and push badge).
 
+### Chat: sent text no longer comes back as a draft (2026-11-16)
+The reply box saves its draft 1.2s after typing stops, so pressing Enter right then sent the message while that save was on its way. When the save reached the server after the message, it recreated the draft `post_message` had just cleared, and the sent text sat in the box as "Your draft". Now `chatSend` cancels a waiting save and bumps `c.dftGen`, so an in-flight save's answer is ignored, and `Chat::save_draft` refuses (returns `sent: true`) a save whose text matches the operator's own latest message from the last 10 minutes, which also covers a second tab or device. Reproduced with a held PUT before the fix, clean after.
+
 ### Visits read per year (2026-11-16)
 An environment's `visits` is the CLI's `usage-update` figure: `captaincore stats` sums Fathom pageviews over the last 12 months (the WordPress.com fallback annualizes a monthly average). Every label said "/ wk", so a site with ~500k pageviews a year showed "506,006 / wk". The Overview card now reads "/ yr · Last 12 months", and the site list, environment rows, fleet Traffic total and the sort menu say per year. The card's 14 bars were a hard-coded placeholder (app.js `visitBars`), so real sites no longer show them; the Stats tab has the real series.
 
