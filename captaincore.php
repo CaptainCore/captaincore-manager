@@ -1298,6 +1298,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'stack'      => CaptainCore\HostConfigs::stack( $env ),
 			'container'  => (string) ( $details->container ?? '' ),
 			'ip'         => (string) ( $details->container_ip ?? '' ),
+			// The SSH login apply renames the container's user to (the site's slug).
+			'ssh_user'   => CaptainCore\HostConfigs::login_name( ( CaptainCore\Sites::get( (int) $env->site_id ) ?: (object) [ 'site' => '' ] )->site ),
 			'server'     => [ 'name' => $server->name, 'address' => $server->address, 'ssh_port' => (int) $server->ssh_port, 'ssh_user' => $server->ssh_user ],
 		];
 	}
@@ -1381,6 +1383,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 		$d  = is_object( $data ) ? $data : (object) [];
 		$ok = CaptainCore\HostConfigs::record_apply( $environment_id, (int) ( $d->revision ?? 0 ), (string) ( $d->status ?? '' ), $d->result ?? null );
+		// The container's SSH login as apply left it (renamed after the site, or
+		// still `site` when that failed): the environment's username follows it.
+		$login = (string) ( $d->result->ssh_user ?? '' );
+		$env   = CaptainCore\Environments::get( (int) $environment_id );
+		if ( $env && (int) $env->server_id > 0 && preg_match( '/^[a-z][a-z0-9-]{0,31}$/', $login ) && $login !== $env->username ) {
+			( new CaptainCore\Environments )->update( [ 'username' => $login, 'updated_at' => current_time( 'mysql' ) ], [ 'environment_id' => (int) $environment_id ] );
+			CaptainCore\ProcessLog::insert( 'SSH login renamed from ' . $env->username . ' to ' . $login . ' (' . $env->environment . ')', (int) $env->site_id );
+		}
 		return [ 'response' => $ok ? 'Recorded' : 'Revision not found' ];
 	}
 
@@ -7739,7 +7749,8 @@ function captaincore_servers_container_func( $request ) {
 		$site = CaptainCore\Sites::get( (int) $env->site_id );
 		$last = CaptainCore\HostConfigs::latest( $env->environment_id );
 		$data->site = [ 'site_id' => (int) $env->site_id, 'name' => $site ? $site->name : '', 'site' => $site ? $site->site : '',
-			'environment' => $env->environment, 'home_url' => $env->home_url, 'stack' => CaptainCore\HostConfigs::stack( $env ) ];
+			'environment' => $env->environment, 'home_url' => $env->home_url, 'stack' => CaptainCore\HostConfigs::stack( $env ),
+			'ssh_user' => (string) $env->username ];
 		$data->hosting = [
 			'config'     => CaptainCore\HostConfigs::for_browser( CaptainCore\HostConfigs::current( $env ) ),
 			'revision'   => $last ? (int) $last->revision : 0,

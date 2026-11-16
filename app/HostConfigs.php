@@ -46,6 +46,36 @@ class HostConfigs extends DB {
 	/** Environment details keys only the Manager writes; CLI syncs never overwrite them. */
 	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container', 'restore', 'restored', 'kinsta_env_id' ];
 
+	// Account names a container already has (or that read as a system account):
+	// a site called one of these logs in as <name>-site instead.
+	const RESERVED_LOGINS = [ 'root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy',
+		'www-data', 'backup', 'list', 'irc', 'gnats', 'nobody', 'messagebus', 'syslog', 'sshd', 'mysql', 'ubuntu', 'polkitd',
+		'tss', 'uuidd', 'tcpdump', 'landscape', 'dnsmasq', 'frankenphp', 'admin', 'administrator', 'user', 'guest', 'ftp',
+		'postfix', 'www', 'http', 'operator', 'staff', 'adm', 'sudo', 'shadow', 'utmp', 'tty', 'disk', 'kmem', 'dialout',
+		'voice', 'cdrom', 'floppy', 'tape', 'audio', 'video', 'plugdev', 'netdev', 'input', 'render', 'crontab', 'ssh', 'users', 'nogroup' ];
+
+	/**
+	 * The SSH login for a site's containers: its slug, so every site has its
+	 * own name (yoursbymk, not site). Lowercase letters, digits and dashes,
+	 * starting with a letter, at most 32 characters. `host apply` renames the
+	 * container's user (uid 1000) to it and reports the name it ended up with;
+	 * the environment's username follows that report, never this guess.
+	 */
+	public static function login_name( $slug ) {
+		$name = preg_replace( '/[^a-z0-9-]/', '', strtolower( (string) $slug ) );
+		if ( $name === '' ) {
+			return 'site';
+		}
+		if ( ! preg_match( '/^[a-z]/', $name ) ) {
+			$name = 's' . $name;
+		}
+		$name = rtrim( substr( $name, 0, 32 ), '-' );
+		if ( in_array( $name, self::RESERVED_LOGINS, true ) || strpos( $name, 'systemd-' ) === 0 || strpos( $name, '_' ) === 0 ) {
+			$name = rtrim( substr( $name, 0, 27 ), '-' ) . '-site';
+		}
+		return $name;
+	}
+
 	/** Starting config for an environment that has no revision yet. */
 	public static function default_for( $environment ) {
 		$site    = Sites::get( (int) $environment->site_id );
@@ -986,7 +1016,8 @@ class HostConfigs extends DB {
 				'site_id'         => (int) $site_id,
 				'environment'     => 'Staging',
 				'address'         => $server->address,
-				'username'        => $prod->username,
+				// A new container's login is `site` until its first apply renames it.
+				'username'        => 'site',
 				'protocol'        => $prod->protocol,
 				'port'            => (string) $slot['port'],
 				'home_directory'  => $prod->home_directory,

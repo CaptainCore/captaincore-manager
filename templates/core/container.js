@@ -254,7 +254,7 @@ Object.assign(Component.prototype, {
 
     const sshU = unit('ssh'), timerU = unit('cron-timer'), cronU = unit('cron');
     const background = [
-      { k: 'SSH', ico: this.icon('key'), v: (dot(sshU).label) + ' · as site on port ' + (c.ssh_port || '—'), fg: dot(sshU).fg, logs: logBtn('ssh') },
+      { k: 'SSH', ico: this.icon('key'), v: (dot(sshU).label) + ' · as ' + ((d.site && d.site.ssh_user) || 'site') + ' on port ' + (c.ssh_port || '—'), fg: dot(sshU).fg, logs: logBtn('ssh') },
       ...(dbOff ? [] : [{ k: 'WP-Cron', ico: this.icon('clock'), v: (timerU && timerU.active === 'active' ? 'Every minute' : 'Timer off') + (cronU && cronU.last_exit ? ' · last ran ' + (since(cronU.last_exit) < 60 ? 'just now' : this.fmtDuration(since(cronU.last_exit)) + ' ago') + (cronU.result && cronU.result !== 'success' ? ' (' + cronU.result + ')' : '') : ''), fg: dot(timerU).fg, logs: logBtn('cron') }])
     ];
 
