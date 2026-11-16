@@ -3982,3 +3982,28 @@ Picking theirs sends its provider_id (the new-site route already refuses a row
 that is not theirs), resets the copy source (copies stay within one Kinsta
 company) and the lede names their account. Customers without a connection and
 operators see no change.
+
+### APM for sites on our servers (2026-11-16)
+Site → Hosting → APM (operators, environments on our servers). Two layers,
+both read from the node's hourly files through `captaincore host apm --json`
+(GET /sites/{id}/hosting/apm?environment=&range=1h|24h|7d):
+- **Requests, always on.** The container's access log now tags what answered
+  each request (`cache`: `hit` for a saved page, `static` for a file on disk,
+  untagged = PHP; host apply's Caddyfile `vars` + `log_append`). The node's
+  cc-metrics timer (cc-backups `apm-collect`, every minute) reads new lines and
+  sums them per site per hour in /var/lib/captaincore/apm/<ct>/<YYYYmmddHH>.json
+  (14 days): requests by kind, 4xx/5xx, PHP time histogram, and PHP time by
+  page (admin-ajax by action, REST by route, numbers folded).
+- **WordPress detail, on a switch.** POST /sites/{id}/hosting/apm { hours:
+  1|4|24|72, 0 = off } saves a hosting revision (`apm {enabled, until,
+  slow_ms, detail_pct}`) and applies it: /etc/captaincore/apm.php joins the
+  prepend (no plugin). It times each page PHP builds and writes one line per
+  request to /var/lib/captaincore/apm/<minute>.jsonl in the container, which
+  the collector reads and deletes: transaction (template, REST route,
+  admin-ajax action, admin screen), total, memory, database time, outside
+  calls, per plugin/theme load + db + http (by backtrace), top queries with
+  values replaced by ?, calls as host + path, and for slow requests (≥ 1 s)
+  and a 5% sample the phases of the page load. It stops by itself at `until`.
+  Measured on a local lab site: 1–5 ms on a 100 ms page with full detail.
+  Plain sites get the requests layer only. Turning it on or off restarts PHP
+  (prepend change), the edge holds requests meanwhile.

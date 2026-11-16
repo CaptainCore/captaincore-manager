@@ -2386,6 +2386,210 @@ button.ccc-edited:hover{color:var(--ink)}
             </sc-if>
           </sc-if>
 
+          <!-- APM: requests (always) and the WordPress recorder (apm.js) -->
+          <sc-if value="{{ tabApm }}" hint-placeholder-val="{{ false }}">
+            <div class="cc-card" style="margin-top:16px">
+              <div class="cc-card-h">
+                <span class="cc-chip" style="--h:var(--brand)"><span ref="{{ apmIco }}"></span></span>
+                <h2>APM</h2>
+                <span class="cc-meta">What visitors waited for</span>
+                <div style="flex:1"></div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ apmRanges }}" as="r" hint-placeholder-count="3">
+                    <span onClick="{{ r.pick }}" style="font:500 var(--fs-12) var(--sans);color:{{ r.fg }};background:{{ r.bg }};border:1px solid {{ r.bd }};border-radius:999px;padding:3px 10px;cursor:pointer">{{ r.label }}</span>
+                  </sc-for>
+                </div>
+                <span class="cc-btn" onClick="{{ apmRefresh }}">Refresh</span>
+              </div>
+              <sc-if value="{{ apmLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px" class="cc-meta">Reading from the server…</div>
+              </sc-if>
+              <sc-if value="{{ apmHasErr }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px;font:500 var(--fs-13) var(--sans);color:var(--bad)">{{ apmErr }}</div>
+              </sc-if>
+              <sc-if value="{{ apmReady }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                    <sc-for list="{{ apmTiles }}" as="t" hint-placeholder-count="5">
+                      <div style="border:1px solid var(--rule);border-radius:11px;padding:10px 13px;min-width:0">
+                        <div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div>
+                        <div style="font:700 20px var(--mono);color:{{ t.c }};margin-top:3px">{{ t.v }}</div>
+                        <div class="cc-meta" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.sub }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px">
+                    <div style="min-width:0">
+                      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font:600 var(--fs-13) var(--sans)">Requests</span>
+                        <span class="cc-meta"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--brand);margin-right:4px"></span>PHP</span>
+                        <span class="cc-meta"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:color-mix(in srgb,var(--brand) 30%,transparent);margin-right:4px"></span>Saved pages and files</span></div>
+                      <div ref="{{ apmReqRef }}"></div>
+                      <div class="cc-meta" style="display:flex;justify-content:space-between;margin-top:4px"><span>{{ apmSpanFrom }}</span><span>{{ apmSpanTo }}</span></div>
+                    </div>
+                    <div style="min-width:0">
+                      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><span style="font:600 var(--fs-13) var(--sans)">PHP time, average</span>
+                        <sc-if value="{{ apmHasDb }}" hint-placeholder-val="{{ false }}"><span class="cc-meta"><span style="display:inline-block;width:9px;height:2px;background:var(--warn);margin:0 4px 3px 0"></span>Database, per page</span></sc-if></div>
+                      <div ref="{{ apmTimeRef }}"></div>
+                      <div class="cc-meta" style="display:flex;justify-content:space-between;margin-top:4px"><span>{{ apmSpanFrom }}</span><span>{{ apmSpanTo }}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ apmReady }}" hint-placeholder-val="{{ true }}">
+              <div class="cc-card" style="margin-top:14px">
+                <div class="cc-card-h"><h2>Where PHP spent its time</h2><span class="cc-meta">By page, from the web server's log. Saved pages and files are left out.</span></div>
+                <sc-if value="{{ apmNoRoutes }}" hint-placeholder-val="{{ false }}"><div class="cc-meta" style="padding:14px 16px">No PHP requests in this range.</div></sc-if>
+                <sc-if value="{{ apmHasRoutes }}" hint-placeholder-val="{{ true }}">
+                  <div style="overflow-x:auto"><div style="min-width:620px">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 80px 80px 80px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em"><span>Page</span><span style="text-align:right">Requests</span><span style="text-align:right">Average</span><span style="text-align:right">95th pct</span><span style="text-align:right">Slowest</span></div>
+                    <sc-for list="{{ apmRoutes }}" as="r" hint-placeholder-count="6">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 80px 80px 80px;gap:10px;padding:7px 16px;border-bottom:1px solid var(--rule);align-items:center;font:400 var(--fs-125) var(--sans)">
+                        <div style="min-width:0"><div style="font:500 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ r.name }}">{{ r.name }}</div>
+                          <div style="height:3px;border-radius:2px;background:var(--panel-2);margin-top:4px"><div style="height:3px;border-radius:2px;background:var(--brand);width:{{ r.share }}"></div></div>
+                          <sc-if value="{{ r.hasErrs }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-115) var(--sans);color:var(--bad)">{{ r.errs }}</span></sc-if></div>
+                        <span style="text-align:right;font-family:var(--mono)">{{ r.n }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.avg }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.p95 }}</span><span style="text-align:right;font-family:var(--mono);color:var(--ink-dim)">{{ r.max }}</span>
+                      </div>
+                    </sc-for>
+                  </div></div>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ apmWpCard }}" hint-placeholder-val="{{ true }}">
+              <div class="cc-card" style="margin-top:14px">
+                <div class="cc-card-h"><h2>WordPress detail</h2>
+                  <sc-if value="{{ apmRecording }}" hint-placeholder-val="{{ false }}"><span class="cc-pill" style="color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)">Recording</span></sc-if>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ apmNotRecording }}" hint-placeholder-val="{{ true }}">
+                    <span class="cc-meta">Record for</span>
+                    <sc-for list="{{ apmRecOpts }}" as="o" hint-placeholder-count="4"><span class="cc-btn" onClick="{{ o.go }}">{{ o.label }}</span></sc-for>
+                  </sc-if>
+                  <sc-if value="{{ apmRecording }}" hint-placeholder-val="{{ false }}"><span class="cc-btn danger" onClick="{{ apmRecOff }}">Stop recording</span></sc-if>
+                </div>
+                <div style="padding:12px 16px;border-bottom:1px solid var(--rule)">
+                  <div style="font:500 var(--fs-13) var(--sans)">{{ apmRecLine }}</div>
+                  <div class="cc-meta" style="margin-top:3px">{{ apmRecHint }}</div>
+                </div>
+                <sc-if value="{{ apmNoWp }}" hint-placeholder-val="{{ false }}"><div class="cc-meta" style="padding:14px 16px">{{ apmNoWpLine }}</div></sc-if>
+                <sc-if value="{{ apmHasWp }}" hint-placeholder-val="{{ true }}">
+                  <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                    <sc-for list="{{ apmWpTiles }}" as="t" hint-placeholder-count="4">
+                      <div style="border:1px solid var(--rule);border-radius:11px;padding:10px 13px"><div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em">{{ t.k }}</div><div style="font:700 20px var(--mono);margin-top:3px">{{ t.v }}</div></div>
+                    </sc-for>
+                  </div>
+                  <div style="padding:4px 16px 8px;font:600 var(--fs-13) var(--sans)">Transactions</div>
+                  <div style="overflow-x:auto"><div style="min-width:760px">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 76px 76px 76px 64px 80px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule);font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em"><span>What WordPress built</span><span style="text-align:right">Count</span><span style="text-align:right">Average</span><span style="text-align:right">95th pct</span><span style="text-align:right">Database</span><span style="text-align:right">Queries</span><span style="text-align:right">Outside</span></div>
+                    <sc-for list="{{ apmTx }}" as="r" hint-placeholder-count="5">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 76px 76px 76px 64px 80px;gap:10px;padding:7px 16px;border-bottom:1px solid var(--rule);align-items:center;font:400 var(--fs-125) var(--sans)">
+                        <div style="min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ r.name }}">{{ r.name }}</div>
+                          <div style="height:3px;border-radius:2px;background:var(--panel-2);margin-top:4px"><div style="height:3px;border-radius:2px;background:var(--brand);width:{{ r.share }}"></div></div>
+                          <sc-if value="{{ r.hasErrs }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-115) var(--sans);color:var(--bad)">{{ r.errs }}</span></sc-if></div>
+                        <span style="text-align:right;font-family:var(--mono)">{{ r.n }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.avg }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.p95 }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.db }}</span><span style="text-align:right;font-family:var(--mono);color:var(--ink-dim)">{{ r.q }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.http }}</span>
+                      </div>
+                    </sc-for>
+                  </div></div>
+
+                  <div style="padding:16px 16px 8px;font:600 var(--fs-13) var(--sans)">Plugins and theme <span class="cc-meta" style="font-weight:400">· per page: loading, plus the queries and outside calls they asked for</span></div>
+                  <div style="overflow-x:auto"><div style="min-width:700px">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px 76px 76px 64px 80px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule);font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em"><span>Plugin or theme</span><span style="text-align:right">Per page</span><span style="text-align:right">Loading</span><span style="text-align:right">Database</span><span style="text-align:right">Queries</span><span style="text-align:right">Outside</span></div>
+                    <sc-for list="{{ apmPlugins }}" as="r" hint-placeholder-count="6">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px 76px 76px 64px 80px;gap:10px;padding:7px 16px;border-bottom:1px solid var(--rule);align-items:center;font:400 var(--fs-125) var(--sans)">
+                        <div style="min-width:0"><div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</div>
+                          <div style="height:3px;border-radius:2px;background:var(--panel-2);margin-top:4px"><div style="height:3px;border-radius:2px;background:var(--warn);width:{{ r.share }}"></div></div></div>
+                        <span style="text-align:right;font-family:var(--mono);font-weight:600">{{ r.avg }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.load }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.db }}</span><span style="text-align:right;font-family:var(--mono);color:var(--ink-dim)">{{ r.q }}</span><span style="text-align:right;font-family:var(--mono)">{{ r.http }}</span>
+                      </div>
+                    </sc-for>
+                  </div></div>
+                  <div class="cc-meta" style="padding:8px 16px 0">Time a plugin spends in its own code while the page runs (after loading) is not split out; it shows in the page's total.</div>
+
+                  <sc-if value="{{ apmHasQueries }}" hint-placeholder-val="{{ true }}">
+                    <div style="padding:16px 16px 8px;font:600 var(--fs-13) var(--sans)">Slowest queries <span class="cc-meta" style="font-weight:400">· values replaced with ?</span></div>
+                    <div style="overflow-x:auto"><div style="min-width:760px">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px 60px 70px 70px 76px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule);font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em"><span>Query</span><span>From</span><span style="text-align:right">Count</span><span style="text-align:right">Average</span><span style="text-align:right">Slowest</span><span style="text-align:right">Total</span></div>
+                      <sc-for list="{{ apmQueries }}" as="q" hint-placeholder-count="5">
+                        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px 60px 70px 70px 76px;gap:10px;padding:7px 16px;border-bottom:1px solid var(--rule);align-items:center;font:400 var(--fs-125) var(--sans)">
+                          <div title="{{ q.sql }}" style="font:400 var(--fs-12)/1.45 var(--mono);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all">{{ q.sql }}</div>
+                          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ q.who }}</span><span style="text-align:right;font-family:var(--mono)">{{ q.n }}</span><span style="text-align:right;font-family:var(--mono)">{{ q.avg }}</span><span style="text-align:right;font-family:var(--mono)">{{ q.max }}</span><span style="text-align:right;font-family:var(--mono);font-weight:600">{{ q.total }}</span>
+                        </div>
+                      </sc-for>
+                    </div></div>
+                  </sc-if>
+
+                  <div style="padding:16px 16px 8px;font:600 var(--fs-13) var(--sans)">Outside calls</div>
+                  <sc-if value="{{ apmNoCalls }}" hint-placeholder-val="{{ false }}"><div class="cc-meta" style="padding:0 16px 8px">No calls to other services were made.</div></sc-if>
+                  <sc-if value="{{ apmHasCalls }}" hint-placeholder-val="{{ true }}">
+                    <div style="overflow-x:auto"><div style="min-width:680px">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px 60px 76px 76px;gap:10px;padding:8px 16px;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule);font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em"><span>Call</span><span>From</span><span style="text-align:right">Count</span><span style="text-align:right">Average</span><span style="text-align:right">Slowest</span></div>
+                      <sc-for list="{{ apmCalls }}" as="c" hint-placeholder-count="3">
+                        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px 60px 76px 76px;gap:10px;padding:7px 16px;border-bottom:1px solid var(--rule);align-items:center;font:400 var(--fs-125) var(--sans)">
+                          <div style="min-width:0"><div style="font:400 var(--fs-12) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ c.call }}">{{ c.call }}</div>
+                            <sc-if value="{{ c.hasErrs }}" hint-placeholder-val="{{ false }}"><span style="font:500 var(--fs-115) var(--sans);color:var(--bad)">{{ c.errs }}</span></sc-if></div>
+                          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.who }}</span><span style="text-align:right;font-family:var(--mono)">{{ c.n }}</span><span style="text-align:right;font-family:var(--mono)">{{ c.avg }}</span><span style="text-align:right;font-family:var(--mono)">{{ c.max }}</span>
+                        </div>
+                      </sc-for>
+                    </div></div>
+                  </sc-if>
+
+                  <sc-if value="{{ apmHasSamples }}" hint-placeholder-val="{{ true }}">
+                    <div style="padding:16px 16px 8px;font:600 var(--fs-13) var(--sans)">Slow requests, in detail <span class="cc-meta" style="font-weight:400">· the slowest few of each kind, plus a sample</span></div>
+                    <div style="border-top:1px solid var(--rule)">
+                      <sc-for list="{{ apmSamples }}" as="x" hint-placeholder-count="3">
+                        <div style="border-bottom:1px solid var(--rule)">
+                          <div onClick="{{ x.toggle }}" style="display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:10px;padding:9px 16px;align-items:center;cursor:pointer" style-hover="background:var(--panel-2)">
+                            <span class="cc-meta">{{ x.chev }}</span>
+                            <div style="min-width:0"><div style="font:500 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.tx }} <span style="font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">{{ x.url }}</span></div>
+                              <div class="cc-meta" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.meta }}</div></div>
+                            <div style="text-align:right;white-space:nowrap"><div style="font:700 var(--fs-13) var(--mono)">{{ x.ms }}</div><div class="cc-meta"><span style="color:{{ x.codeFg }}">{{ x.code }}</span> · {{ x.when }}</div></div>
+                          </div>
+                          <sc-if value="{{ x.open }}" hint-placeholder-val="{{ false }}">
+                            <div style="padding:4px 16px 14px 40px;display:flex;flex-direction:column;gap:12px">
+                              <sc-if value="{{ x.hasPhases }}" hint-placeholder-val="{{ true }}">
+                                <div style="display:flex;flex-direction:column;gap:4px">
+                                  <sc-for list="{{ x.phases }}" as="p" hint-placeholder-count="6">
+                                    <div style="display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) 70px;gap:10px;align-items:center;font:400 var(--fs-12) var(--sans)">
+                                      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.label }}</span>
+                                      <div style="position:relative;height:10px;background:var(--panel-2);border-radius:3px"><div style="position:absolute;top:0;bottom:0;left:{{ p.left }};width:{{ p.width }};background:var(--brand);border-radius:3px"></div></div>
+                                      <span style="text-align:right;font-family:var(--mono)">{{ p.ms }}</span>
+                                    </div>
+                                  </sc-for>
+                                </div>
+                              </sc-if>
+                              <sc-if value="{{ x.hasLoads }}" hint-placeholder-val="{{ false }}">
+                                <div><div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Slowest to load</div>
+                                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                    <sc-for list="{{ x.loads }}" as="l" hint-placeholder-count="3"><span style="font:400 var(--fs-12) var(--sans);border:1px solid var(--rule);border-radius:6px;padding:2px 8px">{{ l.name }} <b style="font-family:var(--mono)">{{ l.ms }}</b></span></sc-for>
+                                  </div></div>
+                              </sc-if>
+                              <sc-if value="{{ x.hasQueries }}" hint-placeholder-val="{{ false }}">
+                                <div><div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Slowest queries</div>
+                                  <sc-for list="{{ x.queries }}" as="q" hint-placeholder-count="3">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 140px 64px;gap:10px;padding:3px 0;font:400 var(--fs-12) var(--sans);align-items:start">
+                                      <span title="{{ q.sql }}" style="font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ q.sql }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-dim)">{{ q.who }}</span><span style="text-align:right;font-family:var(--mono)">{{ q.ms }}</span>
+                                    </div>
+                                  </sc-for></div>
+                              </sc-if>
+                              <sc-if value="{{ x.hasCalls }}" hint-placeholder-val="{{ false }}">
+                                <div><div style="font:600 10.5px var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Outside calls</div>
+                                  <sc-for list="{{ x.calls }}" as="c" hint-placeholder-count="2">
+                                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 140px 44px 64px;gap:10px;padding:3px 0;font:400 var(--fs-12) var(--sans)">
+                                      <span style="font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.call }}</span><span style="color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.who }}</span><span style="color:{{ c.codeFg }};font-family:var(--mono)">{{ c.code }}</span><span style="text-align:right;font-family:var(--mono)">{{ c.ms }}</span>
+                                    </div>
+                                  </sc-for></div>
+                              </sc-if>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </sc-if>
+              </div>
+              </sc-if>
+            </sc-if>
+          </sc-if>
+
           <sc-if value="{{ tabHosting }}" hint-placeholder-val="{{ false }}">
             <sc-if value="{{ hostLoading }}" hint-placeholder-val="{{ false }}">
               <div style="margin-top:16px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Loading hosting configuration…</div>

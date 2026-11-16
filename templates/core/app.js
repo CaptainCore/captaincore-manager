@@ -2581,6 +2581,7 @@ class Component extends DCLogic {
       tabSiteDomains: leaf === 'sitedomains',
       tabHosting: leaf === 'hosting' && !!hostingVals.hostShow,
       ...hostingVals,
+      ...(this.computeApm ? this.computeApm(real, s, hostingVals) : { tabApm: false }),
       ...(this.computeNetwork ? this.computeNetwork(real, s) : { netShow: false, netTenantShow: false, netRows: [], netFilterShow: false }),
       ...this.envDomainsVals(real, s),
       credRows,
@@ -3140,7 +3141,7 @@ class Component extends DCLogic {
     // slow ssh fetch — defaulting the Activity group to Logs felt broken.
     { id: 'activity',  label: 'Activity',  leaves: [['timeline', 'Timeline'], ['logs', 'Logs'], ['scheduled', 'Scheduled']] },
     // Sites on our own servers only (hosting.js decides; hidden otherwise).
-    { id: 'hosting',   label: 'Hosting',   leaves: [['hosting', 'Hosting']] }
+    { id: 'hosting',   label: 'Hosting',   leaves: [['hosting', 'Hosting'], ['apm', 'APM']] }
   ];
   // 'addons' was the pre-grouping name for the plugins/themes pair — keep the
   // alias so links minted before the reorg still land somewhere sensible.
@@ -3166,7 +3167,7 @@ class Component extends DCLogic {
     if (!this._detail) return;
     const load = { logs: 'loadLogs', registry: 'loadRegistry', stats: 'loadStats',
       versions: 'loadQuicksaves', backups: 'loadBackups', snapshots: 'loadSnapshots',
-      captures: 'loadCaptures', timeline: 'loadTimeline', files: 'loadFiles', hosting: 'loadHosting' }[leaf];
+      captures: 'loadCaptures', timeline: 'loadTimeline', files: 'loadFiles', hosting: 'loadHosting', apm: 'loadApm' }[leaf];
     if (load && this[load]) this[load]();
   }
 

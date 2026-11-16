@@ -107,6 +107,7 @@ class HostConfigs extends DB {
 			'cron'                => true,
 			'suspended'           => false,
 			'page_cache'          => [ 'enabled' => true, 'ttl' => 60, 'exclude' => [] ],
+			'apm'                 => [ 'enabled' => false, 'until' => 0, 'slow_ms' => 1000, 'detail_pct' => 5 ],
 			'apps'                => [],
 		];
 	}
@@ -316,6 +317,9 @@ class HostConfigs extends DB {
 		$out['cron']             = ! array_key_exists( 'cron', $in ) || ! empty( $in['cron'] );
 		// Suspended: the edge answers every request with a holding page (503).
 		$out['suspended']        = ! empty( $in['suspended'] );
+		// APM: while on (until a time), PHP records each page it builds; the
+		// recorder stops by itself at `until` (host_apm.php in the CLI).
+		$out['apm']              = self::sanitize_apm( $in['apm'] ?? null );
 		$cache_errors            = [];
 		$out['page_cache']       = self::sanitize_page_cache( $in['page_cache'] ?? null, $cache_errors );
 		if ( $cache_errors ) {
@@ -441,6 +445,7 @@ class HostConfigs extends DB {
 		}
 		$none                 = [];
 		$config['page_cache'] = self::sanitize_page_cache( $config['page_cache'] ?? null, $none );
+		$config['apm']        = self::sanitize_apm( $config['apm'] ?? null );
 		$config['apps']      = $config['apps'] ?? [];
 		$config['cron_jobs'] = $config['cron_jobs'] ?? [];
 		return $config;
@@ -555,6 +560,21 @@ class HostConfigs extends DB {
 	 * lists paths that are never saved, with everything under them.
 	 */
 	const PAGE_CACHE_TTLS = [ 15, 60, 360, 1440, 10080 ];
+
+	/** How long APM can be switched on for, in hours. */
+	const APM_HOURS = [ 1, 4, 24, 72 ];
+
+	public static function sanitize_apm( $in ) {
+		$in    = is_array( $in ) ? $in : ( is_object( $in ) ? (array) $in : [] );
+		$until = (int) ( $in['until'] ?? 0 );
+		$on    = ! empty( $in['enabled'] ) && $until > time();
+		return [
+			'enabled'    => $on,
+			'until'      => $on ? min( $until, time() + 72 * HOUR_IN_SECONDS + 300 ) : 0,
+			'slow_ms'    => max( 100, min( 60000, (int) ( $in['slow_ms'] ?? 1000 ) ) ),
+			'detail_pct' => max( 0, min( 100, (int) ( $in['detail_pct'] ?? 5 ) ) ),
+		];
+	}
 
 	public static function sanitize_page_cache( $in, &$errors ) {
 		// No setting at all (a site from before the page cache, or a caller that left it out) means off.

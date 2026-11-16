@@ -7201,6 +7201,58 @@ function captaincore_site_hosting_cache_func( $request ) {
 	];
 }
 
+// APM of one environment. GET: what visitors waited for over a range (1h,
+// 24h, 7d), read from the node's hourly files through the CLI (`host apm`):
+// requests from the access log always, and while the switch was on the
+// WordPress side (transactions, plugins, queries, outside calls). POST
+// { hours }: switch the recorder on for that long (0 = off). That is a new
+// hosting revision, applied right away like any other save.
+function captaincore_site_hosting_apm_func( $request ) {
+	$env = captaincore_hosting_environment( $request );
+	if ( is_wp_error( $env ) ) {
+		return $env;
+	}
+	$plain  = CaptainCore\HostConfigs::stack( $env ) === 'plain';
+	$config = CaptainCore\HostConfigs::current( $env );
+	if ( $request->get_method() === 'POST' ) {
+		// A plain site has requests to count but no WordPress to record.
+		if ( $plain ) {
+			return new WP_Error( 'plain_site', 'The WordPress recorder needs WordPress; this is a plain site.', [ 'status' => 400 ] );
+		}
+		$params = $request->get_json_params();
+		$hours  = (int) ( $params['hours'] ?? 0 );
+		if ( $hours !== 0 && ! in_array( $hours, CaptainCore\HostConfigs::APM_HOURS, true ) ) {
+			return new WP_Error( 'invalid', 'APM can be on for 1, 4, 24 or 72 hours.', [ 'status' => 400 ] );
+		}
+		$apm            = CaptainCore\HostConfigs::sanitize_apm( $config['apm'] ?? null );
+		$apm['enabled'] = $hours > 0;
+		$apm['until']   = $hours > 0 ? time() + $hours * HOUR_IN_SECONDS : 0;
+		$config['apm']  = $apm;
+		$note           = $hours > 0 ? "APM on for {$hours} " . ( $hours === 1 ? 'hour' : 'hours' ) : 'APM off';
+		$row            = CaptainCore\HostConfigs::save( $env, $config, get_current_user_id(), $note, $params['agent'] ?? '' );
+		if ( is_wp_error( $row ) ) {
+			return $row;
+		}
+		return [ 'apm' => CaptainCore\HostConfigs::sanitize_apm( $apm ), 'token' => CaptainCore\HostConfigs::apply( $env ) ];
+	}
+	$range = in_array( $request['range'], [ '1h', '24h', '7d' ], true ) ? $request['range'] : '1h';
+	$res   = CaptainCore\Run::execute( [ 'host', 'apm', captaincore_hosting_target( $env ), '--range=' . $range, '--json' ] );
+	if ( is_wp_error( $res ) ) {
+		return $res;
+	}
+	$lines = array_filter( explode( "\n", trim( (string) ( $res['response'] ?? '' ) ) ) );
+	$data  = json_decode( (string) end( $lines ), true );
+	if ( ! is_array( $data ) || ( $data['status'] ?? '' ) !== 'ok' ) {
+		return new WP_Error( 'apm_unavailable', 'Could not read APM from the server: ' . ( $data['error'] ?? substr( (string) ( $res['response'] ?? '' ), 0, 200 ) ), [ 'status' => 502 ] );
+	}
+	$last = CaptainCore\HostConfigs::latest( $env->environment_id );
+	unset( $data['status'] );
+	$data['apm']     = CaptainCore\HostConfigs::sanitize_apm( $config['apm'] ?? null );
+	$data['stack']   = $plain ? 'plain' : 'wordpress';
+	$data['applied'] = $last ? $last->status : '';
+	return $data;
+}
+
 // Remove an environment from its server. The caller types the site's name to
 // confirm; the CLI takes a last local backup, parks the container (kept seven
 // days) and reports back through /api host-site-removed.
@@ -13428,6 +13480,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/cache', [
 			'methods'             => [ 'GET', 'POST' ],
 			'callback'            => 'captaincore_site_hosting_cache_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/hosting/apm', [
+			'methods'             => [ 'GET', 'POST' ],
+			'callback'            => 'captaincore_site_hosting_apm_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
