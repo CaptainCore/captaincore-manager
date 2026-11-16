@@ -18,7 +18,7 @@ Object.assign(Component.prototype, {
     const cb = this.chatBoot();
     if (!cb.enabled || this._chat) return this._chat;
     const c = this._chat = {
-      list: [], counts: null, filter: cb.operator ? 'waiting' : (/\/support(\/|$)/.test(location.pathname) ? 'open' : 'all'), supFilter: 'open', q: '', more: false, loading: true, listSeq: 0,
+      list: [], counts: null, filter: cb.operator ? 'open' : (/\/support(\/|$)/.test(location.pathname) ? 'open' : 'all'), supFilter: 'open', q: '', more: false, loading: true, listSeq: 0,
       id: 0, conv: null, convLoading: false, convErr: '', typing: {}, online: false, history: {},
       ws: null, wsState: 'off', everLive: false, retry: 0, lastTyped: 0, readSent: {}, nearBottom: true, scrollPin: false,
       files: [], drag: 0
@@ -768,7 +768,6 @@ Object.assign(Component.prototype, {
     const c = this._chat;
     if (c.q.trim()) return false;
     if (c.filter === 'all') return true;
-    if (c.filter === 'waiting') return conv.status === 'open' && !!conv.waiting_since;
     if (c.filter === 'open' && !this.chatBoot().operator) return conv.status !== 'closed';
     return conv.status === c.filter;
   },
@@ -2318,7 +2317,8 @@ Object.assign(Component.prototype, {
     const rows = c.list.map(x => {
       const on = x.id === c.id;
       const name = isOp ? (x.customer_name || x.customer_email || 'Guest') : x.subject;
-      const chips = [statusChip(x)];
+      // In Active every row is open, so only Waiting earns a status chip there.
+      const chips = isOp && c.filter === 'open' && x.status === 'open' && !x.waiting_since ? [] : [statusChip(x)];
       if (isOp && x.guest) chips.push({ label: 'Guest', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' });
       if (isOp && x.triaged) chips.push({ label: 'Triaged by Grok Bot', bg: 'color-mix(in srgb,#7c5cff 12%,transparent)', fg: 'color-mix(in srgb,#7c5cff 80%,var(--ink))' });
       if (isOp && x.draft) chips.push({ label: x.draft === 'note' ? 'Draft note' : 'Draft reply', bg: 'color-mix(in srgb,var(--ok) 13%,transparent)', fg: 'color-mix(in srgb,var(--ok) 70%,var(--ink))' });
@@ -2336,7 +2336,7 @@ Object.assign(Component.prototype, {
       };
     });
     const counts = c.counts || {};
-    const filters = [['waiting', 'Waiting'], ['open', 'Open'], ['snoozed', 'Snoozed'], ['closed', 'Closed'], ['all', 'All']].map(([v, l]) => ({
+    const filters = [['open', 'Active'], ['snoozed', 'Snoozed'], ['closed', 'Closed'], ['all', 'All']].map(([v, l]) => ({
       label: l, count: counts[v === 'all' ? 'total' : v] !== undefined ? Number(counts[v === 'all' ? 'total' : v]).toLocaleString() : '',
       bg: c.filter === v ? 'var(--panel-2)' : 'transparent', fg: c.filter === v ? 'var(--ink)' : 'var(--ink-dim)',
       go: () => { if (c.filter !== v) { c.filter = v; this.chatLoadList(); } }
@@ -2441,7 +2441,7 @@ Object.assign(Component.prototype, {
       chatQ: c.q, onChatQ: e => { c.q = e.target.value; clearTimeout(c.qTimer); c.qTimer = setTimeout(() => this.chatLoadList(), 300); this.setState({}); },
       chatFilters: filters, chatRows: rows,
       chatListLoading: c.loading && !c.list.length, chatEmpty: !c.loading && !c.list.length,
-      chatEmptyText: c.q.trim() ? 'No conversations match.' : isOp ? (c.filter === 'waiting' ? 'Nobody is waiting. 🎉' : 'Nothing here.') : c.filter === 'open' ? 'No open conversations.' : c.filter === 'closed' ? 'Nothing resolved yet.' : 'No conversations yet.',
+      chatEmptyText: c.q.trim() ? 'No conversations match.' : isOp ? (c.filter === 'open' ? 'Nothing active. 🎉' : 'Nothing here.') : c.filter === 'open' ? 'No open conversations.' : c.filter === 'closed' ? 'Nothing resolved yet.' : 'No conversations yet.',
       chatMore: c.more, chatLoadMore: () => this.chatLoadList(true, true),
       chatNoConv: !c.id && !c.newDraft, chatConvLoading: c.convLoading, chatHasErr: !!c.convErr, chatErr: c.convErr,
       chatHasConv: !!conv,
