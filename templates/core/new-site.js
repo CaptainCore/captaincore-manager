@@ -199,11 +199,27 @@ Object.assign(Component.prototype, {
     if (len > 32) { hint = 'Site names can be at most 32 characters.'; hintColor = 'var(--bad)'; }
     else if (len > 0 && len < 5) { hint = 'Site names need at least 5 characters. Add a word or two.'; hintColor = 'var(--bad)'; }
     else if (len) hint = s.nsStart === 'empty' && s.nsHost !== 'ours' ? 'Shown in your dashboard.' : 'Shown in your dashboard and used as the WordPress site title.';
+    // Customers who linked their own Kinsta company pick where the site is
+    // created: on ours or in theirs (loadNsProviders lists the rows that are
+    // theirs; the new-site route refuses a row that is not). Operators keep
+    // the Provider dropdown under Operator settings.
+    const kcOpts = !isOp && !ours ? (this._nsProvList || []) : [];
+    const kcSel = String(s.nsProviderId || NS_KINSTA_PROVIDER);
+    const kcOwn = kcOpts.length > 1 && kcSel !== String(NS_KINSTA_PROVIDER) ? kcOpts.find(o => o.id === kcSel) : null;
     return {
+      nsKcShow: kcOpts.length > 1,
+      nsKcCards: (kcOpts.length > 1 ? kcOpts : []).map(o => {
+        const house = o.id === String(NS_KINSTA_PROVIDER);
+        return { title: house ? brand : o.label,
+          sub: house ? 'Hosted and looked after by ' + brand + '.' : 'Your own Kinsta company. The site shows up in your MyKinsta.',
+          ...on(o.id === kcSel),
+          // Copies only work within one Kinsta company, so a picked source resets.
+          pick: () => this.setState({ nsProviderId: o.id, nsClone: 'None (fresh install)' }) };
+      }),
       nsDialogW: s.nsPath === 'kinsta' ? 900 : 620,
       nsShowTabs: isOp,
       nsTitle: isOp ? 'New site' : 'Create a new site',
-      nsLede: 'A fresh WordPress site on ' + brand + ', usually ready in a few minutes.',
+      nsLede: 'A fresh WordPress site on ' + (kcOwn ? 'your ' + kcOwn.label + ' Kinsta account' : brand) + ', usually ready in a few minutes.',
       nsLedeShow: s.nsPath === 'kinsta',
       onNsDomainInput: e => this.onNsDomainInput(e),
       onNsNameInput: e => this.onNsNameInput(e),

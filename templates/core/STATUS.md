@@ -3971,3 +3971,14 @@ sync-data now carries an `email` probe (CLI fetch-site-data, `email` in jsonDeta
 `app/EmailRoute.php` classifies it on ingest into `details.email_route` (status anchor | mailgun | other | php_mail | unconfigured, label, plugin, domain, password current/stale/unknown, issues) and keeps `details.email_route_changes` (last 10). Ours = a sending domain in our Mailgun account (`zones()`, site option `captaincore_mailgun_domains`, refreshed daily); the password check compares with the zone's stored `mailgun_smtp_password`. Issues: stale-password (only when the last send failed: Mailgun can still accept an older one), failing, test-mode, mail-blocked, zone-unverified, zone-unused (our zone for the site's domain exists, not used).
 Signals (production): `email` source, `email-left-anchor` (high, priority: the agent's attention list) when a site that sent through us no longer does, resolved automatically when it comes back; `email-changed` (medium) for other changes; joining our Mailgun is logged only. `email-state` source syncs the issues (stale-password, test-mode, mail-blocked are priority).
 UI (operators, and customers for their own sites): Sites list facet "Email" (groups + Not Anchor Mailgun + Needs attention; Sites::list `email`), site Overview Email card that opens a panel with the route, issues, changes and each plugin's redacted settings. On first sync, fleet numbers from a 2026-11-16 probe: ~1,290 anchor, ~1,090 PHP mail, ~240 mailer not set up, ~150 other providers, ~45 another Mailgun; 31 stale-password, ~40 failing, ~60 zone-unused.
+
+### New site: customers pick their own Kinsta account (2026-11-16)
+The Provider dropdown in the New site dialog sat inside Operator settings, so a
+customer with their own linked Kinsta company never saw it and every site they
+made landed in the house Kinsta account. Customers with more than one usable
+Kinsta connection (loadNsProviders: the house row plus /providers rows they
+own) now get a "Which Kinsta account?" section with one card per connection.
+Picking theirs sends its provider_id (the new-site route already refuses a row
+that is not theirs), resets the copy source (copies stay within one Kinsta
+company) and the lede names their account. Customers without a connection and
+operators see no change.
