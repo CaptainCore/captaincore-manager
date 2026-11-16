@@ -236,7 +236,7 @@ Object.assign(Component.prototype, {
     return Object.assign({ hCards: em.card ? [uptime, backup, updates, wp, em.card, vis] : [uptime, backup, updates, wp, vis] }, em.vals);
   },
 
-  // ── Email (operators) ────────────────────────────────────────────────────
+  // ── Email ────────────────────────────────────────────────────
   // How this environment sends mail (details.email_route from EmailRoute,
   // details.email the raw probe, details.email_route_changes the log). The
   // card opens a panel under the cards with the route, its issues, what
@@ -244,14 +244,13 @@ Object.assign(Component.prototype, {
   EMAIL_PRIORITY: ['stale-password', 'test-mode', 'mail-blocked'],
 
   emailCardVals(d, card, OK, WARN, BAD, DIM) {
-    const op = (window.CC_BOOT || {}).dcRole === 'operator';
     const r = d && d.email_route;
-    if (!op || !r || typeof r !== 'object') return { card: null, vals: { emOpen: false } };
+    if (!r || typeof r !== 'object') return { card: null, vals: { emOpen: false } };
     const issues = Array.isArray(r.issues) ? r.issues : [];
     const bad = issues.some(i => this.EMAIL_PRIORITY.includes(i.key));
     const tone = bad ? BAD : issues.length ? WARN : r.status === 'anchor' ? OK : DIM;
     const log = r.log && typeof r.log === 'object' ? r.log : null;
-    const SHORT = { 'stale-password': 'Old password, sends failing', 'test-mode': 'Test mode: not delivering', 'mail-blocked': 'Mail is switched off', failing: 'Last send failed', 'zone-unused': 'Our Mailgun zone not used', 'zone-unverified': 'Mailgun zone not verified' };
+    const SHORT = { 'stale-password': 'Old password, sends failing', 'test-mode': 'Test mode: not delivering', 'mail-blocked': 'Mail is switched off', failing: 'Last send failed', 'zone-unused': 'Anchor Mailgun zone not used', 'zone-unverified': 'Mailgun zone not verified' };
     const sub = issues.length ? (SHORT[issues[0].key] || issues[0].label) + (issues.length > 1 ? ' +' + (issues.length - 1) : '')
       : [r.plugin_name, r.domain, log ? (Number(log.sent) || 0) + ' sent this week' : ''].filter(Boolean).join(' · ') || (r.status === 'php_mail' ? 'No mail plugin' : ' ');
     const open = !!this.state.emOpen;
@@ -264,7 +263,7 @@ Object.assign(Component.prototype, {
       ['Sending domain', r.domain || '—'],
       ['From', r.from_email || '—'],
       ...(r.status === 'anchor' ? [['Mailgun zone', (r.zone_state || 'unknown')], ['Password', ({ current: 'Current', stale: 'Not the one we last set', unknown: 'Not compared' })[r.secret] || r.secret]] : []),
-      ...(r.zone && r.status !== 'anchor' ? [['Our zone for this domain', r.zone + ' (not used)']] : []),
+      ...(r.zone && r.status !== 'anchor' ? [['Anchor Mailgun zone for this domain', r.zone + ' (not used)']] : []),
       ['Test mode', yes(r.test_mode)],
       ...(r.blocker ? [['Mail switched off by', r.blocker]] : []),
       ...((r.interceptors || []).length ? [['Must-use plugins touching mail', r.interceptors.join(', ')]] : []),

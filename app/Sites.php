@@ -246,10 +246,11 @@ class Sites extends DB {
         foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health_issues[0]')) AS issue FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health')) = 'failed'" ) as $row ) {
             $backup_failed[ (int) $row->site_id ] = (string) $row->issue;
         }
-        // How production sends email (EmailRoute, stored by sync-data). Operators only.
+        // How production sends email (EmailRoute, stored by sync-data). Each
+        // user sees it for the sites in their own list.
         $email_routes = [];
-        if ( $is_admin ) {
-            foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.status')) AS st, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.label')) AS lb, JSON_EXTRACT(details, '$.email_route.issue_keys') AS ik FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND JSON_EXTRACT(details, '$.email_route.status') IS NOT NULL" ) as $row ) {
+        if ( $this->sites ) {
+            foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.status')) AS st, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.label')) AS lb, JSON_EXTRACT(details, '$.email_route.issue_keys') AS ik FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND site_id IN (" . implode( ',', array_map( 'intval', (array) $this->sites ) ) . ") AND JSON_EXTRACT(details, '$.email_route.status') IS NOT NULL" ) as $row ) {
                 $email_routes[ (int) $row->site_id ] = EmailRoute::for_list( $row->st, $row->lb, $row->ik );
             }
         }

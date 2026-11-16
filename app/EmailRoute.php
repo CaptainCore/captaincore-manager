@@ -205,7 +205,7 @@ class EmailRoute {
 			$issue( 'zone-unverified', 'Mailgun zone ' . $route['domain'] . ' is ' . $route['zone_state'] );
 		}
 		if ( $route['status'] !== 'anchor' && $route['zone'] !== '' ) {
-			$issue( 'zone-unused', 'Our Mailgun zone ' . $route['zone'] . ' exists but the site sends ' . ( $route['status'] === 'php_mail' ? 'with PHP mail' : 'through ' . $route['label'] ) );
+			$issue( 'zone-unused', 'An Anchor Mailgun zone (' . $route['zone'] . ') exists but the site sends ' . ( $route['status'] === 'php_mail' ? 'with PHP mail' : 'through ' . $route['label'] ) );
 		}
 		$route['issue_keys'] = array_column( $route['issues'], 'key' );
 		return $route;

@@ -994,7 +994,7 @@ class Component extends DCLogic {
     // Network: multisite / Freighter host / tenant from /sites `network`;
     // 'Any network' matches all three.
     if (!inactive(s.fNet)) conds.push(x => s.fNet === 'Any network' ? x.netType !== 'Standalone' : x.netType === s.fNet);
-    // Email (operators; /sites `email`, see EmailRoute): one group per route,
+    // Email (/sites `email`, see EmailRoute; customers see their own sites): one group per route,
     // plus 'Not Anchor Mailgun' and 'Needs attention' across groups.
     if (!inactive(s.fEmail)) conds.push(x => s.fEmail === 'Needs attention' ? x.emailIssues.length > 0
       : s.fEmail === 'Not Anchor Mailgun' ? x.emailStatus !== 'anchor' && x.emailStatus !== ''
@@ -1047,7 +1047,7 @@ class Component extends DCLogic {
       { id: 'fNet', base: 'Network', cur: s.fNet, opts: () => { const m = cntBy(x => x.netType || 'Standalone');
           m['Any network'] = fleet.filter(x => x.netType && x.netType !== 'Standalone').length;
           return facetOpts(m, s.fNet, 'fNet'); } },
-      ...(isOp && (fleet.some(x => x.emailStatus) || !inactive(s.fEmail)) ? [{ id: 'fEmail', base: 'Email', cur: s.fEmail, opts: () => { const m = cntBy(x => x.emailGroup);
+      ...(fleet.some(x => x.emailStatus) || !inactive(s.fEmail) ? [{ id: 'fEmail', base: 'Email', cur: s.fEmail, opts: () => { const m = cntBy(x => x.emailGroup);
           m['Not Anchor Mailgun'] = fleet.filter(x => x.emailStatus && x.emailStatus !== 'anchor').length;
           m['Needs attention'] = fleet.filter(x => x.emailIssues.length > 0).length;
           return facetOpts(m, s.fEmail, 'fEmail'); } }] : []),
