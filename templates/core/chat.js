@@ -2153,10 +2153,32 @@ Object.assign(Component.prototype, {
     pick.querySelector('button').focus();
   },
 
+  // A keystroke in the reply box. A setState re-renders the whole app
+  // (every view's values, the thread, the inbox list), which made typing
+  // lag on a busy machine, so the text is kept without a render. Only the
+  // Send button reads it (dim when empty), so a render happens only when
+  // the box goes from empty to not, or back. The field is uncontrolled
+  // (chatInputRef writes text set in code), and it grows here as the ref
+  // would.
+  chatBodyInput(t, isOp) {
+    const v = t.value;
+    if (!(this.state.chatBody || '').trim() !== !v.trim()) this.setState({ chatBody: v });
+    else this.state.chatBody = v;
+    t.style.height = 'auto';
+    t.style.height = Math.min(t.scrollHeight, 180) + 'px';
+    this.chatTyping(v);
+    if (isOp) this.chatDraftEdited(v);
+  },
+
   chatInputRef(el) {
     if (!el) return;
-    // value="{{ }}" only seeds the field (DC runtime), so clearing after a
-    // send or a conversation switch happens here.
+    // The field has no value binding: a bound value is a controlled field,
+    // which only keeps a keystroke when the keystroke renders, and typing
+    // doesn't render (chatBodyInput). Every render runs this ref, so text
+    // set in code (cleared after a send, a draft filled in, a quote) is
+    // written here. Typing keeps state and field the same, so no write.
+    const want = this.state.chatBody || '';
+    if (el.value !== want) el.value = want;
     if (this._chatClear) { this._chatClear = false; el.value = ''; }
     const c0 = this._chat;
     if (c0 && c0.dftFill != null) { el.value = c0.dftFill; c0.dftFill = null; }
@@ -2345,7 +2367,7 @@ Object.assign(Component.prototype, {
         fg: (s.chatMode || 'reply') === v ? (v === 'note' ? 'color-mix(in srgb,var(--warn) 80%,var(--ink))' : 'var(--ink)') : 'var(--ink-dim)'
       })) : [],
       chatBody: s.chatBody || '',
-      onChatBody: e => { this.setState({ chatBody: e.target.value }); this.chatTyping(e.target.value); if (isOp) this.chatDraftEdited(e.target.value); },
+      onChatBody: e => this.chatBodyInput(e.target, isOp),
       chatKey: e => {
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); }
         // Up in an empty composer edits your last message, as in Slack.

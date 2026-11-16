@@ -222,6 +222,20 @@ Object.assign(Component.prototype, {
     }).catch(e => this.toast(e && e.message !== 'auth' ? e.message : 'Could not undo', { kind: 'error' }));
   },
 
+  // Measure only when the text or width changed: collapsing the box to
+  // auto on every render (the live clock redraws each second) briefly
+  // grew the thread above and knocked its scroll position up. When it
+  // does resize, a thread read to the bottom stays at the bottom.
+  cctReplySize(el) {
+    const key = el.value + '\n' + el.clientWidth;
+    if (el._cctSized === key) return;
+    el._cctSized = key;
+    const leg = document.querySelector('.cct-leg');
+    const fromBottom = leg ? leg.scrollHeight - leg.scrollTop - leg.clientHeight : 0;
+    el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 260) + 'px';
+    if (leg && fromBottom < 40) leg.scrollTop = leg.scrollHeight;
+  },
+
   // Keep the reply box's text as the draft (it stays the agent's draft).
   cctSaveDraft(id) {
     const t = this.cctState();
@@ -447,32 +461,35 @@ Object.assign(Component.prototype, {
       cctLegRef: el => this.cctLegRef(el),
       cctReply: reply,
       cctReplyPh: draft ? '' : 'Reply to ' + first + ' (optional)',
-      onCctReply: e => { if (x) { t.edits[x.id] = e.target.value; this.setState({}); } },
+      // A keystroke keeps the text without a render (a render redraws the
+      // whole app, which lagged typing). The buttons only care whether the
+      // box is empty, so a render happens when that flips.
+      onCctReply: e => {
+        if (!x) return;
+        const was = !!String(t.edits[x.id] || '').trim();
+        t.edits[x.id] = e.target.value;
+        if (was !== !!e.target.value.trim()) this.setState({});
+        else this.cctReplySize(e.target);
+      },
       cctDraftBy: draft ? 'Draft by ' + draft.by + ' · ' + this.cctWhen(draft.updated_at) : '',
       cctDraftWarn: !!(draft && leg && (leg.messages || []).some(m => m.kind === 'comment' && m.author_kind === 'customer' && m.id > draft.based_on_message_id)),
       cctHasDraft: !!draft,
-      // value="{{ }}" only seeds a field, so the ref puts in this
-      // conversation's text (its draft, or what was typed here) whenever the
-      // selection changes or the draft arrives while the box isn't in use.
-      // Grows with the text; leaving it saves the text back as the draft.
+      // The field has no value binding (a bound value is controlled, and
+      // typing doesn't render), so the ref puts in this conversation's text
+      // (its draft, or what was typed here) whenever the selection changes
+      // or the text changes in code. Typing keeps t.edits and the field the
+      // same. Grows with the text; leaving it saves the text back as the draft.
       cctReplyRef: el => {
         if (!el) return;
         const id = x ? x.id : 0;
-        if (el._cctId !== id || (document.activeElement !== el && el.value !== reply)) el.value = reply;
+        if (el._cctId !== id || el.value !== reply) el.value = reply;
         el._cctId = id;
         if (!el._cctBlur) { el._cctBlur = true; el.addEventListener('blur', () => { if (el._cctId) this.cctSaveDraft(el._cctId); }); }
         // Measure only when the text or width changed: collapsing the box to
         // auto on every render (the live clock redraws each second) briefly
         // grew the thread above and knocked its scroll position up. When it
         // does resize, a thread read to the bottom stays at the bottom.
-        const key = el.value + '\n' + el.clientWidth;
-        if (el._cctSized !== key) {
-          el._cctSized = key;
-          const leg = document.querySelector('.cct-leg');
-          const fromBottom = leg ? leg.scrollHeight - leg.scrollTop - leg.clientHeight : 0;
-          el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 260) + 'px';
-          if (leg && fromBottom < 40) leg.scrollTop = leg.scrollHeight;
-        }
+        this.cctReplySize(el);
       },
       cctCanSend: hasText && !busy,
       cctSendOpacity: hasText && !busy ? '1' : '.45',
