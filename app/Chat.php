@@ -528,18 +528,28 @@ class Chat {
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
-		// The same text from the same person twice within two minutes is a
-		// repeat, not a new message: a second window still holding the text,
-		// a double submit, a retry after a lost reply. Answer with the first
-		// one so the client treats it as sent.
+		// The same text from the same person again is a repeat, not a new
+		// message: a second window still holding the text, a double submit, a
+		// retry after a lost reply. A longer message counts within 60 seconds.
+		// A short one ("yes", "no") only within 10 seconds and with nothing
+		// else said in between, since two short answers in a row are normal.
+		// Answer with the first one so the client treats it as sent.
 		if ( ! $files && $refs === '' ) {
 			global $wpdb;
+			$m      = $wpdb->base_prefix . 'captaincore_chat_messages';
+			$short  = mb_strlen( trim( $body ) ) < 20;
 			$repeat = $wpdb->get_var( $wpdb->prepare(
-				"SELECT chat_message_id FROM {$wpdb->base_prefix}captaincore_chat_messages
+				"SELECT chat_message_id FROM $m
 				WHERE chat_conversation_id = %d AND author_user_id = %d AND kind = %s AND body = %s AND created_at >= %s
 				ORDER BY chat_message_id DESC LIMIT 1",
-				$conversation->chat_conversation_id, $user_id, $kind, $body, gmdate( 'Y-m-d H:i:s', time() - 120 )
+				$conversation->chat_conversation_id, $user_id, $kind, $body, gmdate( 'Y-m-d H:i:s', time() - ( $short ? 10 : 60 ) )
 			) );
+			if ( $repeat && $short && $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM $m WHERE chat_conversation_id = %d AND chat_message_id > %d AND kind != 'event'",
+				$conversation->chat_conversation_id, $repeat
+			) ) ) {
+				$repeat = 0;
+			}
 			if ( $repeat ) {
 				$row = ChatMessages::get( $repeat );
 				return [ 'message' => self::present_message( $row, [] ), 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ), 'repeat' => true ];
