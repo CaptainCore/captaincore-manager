@@ -156,7 +156,11 @@ Object.assign(Component.prototype, {
           server: x.server || '',
           netType: ({ multisite: 'Multisite', host: 'Freighter host', tenant: 'Freighter tenant' })[(x.network && x.network.type) || ''] || 'Standalone',
           environmentsRaw: x.environments || [],
-          health: x.health || null };
+          health: x.health || null,
+          // How production sends email (operators; Sites::list `email`).
+          email: x.email || null, emailStatus: (x.email && x.email.status) || '',
+          emailGroup: x.email ? ({ anchor: 'Anchor Mailgun', mailgun: 'Mailgun (another account)', other: 'Other provider', php_mail: 'PHP mail (no mailer)', unconfigured: 'Mailer not set up' })[x.email.status] || 'Not checked yet' : 'Not checked yet',
+          emailIssues: (x.email && Array.isArray(x.email.issues)) ? x.email.issues : [] };
       });
       this.ACCOUNTS = (Array.isArray(accounts) ? accounts : []).map(a => ({ id: String(a.account_id), name: this.decodeHtml(a.name),
         users: (a.metrics && a.metrics.users) || 0, sites: (a.metrics && a.metrics.sites) || 0,

@@ -232,6 +232,56 @@ Object.assign(Component.prototype, {
         : card('Storage', e.storage ? this.fmtStorage(e.storage) : '—', 'Files on the server', DIM, op ? 'hosting' : null);
       return { hCards: [uptime, backup, card('Site', 'Plain HTML', 'No WordPress or database', DIM, op ? 'hosting' : null), storage, vis] };
     }
-    return { hCards: [uptime, backup, updates, wp, vis] };
+    const em = this.emailCardVals(d, card, OK, WARN, BAD, DIM);
+    return Object.assign({ hCards: em.card ? [uptime, backup, updates, wp, em.card, vis] : [uptime, backup, updates, wp, vis] }, em.vals);
+  },
+
+  // ── Email (operators) ────────────────────────────────────────────────────
+  // How this environment sends mail (details.email_route from EmailRoute,
+  // details.email the raw probe, details.email_route_changes the log). The
+  // card opens a panel under the cards with the route, its issues, what
+  // changed and each mail plugin's settings (secrets already redacted).
+  EMAIL_PRIORITY: ['stale-password', 'test-mode', 'mail-blocked'],
+
+  emailCardVals(d, card, OK, WARN, BAD, DIM) {
+    const op = (window.CC_BOOT || {}).dcRole === 'operator';
+    const r = d && d.email_route;
+    if (!op || !r || typeof r !== 'object') return { card: null, vals: { emOpen: false } };
+    const issues = Array.isArray(r.issues) ? r.issues : [];
+    const bad = issues.some(i => this.EMAIL_PRIORITY.includes(i.key));
+    const tone = bad ? BAD : issues.length ? WARN : r.status === 'anchor' ? OK : DIM;
+    const log = r.log && typeof r.log === 'object' ? r.log : null;
+    const SHORT = { 'stale-password': 'Old password, sends failing', 'test-mode': 'Test mode: not delivering', 'mail-blocked': 'Mail is switched off', failing: 'Last send failed', 'zone-unused': 'Our Mailgun zone not used', 'zone-unverified': 'Mailgun zone not verified' };
+    const sub = issues.length ? (SHORT[issues[0].key] || issues[0].label) + (issues.length > 1 ? ' +' + (issues.length - 1) : '')
+      : [r.plugin_name, r.domain, log ? (Number(log.sent) || 0) + ' sent this week' : ''].filter(Boolean).join(' · ') || (r.status === 'php_mail' ? 'No mail plugin' : ' ');
+    const open = !!this.state.emOpen;
+    const c = { ...card('Email', r.label || 'Unknown', sub, tone), go: () => this.setState({ emOpen: !open }), cursor: 'pointer' };
+    if (!open) return { card: c, vals: { emOpen: false } };
+    const yes = v => v ? 'Yes' : 'No';
+    const rows = [
+      ['Sends through', r.label + (r.status === 'anchor' ? ' (our account)' : '')],
+      ['Plugin', r.plugin_name || 'None'],
+      ['Sending domain', r.domain || '—'],
+      ['From', r.from_email || '—'],
+      ...(r.status === 'anchor' ? [['Mailgun zone', (r.zone_state || 'unknown')], ['Password', ({ current: 'Current', stale: 'Not the one we last set', unknown: 'Not compared' })[r.secret] || r.secret]] : []),
+      ...(r.zone && r.status !== 'anchor' ? [['Our zone for this domain', r.zone + ' (not used)']] : []),
+      ['Test mode', yes(r.test_mode)],
+      ...(r.blocker ? [['Mail switched off by', r.blocker]] : []),
+      ...((r.interceptors || []).length ? [['Must-use plugins touching mail', r.interceptors.join(', ')]] : []),
+      ...((r.conflicts || []).length ? [['Also active', r.conflicts.join(', ')]] : []),
+      ...((r.unconfigured || []).length ? [['Installed, not set up', r.unconfigured.join(', ')]] : []),
+      ...(log ? [['Last 7 days', (Number(log.sent) || 0) + ' sent · ' + (Number(log.failed) || 0) + ' failed' + (Number(log.sandboxed) ? ' · ' + log.sandboxed + ' held by test mode' : '')],
+        ['Last delivered', log.last_sent ? log.last_sent + ' UTC' : 'Never'], ['Last failure', log.last_failed ? log.last_failed + ' UTC' : 'None']] : []),
+      ['Checked', d.email_route_at ? this.agoText(Number(d.email_route_at) * 1000) : '—']
+    ].map(([k, v]) => ({ k, v: String(v) }));
+    const changes = (Array.isArray(d.email_route_changes) ? d.email_route_changes : []).slice().reverse()
+      .map(x => ({ when: x.at ? new Date(Number(x.at) * 1000).toLocaleString() : '', from: x.from || '', to: x.to || '' }));
+    const mailers = ((d.email && Array.isArray(d.email.mailers)) ? d.email.mailers : []).map(m => ({
+      name: (m.name || m.plugin) + (d.email.effective === m.plugin ? ' · sends' : m.configured ? ' · set up' : ' · not set up'),
+      json: JSON.stringify(m.settings || {}, null, 2) }));
+    return { card: c, vals: {
+      emOpen: true, emClose: () => this.setState({ emOpen: false }), emTitle: 'Email: ' + (r.label || 'Unknown'), emTone: tone,
+      emIssues: issues.map(i => ({ label: i.label, tone: this.EMAIL_PRIORITY.includes(i.key) ? BAD : WARN })), emHasIssues: issues.length > 0,
+      emRows: rows, emChanges: changes, emHasChanges: changes.length > 0, emMailers: mailers, emHasMailers: mailers.length > 0 } };
   }
 });

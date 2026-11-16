@@ -33,7 +33,7 @@ class Component extends DCLogic {
     // (right-click the view toggle to set it).
     view: (() => { try { const v = localStorage.getItem('cc-sites-view'); return ['table', 'cards', 'list'].includes(v) ? v : 'table'; } catch (e) { return 'table'; } })(),
     q: '', fProv: 'Any', fServer: 'Any', fHealth: 'All', sel: {},
-    fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any',
+    fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fEmail: 'Any', fTheme: 'Any',
     fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS',
     fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', fOp: 'AND', labelsSel: {},
     siteId: null, siteTab: 'overview', env: 'Production', addonKind: 'plugins',
@@ -994,6 +994,11 @@ class Component extends DCLogic {
     // Network: multisite / Freighter host / tenant from /sites `network`;
     // 'Any network' matches all three.
     if (!inactive(s.fNet)) conds.push(x => s.fNet === 'Any network' ? x.netType !== 'Standalone' : x.netType === s.fNet);
+    // Email (operators; /sites `email`, see EmailRoute): one group per route,
+    // plus 'Not Anchor Mailgun' and 'Needs attention' across groups.
+    if (!inactive(s.fEmail)) conds.push(x => s.fEmail === 'Needs attention' ? x.emailIssues.length > 0
+      : s.fEmail === 'Not Anchor Mailgun' ? x.emailStatus !== 'anchor' && x.emailStatus !== ''
+      : x.emailGroup === s.fEmail);
     if (this._hydrated) {
       // Theme/plugin resolve server-side (see sites-filters.js). One combined
       // cond over the matched site-id set; while loading, don't hide anything.
@@ -1042,6 +1047,10 @@ class Component extends DCLogic {
       { id: 'fNet', base: 'Network', cur: s.fNet, opts: () => { const m = cntBy(x => x.netType || 'Standalone');
           m['Any network'] = fleet.filter(x => x.netType && x.netType !== 'Standalone').length;
           return facetOpts(m, s.fNet, 'fNet'); } },
+      ...(isOp && (fleet.some(x => x.emailStatus) || !inactive(s.fEmail)) ? [{ id: 'fEmail', base: 'Email', cur: s.fEmail, opts: () => { const m = cntBy(x => x.emailGroup);
+          m['Not Anchor Mailgun'] = fleet.filter(x => x.emailStatus && x.emailStatus !== 'anchor').length;
+          m['Needs attention'] = fleet.filter(x => x.emailIssues.length > 0).length;
+          return facetOpts(m, s.fEmail, 'fEmail'); } }] : []),
       // Theme and Plugin chips open a Version/Status popover (sub: 'theme' |
       // 'plugin'); the sub-facet state keys live on SUB_KEYS in sites-filters.js.
       { id: 'fTheme', base: 'Theme', cur: s.fTheme, sub: 'theme', opts: () => this._hydrated
@@ -1203,7 +1212,7 @@ class Component extends DCLogic {
         })
       ],
       hasFilters: !!nq || conds.length > 0 || selLabels.length > 0,
-      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fServer: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
+      clearFilters: () => { this.setState({ q: '', fProv: 'Any', fServer: 'Any', fUnassigned: false, fRemoved: false, fBackup: 'Any', fCore: 'Any', fNet: 'Any', fEmail: 'Any', fTheme: 'Any', fPlugin: 'Any', fPlugVer: 'Any', fPlugStatus: 'Any', fPlugIs: 'IS', fPlugVerIs: 'IS', fThemeVer: 'Any', fThemeStatus: 'Any', fThemeIs: 'IS', fThemeVerIs: 'IS', fPlugHash: '', fThemeHash: '', ddCat: '', labelsSel: {} }); this._filterMatch = null; if (this.applyServerFilter) this.applyServerFilter(); },
       // Filter-to-console (legacy parity): hand the whole filtered set — every
       // page, not just the visible one — to the dock terminal as its target
       // list. Only offered while a filter narrows the fleet, so a stray click

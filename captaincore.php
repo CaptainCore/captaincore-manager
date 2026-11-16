@@ -1704,6 +1704,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 					if ( in_array( $key, CaptainCore\HostConfigs::MANAGER_DETAILS, true ) && isset( $details->$key ) ) {
 						continue;
 					}
+					// The Manager works these out itself (EmailRoute, in sync-data).
+					if ( $key === 'email_route' || $key === 'email_route_changes' || $key === 'email_route_at' ) {
+						continue;
+					}
 					$details->$key = $value;
 				}
 			}
@@ -1754,11 +1758,28 @@ function captaincore_api_func( WP_REST_Request $request ) {
 					if ( in_array( $key, CaptainCore\HostConfigs::MANAGER_DETAILS, true ) && isset( $details->$key ) ) {
 						continue;
 					}
+					// The Manager works these out itself (EmailRoute, in sync-data).
+					if ( $key === 'email_route' || $key === 'email_route_changes' || $key === 'email_route_at' ) {
+						continue;
+					}
 					$details->$key = $value;
 				}
 			}
 		}
 		$details = CaptainCore\PublicKeys::note_live( $details, $keys_live_before );
+
+		// How this environment sends email, from the `email` probe: the route,
+		// what changed since the last sync, and (production, below) signals.
+		$email_prev  = $details->email_route ?? null;
+		$email_route = null;
+		if ( ! empty( $incoming_details->email ) ) {
+			$email_route = CaptainCore\EmailRoute::classify( $incoming_details->email, $post->data->home_url ?? ( $current_environment->home_url ?? '' ) );
+			if ( $email_route ) {
+				$details->email_route_changes = CaptainCore\EmailRoute::changes( $email_prev, $email_route, $details->email_route_changes ?? [] );
+				$details->email_route         = $email_route;
+				$details->email_route_at      = time();
+			}
+		}
 
 		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
 		if ( ! empty( $capture ) ) {
@@ -1884,6 +1905,12 @@ function captaincore_api_func( WP_REST_Request $request ) {
 					}
 				}
 			}
+		}
+
+		// Email: leaving our Mailgun (priority) or another change, and the
+		// route's current issues. See EmailRoute::signals().
+		if ( $is_production && $email_route ) {
+			CaptainCore\EmailRoute::signals( (int) $site_id, $signal_env_id, $signal_env, $email_prev, $email_route );
 		}
 
 		// Premium plugin licenses, as the site stored them (see the licenses probe in

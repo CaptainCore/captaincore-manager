@@ -284,6 +284,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\DnsCLI' => __DIR__ . '/../..' . '/app/DnsCLI.php',
         'CaptainCore\\Domain' => __DIR__ . '/../..' . '/app/Domain.php',
         'CaptainCore\\Domains' => __DIR__ . '/../..' . '/app/Domains.php',
+        'CaptainCore\\EmailRoute' => __DIR__ . '/../..' . '/app/EmailRoute.php',
         'CaptainCore\\Environments' => __DIR__ . '/../..' . '/app/Environments.php',
         'CaptainCore\\ErrorLogCLI' => __DIR__ . '/../..' . '/app/ErrorLogCLI.php',
         'CaptainCore\\GeoIP' => __DIR__ . '/../..' . '/app/GeoIP.php',

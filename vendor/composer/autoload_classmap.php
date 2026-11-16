@@ -158,6 +158,7 @@ return array(
     'CaptainCore\\DnsCLI' => $baseDir . '/app/DnsCLI.php',
     'CaptainCore\\Domain' => $baseDir . '/app/Domain.php',
     'CaptainCore\\Domains' => $baseDir . '/app/Domains.php',
+    'CaptainCore\\EmailRoute' => $baseDir . '/app/EmailRoute.php',
     'CaptainCore\\Environments' => $baseDir . '/app/Environments.php',
     'CaptainCore\\ErrorLogCLI' => $baseDir . '/app/ErrorLogCLI.php',
     'CaptainCore\\GeoIP' => $baseDir . '/app/GeoIP.php',

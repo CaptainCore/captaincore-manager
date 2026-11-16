@@ -246,6 +246,13 @@ class Sites extends DB {
         foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health_issues[0]')) AS issue FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND JSON_UNQUOTE(JSON_EXTRACT(details, '$.backup_health')) = 'failed'" ) as $row ) {
             $backup_failed[ (int) $row->site_id ] = (string) $row->issue;
         }
+        // How production sends email (EmailRoute, stored by sync-data). Operators only.
+        $email_routes = [];
+        if ( $is_admin ) {
+            foreach ( (array) $wpdb->get_results( "SELECT site_id, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.status')) AS st, JSON_UNQUOTE(JSON_EXTRACT(details, '$.email_route.label')) AS lb, JSON_EXTRACT(details, '$.email_route.issue_keys') AS ik FROM {$wpdb->base_prefix}captaincore_environments WHERE environment = 'Production' AND JSON_EXTRACT(details, '$.email_route.status') IS NOT NULL" ) as $row ) {
+                $email_routes[ (int) $row->site_id ] = EmailRoute::for_list( $row->st, $row->lb, $row->ik );
+            }
+        }
         foreach( $this->sites as $site_id ) {
             $site                    = self::get( $site_id );
             $site->server            = $servers[ (int) $site_id ] ?? "";
@@ -285,6 +292,9 @@ class Sites extends DB {
             }
             
             $site->health            = self::list_health( $site, $outages[ (int) $site_id ] ?? null, $backup_failed[ (int) $site_id ] ?? null, $is_admin );
+            if ( isset( $email_routes[ (int) $site_id ] ) ) {
+                $site->email = $email_routes[ (int) $site_id ];
+            }
 
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {

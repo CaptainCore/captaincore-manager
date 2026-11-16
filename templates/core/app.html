@@ -95,13 +95,30 @@
 .cc-site-tabs::-webkit-scrollbar{display:none}
 .cc-site-tabs button{border:0;border-bottom:2px solid transparent;background:none;padding:9px 0 11px;margin-bottom:-1px;font:500 var(--fs-14) var(--sans);cursor:pointer;white-space:nowrap;flex:none}
 .cc-site-tabs button:hover{color:var(--ink)!important}
-.cc-health{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
+.cc-health{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.cc-em{margin-top:14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);padding:16px 18px}
+.cc-em-head{display:flex;align-items:center;gap:9px}
+.cc-em h3{margin:0;font:600 var(--fs-15) var(--sans)}
+.cc-em h4{margin:16px 0 8px;font:600 var(--fs-12) var(--sans);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-dim)}
+.cc-em-x{border:none;background:none;color:var(--ink-dim);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+.cc-em-x:hover{background:var(--panel-2);color:var(--ink)}
+.cc-em-issues{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.cc-em-issue{display:flex;gap:8px;border-left:3px solid;padding:6px 10px;background:var(--panel-2);border-radius:0 8px 8px 0;font:500 var(--fs-13) var(--sans)}
+.cc-em-rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px;margin:14px 0 0}
+.cc-em-rows div{min-width:0}
+.cc-em-rows dt{font:500 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.cc-em-rows dd{margin:2px 0 0;font:500 var(--fs-13) var(--sans);overflow-wrap:anywhere}
+.cc-em-change{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;font:400 var(--fs-13) var(--sans);padding:5px 0;border-top:1px solid var(--rule)}
+.cc-em-when{font:500 var(--fs-12) var(--mono);color:var(--ink-dim);min-width:150px}
+.cc-em-set{border-top:1px solid var(--rule);padding:6px 0}
+.cc-em-set summary{cursor:pointer;font:500 var(--fs-13) var(--sans)}
+.cc-em-set pre{margin:8px 0 2px;max-height:320px;overflow:auto;background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-12) var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .cc-health-card{display:flex;flex-direction:column;gap:5px;background:var(--paper);border:1px solid var(--rule);border-radius:13px;padding:13px 15px;min-width:0;transition:box-shadow .12s}
 .cc-health-card[style*="pointer"]:hover{box-shadow:0 0 0 1px var(--brand)}
 .cc-health-k{display:flex;align-items:center;gap:7px;font:500 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .cc-health-v{font:700 19px/1.2 var(--sans);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-health-sub{font:400 var(--fs-12) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:640px){.cc-site-tabs{gap:20px;-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:28px}.cc-health{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cc-health-card:last-child{grid-column:1 / -1}.cc-health-v{font-size:17px}}
+@media (max-width:640px){.cc-site-tabs{gap:20px;-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:28px}.cc-health{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cc-health-card:last-child:nth-child(odd){grid-column:1 / -1}.cc-health-v{font-size:17px}}
 /* Site header: the environment's address and WP admin. */
 .cc-head-links{display:inline-flex;align-items:center;gap:2px;min-width:0;max-width:100%}
 .cc-head-link{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px;border:0;border-radius:8px;background:none;color:var(--brand-ink);font:500 var(--fs-13) var(--sans);cursor:pointer;min-width:0;white-space:nowrap}
@@ -1590,6 +1607,40 @@ button.ccc-edited:hover{color:var(--ink)}
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ emOpen }}" hint-placeholder-val="{{ false }}">
+              <section class="cc-em" aria-label="Email delivery">
+                <div class="cc-em-head">
+                  <span style="width:9px;height:9px;border-radius:50%;background:{{ emTone }};flex:none"></span>
+                  <h3>{{ emTitle }}</h3>
+                  <div style="flex:1"></div>
+                  <button type="button" onClick="{{ emClose }}" class="cc-em-x" aria-label="Close email details">×</button>
+                </div>
+                <sc-if value="{{ emHasIssues }}" hint-placeholder-val="{{ false }}">
+                  <div class="cc-em-issues">
+                    <sc-for list="{{ emIssues }}" as="i" hint-placeholder-count="1">
+                      <div class="cc-em-issue" style="border-color:{{ i.tone }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ i.tone }};flex:none;margin-top:6px"></span>{{ i.label }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <dl class="cc-em-rows">
+                  <sc-for list="{{ emRows }}" as="r" hint-placeholder-count="6">
+                    <div><dt>{{ r.k }}</dt><dd>{{ r.v }}</dd></div>
+                  </sc-for>
+                </dl>
+                <sc-if value="{{ emHasChanges }}" hint-placeholder-val="{{ false }}">
+                  <h4>Changes</h4>
+                  <sc-for list="{{ emChanges }}" as="c" hint-placeholder-count="1">
+                    <div class="cc-em-change"><span class="cc-em-when">{{ c.when }}</span><span>{{ c.from }}</span><span aria-hidden="true">→</span><span style="font-weight:600">{{ c.to }}</span></div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{ emHasMailers }}" hint-placeholder-val="{{ false }}">
+                  <h4>Mail plugin settings</h4>
+                  <sc-for list="{{ emMailers }}" as="m" hint-placeholder-count="1">
+                    <details class="cc-em-set"><summary>{{ m.name }}</summary><pre>{{ m.json }}</pre></details>
+                  </sc-for>
+                </sc-if>
+              </section>
+            </sc-if>
             <!-- Network sites: multisite subsites, WP Freighter tenants (network.js) -->
             <sc-if value="{{ netTenantShow }}" hint-placeholder-val="{{ false }}">
               <div onClick="{{ netTenantGo }}" style="margin-top:14px;display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:11px 16px;cursor:pointer" style-hover="border-color:var(--brand)">
