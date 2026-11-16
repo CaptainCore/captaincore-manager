@@ -778,6 +778,13 @@ Object.assign(Component.prototype, {
       c.scrollPin = c.scrollPin || c.nearBottom || mine;
     }
     delete c.typing[m.conversation_id];
+    // Sent from another window or device: a box here still holding the same
+    // text would only send it again, so clear it.
+    if (viewing && m.author_user_id === cb.userId && !this.state.chatSending && m.body && (this.state.chatBody || '').trim() === String(m.body).trim()) {
+      this._chatClear = true;
+      clearTimeout(c.draftTimer); c.draftText = c.draftSent = '';
+      this.setState({ chatBody: '' });
+    }
     const row = c.list.find(x => x.id === m.conversation_id);
     // Grok Bot's triage note marks the row; the customer's next message clears it.
     if (row && cb.operator && m.via === 'bot' && m.kind === 'note') row.triaged = true;

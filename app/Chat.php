@@ -528,6 +528,23 @@ class Chat {
 		if ( is_wp_error( $body ) ) {
 			return $body;
 		}
+		// The same text from the same person twice within two minutes is a
+		// repeat, not a new message: a second window still holding the text,
+		// a double submit, a retry after a lost reply. Answer with the first
+		// one so the client treats it as sent.
+		if ( ! $files && $refs === '' ) {
+			global $wpdb;
+			$repeat = $wpdb->get_var( $wpdb->prepare(
+				"SELECT chat_message_id FROM {$wpdb->base_prefix}captaincore_chat_messages
+				WHERE chat_conversation_id = %d AND author_user_id = %d AND kind = %s AND body = %s AND created_at >= %s
+				ORDER BY chat_message_id DESC LIMIT 1",
+				$conversation->chat_conversation_id, $user_id, $kind, $body, gmdate( 'Y-m-d H:i:s', time() - 120 )
+			) );
+			if ( $repeat ) {
+				$row = ChatMessages::get( $repeat );
+				return [ 'message' => self::present_message( $row, [] ), 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ), 'repeat' => true ];
+			}
+		}
 		$user    = get_userdata( $user_id );
 		$message = self::append( (int) $conversation->chat_conversation_id, [
 			'kind'           => $kind,
