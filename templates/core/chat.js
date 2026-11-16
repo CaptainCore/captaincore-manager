@@ -1303,6 +1303,17 @@ Object.assign(Component.prototype, {
       el._cccBound = true;
       el.addEventListener('scroll', () => { c.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80; });
       el.addEventListener('contextmenu', e => this.chatThreadCtx(e, el));
+      // Touch screens have no hover, so a message's edit and react buttons
+      // stay hidden (they would sit on the text) until the message is
+      // tapped. Another tap, or a tap elsewhere, hides them again.
+      el.addEventListener('click', e => {
+        if (!window.matchMedia('(hover: none)').matches) return;
+        if (e.target.closest('button,a,textarea,input,.ccc-chip,img,video')) return;
+        const msg = e.target.closest('.ccc-msg,.ccc-note');
+        const was = msg && msg.hasAttribute('data-acts');
+        el.querySelectorAll('[data-acts]').forEach(x => x.removeAttribute('data-acts'));
+        if (msg && !was) msg.setAttribute('data-acts', '');
+      });
       // The inline editor: Enter saves, Shift+Enter is a new line, Esc
       // cancels (and stops here, so the page doesn't close dialogs too).
       el.addEventListener('keydown', e => {

@@ -394,8 +394,9 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-react-add:hover{color:var(--brand-ink);border-color:var(--brand)}
 .ccc-msg .ccc-react-add,.ccc-note .ccc-react-add{position:absolute;right:0;top:4px}
 .ccc-bub .ccc-react-add{align-self:center}
-.ccc-msg:hover .ccc-react-add,.ccc-note:hover .ccc-react-add,.ccc-bub:hover .ccc-react-add,.ccc-react-add:focus-visible{opacity:1}
-@media (hover:none){.ccc-react-add{opacity:.55}}
+@media (hover:hover){.ccc-msg:hover .ccc-react-add,.ccc-note:hover .ccc-react-add,.ccc-bub:hover .ccc-react-add{opacity:1}}
+.ccc-react-add:focus-visible{opacity:1}
+@media (hover:none){.ccc-react-add{opacity:.55}.ccc-msg .ccc-react-add,.ccc-note .ccc-react-add{opacity:0;pointer-events:none}.ccc-msg[data-acts] .ccc-react-add,.ccc-note[data-acts] .ccc-react-add{opacity:1;pointer-events:auto}}
 .ccc-msg .ccc-edit-btn,.ccc-note .ccc-edit-btn{right:34px}
 .ccc-logbtn{margin-left:-6px}
 .ccc-pf-log{max-width:320px}

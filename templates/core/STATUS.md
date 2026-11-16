@@ -3944,3 +3944,6 @@ A third tab beside Inbox and Triage (/account/chat/customers, chat-people.js): a
 
 ### Chat: repeat guard (2026-11-16)
 A customer with two dashboard windows sent the same message twice: typed in one, sent from the other, then pressed Enter in the first on the text still in its box. Two guards: `Chat::post_message` answers an identical message (same person, conversation, kind and body, no files or logs) with the first one: within 60 seconds, or for a short message (under 20 characters) within 10 seconds and only when nothing else was said in between, so "yes" twice to two questions goes through (`repeat: true`, nothing inserted, nothing emitted), and `chatOnMessage` clears a box that holds exactly the text of a message the same user just sent from another window or device.
+
+### Chat: message buttons on touch screens (2026-11-16)
+On a phone the edit and react buttons (absolute, top right) were always shown at .55 and sat on the text of follow-up messages. On `(hover:none)` they are now hidden until the message is tapped (chatThreadRef click toggles `data-acts` on the `.ccc-msg`/`.ccc-note`; another tap or a tap on another message hides them). The hover rule is scoped to `(hover:hover)` so iOS sticky hover doesn't keep them up. Customer bubbles (`.ccc-bub`, inline button) are unchanged.
