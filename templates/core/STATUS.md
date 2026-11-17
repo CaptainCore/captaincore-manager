@@ -4042,3 +4042,5 @@ tile, title, one-line description): push staging → production, swap, pull
 production → staging (worded "Create a staging copy…" when there is no staging
 yet, `noStaging`), push to another site, and Work on it locally (Cove). The
 old `.cc-deploy-quick` link styles are gone.
+
+Kinsta account in Edit site (2026-11-17): for a Kinsta site, Edit site lists every Kinsta connection (provider row) under "Kinsta account", each checked live for the site (`GET /sites/{id}/kinsta-accounts`, operators only, one `sites/{provider_site_id}` read per row) with "Has this site" / "Not found", the current one marked, and a hint when the site turned up in another account ("Kinsta finds this site in Anchor Hosting, not Launch Kits. Pick it and save."). Saving sends `provider_id` with the identity PUT; the route refuses an account that can't see the site, else switches the row, logs "Moved … to the X Kinsta account from Y" and pushes the site to the CLI. For a site moved between Kinsta companies: Kinsta keeps the site id through a transfer, so the row is all that changes (`site-detail.js computeEditSiteAccounts`).

@@ -858,8 +858,19 @@ Object.assign(Component.prototype, {
   openEditSite() {
     const real = this._detail;
     if (!real || !real.site) return;
-    this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '' };
+    this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '', providerId: String(real.site.provider_id || '') };
     this.setState({ edsOpen: true, edsSaving: false, edsEnvBusy: '' });
+    // Kinsta accounts, each checked for this site (where it lives after a
+    // transfer between Kinsta companies).
+    this._esAccts = null;
+    if (real.site.provider === 'kinsta') {
+      const siteId = real.siteId;
+      this.api('/sites/' + siteId + '/kinsta-accounts').then(res => {
+        if (!this._detail || this._detail.siteId !== siteId) return;
+        this._esAccts = res && Array.isArray(res.accounts) ? res : { linked: false, accounts: [] };
+        this.setState({ tick: this.state.tick });
+      }).catch(() => { this._esAccts = { linked: false, accounts: [], failed: true }; this.setState({ tick: this.state.tick }); });
+    }
     if (this._esKeys === undefined) {
       this._esKeys = null; // loading
       this.api('/keys/').then(list => { this._esKeys = Array.isArray(list) ? list : []; this.setState({ tick: this.state.tick }); })
@@ -873,7 +884,8 @@ Object.assign(Component.prototype, {
     if (!(d.name || '').trim()) { this.toast('Domain name is required', { kind: 'error' }); return; }
     this.setState({ edsSaving: true });
     this.api('/sites/' + real.siteId + '/identity', { method: 'PUT',
-      body: { name: d.name.trim(), provider: d.provider || '', key: d.key === '' ? '' : d.key } }).then(res => {
+      body: Object.assign({ name: d.name.trim(), provider: d.provider || '', key: d.key === '' ? '' : d.key },
+        d.provider === 'kinsta' && d.providerId && d.providerId !== String(real.site.provider_id || '') ? { provider_id: Number(d.providerId) } : {}) }).then(res => {
       if (!res || res.code || !res.site) {
         this.setState({ edsSaving: false });
         this.toast((res && res.message) || 'Could not save site', { kind: 'error' });
@@ -882,8 +894,11 @@ Object.assign(Component.prototype, {
       if (this._detail === real) real.site = res.site;
       const f = this.FLEET.find(x => x.id === String(real.siteId));
       if (f) { f.name = res.site.name; f.provider = (res.site.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase()); }
+      const moved = d.provider === 'kinsta' && d.providerId && String(res.site.provider_id || '') === d.providerId && f && f.providerConnId !== d.providerId;
+      if (f) f.providerConnId = String(res.site.provider_id || '');
       this.setState({ edsOpen: false, edsSaving: false });
-      this.toast('Site updated', { kind: 'success' });
+      const acct = moved && this._esAccts ? (this._esAccts.accounts.find(a => String(a.provider_id) === d.providerId) || {}).name : '';
+      this.toast(acct ? 'Site now on the ' + acct + ' Kinsta account' : 'Site updated', { kind: 'success' });
     }).catch(() => { this.setState({ edsSaving: false }); this.toast('Could not save site', { kind: 'error' }); });
   },
 
@@ -908,9 +923,47 @@ Object.assign(Component.prototype, {
         mark: String(d.key || '') === String(k.key_id || '') ? '✓' : '',
         bg: String(d.key || '') === String(k.key_id || '') ? 'var(--brand-soft)' : 'transparent',
         pick: () => { this._es.key = k.key_id; this.setState({ tick: this.state.tick }); } })),
+      ...this.computeEditSiteAccounts(real, d),
       edsSaveLabel: s.edsSaving ? 'Saving…' : 'Save changes',
       edsSave: () => this.saveEditSite(),
       ...this.computeEditSiteEnvs(real, s)
+    };
+  },
+
+  // ── Edit site → Kinsta account ────────────────────────────────
+  // Which Kinsta company connection (provider row) holds the site. After a
+  // transfer at Kinsta the site keeps its id, so switching the row is all
+  // that changes; each row says whether Kinsta can see the site with it.
+  computeEditSiteAccounts(real, d) {
+    const A = this._esAccts;
+    const show = !!real && d.provider === 'kinsta' && (real.site || {}).provider === 'kinsta';
+    if (!show) return { edsAcctShow: false };
+    const accts = A ? A.accounts : [];
+    const cur = String((real.site || {}).provider_id || '');
+    const pick = d.providerId || cur;
+    const where = accts.filter(a => a.has_site);
+    const curRow = accts.find(a => String(a.provider_id) === cur);
+    let note = '';
+    if (A && A.failed) note = 'Could not check the Kinsta accounts.';
+    else if (A && !A.linked) note = 'This site is not linked to a Kinsta site yet, so the accounts could not be checked.';
+    else if (A && curRow && curRow.has_site === false && where.length) note = 'Kinsta finds this site in ' + where.map(a => a.name).join(', ') + ', not ' + curRow.name + '. Pick it and save.';
+    else if (A && where.length === 0) note = 'None of the Kinsta accounts can see this site.';
+    return {
+      edsAcctShow: true,
+      edsAcctLoading: A === null,
+      edsAcctNote: note, edsAcctHasNote: !!note,
+      edsAccts: accts.map(a => {
+        const id = String(a.provider_id), on = id === pick;
+        return {
+          label: a.name,
+          badge: a.has_site === true ? 'Has this site' : a.has_site === false ? 'Not found' : '',
+          badgeFg: a.has_site === true ? 'var(--ok)' : 'var(--ink-dim)',
+          sub: id === cur ? 'Current' : '',
+          mark: on ? '✓' : '',
+          bg: on ? 'var(--brand-soft)' : 'transparent',
+          pick: () => { this._es.providerId = id; this.setState({ tick: this.state.tick }); }
+        };
+      })
     };
   },
 

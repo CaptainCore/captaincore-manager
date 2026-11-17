@@ -6973,6 +6973,26 @@ button.ccc-edited:hover{color:var(--ink)}
               </sc-for>
             </div>
           </div>
+          <sc-if value="{{ edsAcctShow }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <span style="display:block;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-bottom:5px">Kinsta account</span>
+              <sc-if value="{{ edsAcctLoading }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Checking which Kinsta account has this site…</span>
+              </sc-if>
+              <div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+                <sc-for list="{{ edsAccts }}" as="ea" hint-placeholder-count="3">
+                  <div onClick="{{ ea.pick }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--rule);background:{{ ea.bg }};cursor:pointer" style-hover="background:var(--panel-2)">
+                    <span style="flex:1;min-width:0;font:400 var(--fs-13) var(--sans)">{{ ea.label }}<sc-if value="{{ ea.sub }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px;font:500 var(--fs-11) var(--sans);color:var(--ink-dim)">{{ ea.sub }}</span></sc-if></span>
+                    <span style="font:500 var(--fs-12) var(--sans);color:{{ ea.badgeFg }}">{{ ea.badge }}</span>
+                    <span style="width:14px;font:600 var(--fs-13) var(--sans);color:var(--brand-ink)">{{ ea.mark }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ edsAcctHasNote }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:6px 0 0;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">{{ edsAcctNote }}</p>
+              </sc-if>
+            </div>
+          </sc-if>
           <div>
             <span style="display:block;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-bottom:5px">SSH key override</span>
             <sc-if value="{{ edsKeysLoading }}" hint-placeholder-val="{{ false }}">

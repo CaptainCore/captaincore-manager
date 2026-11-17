@@ -3917,17 +3917,71 @@ function captaincore_site_identity_update_func( WP_REST_Request $request ) {
 	if ( $key !== null ) {
 		$details->key = empty( $key ) ? null : intval( $key );
 	}
-	( new CaptainCore\Sites )->update( [
+	$update = [
 		'name'       => $name,
 		'provider'   => $provider ? $provider : $current->provider,
 		'updated_at' => date( "Y-m-d H:i:s" ),
 		'details'    => json_encode( $details ),
-	], [ 'site_id' => $site_id ] );
-	CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $name, "Updated site details for {$name}", [], $current->customer_id ? $current->customer_id : null );
+	];
+	// Which Kinsta account (provider row) holds the site, for a site moved
+	// between Kinsta companies. Kinsta keeps the site's id through a transfer,
+	// so only the row changes; the new account must be able to see the site.
+	$provider_id = $request->get_param( 'provider_id' );
+	$moved_to    = null;
+	if ( $provider_id !== null && (int) $provider_id !== (int) $current->provider_id && $update['provider'] === 'kinsta' ) {
+		$row = CaptainCore\Providers::get( (int) $provider_id );
+		if ( empty( $row ) || $row->provider !== 'kinsta' ) {
+			return new WP_Error( 'bad_provider', 'That Kinsta account does not exist.', [ 'status' => 400 ] );
+		}
+		if ( ! empty( $current->provider_site_id ) ) {
+			CaptainCore\Providers\Kinsta::use_provider( $row->provider_id );
+			$found = CaptainCore\Remote\Kinsta::get( "sites/{$current->provider_site_id}" );
+			if ( empty( $found->site ) ) {
+				return new WP_Error( 'not_in_account', "Kinsta can't find this site in {$row->name}. Transfer it there at Kinsta first.", [ 'status' => 400 ] );
+			}
+		}
+		$update['provider_id'] = (int) $row->provider_id;
+		$moved_to              = $row->name;
+	}
+	( new CaptainCore\Sites )->update( $update, [ 'site_id' => $site_id ] );
+	$customer = $current->customer_id ? $current->customer_id : null;
+	CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $name, "Updated site details for {$name}", [], $customer );
+	if ( $moved_to ) {
+		$from = CaptainCore\Providers::get( (int) $current->provider_id );
+		CaptainCore\ActivityLog::log( 'updated', 'site', $site_id, $name, "Moved {$name} to the {$moved_to} Kinsta account" . ( ! empty( $from->name ) ? " from {$from->name}" : '' ), [], $customer );
+		CaptainCore\Providers\Kinsta::push_site_to_cli( $site_id );
+	}
 	return [
 		'response' => 'Successfully updated site',
 		'site'     => ( new CaptainCore\Site( $site_id ) )->fetch(),
 	];
+}
+
+// Every Kinsta account (provider row) and whether it can see this site, so
+// Edit site can show where a site lives after a transfer between Kinsta
+// companies. Operators only; reads only.
+function captaincore_site_kinsta_accounts_func( WP_REST_Request $request ) {
+	$site = ( new CaptainCore\Sites )->get( intval( $request['id'] ) );
+	if ( empty( $site ) ) {
+		return new WP_Error( 'not_found', 'Site not found', [ 'status' => 404 ] );
+	}
+	$out = [];
+	foreach ( CaptainCore\Providers::where( [ 'provider' => 'kinsta' ] ) as $row ) {
+		$has = null;
+		if ( ! empty( $site->provider_site_id ) ) {
+			CaptainCore\Providers\Kinsta::use_provider( $row->provider_id );
+			$found = CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}" );
+			$has   = ! empty( $found->site );
+		}
+		$out[] = [
+			'provider_id' => (int) $row->provider_id,
+			'name'        => $row->name,
+			'house'       => (int) $row->user_id === 0,
+			'current'     => (int) $row->provider_id === (int) $site->provider_id,
+			'has_site'    => $has,
+		];
+	}
+	return [ 'linked' => ! empty( $site->provider_site_id ), 'accounts' => $out ];
 }
 
 function captaincore_site_environment_update_func( WP_REST_Request $request ) {
@@ -14127,6 +14181,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/update', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_sites_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/kinsta-accounts', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_kinsta_accounts_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
