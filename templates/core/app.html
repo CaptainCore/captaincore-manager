@@ -133,8 +133,6 @@
 .cc-conn-v{flex:1;min-width:0;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cc-conn-copy{flex:none;font:500 var(--fs-115) var(--sans);color:var(--brand-ink);border:1px solid var(--rule);border-radius:6px;padding:2px 8px}
 .cc-conn-copy:hover{background:var(--panel-2)}
-.cc-deploy-quick{display:flex;flex-direction:column;gap:8px}
-.cc-deploy-quick > span,.cc-deploy-quick sc-if > span{font-size:var(--fs-13)!important}
 .cc-tool{width:100%;display:flex;align-items:center;gap:12px;padding:8px 16px;border:0;background:none;text-align:left;cursor:pointer;font:inherit}
 .cc-tool:hover{background:var(--panel-2)}
 .cc-tool-i{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 10%,var(--paper));color:var(--brand-ink)}
@@ -1758,25 +1756,28 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
               <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
                 <sc-if value="{{ dDeployCardShow }}" hint-placeholder-val="{{ true }}">
-                <section class="cc-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-                  <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Deploy</h2>
+                <section class="cc-card" style="padding:6px 0 4px">
+                  <h2 style="margin:0;padding:8px 16px 4px;font:600 var(--fs-14) var(--sans)">Deploy</h2>
                   <sc-if value="{{ envDeployShow }}" hint-placeholder-val="{{ false }}">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button type="button" onClick="{{ envDeployOpen }}" class="cc-btn primary">Deploy between environments…</button><span class="cc-meta">Pick any two. A backup of the target is taken first.</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 16px 8px"><button type="button" onClick="{{ envDeployOpen }}" class="cc-btn primary">Deploy between environments…</button><span class="cc-meta">Pick any two. A backup of the target is taken first.</span></div>
                   </sc-if>
                   <sc-if value="{{ dIsWp }}" hint-placeholder-val="{{ true }}">
-                  <div class="cc-deploy-quick">
                   <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ pushEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg>Push staging → production</span>
+                    <button type="button" onClick="{{ pushEnv }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Push staging → production</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Copy staging over the live site</span></span></button>
                   </sc-if>
                   <sc-if value="{{ canSwap }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ swapEnv }}" title="Production gets staging; staging gets production as it was right before the push" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M7 20V4 M3 8l4-4 4 4 M17 4v16 M13 16l4 4 4-4"></path></svg>Swap staging ⇄ production</span>
+                    <button type="button" onClick="{{ swapEnv }}" class="cc-tool" title="Production gets staging; staging gets production as it was right before the push"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4 M3 8l4-4 4 4 M17 4v16 M13 16l4 4 4-4"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Swap staging ⇄ production</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Production gets staging, staging keeps the old production</span></span></button>
                   </sc-if>
-                  <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
-                  <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
+                  <sc-if value="{{ hasStaging }}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{ pullEnv }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Pull production → staging</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Refresh staging with a copy of the live site</span></span></button>
+                  </sc-if>
+                  <sc-if value="{{ noStaging }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ pullEnv }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Pull production → staging</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Create a staging copy of the live site to try changes on</span></span></button>
+                  </sc-if>
+                  <button type="button" onClick="{{ pushOther }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Push to another site…</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Copy this environment over one of your other sites</span></span></button>
                   <sc-if value="{{ coveShow }}" hint-placeholder-val="{{ true }}">
-                    <span onClick="{{ coveOpenDlg }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 5h14v10H5z M3 19h18 M12 8v4 M10 10.5l2 2 2-2"></path></svg>Work on it locally with Cove…</span>
+                    <button type="button" onClick="{{ coveOpenDlg }}" class="cc-tool"><span class="cc-tool-i"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14v10H5z M3 19h18 M12 8v4 M10 10.5l2 2 2-2"></path></svg></span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">Work on it locally…</span><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Pull a copy to your computer with Cove, in one command</span></span></button>
                   </sc-if>
-                  </div>
                   </sc-if>
                 </section>
                 </sc-if>

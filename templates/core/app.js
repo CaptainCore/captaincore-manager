@@ -2542,6 +2542,7 @@ class Component extends DCLogic {
       dMetaPost: isPlain ? 'Plain site' : '', dHasMetaPost: isPlain,
       pBg: segBg('Production'), pFg: segFg('Production'), sBg: segBg('Staging'), sFg: segFg('Staging'),
       hasStaging: real && real.envs ? real.envs.some(e => e.environment === 'Staging') : true,
+      noStaging: !!(real && real.envs) && !real.envs.some(e => e.environment === 'Staging'),
       // Swap rides Kinsta's pre-push backup of production, so it needs a
       // Kinsta-linked site with both environments.
       canSwap: real && real.envs ? (real.site || {}).provider === 'kinsta' && !!(real.site || {}).provider_site_id

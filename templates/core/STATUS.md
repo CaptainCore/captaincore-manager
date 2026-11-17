@@ -4035,3 +4035,10 @@ badges, and open / edit (the domain's WP Landing Kit screen) links. On a
 multisite, WordPress MU Domain Mapping's domains now show on each subsite's
 line ("mapped: …"). First data arrives with the next daily sync after the
 CLI deploy.
+
+### Deploy card in the Tools style (2026-11-16)
+The Deploy card's links are now rows like the Tools card (`.cc-tool`: icon
+tile, title, one-line description): push staging → production, swap, pull
+production → staging (worded "Create a staging copy…" when there is no staging
+yet, `noStaging`), push to another site, and Work on it locally (Cove). The
+old `.cc-deploy-quick` link styles are gone.
