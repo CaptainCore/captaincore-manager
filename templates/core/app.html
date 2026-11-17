@@ -126,6 +126,17 @@
 .cc-head-host{overflow:hidden;text-overflow:ellipsis;max-width:280px}
 .cc-head-icon{width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:none;color:var(--ink-dim);cursor:pointer;flex:none}
 .cc-head-icon:hover{background:var(--panel-2);color:var(--ink)}
+/* Visit site hover card: the full address with a copy button. Pointer
+   devices get the card (the separate copy icon hides); touch keeps the icon. */
+.cc-url-hover{position:relative;display:inline-flex;min-width:0}
+.cc-url-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:30;display:flex;align-items:center;gap:4px;width:max-content;max-width:min(460px,calc(100vw - 32px));padding:4px 4px 4px 12px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);opacity:0;visibility:hidden;transform:translateY(-3px);transition:opacity .12s ease,transform .12s ease,visibility 0s linear .12s}
+.cc-url-pop::before{content:"";position:absolute;left:0;right:0;top:-8px;height:8px}
+.cc-url-hover:hover .cc-url-pop,.cc-url-hover:focus-within .cc-url-pop{opacity:1;visibility:visible;transform:none;transition-delay:.15s,.15s,.15s}
+.cc-url-pop-text{font:400 var(--fs-12) var(--mono);color:var(--ink);overflow-wrap:anywhere;min-width:0;user-select:all}
+.cc-url-pop-copy{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 9px;border:0;border-radius:7px;background:var(--panel-2);color:var(--ink);font:500 var(--fs-12) var(--sans);cursor:pointer;flex:none}
+.cc-url-pop-copy:hover{background:var(--brand-soft);color:var(--brand-ink)}
+@media (hover:hover) and (pointer:fine){.cc-url-copy-icon{display:none}}
+@media (hover:none),(pointer:coarse){.cc-url-pop{display:none}}
 /* Site Overview: Connect rows, deploy shortcuts, tools. */
 .cc-conn-row{display:flex;align-items:center;gap:12px;padding:9px 16px;border-top:1px solid var(--rule);cursor:pointer}
 .cc-conn-row:hover{background:var(--panel-2);color:var(--brand-ink)}
@@ -1527,8 +1538,11 @@ button.ccc-edited:hover{color:var(--ink)}
                 <button type="button" onClick="{{ envSwToggle }}" aria-haspopup="menu" aria-expanded="{{ envSwOpen }}" class="cc-env-pill" style="{{ envSwStyle }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ envSwDot }};flex:none"></span>{{ envSwName }}<sc-if value="{{ envSwHasWhere }}" hint-placeholder-val="{{ true }}"><span style="font-weight:400;opacity:.85">· {{ envSwWhere }}</span></sc-if><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
                 <sc-if value="{{ dHasUrl }}" hint-placeholder-val="{{ false }}">
                   <span class="cc-head-links">
-                    <button type="button" onClick="{{ dUrlOpen }}" title="{{ dUrlTitle }}" class="cc-head-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M2 12h20 M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10Z"></path></svg>Visit site<span aria-hidden="true">↗</span></button>
-                    <button type="button" onClick="{{ dUrlCopy }}" title="Copy the address" aria-label="Copy the address" class="cc-head-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h11v11H9z M5 15H4V4h11v1"></path></svg></button>
+                    <span class="cc-url-hover">
+                      <button type="button" onClick="{{ dUrlOpen }}" aria-label="Visit site: {{ dUrlTitle }}" class="cc-head-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M2 12h20 M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10Z"></path></svg>Visit site<span aria-hidden="true">↗</span></button>
+                      <span class="cc-url-pop" role="tooltip"><span class="cc-url-pop-text">{{ dUrlTitle }}</span><button type="button" onClick="{{ dUrlCopy }}" aria-label="Copy the address" class="cc-url-pop-copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h11v11H9z M5 15H4V4h11v1"></path></svg>Copy</button></span>
+                    </span>
+                    <button type="button" onClick="{{ dUrlCopy }}" title="Copy the address" aria-label="Copy the address" class="cc-head-icon cc-url-copy-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h11v11H9z M5 15H4V4h11v1"></path></svg></button>
                     <sc-if value="{{ dHasAdmin }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ dAdminOpen }}" title="{{ dAdminTitle }}" class="cc-head-link">WP admin<span aria-hidden="true">↗</span></button></sc-if>
                   </span>
                 </sc-if>
