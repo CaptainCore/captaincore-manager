@@ -98,6 +98,14 @@ class ProviderAction {
                 // the site unlinked. 30 attempts ≈ 5 minutes of polling.
                 if ( $action->attempts >= 30 ) {
                     $update["status"] = $cosmetic_step ? "done" : "failed";
+                    if ( ! $cosmetic_step ) {
+                        // Say why, for the browser's failure lookup (paGone).
+                        $last          = \CaptainCore\Providers\Kinsta::error_message( $response ?? null, '' );
+                        $action->error = "Kinsta stopped reporting on operation {$provider_action->provider_key} (HTTP {$status})" . ( $last !== '' ? ": $last" : '.' );
+                        $update["action"] = json_encode( $action );
+                        $entity = $action->domain ?? $action->name ?? '';
+                        ActivityLog::log( 'failed', 'site', $action->site_id ?? null, $entity, "{$action->command} gave up for {$entity}: {$action->error}", [], $action->account_id ?? null );
+                    }
                     if ( $cosmetic_step ) {
                         error_log( "CaptainCore new-site step {$action->step} never resolved for " . ( $action->domain ?? $action->name ?? '' ) . " (site {$action->site_id}) — marking the chain done." );
                     }

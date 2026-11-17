@@ -357,6 +357,16 @@ class Kinsta {
         $response      = self::create_site_request( $site );
         $site->command = "new-site";
         $site->intial_response = $response;
+        // Refused outright (not rate-limited, which check() retries): no job to
+        // track, so hand Kinsta's own words back to the dialog instead of an
+        // operation id of null and a job that never moves.
+        $rate_limited = ( $response->message ?? '' ) == "Too many requests, please try again later.";
+        if ( empty( $response->operation_id ) && ! $rate_limited ) {
+            $why = self::error_message( $response, 'Kinsta did not accept the request.' );
+            error_log( "CaptainCore new-site: Kinsta refused {$site->name}: $why" );
+            \CaptainCore\ActivityLog::log( 'failed', 'site', null, $site->domain ?? $site->name, "Kinsta refused the new site {$site->name}: $why", [], $site->account_id ?? null );
+            return new \WP_Error( 'kinsta_refused', "Kinsta could not create the site: $why", [ 'status' => 502 ] );
+        }
         $site->message = ! empty( $site->clone_site_id )
             ? "Creating site $site->name at Kinsta via site clone"
             : ( ( $site->start ?? '' ) === 'empty'
@@ -435,6 +445,29 @@ class Kinsta {
             ];
         }
         return $results;
+    }
+
+    // Kinsta's reason for a refused call, from the shapes its API answers with
+    // ({message}, {data: {message}}, {errors: [...]}, validation details).
+    public static function error_message( $response, $fallback = 'Kinsta did not answer.' ) {
+        if ( $response === false || $response === null ) {
+            return 'Could not reach Kinsta.';
+        }
+        $r     = json_decode( wp_json_encode( $response ), true );
+        $parts = [];
+        foreach ( [ $r['data']['message'] ?? '', $r['message'] ?? '', $r['error'] ?? '' ] as $m ) {
+            if ( is_string( $m ) && $m !== '' && ! in_array( $m, $parts, true ) ) {
+                $parts[] = $m;
+            }
+        }
+        foreach ( (array) ( $r['errors'] ?? $r['data']['errors'] ?? [] ) as $k => $e ) {
+            $e = is_array( $e ) ? ( $e['message'] ?? implode( ' ', array_filter( $e, 'is_string' ) ) ) : $e;
+            if ( is_string( $e ) && $e !== '' ) {
+                $parts[] = ( is_string( $k ) ? "$k: " : '' ) . $e;
+            }
+        }
+        $text = trim( implode( ' ', $parts ) );
+        return $text !== '' ? wp_strip_all_tags( $text ) : $fallback;
     }
 
     // One Kinsta environment's own SFTP password. A site's environments share

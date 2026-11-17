@@ -1798,6 +1798,12 @@ class Component extends DCLogic {
     this.setState({ nsBusy: true, nsErrors: [] });
     this.api('/providers/kinsta/new-site', { method: 'POST', body: { site } }).then(res => {
       if (res && res.errors && res.errors.length) { this.setState({ nsErrors: res.errors, nsBusy: false }); return; }
+      // Refused by the host (a WP_Error carrying its own words, e.g. Kinsta's
+      // "Site creation is temporarily down"): keep the dialog open and say why.
+      if (!res || res.code || !res.operation_id) {
+        this.setState({ nsErrors: [(res && res.message) || 'Kinsta did not accept the request. Nothing was created.'], nsBusy: false });
+        return;
+      }
       this.toast(`${name} is on its way. It shows up in your sites in a few minutes.`, { kind: 'success' });
       this.setState({ nsOpen: false, nsBusy: false, nsName: '', nsDomain: '', nsNotes: '', nsNameTouched: false,
         nsClone: 'None (fresh install)', nsStart: 'fresh', nsShared: [], nsCustomerId: '', nsBillingId: '' });
@@ -1921,6 +1927,7 @@ class Component extends DCLogic {
       this._nsJobs[name] = jobId;
       job.stream.push('Resumed tracking — provisioning already underway.');
     }
+    if (a.provider_action_id) job._paId = a.provider_action_id; // for nsProgressGone's failure lookup
     const key = (a.status || '') + '|' + (act.step || '') + '|' + (a.provider_key || '');
     if (job._paKey === key) return; // nothing changed since the last poll
     job._paKey = key;
@@ -1964,6 +1971,7 @@ class Component extends DCLogic {
       job.stream.push('Resumed tracking — the staging build is already underway.');
     }
     this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 6) + 2) }));
+    if (a.provider_action_id) job._paId = a.provider_action_id; // for stgProgressGone's failure lookup
     const key = (a.status || '') + '|' + (act.step || '') + '|' + (a.provider_key || '');
     if (job._paKey === key) return;
     job._paKey = key;
@@ -1990,8 +1998,28 @@ class Component extends DCLogic {
     const job = this._jobObjs && this._jobObjs[(this._stgJobs || {})[id]];
     delete (this._stgJobs || {})[id];
     if (!job) return;
-    job.stream.push("The staging build left the queue (finished in another session or marked failed by the server). Check the site's environments.");
-    this.finishJob(job, 'done');
+    this.paGone(job, 'The staging build', "The staging build left the queue (finished in another session). Check the site's environments.");
+  }
+
+  // A provider action left the queue without this browser running its last
+  // step. A failed row carries the host's reason (ProviderAction check()
+  // stores it as action.error): show it in the job and as an error toast so a
+  // failure at Kinsta is never mistaken for "finished elsewhere".
+  paGone(job, what, okLine) {
+    const fail = (why) => {
+      job.stream.push('Error: ' + why);
+      this.finishJob(job, 'error');
+      this.toast(what + ' failed: ' + why, { kind: 'error' });
+    };
+    if (!job._paId) { job.stream.push(okLine); this.finishJob(job, 'done'); return; }
+    this.api('/provider-actions/' + job._paId).then(row => {
+      if (row && row.status === 'failed') { fail((row.action || {}).error || 'Kinsta reported a failure without a reason.'); return; }
+      job.stream.push(okLine);
+      this.finishJob(job, 'done');
+    }).catch(() => {
+      job.stream.push(okLine.replace(' (finished in another session)', ' (finished elsewhere or failed; could not check which)'));
+      this.finishJob(job, 'done');
+    });
   }
 
   // Swap progress (the swap-environments chain): step 1 is the push of
@@ -2063,8 +2091,7 @@ class Component extends DCLogic {
     const job = jobId && this._jobObjs ? this._jobObjs[jobId] : null;
     delete (this._nsJobs || {})[name];
     if (!job) return;
-    job.stream.push('The provisioning action left the queue (finished elsewhere or marked failed by the server). Check Sites for ' + name + '.');
-    this.finishJob(job, 'done');
+    this.paGone(job, 'Creating ' + name, 'The provisioning action left the queue (finished in another session). Check Sites for ' + name + '.');
   }
 
   openDomain(id) {
