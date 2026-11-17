@@ -140,7 +140,19 @@ class EmailRoute {
 			'zone' => self::zone_for( $home_url, $zones ), 'interceptors' => array_values( array_map( 'strval', (array) ( $email['mu'] ?? [] ) ) ),
 			'blocker' => '', 'conflicts' => [], 'unconfigured' => [], 'log' => is_array( $email['log'] ?? null ) ? $email['log'] : null, 'issues' => [],
 		];
+		// A mail plugin set to send with PHP's own mail on purpose (Gravity SMTP
+		// on its PHP Mail connector, or falling back to it because the primary
+		// is switched off) is not "unconfigured": the route is PHP mail, through it.
+		$php_plugin = null;
 		foreach ( $mailers as $m ) {
+			if ( ( $m['provider'] ?? '' ) === 'php_mail' && ( $m['kind'] ?? '' ) === 'pluggable' && ( ( $m['connector'] ?? '' ) !== '' || ! empty( $m['primary_off'] ) ) && ! $php_plugin ) {
+				$php_plugin = $m;
+			}
+		}
+		foreach ( $mailers as $m ) {
+			if ( $php_plugin && $m === $php_plugin ) {
+				continue;
+			}
 			if ( empty( $m['configured'] ) || ( $m['provider'] ?? '' ) === 'php_mail' ) {
 				$route['unconfigured'][] = (string) ( $m['name'] ?? $m['plugin'] ?? '' );
 			} elseif ( ! $eff || ( $m['plugin'] ?? '' ) !== ( $eff['plugin'] ?? '' ) ) {
@@ -172,9 +184,24 @@ class EmailRoute {
 				$route['status'] = 'other';
 				$route['label']  = self::provider_name( $provider );
 			}
+		} elseif ( $php_plugin ) {
+			$route = array_merge( $route, [
+				'label' => 'PHP mail', 'plugin' => (string) $php_plugin['plugin'], 'plugin_name' => (string) ( $php_plugin['name'] ?? $php_plugin['plugin'] ),
+				'from_email' => (string) ( $php_plugin['from_email'] ?? '' ), 'test_mode' => ! empty( $php_plugin['test_mode'] ),
+			] );
 		} elseif ( $route['unconfigured'] ) {
 			$route['status'] = 'unconfigured';
 			$route['label']  = $route['unconfigured'][0] . ' not set up';
+		}
+		// The plugin's primary is set up but switched off, so mail goes through
+		// its backup (or PHP mail). Worth knowing when the primary is ours.
+		$sender = $eff ?: $php_plugin;
+		if ( $sender && ! empty( $sender['primary_off'] ) ) {
+			$route['primary_off'] = [
+				'connector' => (string) ( $sender['primary'] ?? '' ),
+				'provider'  => (string) ( $sender['primary_provider'] ?? '' ),
+				'domain'    => (string) ( $sender['primary_domain'] ?? '' ),
+			];
 		}
 		// Only what certainly stops mail (the probe's `blockers`). Other must-use
 		// plugins that touch wp_mail are listed as interceptors: most only act
@@ -197,6 +224,11 @@ class EmailRoute {
 			$issue( 'stale-password', 'Mailgun password is not the current one and the last send failed' . ( $last_failed !== '' ? ' (' . $last_failed . ' UTC)' : '' ) );
 		} elseif ( $failing && ! $route['test_mode'] ) {
 			$issue( 'failing', 'The last send failed' . ( $last_failed !== '' ? ' (' . $last_failed . ' UTC)' : '' ) . ( $last_sent !== '' ? ', last delivered ' . $last_sent . ' UTC' : ', nothing delivered' ) );
+		}
+		if ( ! empty( $route['primary_off'] ) ) {
+			$po = $route['primary_off'];
+			$what = self::provider_name( $po['provider'] ) . ( $po['domain'] !== '' ? ' (' . $po['domain'] . ')' : '' );
+			$issue( 'primary-off', ( $route['plugin_name'] ?: 'The mail plugin' ) . "'s primary integration, " . $what . ', is switched off, so mail goes through ' . ( $route['status'] === 'php_mail' ? 'PHP mail' : $route['label'] ) );
 		}
 		if ( $route['test_mode'] ) {
 			$issue( 'test-mode', 'Gravity SMTP is in test mode: nothing is delivered' );
