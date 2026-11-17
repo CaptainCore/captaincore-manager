@@ -1773,6 +1773,9 @@ button.ccc-edited:hover{color:var(--ink)}
                   </sc-if>
                   <span onClick="{{ pullEnv }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg>Pull production → staging</span>
                   <span onClick="{{ pushOther }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 12h14 M12 5l7 7-7 7"></path></svg>Push to another site…</span>
+                  <sc-if value="{{ coveShow }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ coveOpenDlg }}" style="display:flex;align-items:center;gap:9px;font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.8"><path d="M5 5h14v10H5z M3 19h18 M12 8v4 M10 10.5l2 2 2-2"></path></svg>Work on it locally with Cove…</span>
+                  </sc-if>
                   </div>
                   </sc-if>
                 </section>
@@ -7095,6 +7098,65 @@ button.ccc-edited:hover{color:var(--ink)}
         <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
           <button onClick="{{ closeDep }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink-dim);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer" style-hover="color:var(--ink)">Cancel</button>
           <button onClick="{{ depGo }}" style="border:none;background:{{ depBtnBg }};color:white;font:600 var(--fs-13) var(--sans);padding:7px 15px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ depBtn }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Work on it locally with Cove (cove-local.js) ══ -->
+  <sc-if value="{{ coveOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ coveClose }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:8vh 16px;overflow-y:auto">
+      <div onClick="{{ stopProp }}" style="width:600px;max-width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .15s ease">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:14px 18px;border-bottom:1px solid var(--rule)">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 var(--fs-15) var(--sans)">Work on it locally</span>
+            <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Cove copies this site to your Mac or Linux computer, files and database, and runs it there. One command, about a minute for most sites.</span></span>
+          <div style="flex:1"></div>
+          <span onClick="{{ coveClose }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px;flex:none" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:11px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 8%,var(--paper)),var(--paper) 75%);border:1px solid var(--rule)">
+            <span style="display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M7 18a4 4 0 0 1-.6-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-1 9z"></path></svg>
+              <span style="display:flex;flex-direction:column;min-width:0"><span style="font:600 var(--fs-13) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ coveFrom }}</span><span class="cc-meta">{{ coveFromEnv }}</span></span></span>
+            <svg width="40" height="12" viewBox="0 0 40 12" fill="none" stroke="var(--ink-dim)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M2 6h34 M31 1.5l5 4.5-5 4.5"></path></svg>
+            <span style="display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 5h14v10H5z M3 19h18"></path></svg>
+              <span style="display:flex;flex-direction:column;min-width:0"><span title="{{ coveTo }}" style="font:600 var(--fs-13) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ coveTo }}</span><span class="cc-meta">On your computer</span></span></span>
+          </div>
+          <sc-if value="{{ coveEnvShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:-6px"><span class="cc-meta">Copy from</span>
+              <sc-for list="{{ coveEnvChips }}" as="c" hint-placeholder-count="2"><span onClick="{{ c.pick }}" style="font:500 var(--fs-12) var(--sans);padding:3px 10px;border-radius:999px;cursor:pointer;color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }}">{{ c.label }}</span></sc-for></div>
+          </sc-if>
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px"><span style="width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 var(--fs-12) var(--sans);flex:none">1</span><span style="font:600 var(--fs-13) var(--sans)">Install Cove (once)</span></div>
+            <div style="display:flex;align-items:stretch;border:1px solid var(--rule);border-radius:9px;background:var(--panel);overflow:hidden"><code style="flex:1;min-width:0;padding:9px 11px;font:400 var(--fs-12)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere">{{ coveInstall }}</code><button type="button" onClick="{{ coveCopyInstall }}" style="flex:none;border:0;border-left:1px solid var(--rule);background:var(--paper);padding:0 12px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="background:var(--panel-2)">Copy</button></div>
+            <div class="cc-meta" style="margin-top:6px">Already have Cove? Skip this. Free and open source, from <a href="https://cove.run" target="_blank" rel="noopener" style="color:var(--brand-ink)">cove.run</a>.</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px"><span style="width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 var(--fs-12) var(--sans);flex:none">2</span><span style="font:600 var(--fs-13) var(--sans)">Pull the site down</span></div>
+            <div style="display:flex;align-items:stretch;border:1px solid var(--rule);border-radius:9px;background:var(--panel);overflow:hidden"><code style="flex:1;min-width:0;padding:9px 11px;font:400 var(--fs-12)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere">{{ covePull }}</code><button type="button" onClick="{{ coveCopyPull }}" style="flex:none;border:0;border-left:1px solid var(--rule);background:var(--paper);padding:0 12px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="background:var(--panel-2)">Copy</button></div>
+            <div class="cc-meta" style="margin-top:6px">{{ coveSign }}</div>
+            <sc-if value="{{ coveKeysShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ coveKeysGo }}" style="display:inline-block;margin-top:4px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Add an SSH key in Profile →</span></sc-if>
+            <sc-if value="{{ covePassShow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ coveCopyPass }}" style="display:inline-block;margin-top:4px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer">Copy the SFTP password</span></sc-if>
+            <div onClick="{{ coveProxyToggle }}" style="margin-top:10px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:9px 11px;border:1px solid var(--rule);border-radius:9px" style-hover="border-color:var(--brand)">
+              <span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--brand);display:grid;place-items:center;flex:none;margin-top:1px;font:700 11px var(--sans);color:var(--brand-ink)">{{ coveProxyMark }}</span>
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font:500 var(--fs-13) var(--sans)">Leave uploads on the live site</span><span class="cc-meta">{{ coveProxySub }}</span></span>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px"><span style="width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font:700 var(--fs-12) var(--sans);flex:none">3</span><span style="font:600 var(--fs-13) var(--sans)">Open it</span></div>
+            <div style="display:flex;align-items:stretch;border:1px solid var(--rule);border-radius:9px;background:var(--panel);overflow:hidden"><code style="flex:1;min-width:0;padding:9px 11px;font:400 var(--fs-12)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere">{{ coveLogin }}</code><button type="button" onClick="{{ coveCopyLogin }}" style="flex:none;border:0;border-left:1px solid var(--rule);background:var(--paper);padding:0 12px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="background:var(--panel-2)">Copy</button></div>
+            <div class="cc-meta" style="margin-top:6px">Prints a one-time sign-in link. The site runs at <span style="font-family:var(--mono);color:var(--ink)">{{ coveUrl }}</span>, with email caught locally so nothing goes out to real people.</div>
+          </div>
+          <sc-if value="{{ covePushShow }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid var(--rule);padding-top:14px">
+              <div style="font:600 var(--fs-13) var(--sans);margin-bottom:8px">When you're done: send it back to staging</div>
+              <div style="display:flex;align-items:stretch;border:1px solid var(--rule);border-radius:9px;background:var(--panel);overflow:hidden"><code style="flex:1;min-width:0;padding:9px 11px;font:400 var(--fs-12)/1.55 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere">{{ covePush }}</code><button type="button" onClick="{{ coveCopyPush }}" style="flex:none;border:0;border-left:1px solid var(--rule);background:var(--paper);padding:0 12px;font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="background:var(--panel-2)">Copy</button></div>
+              <div class="cc-meta" style="margin-top:6px">{{ covePushNote }}</div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <a href="https://cove.run" target="_blank" rel="noopener" style="margin-right:auto;align-self:center;font:500 var(--fs-12) var(--sans);color:var(--ink-dim);text-decoration:none" style-hover="color:var(--ink)">What is Cove? →</a>
+          <button onClick="{{ coveClose }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-13) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer">Done</button>
         </div>
       </div>
     </div>

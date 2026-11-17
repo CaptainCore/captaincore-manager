@@ -2586,6 +2586,7 @@ class Component extends DCLogic {
       ...this.envDomainsVals(real, s),
       credRows,
       ...this.sftpCopyVals(real, s),
+      ...(this.coveLocalVals ? this.coveLocalVals(real, s) : { coveShow: false, coveOpen: false }),
       // The Overview's health cards (hCards) come from siteHeadVals (site-overview.js).
       openStats: () => this.goSiteTab('stats'),
       statG: s.statG, statR: s.statR,

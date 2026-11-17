@@ -4007,3 +4007,16 @@ both read from the node's hourly files through `captaincore host apm --json`
   Measured on a local lab site: 1–5 ms on a 100 ms page with full detail.
   Plain sites get the requests layer only. Turning it on or off restarts PHP
   (prepend change), the edge holds requests meanwhile.
+
+### Deploy card: "Work on it locally with Cove…" (2026-11-16)
+A link under the push/pull links on every WordPress environment with SSH
+details (customers and operators; not plain sites or WP Freighter hosts) opens
+a dialog that shows the site coming down to your own computer with Cove
+(cove-local.js): install line, the exact `cove pull --ssh "user@host -p port"
+--site <slug>` for the environment in view (plus `--path` when WordPress is
+not in ~/public, `--tenant` for a Freighter tenant, `--proxy-uploads` as a
+checkbox, on by default past 2 GB), `cove login <slug>`, and `cove push` to
+staging when there is one. Our servers sign in with the person's SSH key
+(links to Profile when they have none); other hosts get a Copy SFTP password
+link. Nothing runs from the Manager; it shows and copies commands. Local names
+are the site slug, with the environment appended for anything but Production.
