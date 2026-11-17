@@ -437,6 +437,18 @@ class Kinsta {
         return $results;
     }
 
+    // One Kinsta environment's own SFTP password. A site's environments share
+    // live's SFTP username but each has its own password, so a new staging or
+    // premium row must not take Production's. Empty when Kinsta does not
+    // answer, and callers then fall back to Production's.
+    public static function sftp_password( $kinsta_env_id ) {
+        if ( empty( $kinsta_env_id ) ) {
+            return '';
+        }
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$kinsta_env_id}/ssh/password" );
+        return (string) ( $response->environment->sftp_password ?? '' );
+    }
+
     public static function environments( $kinsta_id ) {
         $response = \CaptainCore\Remote\Kinsta::get( "sites/$kinsta_id/environments" );
         return $response->site->environments ?? false;
@@ -618,7 +630,7 @@ class Kinsta {
                 'environment'             => $label,
                 'address'                 => $env->ssh_connection->ssh_ip->external_ip ?? '',
                 'username'                => $production->username,
-                'password'                => $production->password,
+                'password'                => self::sftp_password( $env->id ) ?: $production->password,
                 'protocol'                => $production->protocol,
                 'port'                    => (string) ( $env->ssh_connection->ssh_port ?? '' ),
                 'home_directory'          => $production->home_directory,
@@ -657,9 +669,9 @@ class Kinsta {
                 $production_environment = $environment;
             }
         }
-        // The staging row inherits its SFTP user/password/home from Production
-        // (Kinsta shares one credential set across a site's environments), so
-        // there is nothing to copy without it.
+        // The staging row takes its SFTP username and home from Production
+        // (Kinsta shares them across a site's environments) and its own
+        // password from Kinsta, so there is nothing to copy without it.
         if ( empty( $production_environment ) ) {
             return;
         }
@@ -692,7 +704,7 @@ class Kinsta {
                     'environment'             => "Staging",
                     'address'                 => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
                     'username'                => $production_environment->username,
-                    'password'                => $production_environment->password,
+                    'password'                => self::sftp_password( $kinsta_environment->id ) ?: $production_environment->password,
                     'protocol'                => $production_environment->protocol,
                     'port'                    => $kinsta_environment->ssh_connection->ssh_port,
                     'home_directory'          => $production_environment->home_directory,
@@ -751,7 +763,8 @@ class Kinsta {
         }
         // Each CaptainCore environment takes the address and port of the
         // Kinsta environment of the same name (environment_names); every
-        // non-live one also shares production's SFTP login, as Kinsta does.
+        // non-live one shares production's SFTP username and takes its own
+        // password from Kinsta.
         foreach ( $environments as $environment ) {
             $kinsta_environment = self::match_environment( $kinsta, $environment->environment, $site_id );
             if ( ! $kinsta_environment ) {
@@ -765,7 +778,7 @@ class Kinsta {
             if ( strtolower( (string) $kinsta_environment->name ) !== 'live' && $production_environment ) {
                 $update += [
                     "username"       => $production_environment->username,
-                    "password"       => $production_environment->password,
+                    "password"       => self::sftp_password( $kinsta_environment->id ) ?: $production_environment->password,
                     "protocol"       => $production_environment->protocol,
                     "home_directory" => $production_environment->home_directory,
                 ];
