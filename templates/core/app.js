@@ -1084,7 +1084,8 @@ class Component extends DCLogic {
       // Customers' sites are all at one host, so the column is operators' only.
       ...(isOp ? [{ label: 'Provider', k: 'provider', val: x => x.provider || '' }] : []),
       { label: 'Core', k: 'core', val: x => x.core || '' },
-      { label: 'Visits / yr', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
+      // Visits / yr or Size, picked from the column's header menu (sites-status.js).
+      this.siteMetricCol ? this.siteMetricCol(s) : { label: 'Visits / yr', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 }
     ];
     const sorted = this.sortRows('sitesSort', SITE_COLS, filtered).slice(pageStart, pageStart + PAGE);
     const thumbOf = (x, size) => {
@@ -1098,6 +1099,7 @@ class Component extends DCLogic {
     const showAcct = isOp || (this.ACCOUNTS || []).length > 1;
     const rows = sorted.map(x => { const [health, dot] = healthOf(x); return { ...x, health, dot, ...this.siteStatusCell(x),
       acctLine: showAcct ? x.account : '',
+      metricVal: this.siteMetricCell ? this.siteMetricCell(s, x) : x.visits,
       mono: (x.name || '?').slice(0, 2).toUpperCase(),
       removedChip: !!x.removed,
       thumb: thumbOf(x, 100), hasThumb: !!thumbOf(x, 100),
@@ -1378,7 +1380,7 @@ class Component extends DCLogic {
       viewCtx: (e) => this.openSitesViewMenu(e),
       ...this.siteRequestsVals(s),
       listRows: rows,
-      siteCols: this.mkSortCols('sitesSort', SITE_COLS)
+      siteCols: this.siteMetricCols ? this.siteMetricCols(this.mkSortCols('sitesSort', SITE_COLS), s) : this.mkSortCols('sitesSort', SITE_COLS)
     };
   }
 

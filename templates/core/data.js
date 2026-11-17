@@ -146,7 +146,7 @@ Object.assign(Component.prototype, {
         const provider = (x.provider || '').replace(/\b[a-z]/g, c => c.toUpperCase());
         return { id: String(x.site_id), name: x.name, site: x.site || '', provider, providerSiteId: x.provider_site_id || '', providerConnId: String(x.provider_id || ''), account: accName[x.account_id] || '', accountId: String(x.account_id || ''),
           core: x.core || '', visits: x.visits ? Number(x.visits).toLocaleString() : '\u2014',
-          storage: this.fmtStorage(x.storage), envs, updates: 0, vuln: 0, owned: true, theme: '',
+          storage: this.fmtStorage(x.storage), storageBytes: parseInt(x.storage, 10) || 0, envs, updates: 0, vuln: 0, owned: true, theme: '',
           backup: 'Direct',
           labels: (Array.isArray(x.labels) ? x.labels : []).map(l => typeof l === 'string' ? l : (l && (l.type || l.text)) || '').filter(Boolean),
           unassigned: !x.account_id || x.account_id == '0',

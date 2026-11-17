@@ -1341,7 +1341,21 @@ button.ccc-edited:hover{color:var(--ink)}
                 <span onClick="{{ toggleAll }}" style="width:16px;height:16px;border:1.5px solid var(--rule);border-radius:4px;display:grid;place-items:center;background:{{ selAllBg }};color:white;font:600 10px var(--sans);cursor:pointer">{{ selAllMark }}</span>
                 <span></span>
                 <sc-for list="{{ siteCols }}" as="h" hint-placeholder-count="3">
-                <span onClick="{{ h.go }}" style="color:{{ h.fg }};cursor:{{ h.cursor }};white-space:nowrap" style-hover="color:var(--ink)">{{ h.label }}{{ h.arrow }}</span>
+                <span style="position:relative;display:flex;align-items:center;gap:2px;min-width:0">
+                  <span onClick="{{ h.go }}" style="color:{{ h.fg }};cursor:{{ h.cursor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" style-hover="color:var(--ink)">{{ h.label }}{{ h.arrow }}</span>
+                  <sc-if value="{{ h.menu }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ h.menuToggle }}" aria-haspopup="menu" aria-expanded="{{ h.menuOpen }}" aria-label="Choose what this column shows" title="Choose what this column shows" style="flex:none;width:20px;height:20px;display:grid;place-items:center;border:0;border-radius:5px;background:none;color:var(--ink-dim);cursor:pointer;padding:0" style-hover="background:var(--panel-2);color:var(--ink)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+                    <sc-if value="{{ h.menuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ h.menuClose }}" style="position:fixed;inset:0;z-index:39;cursor:default"></div>
+                      <div role="menu" style="position:absolute;top:26px;right:0;z-index:40;min-width:170px;background:var(--paper);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow);padding:5px;text-transform:none;letter-spacing:0;animation:ccfade .12s ease">
+                        <div style="padding:6px 9px 4px;font:600 var(--fs-11) var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">Show</div>
+                        <sc-for list="{{ h.menuItems }}" as="mi" hint-placeholder-count="2">
+                          <button type="button" role="menuitemradio" onClick="{{ mi.pick }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border:0;border-radius:7px;background:none;color:var(--ink);font:500 var(--fs-13) var(--sans);cursor:pointer;text-align:left" style-hover="background:var(--panel-2)"><span style="flex:1">{{ mi.label }}</span><span style="width:12px;color:var(--brand-ink);font-weight:600">{{ mi.mark }}</span></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </sc-if>
+                </span>
               </sc-for>
               </div>
               <sc-for list="{{ listRows }}" as="s" hint-placeholder-count="8">
@@ -1368,7 +1382,7 @@ button.ccc-edited:hover{color:var(--ink)}
                   </span>
                   <sc-if value="{{ siteProvCol }}" hint-placeholder-val="{{ true }}"><span style="color:var(--ink-dim)">{{ s.provider }}</span></sc-if>
                   <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ s.core }}</span>
-                  <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ s.visits }}</span>
+                  <span style="font:400 var(--fs-13) var(--mono);color:var(--ink-dim)">{{ s.metricVal }}</span>
                 </div>
               </sc-for>
               <sc-for list="{{ sitesSkelRows }}" as="k" hint-placeholder-count="0">

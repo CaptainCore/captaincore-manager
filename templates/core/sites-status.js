@@ -43,6 +43,47 @@ Object.assign(Component.prototype, {
       envMoreTitle: sorted.slice(2).join(', ') };
   },
 
+  // ── Sites table: the last column's metric ──
+  // One column, switched from its header menu between Visits / yr and Size
+  // (production + every environment's storage), so sorting by size adds no
+  // column. The pick is remembered per browser (cc-sites-metric).
+  SITE_METRICS: [['visits', 'Visits / yr'], ['size', 'Size']],
+
+  siteMetric(s) {
+    if (s.siteMetric) return s.siteMetric;
+    let m = '';
+    try { m = localStorage.getItem('cc-sites-metric') || ''; } catch (e) {}
+    return this.SITE_METRICS.some(([k]) => k === m) ? m : 'visits';
+  },
+
+  siteMetricCol(s) {
+    return this.siteMetric(s) === 'size'
+      ? { label: 'Size', k: 'size', val: x => Number(x.storageBytes) || 0 }
+      : { label: 'Visits / yr', k: 'visits', val: x => parseInt(String(x.visits).replace(/\D/g, ''), 10) || 0 };
+  },
+
+  siteMetricCell(s, x) {
+    return this.siteMetric(s) === 'size' ? (Number(x.storageBytes) ? x.storage : '\u2014') : x.visits;
+  },
+
+  // Picking a metric sorts by it, largest first, so "Size" answers "which
+  // sites are biggest" in one click; clicking the header still flips it.
+  pickSiteMetric(k) {
+    try { localStorage.setItem('cc-sites-metric', k); } catch (e) {}
+    this.setState({ siteMetric: k, ddOpen: '', sitesSort: { k, d: -1 }, sitesPage: 1 });
+  },
+
+  // The header cells from mkSortCols, with the metric menu on the last one.
+  siteMetricCols(cols, s) {
+    const cur = this.siteMetric(s), open = s.ddOpen === 'siteMetric';
+    return cols.map((c, i) => i < cols.length - 1 ? { ...c, menu: false } : { ...c, menu: true,
+      menuOpen: open,
+      menuToggle: (e) => { e.stopPropagation(); this.setState(st => ({ ddOpen: st.ddOpen === 'siteMetric' ? '' : 'siteMetric' })); },
+      menuClose: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ ddOpen: '' }); },
+      menuItems: this.SITE_METRICS.map(([k, label]) => ({ label, mark: k === cur ? '\u2713' : '',
+        pick: (e) => { e.stopPropagation(); this.pickSiteMetric(k); } })) });
+  },
+
   // On a phone the table cannot fit, so it shows as cards unless Table was
   // picked there on purpose.
   sitesViewVals(s) {
