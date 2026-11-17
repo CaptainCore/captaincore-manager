@@ -4020,3 +4020,18 @@ staging when there is one. Our servers sign in with the person's SSH key
 (links to Profile when they have none); other hosts get a Copy SFTP password
 link. Nothing runs from the Manager; it shows and copies commands. Local names
 are the site slug, with the environment appended for anything but Production.
+
+### Overview: mapped domains (WP Landing Kit) (2026-11-16)
+The network card on the site Overview (network.js) has a third kind beside
+multisite and WP Freighter: a domain mapping plugin on a single site. The
+CLI's network probe in fetch-site-data now also sends `domain_mappings`
+(stored in environment details like `freighter`, null clears it): for WP
+Landing Kit, every `mapped-domain` post (title = domain, published = on) with
+what its first mapping shows (page, post, product, term or post type archive,
+or a redirect), the enforced protocol and how many extra URLs it maps. The
+card lists the site itself, then each domain with what it shows ("Page ·
+/path/" when the page is titled after the domain), off and target-missing
+badges, and open / edit (the domain's WP Landing Kit screen) links. On a
+multisite, WordPress MU Domain Mapping's domains now show on each subsite's
+line ("mapped: …"). First data arrives with the next daily sync after the
+CLI deploy.

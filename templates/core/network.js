@@ -3,7 +3,10 @@
 // them: `network_sites` (multisite: {mode,count,sites:[{id,name,url,main,
 // registered,last_updated,public,archived,spam,deleted}]}) and `freighter`
 // (WP Freighter: {role,tenant_id,main_url,files,domain_mapping,count,
-// tenants:[{id,name,domain,url,created_at}]}). The site's FLEET row carries
+// tenants:[{id,name,domain,url,created_at}]}), and `domain_mappings` (a
+// mapping plugin on a single site, WP Landing Kit: {plugin, plugin_title,
+// plugin_active, count, domains:[{id,domain,active,protocol,target,extra}]}).
+// The site's FLEET row carries
 // the Manager's resolved `network` (tenant_sites → CaptainCore site ids,
 // host_site_id), which turns a tenant row into a link to its own site page.
 // Both lists are capped at 500 by the collector; the counts stay exact.
@@ -17,6 +20,7 @@ Object.assign(Component.prototype, {
     const det = env.details || {};
     const ms = det.network_sites && typeof det.network_sites === 'object' ? det.network_sites : null;
     const fr = det.freighter && typeof det.freighter === 'object' ? det.freighter : null;
+    const dm = det.domain_mappings && typeof det.domain_mappings === 'object' ? det.domain_mappings : null;
     const row = this.FLEET.find(x => x.id === String(real.siteId)) || {};
     const net = row.network || {};
     const byId = {}; this.FLEET.forEach(x => { byId[x.id] = x; });
@@ -41,9 +45,9 @@ Object.assign(Component.prototype, {
     const finish = (base, all) => {
       const shown = q ? all.filter(r => (r.name + ' ' + r.sub).toLowerCase().includes(q)) : all;
       return { ...off, ...base, netShow: true, netRows: shown,
-        netFilterShow: all.length > 12, netQ: s.netQ || '',
+        netFilterShow: all.length > 12, netQ: s.netQ || '', netQPh: base.netTitle === 'Mapped domains' ? 'Filter domains…' : 'Filter sites…',
         onNetQ: (e) => this.setState({ netQ: e.target.value }),
-        netEmpty: shown.length === 0, netEmptyText: q ? 'No sites match “' + (s.netQ || '').trim() + '”.' : 'No sites reported yet.' };
+        netEmpty: shown.length === 0, netEmptyText: q ? 'Nothing matches “' + (s.netQ || '').trim() + '”.' : 'Nothing reported yet.' };
     };
 
     // A tenant: point back at the host, whatever else is on the page.
@@ -72,7 +76,10 @@ Object.assign(Component.prototype, {
         if (b.main) actions.push(act('log in', () => this.magicLogin(real.siteId, envLower), true));
         else if (canLogin) actions.push(act('log in', () => this.magicLogin(real.siteId, envLower, null, { blog: b.id, label: b.name || url }), true));
         else actions.push(act('admin ↗', () => this.safeOpen(url.replace(/\/?$/, '/') + 'wp-admin/')));
-        return { key: 'b' + b.id, name: b.name || url, sub: url.replace(/^https?:\/\//, ''),
+        // WordPress MU Domain Mapping: the subsite's own domains (primary first).
+        const mapped = (b.domains || []).map(d => d.domain);
+        const also = mapped.length ? ' · mapped: ' + mapped.slice(0, 2).join(', ') + (mapped.length > 2 ? ' +' + (mapped.length - 2) : '') : '';
+        return { key: 'b' + b.id, name: b.name || url, sub: url.replace(/^https?:\/\//, '') + also,
           badges: [...(b.main ? [{ t: 'main', bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }] : []),
             ...(Number(b.public) === 0 && !flags.length ? [{ t: 'private', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' }] : []),
             ...flags.map(f => ({ t: f, bg: f === 'archived' ? 'var(--panel-2)' : 'var(--bad-soft)', fg: f === 'archived' ? 'var(--ink-dim)' : 'var(--bad)' }))],
@@ -119,6 +126,40 @@ Object.assign(Component.prototype, {
       const meta = [fr.files ? fr.files + ' files' : '', fr.domain_mapping ? 'domain mapping' : '',
         count + ' tenant' + (count === 1 ? '' : 's'), tracked + ' in CaptainCore'].filter(Boolean).join(' · ');
       return finish({ ...tenant, netTitle: 'Tenant sites', netMeta: meta }, all);
+    }
+
+    // A domain mapping plugin on a single site (WP Landing Kit): the site
+    // itself, then each domain it answers with what that domain shows.
+    if (dm && Array.isArray(dm.domains) && (dm.domains.length || dm.count)) {
+      const home = env.home_url || '';
+      const kinds = { 'single-page': 'Page', 'single-post': 'Post', 'single-product': 'Product', 'post-type-archive': 'Archive', 'taxonomy-term-archive': 'Archive' };
+      const all = [{ key: 'main', name: row.name || home, sub: home.replace(/^https?:\/\//, ''),
+        badges: [{ t: 'main', bg: 'var(--brand-soft)', fg: 'var(--brand-ink)' }], when: '', whenTitle: '', op: '1',
+        actions: [act('open ↗', () => this.safeOpen(home)), act('log in', () => this.magicLogin(real.siteId, envLower), true)] }];
+      dm.domains.forEach(d => {
+        const t = d.target || {};
+        let shows;
+        if (t.type === 'redirect') shows = 'Redirects to ' + (t.label || '/') + (t.status ? ' (' + t.status + ')' : '');
+        else if (t.type === 'taxonomy-term-archive') shows = (t.taxonomy ? t.taxonomy.replace(/_/g, ' ') : 'Term') + ' · ' + (t.label || 'unknown term');
+        else if (t.type === 'post-type-archive') shows = 'Archive · ' + (t.label || 'posts');
+        else if (kinds[t.type]) {
+          // Pages are often titled after the domain itself: show the path then.
+          const same = t.label && t.label.toLowerCase().replace(/^www\./, '') === String(d.domain).replace(/^www\./, '');
+          shows = kinds[t.type] + ' · ' + (same && t.path ? t.path : (t.label || (t.id ? '#' + t.id : 'not set')));
+        } else shows = 'Nothing mapped yet';
+        if (d.extra) shows += ' · +' + d.extra + ' URL' + (d.extra === 1 ? '' : 's');
+        const url = (d.protocol === 'http' ? 'http://' : 'https://') + d.domain;
+        all.push({ key: 'd' + d.id, name: d.domain, sub: shows,
+          badges: [...(d.active ? [] : [{ t: 'off', bg: 'var(--panel-2)', fg: 'var(--ink-dim)' }]),
+            ...(t.missing ? [{ t: 'target missing', bg: 'var(--bad-soft)', fg: 'var(--bad)' }] : [])],
+          when: '', whenTitle: '', op: d.active ? '1' : '.6',
+          actions: [act('open ↗', () => this.safeOpen(url)), act('edit ↗', () => this.safeOpen(home.replace(/\/?$/, '/') + 'wp-admin/post.php?post=' + d.id + '&action=edit'))] });
+      });
+      const count = Number(dm.count) || dm.domains.length;
+      const live = dm.domains.filter(d => d.active).length;
+      const meta = [dm.plugin_title || dm.plugin, count + ' domain' + (count === 1 ? '' : 's'), live < dm.domains.length ? live + ' on' : '',
+        dm.plugin_active === false ? 'plugin inactive' : ''].filter(Boolean).join(' · ') + (count > dm.domains.length ? ' · first ' + dm.domains.length + ' shown' : '');
+      return finish({ ...tenant, netTitle: 'Mapped domains', netMeta: meta }, all);
     }
 
     // Before the host syncs with the network collector: the Manager may
