@@ -34,7 +34,7 @@ class ProviderAction {
                 }
                 // Poll with the key of the Kinsta connection the action was
                 // started on (the row's provider), not the house key.
-                \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id );
+                \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id, $provider_action );
                 $response         = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
                 $action->response = $response;
                 $status           = $response->status ?? '';
@@ -202,7 +202,7 @@ class ProviderAction {
         // Every Kinsta call below acts on the site this action was started
         // for, so use that connection's key, not the house key.
         if ( $provider->provider == "kinsta" ) {
-            \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id );
+            \CaptainCore\Providers\Kinsta::use_provider( $provider_action->provider_id, $provider_action );
         }
 
         if ( $current_action->command == "new-site" && ! empty( $current_action->step ) && $provider->provider == "kinsta" ) {
