@@ -5277,6 +5277,232 @@ button.ccc-edited:hover{color:var(--ink)}
         </div>
       </sc-if>
 
+      <sc-if value="{{ showStatus }}" hint-placeholder-val="{{ false }}">
+        <div class="cc-page" style="max-width:960px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
+          <sc-if value="{{ stpList }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span style="font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">{{ stpSummary }}</span>
+              <a href="{{ stpPageUrl }}" target="_blank" rel="noopener" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);text-decoration:none">Public page ↗</a>
+              <div style="flex:1"></div>
+              <button onClick="{{ stpNewMaint }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand)">Schedule maintenance</button>
+              <button onClick="{{ stpNewIncident }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">New incident</button>
+            </div>
+
+            <sc-if value="{{ stpCompose }}" hint-placeholder-val="{{ false }}">
+              <section style="margin-top:16px;border:1px solid var(--brand);border-radius:13px;background:var(--paper);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-sm)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font:600 var(--fs-15) var(--sans)">{{ stpComposeTitle }}</span>
+                  <div style="flex:1"></div>
+                  <span onClick="{{ stpCloseCompose }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--ink)">Cancel</span>
+                </div>
+                <input value="{{ stpTitle }}" onInput="{{ onStpTitle }}" placeholder="Title customers will see, e.g. Sites at our Ashburn datacenter are offline" style="height:38px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:500 var(--fs-14) var(--sans);padding:0 12px;outline:none">
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+                  <sc-if value="{{ stpIsIncident }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Impact</span>
+                      <div style="display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                        <sc-for list="{{ stpImpacts }}" as="o" hint-placeholder-count="4">
+                          <span onClick="{{ o.go }}" style="padding:4px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }}">{{ o.label }}</span>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Status</span>
+                    <div style="display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                      <sc-for list="{{ stpStatuses }}" as="o" hint-placeholder-count="4">
+                        <span onClick="{{ o.go }}" style="padding:4px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }}">{{ o.label }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+                <sc-if value="{{ stpIsMaint }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:12px;flex-wrap:wrap">
+                    <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Starts
+                      <input type="datetime-local" value="{{ stpFrom }}" onInput="{{ onStpFrom }}" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none"></label>
+                    <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Ends
+                      <input type="datetime-local" value="{{ stpUntil }}" onInput="{{ onStpUntil }}" style="height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none"></label>
+                  </div>
+                </sc-if>
+                <textarea value="{{ stpBody }}" onInput="{{ onStpBody }}" placeholder="What is happening and who is affected. Markdown supported." style="min-height:110px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span onClick="{{ stpToggleNotify }}" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:500 var(--fs-13) var(--sans)">
+                    <sc-if value="{{ stpNotifyOn }}" hint-placeholder-val="{{ true }}"><span style="width:16px;height:16px;border-radius:4px;background:var(--brand);color:white;display:grid;place-items:center;font:700 11px var(--sans)">✓</span></sc-if>
+                    <sc-if value="{{ stpNotifyOff }}" hint-placeholder-val="{{ false }}"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--rule)"></span></sc-if>
+                    {{ stpNotifyLabel }}</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ stpCreate }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:9px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Publish</button>
+                </div>
+              </section>
+            </sc-if>
+
+            <sc-if value="{{ stpHasOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:22px;font:600 var(--fs-12) var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">Open</div>
+              <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ stpOpenRows }}" as="r" hint-placeholder-count="1">
+                  <div onClick="{{ r.open }}" style="border:1px solid var(--rule);border-left:4px solid {{ r.dot }};border-radius:11px;background:var(--paper);padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:var(--shadow-sm)" style-hover="border-color:var(--brand)">
+                    <div style="flex:1;min-width:0">
+                      <div style="font:600 var(--fs-15) var(--sans)">{{ r.title }}</div>
+                      <div style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);margin-top:2px">{{ r.impact }} · {{ r.when }} · {{ r.meta }}</div>
+                    </div>
+                    <span style="font:600 var(--fs-12) var(--sans);color:{{ r.statusFg }}">{{ r.statusLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div style="margin-top:22px;display:flex;align-items:center;gap:10px">
+              <span style="font:600 var(--fs-12) var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)">History</span>
+              <div style="flex:1"></div>
+              <input value="{{ stpQ }}" onInput="{{ onStpQ }}" placeholder="Search titles" style="width:220px;height:30px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none">
+            </div>
+            <sc-if value="{{ stpLoading }}" hint-placeholder-val="{{ false }}">
+              <div class="cc-skel" style="height:160px;margin-top:10px;border-radius:12px"></div>
+            </sc-if>
+            <sc-if value="{{ stpLoaded }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:8px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <sc-for list="{{ stpPastRows }}" as="r" hint-placeholder-count="5">
+                  <div onClick="{{ r.open }}" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                    <span title="{{ r.impact }}" style="width:8px;height:8px;border-radius:50%;background:{{ r.dot }};flex:none"></span>
+                    <span style="flex:1;min-width:0;font:500 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</span>
+                    <span class="cc-hide-sm" style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);white-space:nowrap">{{ r.meta }}</span>
+                    <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);white-space:nowrap;width:170px;text-align:right">{{ r.when }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ stpNoPast }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Nothing here yet.</div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ stpMore }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:10px;text-align:center"><span onClick="{{ stpLoadMore }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">Show more</span></div>
+              </sc-if>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ stpDetail }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ stpBack }}" style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">← Status</span>
+            <sc-if value="{{ stpOneFailed }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;font:400 var(--fs-14) var(--sans);color:var(--ink-dim)">That incident could not be loaded.</div>
+            </sc-if>
+            <sc-if value="{{ stpOneReady }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ stpNotEditingHead }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
+                  <h1 style="margin:0;font:600 24px var(--sans);letter-spacing:-.02em">{{ stpOneTitle }}</h1>
+                  <span style="font:600 var(--fs-12) var(--sans);background:{{ stpOneStatusBg }};color:{{ stpOneStatusFg }};border-radius:99px;padding:3px 10px">{{ stpOneStatus }}</span>
+                  <div style="flex:1"></div>
+                  <a href="{{ stpOneUrl }}" target="_blank" rel="noopener" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);text-decoration:none">View on status page ↗</a>
+                  <span onClick="{{ stpStartEdit }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--brand)">Edit</span>
+                  <span onClick="{{ stpDelete }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:2px 9px" style-hover="border-color:var(--bad);color:var(--bad)">Delete</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:6px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ stpOneDot }}"></span>{{ stpOneImpact }} · {{ stpOneTimes }}
+                  <sc-if value="{{ stpOneImported }}" hint-placeholder-val="{{ false }}"><span>· imported from Statuspage</span></sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ stpEditing }}" hint-placeholder-val="{{ false }}">
+                <section style="margin-top:12px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                  <input value="{{ stpEdTitle }}" onInput="{{ onStpEdTitle }}" style="height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:600 var(--fs-15) var(--sans);padding:0 11px;outline:none">
+                  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:end">
+                    <sc-if value="{{ stpEdShowImpact }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                        <sc-for list="{{ stpEdImpacts }}" as="o" hint-placeholder-count="4">
+                          <span onClick="{{ o.go }}" style="padding:4px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }}">{{ o.label }}</span>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Started
+                      <input type="datetime-local" value="{{ stpEdStart }}" onInput="{{ onStpEdStart }}" style="height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none"></label>
+                    <label style="display:flex;flex-direction:column;gap:5px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Resolved
+                      <input type="datetime-local" value="{{ stpEdEnd }}" onInput="{{ onStpEdEnd }}" style="height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 10px;outline:none"></label>
+                    <div style="flex:1"></div>
+                    <span onClick="{{ stpCancelEdit }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer;padding:8px 4px">Cancel</span>
+                    <button onClick="{{ stpSaveEdit }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer">Save</button>
+                  </div>
+                  <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Edits change the page only. Nobody is emailed.</div>
+                </section>
+              </sc-if>
+
+              <sc-if value="{{ stpUpdFolded }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:16px"><span onClick="{{ stpUpdUnfold }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">+ Post another update</span></div>
+              </sc-if>
+              <sc-if value="{{ stpUpdShow }}" hint-placeholder-val="{{ true }}">
+              <section style="margin-top:18px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="font:600 var(--fs-14) var(--sans)">Post an update</span>
+                  <div style="flex:1"></div>
+                  <div style="display:inline-flex;gap:2px;background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;padding:3px">
+                    <sc-for list="{{ stpUpdStatuses }}" as="o" hint-placeholder-count="4">
+                      <span onClick="{{ o.go }}" style="padding:4px 11px;border-radius:7px;cursor:pointer;font:500 var(--fs-13) var(--sans);background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }}">{{ o.label }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <textarea value="{{ stpUpdBody }}" onInput="{{ onStpUpdBody }}" placeholder="{{ stpUpdPlaceholder }}" style="min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span onClick="{{ stpToggleUpdNotify }}" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:500 var(--fs-13) var(--sans)">
+                    <sc-if value="{{ stpUpdNotifyOn }}" hint-placeholder-val="{{ true }}"><span style="width:16px;height:16px;border-radius:4px;background:var(--brand);color:white;display:grid;place-items:center;font:700 11px var(--sans)">✓</span></sc-if>
+                    <sc-if value="{{ stpUpdNotifyOff }}" hint-placeholder-val="{{ false }}"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--rule)"></span></sc-if>
+                    {{ stpUpdNotifyLabel }}</span>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ stpPostUpdate }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 18px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ stpUpdLabel }}</button>
+                </div>
+              </section>
+              </sc-if>
+
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ stpUpdates }}" as="u" hint-placeholder-count="2">
+                  <section style="border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:13px 16px">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                      <span style="font:600 var(--fs-13) var(--sans);color:{{ u.fg }}">{{ u.label }}</span>
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ u.when }} {{ u.by }} {{ u.sent }}</span>
+                      <div style="flex:1"></div>
+                      <sc-if value="{{ u.notEditing }}" hint-placeholder-val="{{ true }}">
+                        <span onClick="{{ u.edit }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--brand-ink)">Edit</span>
+                        <span onClick="{{ u.del }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Delete</span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ u.notEditing }}" hint-placeholder-val="{{ true }}">
+                      <div ref="{{ u.bodyRef }}" class="cc-md cc-md--thread" style="margin-top:6px;font:400 var(--fs-14) var(--sans);line-height:1.6;overflow-wrap:anywhere"></div>
+                    </sc-if>
+                    <sc-if value="{{ u.editing }}" hint-placeholder-val="{{ false }}">
+                      <textarea value="{{ u.editBody }}" onInput="{{ u.onEditBody }}" style="margin-top:8px;width:100%;min-height:90px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                      <div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:8px">
+                        <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Corrects the page only. Nobody is emailed.</span>
+                        <span onClick="{{ u.cancel }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                        <button onClick="{{ u.save }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:7px 14px;border-radius:8px;cursor:pointer">Save</button>
+                      </div>
+                    </sc-if>
+                  </section>
+                </sc-for>
+              </div>
+
+              <section style="margin-top:22px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="font:600 var(--fs-14) var(--sans)">Postmortem</span>
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ stpPmState }}</span>
+                  <sc-if value="{{ stpPmHasSendNote }}" hint-placeholder-val="{{ false }}"><span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">· {{ stpPmSendNote }}</span></sc-if>
+                </div>
+                <textarea value="{{ stpPm }}" onInput="{{ onStpPm }}" placeholder="What happened, why, what we changed so it does not happen again. Markdown supported." style="min-height:160px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);color:var(--ink);font:400 var(--fs-14) var(--sans);padding:10px 12px;outline:none;resize:vertical"></textarea>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <sc-if value="{{ stpPmCanNotify }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ stpTogglePmNotify }}" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:500 var(--fs-13) var(--sans)">
+                      <sc-if value="{{ stpPmNotifyOn }}" hint-placeholder-val="{{ true }}"><span style="width:16px;height:16px;border-radius:4px;background:var(--brand);color:white;display:grid;place-items:center;font:700 11px var(--sans)">✓</span></sc-if>
+                      <sc-if value="{{ stpPmNotifyOff }}" hint-placeholder-val="{{ false }}"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--rule)"></span></sc-if>
+                      {{ stpPmNotifyLabel }}</span>
+                  </sc-if>
+                  <div style="flex:1"></div>
+                  <sc-if value="{{ stpPmUnpublished }}" hint-placeholder-val="{{ true }}">
+                    <span onClick="{{ stpPmSaveDraft }}" style="font:500 var(--fs-13) var(--sans);color:var(--brand-ink);cursor:pointer">Save draft</span>
+                  </sc-if>
+                  <sc-if value="{{ stpPmPublished }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ stpPmUnpublish }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer" style-hover="color:var(--bad)">Unpublish</span>
+                  </sc-if>
+                  <button onClick="{{ stpPmPublish }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ stpPmPublishLabel }}</button>
+                </div>
+              </section>
+            </sc-if>
+          </sc-if>
+        </div>
+      </sc-if>
       <sc-if value="{{ showServers }}" hint-placeholder-val="{{ false }}">
         <div class="cc-page" style="max-width:1160px;margin:0 auto;padding:28px 32px 120px;animation:ccfade .25s ease">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -5991,6 +6217,19 @@ button.ccc-edited:hover{color:var(--ink)}
               <button onClick="{{ saveProfile }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-125) var(--sans);padding:7px 14px;border-radius:7px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ profSaveLabel }}</button>
               <sc-if value="{{ profHasMsg }}" hint-placeholder-val="{{ false }}">
                 <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">{{ profMsg }}</span>
+              </sc-if>
+            </div>
+          </div>
+          <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+              <div style="flex:1;min-width:0">
+                <h2 style="margin:0;font:600 var(--fs-14) var(--sans)">Status alerts</h2>
+                <div style="margin-top:3px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ stpMeNote }} <a href="{{ stpMePageUrl }}" target="_blank" rel="noopener" style="color:var(--brand-ink);text-decoration:none;white-space:nowrap">Status page ↗</a></div>
+              </div>
+              <sc-if value="{{ stpMeReady }}" hint-placeholder-val="{{ true }}">
+                <span role="switch" aria-checked="{{ stpMeOn }}" aria-label="Email me status alerts" onClick="{{ stpMeToggle }}" style="flex:none;width:40px;height:22px;border-radius:99px;background:{{ stpMeTrack }};border:1px solid var(--rule);position:relative;cursor:pointer;transition:background .15s">
+                  <span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:white;box-shadow:0 1px 2px rgba(0,0,0,.25);transform:{{ stpMeKnob }};transition:transform .15s"></span>
+                </span>
               </sc-if>
             </div>
           </div>

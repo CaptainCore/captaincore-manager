@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 82;
+    const REQUIRED_VERSION = 83;
 
     private static function _table() {
         global $wpdb;
@@ -1846,6 +1846,82 @@ class DB {
             updated_at datetime NOT NULL,
         PRIMARY KEY  (server_id),
         KEY provider_id (provider_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        if ( ! empty( $wpdb->last_error ) ) {
+            return $wpdb->last_error;
+        }
+
+        // v83: the public status page (CaptainCore\StatusPage). An incident or
+        // maintenance window, the updates posted to it, and the people emailed
+        // when it changes. source_id is the Statuspage.io id of an imported row,
+        // so a second import updates instead of duplicating.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_status_incidents` (
+            status_incident_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            source_id varchar(32) NOT NULL DEFAULT '',
+            kind varchar(20) NOT NULL DEFAULT 'incident',
+            title varchar(255) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'investigating',
+            impact varchar(20) NOT NULL DEFAULT 'minor',
+            started_at datetime NOT NULL,
+            resolved_at datetime DEFAULT NULL,
+            scheduled_for datetime DEFAULT NULL,
+            scheduled_until datetime DEFAULT NULL,
+            postmortem longtext,
+            postmortem_published_at datetime DEFAULT NULL,
+            postmortem_notify varchar(20) NOT NULL DEFAULT '',
+            postmortem_notify_cursor bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            postmortem_notified int(10) UNSIGNED NOT NULL DEFAULT 0,
+            created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (status_incident_id),
+        KEY source_id (source_id),
+        KEY started_at (started_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // notify: '' (no email), pending, sending, sent. notify_cursor is the
+        // last subscriber_id emailed, so a send cut short resumes after it.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_status_updates` (
+            status_update_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            status_incident_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            source_id varchar(32) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT '',
+            body longtext,
+            notify varchar(20) NOT NULL DEFAULT '',
+            notify_cursor bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            notified int(10) UNSIGNED NOT NULL DEFAULT 0,
+            created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (status_update_id),
+        KEY status_incident_id (status_incident_id),
+        KEY source_id (source_id),
+        KEY notify (notify)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        // One row per address. user_id links a Manager login (its toggle in
+        // Profile); 0 is an address with no login (imported from Statuspage).
+        // token signs the one-click unsubscribe link.
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_status_subscribers` (
+            status_subscriber_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            email varchar(191) NOT NULL DEFAULT '',
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            source varchar(20) NOT NULL DEFAULT '',
+            token varchar(64) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (status_subscriber_id),
+        UNIQUE KEY email (email),
+        KEY user_id (user_id),
+        KEY status (status)
         ) $charset_collate;";
 
         dbDelta($sql);

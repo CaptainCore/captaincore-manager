@@ -22,10 +22,10 @@ Object.assign(Component.prototype, {
   ROUTE_SEG: { home: '', chat: 'chat', support: 'support', sites: 'sites', site: 'sites', relay: 'ai-relay', domains: 'domains', domain: 'domains',
     accounts: 'accounts', account: 'accounts', billing: 'billing', invoice: 'billing', security: 'security',
     audits: 'site-audits', activity: 'activity', reports: 'reports', archives: 'archives', servers: 'servers', server: 'servers', container: 'servers', settings: 'settings',
-    profile: 'profile', users: 'users' },
+    profile: 'profile', users: 'users', status: 'status' },
   SEG_ROUTE: { '': 'home', chat: 'chat', support: 'support', sites: 'sites', domains: 'domains', accounts: 'accounts', billing: 'billing',
     security: 'security', 'site-audits': 'audits', activity: 'activity', reports: 'reports', archives: 'archives', servers: 'servers',
-    settings: 'settings', profile: 'profile', users: 'users' },
+    settings: 'settings', profile: 'profile', users: 'users', status: 'status' },
 
   pathForState() {
     const s = this.state;
@@ -45,6 +45,7 @@ Object.assign(Component.prototype, {
     else if (s.route === 'container' && s.serverId && s.ctName) { path += '/' + s.serverId + '/' + s.ctName; }
     else if (s.route === 'billing' && s.billTab === 'renewals') { path += '/renewals'; }
     else if (s.route === 'security' && s.secTab && s.secTab !== 'vulns') { path += '/' + s.secTab; }
+    else if (s.route === 'status' && s.stpId) { path += '/' + s.stpId; }
     return path;
   },
 
@@ -77,6 +78,8 @@ Object.assign(Component.prototype, {
         if (cb.operator && this.state.chatPeople && this.chatPeopleClose) this.chatPeopleClose();
         if (cb.enabled && this.chatOpen) this.chatOpen(parts[1] || 0);
       }
+    } else if (head === 'status') {
+      if (this.openStatusIncident) this.openStatusIncident(parts[1] || null);
     } else if (head === 'ai-relay' && parts[1]) {
       this.openRelay(parts[1]);
     } else if (head === 'domains' && parts[1]) {

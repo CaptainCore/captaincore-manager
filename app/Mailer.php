@@ -2030,6 +2030,82 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  STATUS PAGE: an incident update / a published postmortem (StatusPage)
+     * ------------------------------------------------------------------------- */
+    static public function send_status_update( $to, $incident, $update, $unsubscribe_url ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $label       = StatusPage::status_label( $update->status );
+        $tones       = [
+            'resolved' => '#1F8F55', 'completed' => '#1F8F55', 'monitoring' => '#2563EB', 'verifying' => '#2563EB',
+            'identified' => '#C2410C', 'investigating' => '#B91C1C', 'scheduled' => '#6D28D9', 'in_progress' => '#6D28D9',
+        ];
+        $tone        = $tones[ $update->status ] ?? $brand_color;
+        $when        = esc_html( StatusPage::local( $update->created_at ) );
+        $body        = StatusPage::html( $update->body );
+        $url         = esc_url( StatusPage::incident_url( $incident ) );
+
+        // Earlier updates, newest first, so a late subscriber has the story.
+        $earlier = '';
+        foreach ( StatusPage::updates( $incident->status_incident_id ) as $u ) {
+            if ( (int) $u->status_update_id === (int) $update->status_update_id ) {
+                continue;
+            }
+            $earlier .= "<div style='padding: 14px 0; border-top: 1px solid #E3E7EE;'>
+                <div style='font-size: 13px; color: #666D7A; margin-bottom: 4px;'><strong style='color: #15181D;'>" . esc_html( StatusPage::status_label( $u->status ) ) . "</strong> &middot; " . esc_html( StatusPage::local( $u->created_at ) ) . "</div>
+                <div style='font-size: 14px; line-height: 1.55; color: #565C66;'>" . StatusPage::html( $u->body ) . "</div>
+            </div>";
+        }
+        if ( $earlier !== '' ) {
+            $earlier = "<div style='margin-top: 28px; text-align: left;'><div style='font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #A3ACB9; margin-bottom: 4px;'>Earlier updates</div>{$earlier}</div>";
+        }
+        $schedule = '';
+        if ( $incident->kind === 'maintenance' && $incident->scheduled_for ) {
+            $schedule = "<p style='margin: 0 0 16px; font-size: 14px; color: #666D7A;'>Scheduled " . esc_html( StatusPage::local( $incident->scheduled_for ) ) . ( $incident->scheduled_until ? ' until ' . esc_html( StatusPage::local( $incident->scheduled_until ) ) : '' ) . "</p>";
+        }
+
+        $content = "
+            <div style='text-align: left;'>
+                <p style='margin: 0 0 16px;'><span style='display: inline-block; padding: 4px 12px; border-radius: 999px; background: {$tone}; color: #ffffff; font-size: 13px; font-weight: 700;'>" . esc_html( $label ) . "</span> <span style='font-size: 13px; color: #666D7A;'>&nbsp;{$when}</span></p>
+                {$schedule}
+                <div style='font-size: 16px; line-height: 1.6; color: #565C66;'>{$body}</div>
+                <p style='margin: 28px 0 0; text-align: center;'><a href='{$url}' style='display: inline-block; background: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 600; padding: 11px 22px; border-radius: 8px;'>View status page</a></p>
+                {$earlier}
+            </div>";
+
+        $name    = StatusPage::name();
+        $subject = "[{$name} status] " . html_entity_decode( $incident->title, ENT_QUOTES, 'UTF-8' ) . " - {$label}";
+        self::send_email_with_layout( $to, $subject, $incident->title, "{$name} status update", $content, self::status_headers( $unsubscribe_url ), esc_url( $unsubscribe_url ), false );
+    }
+
+    static public function send_status_postmortem( $to, $incident, $unsubscribe_url ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#123E8C';
+        $url         = esc_url( StatusPage::incident_url( $incident ) );
+        $when        = esc_html( StatusPage::local( $incident->started_at, 'M j, Y' ) );
+        $content     = "
+            <div style='text-align: left;'>
+                <p style='margin: 0 0 16px; font-size: 13px; color: #666D7A;'>Postmortem for the incident on {$when}</p>
+                <div style='font-size: 16px; line-height: 1.6; color: #565C66;'>" . StatusPage::html( $incident->postmortem ) . "</div>
+                <p style='margin: 28px 0 0; text-align: center;'><a href='{$url}' style='display: inline-block; background: {$brand_color}; color: #ffffff; text-decoration: none; font-weight: 600; padding: 11px 22px; border-radius: 8px;'>View on the status page</a></p>
+            </div>";
+        $name    = StatusPage::name();
+        $subject = "[{$name} status] Postmortem: " . html_entity_decode( $incident->title, ENT_QUOTES, 'UTF-8' );
+        self::send_email_with_layout( $to, $subject, $incident->title, 'Postmortem', $content, self::status_headers( $unsubscribe_url ), esc_url( $unsubscribe_url ), false );
+    }
+
+    /** Reply-To support, plus RFC 8058 one-click unsubscribe (Gmail and Yahoo want it on bulk mail). */
+    private static function status_headers( $unsubscribe_url ) {
+        $admin_email = get_option( 'admin_email' );
+        $headers     = $admin_email ? [ 'Reply-To: ' . get_bloginfo( 'name' ) . " <{$admin_email}>" ] : [];
+        if ( $unsubscribe_url ) {
+            $headers[] = 'List-Unsubscribe: <' . $unsubscribe_url . '>';
+            $headers[] = 'List-Unsubscribe-Post: List-Unsubscribe=One-Click';
+        }
+        return $headers;
+    }
+
+    /* -------------------------------------------------------------------------
      *  HELPER: Generate Order Summary with Refund HTML
      * ------------------------------------------------------------------------- */
     private static function get_order_summary_with_refund_html( $order, $refund, $brand_color ) {

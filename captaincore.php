@@ -49,6 +49,7 @@ register_deactivation_hook( __FILE__, 'deactivate_captaincore' );
 require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore.php';
 require plugin_dir_path( __FILE__ ) . 'app/Router.php';
 new CaptainCore\Router();
+add_action( 'plugins_loaded', [ 'CaptainCore\StatusPage', 'init' ] ); // after the autoloader
 
 /**
  * Begins execution of the plugin.
@@ -198,6 +199,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore malware-findings', 'CaptainCore\MalwareFindingsCLI' );
 	WP_CLI::add_command( 'captaincore chat', 'CaptainCore\ChatCLI' );
 	WP_CLI::add_command( 'captaincore restart-php', 'CaptainCore\RestartPhpCLI' );
+	WP_CLI::add_command( 'captaincore status', 'CaptainCore\StatusPageCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -10442,6 +10444,120 @@ function captaincore_register_rest_endpoints() {
 		'permission_callback' => function () {
 			return current_user_can( 'manage_options' );
 		},
+	] );
+	// Status page (CaptainCore\StatusPage). Operators run incidents; anyone signed
+	// in toggles their own alerts; GET /status is the public feed (it is a public page).
+	register_rest_route( 'captaincore/v1', '/status', [
+		'methods'             => 'GET',
+		'callback'            => function ( WP_REST_Request $request ) {
+			return CaptainCore\StatusPage::public_feed( max( 1, (int) $request->get_param( 'page' ) ) );
+		},
+		'permission_callback' => '__return_true',
+	] );
+	register_rest_route( 'captaincore/v1', '/me/status-alerts', [
+		[
+			'methods'             => 'GET',
+			'callback'            => function () {
+				return [ 'enabled' => CaptainCore\StatusPage::is_subscribed( get_current_user_id() ), 'page_url' => CaptainCore\StatusPage::url() ];
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		],
+		[
+			'methods'             => 'PUT',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$user = wp_get_current_user();
+				$res  = CaptainCore\StatusPage::set_subscription( $user->user_email, (bool) $request->get_param( 'enabled' ), $user->ID, 'profile' );
+				if ( is_wp_error( $res ) ) {
+					return $res;
+				}
+				return [ 'enabled' => CaptainCore\StatusPage::is_subscribed( $user->ID ) ];
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		],
+	] );
+	$status_op = 'captaincore_admin_permission_check';
+	register_rest_route( 'captaincore/v1', '/status/incidents', [
+		[
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$limit = min( 200, max( 1, (int) ( $request->get_param( 'limit' ) ?: 50 ) ) );
+				return CaptainCore\StatusPage::listing( $limit, max( 0, (int) $request->get_param( 'offset' ) ), trim( (string) $request->get_param( 'search' ) ) );
+			},
+			'permission_callback' => $status_op,
+		],
+		[
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$res = CaptainCore\StatusPage::create( (array) $request->get_json_params(), get_current_user_id() );
+				return is_wp_error( $res ) ? $res : CaptainCore\StatusPage::operator_incident( $res, true );
+			},
+			'permission_callback' => $status_op,
+		],
+	] );
+	register_rest_route( 'captaincore/v1', '/status/incidents/(?P<id>\d+)', [
+		[
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$i = CaptainCore\StatusPage::get( (int) $request['id'] );
+				return $i ? CaptainCore\StatusPage::operator_incident( $i, true ) : new WP_Error( 'not_found', 'No such incident.', [ 'status' => 404 ] );
+			},
+			'permission_callback' => $status_op,
+		],
+		[
+			'methods'             => 'PUT',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$res = CaptainCore\StatusPage::edit( (int) $request['id'], (array) $request->get_json_params() );
+				return is_wp_error( $res ) ? $res : CaptainCore\StatusPage::operator_incident( $res, true );
+			},
+			'permission_callback' => $status_op,
+		],
+		[
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return [ 'deleted' => CaptainCore\StatusPage::delete_incident( (int) $request['id'] ) ];
+			},
+			'permission_callback' => $status_op,
+		],
+	] );
+	register_rest_route( 'captaincore/v1', '/status/incidents/(?P<id>\d+)/updates', [
+		'methods'             => 'POST',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$res = CaptainCore\StatusPage::add_update( (int) $request['id'], (array) $request->get_json_params(), get_current_user_id() );
+			return is_wp_error( $res ) ? $res : CaptainCore\StatusPage::operator_incident( $res, true );
+		},
+		'permission_callback' => $status_op,
+	] );
+	register_rest_route( 'captaincore/v1', '/status/incidents/(?P<id>\d+)/postmortem', [
+		'methods'             => 'PUT',
+		'callback'            => function ( WP_REST_Request $request ) {
+			$res = CaptainCore\StatusPage::save_postmortem( (int) $request['id'], (string) $request->get_param( 'body' ), (bool) $request->get_param( 'publish' ), (bool) $request->get_param( 'notify' ) );
+			return is_wp_error( $res ) ? $res : CaptainCore\StatusPage::operator_incident( $res, true );
+		},
+		'permission_callback' => $status_op,
+	] );
+	register_rest_route( 'captaincore/v1', '/status/updates/(?P<id>\d+)', [
+		[
+			'methods'             => 'PUT',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$res = CaptainCore\StatusPage::edit_update( (int) $request['id'], (string) $request->get_param( 'body' ) );
+				return is_wp_error( $res ) ? $res : [ 'saved' => $res ];
+			},
+			'permission_callback' => $status_op,
+		],
+		[
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return [ 'deleted' => CaptainCore\StatusPage::delete_update( (int) $request['id'] ) ];
+			},
+			'permission_callback' => $status_op,
+		],
+	] );
+	register_rest_route( 'captaincore/v1', '/status/subscribers', [
+		'methods'             => 'GET',
+		'callback'            => function () {
+			return CaptainCore\StatusPage::subscribers();
+		},
+		'permission_callback' => $status_op,
 	] );
 	// Uptime outages for agents: open incidents from the CLI's monitor, with the latest
 	// auto-recovery attempt, and an acknowledgement so each outage is looked at once.
