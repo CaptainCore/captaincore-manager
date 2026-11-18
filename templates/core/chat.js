@@ -561,11 +561,29 @@ Object.assign(Component.prototype, {
       { label: 'Open account', act: () => this.openAccount(x.id) }, tab,
       { label: 'Copy account name', act: () => this.ctxCopy(x.name, 'account name') }
     ]);
+    const site = this.chatDomainSite(x.name);
     this.openCtxMenu(e, [
       { label: 'Open domain', act: () => this.openDomain(x.id) }, tab,
+      ...(site ? this.siteLoginEntries(site) : []),
       { label: 'Visit ' + x.name + ' ↗', act: () => window.open('https://' + x.name, '_blank') },
       { label: 'Copy domain', act: () => this.ctxCopy(x.name, 'domain') }
     ]);
+  },
+
+  // The site a domain belongs to, so its menu can log in to WordPress: one of
+  // the customer's sites named for it or serving it (www. ignored), else a
+  // fleet site of that name. The fleet record carries `envs` for Staging.
+  chatDomainSite(domain) {
+    const c = this._chat;
+    const conv = c && c.conv && c.conv.conversation;
+    const acc = conv && c.access ? c.access[conv.customer_user_id] : null;
+    const bare = h => String(h || '').toLowerCase().replace(/^https?:\/\//, '').replace(/[\/:?#].*$/, '').replace(/^www\./, '');
+    const want = bare(domain);
+    if (!want) return null;
+    const fleet = this.FLEET || [];
+    const hit = ((acc && acc.sites) || []).find(s => bare(s.name) === want || bare(s.url) === want);
+    const f = hit ? fleet.find(s => String(s.id) === String(hit.id)) : fleet.find(s => bare(s.name) === want);
+    return f || (hit ? { id: String(hit.id), name: hit.name, envs: '' } : null);
   },
 
   // Anything in a thread: a message or note, an image or file, a link, or a
