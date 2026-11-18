@@ -977,6 +977,9 @@ class StatusPage {
 		if ( ! $route ) {
 			return $template;
 		}
+		// Never page-cached: a host cache (Kinsta, Cloudflare) would hold an
+		// outage notice back, or keep showing one after it is resolved.
+		nocache_headers();
 		if ( $route === 'feed' ) {
 			self::atom();
 			exit;
