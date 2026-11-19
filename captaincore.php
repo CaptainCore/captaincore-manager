@@ -1452,7 +1452,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$env     = ! empty( $environment ) ? CaptainCore\Environments::display_name( $environment ) : 'Production';
 		$attempt = max( 1, (int) ( $d->attempt ?? 1 ) );
 
-		$saturated = $ssh_ok && $max !== null && $busy !== null && $busy >= $max;
+		// Socket count at max, or an ondemand/dynamic pool that has spawned
+		// every child. A static pool always has max children, so only its
+		// socket count counts. See MonitorRecoveries::pool_saturated().
+		$saturated = CaptainCore\MonitorRecoveries::pool_saturated( $ssh_ok, $probe );
 		// A restart only helps when PHP is not answering in time: a timeout, a
 		// dropped connection or a gateway error. A 500, 403/404, DNS or TLS
 		// failure gets recorded and emailed, never restarted.

@@ -44,6 +44,41 @@ class MonitorRecoveries extends DB {
 	}
 
 	/**
+	 * Whether the probe shows a pool that cannot take another request.
+	 *
+	 * Socket connections at pm.max_children are the direct reading, and the
+	 * count can exceed max when requests are queued behind a full pool. An
+	 * ondemand or dynamic pool also counts as full once it has spawned every
+	 * child: nginx drops a connection when its read times out while the worker
+	 * is still inside the request, so the socket count can sit one under the
+	 * process count. A static pool always has max_children processes, so its
+	 * process count says nothing. Host load is not used; inside a container it
+	 * is the node's load.
+	 *
+	 * @param bool   $ssh_ok The probe reached the site.
+	 * @param object $probe  Fields from php-worker-check.
+	 */
+	public static function pool_saturated( $ssh_ok, $probe ) {
+		if ( empty( $ssh_ok ) || ! is_object( $probe ) ) {
+			return false;
+		}
+		$max = ( isset( $probe->max_workers ) && is_numeric( $probe->max_workers ) ) ? (int) $probe->max_workers : 0;
+		if ( $max < 1 ) {
+			return false;
+		}
+		$busy = ( isset( $probe->busy_workers ) && is_numeric( $probe->busy_workers ) ) ? (int) $probe->busy_workers : null;
+		if ( $busy !== null && $busy >= $max ) {
+			return true;
+		}
+		$pm = strtolower( trim( (string) ( $probe->pm ?? '' ) ) );
+		if ( $pm !== 'ondemand' && $pm !== 'dynamic' ) {
+			return false;
+		}
+		$processes = ( isset( $probe->fpm_processes ) && is_numeric( $probe->fpm_processes ) ) ? (int) $probe->fpm_processes : null;
+		return $processes !== null && $processes >= $max;
+	}
+
+	/**
 	 * "16 of 16 PHP workers busy, 5 more requests waiting". The probe counts
 	 * connections on the pool's socket, which includes requests queued behind
 	 * a full pool, so busy can exceed max.
