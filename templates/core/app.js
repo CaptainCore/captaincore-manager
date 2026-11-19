@@ -558,6 +558,7 @@ class Component extends DCLogic {
       // realAccountVals overrides with the working implementation.
       accShowEditPlan: true, openEditPlan: () => {}, epOpen: false,
       epRenewalA: true, epRenewalB: false, epRenewalClearShow: false, epRenewalNone: false, epRenewalClear: () => {},
+      epRenewalLabel: 'Pick a date', epRenewalLabelFg: 'var(--ink-dim)', epCalOpen: false, epCalToggle: () => {},
       accActivity: this.ACC_ACTIVITY,
       ...(this._hydrated ? this.realAccountVals(s) : {})
     };

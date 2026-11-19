@@ -7584,18 +7584,60 @@ button.ccc-edited:hover{color:var(--ink)}
           </sc-if>
           <div style="display:flex;align-items:center;gap:12px">
             <span style="width:110px;font:500 var(--fs-125) var(--sans);color:var(--ink-dim);flex:none">Next renewal</span>
-            <div style="flex:1;min-width:0">
-              <sc-if value="{{ epRenewalA }}" hint-placeholder-val="{{ true }}">
-                <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="width:100%;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none;color-scheme:light dark;box-sizing:border-box">
-              </sc-if>
-              <sc-if value="{{ epRenewalB }}" hint-placeholder-val="{{ false }}">
-                <input type="datetime-local" step="1" value="{{ epRenewal }}" onInput="{{ onEpRenewal }}" style="width:100%;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 9px;outline:none;color-scheme:light dark;box-sizing:border-box">
-              </sc-if>
+            <div onClick="{{ epCalToggle }}" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);display:flex;align-items:center;gap:8px;padding:0 9px;cursor:pointer;box-sizing:border-box" style-hover="border-color:var(--brand)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink-dim);flex:none"><path d="M4 5h16v16H4zM4 9h16M8 3v4M16 3v4"/></svg>
+              <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 var(--fs-125) var(--sans);color:{{ epRenewalLabelFg }}">{{ epRenewalLabel }}</span>
+              <span style="font:400 var(--fs-11) var(--sans);color:var(--ink-dim)">▾</span>
             </div>
             <sc-if value="{{ epRenewalClearShow }}" hint-placeholder-val="{{ true }}">
               <span onClick="{{ epRenewalClear }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;flex:none">Clear</span>
             </sc-if>
           </div>
+          <sc-if value="{{ epCalOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:-6px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--panel)">
+              <div style="width:238px;flex:none">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                  <span onClick="{{ epCalPrev }}" title="Previous month" style="width:26px;height:26px;font:500 var(--fs-15) var(--sans);display:grid;place-items:center;border-radius:6px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">‹</span>
+                  <span style="flex:1;text-align:center;font:600 var(--fs-125) var(--sans)">{{ epCalTitle }}</span>
+                  <span onClick="{{ epCalNext }}" title="Next month" style="width:26px;height:26px;font:500 var(--fs-15) var(--sans);display:grid;place-items:center;border-radius:6px;cursor:pointer;color:var(--ink-dim)" style-hover="background:var(--panel-2);color:var(--ink)">›</span>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+                  <sc-for list="{{ epCalDow }}" as="dw" hint-placeholder-count="7">
+                    <span style="height:22px;display:grid;place-items:center;font:500 var(--fs-11) var(--sans);color:var(--ink-dim)">{{ dw.l }}</span>
+                  </sc-for>
+                  <sc-for list="{{ epCalDays }}" as="cd" hint-placeholder-count="42">
+                    <span onClick="{{ cd.pick }}" style="height:30px;display:grid;place-items:center;border-radius:7px;cursor:pointer;border:1px solid {{ cd.bd }};background:{{ cd.bg }};color:{{ cd.fg }};font:{{ cd.fw }} var(--fs-12) var(--sans);opacity:{{ cd.op }};box-sizing:border-box" style-hover="background:var(--panel-2)">{{ cd.label }}</span>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:8px">
+                <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Time</span>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:5px">
+                  <sc-for list="{{ epCalTimes }}" as="ct" hint-placeholder-count="10">
+                    <span onClick="{{ ct.pick }}" style="height:28px;display:grid;place-items:center;border:1px solid {{ ct.bd }};border-radius:99px;background:{{ ct.bg }};color:{{ ct.fg }};font:500 var(--fs-12) var(--sans);cursor:pointer;white-space:nowrap">{{ ct.label }}</span>
+                  </sc-for>
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Other
+                  <sc-if value="{{ epRenewalA }}" hint-placeholder-val="{{ true }}">
+                    <input type="time" value="{{ epCalTime }}" onInput="{{ onEpCalTime }}" style="height:28px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;color-scheme:light dark">
+                  </sc-if>
+                  <sc-if value="{{ epRenewalB }}" hint-placeholder-val="{{ false }}">
+                    <input type="time" value="{{ epCalTime }}" onInput="{{ onEpCalTime }}" style="height:28px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 8px;outline:none;color-scheme:light dark">
+                  </sc-if>
+                </label>
+                <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);margin-top:4px">Jump to</span>
+                <div style="display:flex;flex-wrap:wrap;gap:5px">
+                  <sc-for list="{{ epCalQuick }}" as="cq" hint-placeholder-count="3">
+                    <span onClick="{{ cq.pick }}" style="height:26px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--rule);border-radius:99px;background:var(--paper);color:var(--ink-dim);font:500 var(--fs-12) var(--sans);cursor:pointer;white-space:nowrap" style-hover="color:var(--brand-ink);border-color:var(--brand)">{{ cq.label }}</span>
+                  </sc-for>
+                </div>
+                <div style="flex:1"></div>
+                <div style="display:flex;justify-content:flex-end">
+                  <span onClick="{{ epCalDone }}" style="height:28px;display:inline-flex;align-items:center;padding:0 14px;border-radius:7px;background:var(--brand);color:white;font:500 var(--fs-12) var(--sans);cursor:pointer">Done</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
           <sc-if value="{{ epRenewalNone }}" hint-placeholder-val="{{ false }}">
             <span style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);margin-top:-6px">none — account inactive</span>
           </sc-if>

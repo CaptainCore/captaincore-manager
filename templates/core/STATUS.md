@@ -1605,10 +1605,14 @@ work is cross-cutting depth (below) and the deferred per-slice items noted above
   /password/i renders `••••`; a Show/Hide control toggles reveal. Clicking
   anywhere on the row copies the real value. Reveal state is keyed
   `siteId|env|key` so switching sites/envs re-masks.
-- **Edit plan → Next renewal is a real date picker** (`<input type="datetime-local"
-  step="1">`). The API stores `YYYY-MM-DD HH:MM:SS` and the input wants a `T`
-  separator — accounts.js converts both ways (and appends `:00` when the browser
-  omits seconds).
+- **Edit plan → Next renewal is a custom HTML date picker** (2026-11-19, replaced
+  the native `datetime-local`, which kept the old time down to the second on
+  every new day). Trigger shows "Tue, Dec 15, 2026 · 7:00 AM"; the inline panel
+  has a month grid, hour chips 5 AM–2 PM, an "Other" `type=time` field, and
+  jumps (Today, 1st of next month, +interval from date). A day keeps the time
+  (8 AM when empty); seconds are never shown and always stored as `:00`. The API
+  stores `YYYY-MM-DD HH:MM:SS`; accounts.js `epRenewalPicker()` builds dates
+  from parts (never `Date()` parsing). Clear still empties it (= inactive).
 - **Delete account** (operator-only) on account detail — `DELETE /accounts/{id}`
   (v1's deleteAccount; the route also queues the CLI's background `account delete`),
   confirm → toast → drop from ACCOUNTS → route back to the list.

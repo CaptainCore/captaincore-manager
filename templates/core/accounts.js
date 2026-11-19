@@ -36,6 +36,7 @@ Object.assign(Component.prototype, {
     d.auto_pay = d.auto_pay === true || d.auto_pay === 'true';
     d.auto_switch = d.auto_switch === true || d.auto_switch === 'true';
     this._ep = d; this._epMsg = ''; this._epSaving = false; this._epRenewalGen = 0;
+    this._epCal = null;
     if (!this._epPlans) {
       const custom = { name: 'Custom', interval: '12', price: '', limits: { visits: '', storage: '', sites: '' } };
       this.api('/configurations/').then(cfg => {
@@ -60,6 +61,94 @@ Object.assign(Component.prototype, {
     const day = d.getDate(), tens = day % 100;
     const suffix = ( tens >= 11 && tens <= 13 ) ? 'th' : ( { 1: 'st', 2: 'nd', 3: 'rd' }[ day % 10 ] || 'th' );
     return d.toLocaleDateString( undefined, { month: 'long' } ) + ' ' + day + suffix + ' ' + d.getFullYear();
+  },
+
+  // Edit plan → Next renewal picker. Replaces the native datetime-local input,
+  // which made every new date carry the old time down to the second. One click
+  // on a day keeps the time (or starts at 8 AM, the most common renewal hour),
+  // one click on an hour chip sets the minutes to :00, and seconds are never
+  // shown (always stored as :00). The API stores "YYYY-MM-DD HH:MM:SS"; empty
+  // means inactive (Accounts::update_plan + the renewal cron), so Clear stays.
+  // Dates are built from their parts, never parsed by Date(), because the
+  // stored string has no zone. The native time field remounts on outside
+  // changes (A/B gen) because the DC runtime binds value like defaultValue.
+  epRenewalPicker(ep, mut) {
+    const pad = n => String(n).padStart(2, '0');
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(ep.next_renewal || ''));
+    const cur = m ? { y: +m[1], mo: +m[2] - 1, d: +m[3], h: m[4] != null ? +m[4] : 8, mi: m[5] != null ? +m[5] : 0 } : null;
+    const now = new Date();
+    const today = { y: now.getFullYear(), mo: now.getMonth(), d: now.getDate() };
+    const cal = this._epCal || (this._epCal = { open: false });
+    if (cal.y == null) { const b = cur || today; cal.y = b.y; cal.mo = b.mo; }
+    const remount = () => { this._epRenewalGen = (this._epRenewalGen || 0) + 1; };
+    const daysIn = (y, mo) => new Date(y, mo + 1, 0).getDate();
+    const set = (date, h, mi) => mut(x => {
+      x.next_renewal = `${date.y}-${pad(date.mo + 1)}-${pad(date.d)} ${pad(h)}:${pad(mi)}:00`;
+      cal.y = date.y; cal.mo = date.mo; remount();
+    });
+    const setDate = date => set(date, cur ? cur.h : 8, cur ? cur.mi : 0);
+    const addMonths = (b, n) => {
+      const t = new Date(b.y, b.mo + n, 1), y = t.getFullYear(), mo = t.getMonth();
+      return { y, mo, d: Math.min(b.d, daysIn(y, mo)) };
+    };
+    const hour12 = h => (h % 12 || 12) + (h < 12 ? ' AM' : ' PM');
+    const shift = n => () => { const t = new Date(cal.y, cal.mo + n, 1); cal.y = t.getFullYear(); cal.mo = t.getMonth(); this.setState({}); };
+
+    const first = new Date(cal.y, cal.mo, 1);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const t = new Date(cal.y, cal.mo, 1 - first.getDay() + i);
+      const date = { y: t.getFullYear(), mo: t.getMonth(), d: t.getDate() };
+      const same = o => o && o.y === date.y && o.mo === date.mo && o.d === date.d;
+      const on = same(cur), isToday = same(today), inMonth = date.mo === cal.mo;
+      days.push({
+        label: date.d,
+        bg: on ? 'var(--brand)' : 'transparent',
+        fg: on ? 'white' : isToday ? 'var(--brand-ink)' : inMonth ? 'var(--ink)' : 'var(--ink-dim)',
+        bd: isToday && !on ? 'var(--brand)' : 'transparent',
+        fw: on || isToday ? 600 : 400,
+        op: inMonth || on ? 1 : 0.45,
+        pick: () => setDate(date),
+      });
+    }
+
+    const iv = parseInt(ep.interval, 10) || 12;
+    const ivLabel = iv === 12 ? '+1 year' : iv === 1 ? '+1 month' : `+${iv} months`;
+    const timeLabel = cur ? `${cur.h % 12 || 12}:${pad(cur.mi)} ${cur.h < 12 ? 'AM' : 'PM'}` : '';
+    const label = cur
+      ? new Date(cur.y, cur.mo, cur.d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + timeLabel
+      : 'Pick a date';
+    return {
+      epRenewalLabel: label,
+      epRenewalLabelFg: cur ? 'var(--ink)' : 'var(--ink-dim)',
+      epRenewalA: (this._epRenewalGen || 0) % 2 === 0,
+      epRenewalB: (this._epRenewalGen || 0) % 2 === 1,
+      epRenewalClearShow: !!cur,
+      epRenewalNone: !cur,
+      epRenewalClear: () => mut(x => { x.next_renewal = ''; remount(); }),
+      epCalOpen: !!cal.open,
+      epCalToggle: () => { cal.open = !cal.open; if (cal.open) { const b = cur || today; cal.y = b.y; cal.mo = b.mo; } this.setState({}); },
+      epCalDone: () => { cal.open = false; this.setState({}); },
+      epCalTitle: first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      epCalPrev: shift(-1), epCalNext: shift(1),
+      epCalDow: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(l => ({ l })),
+      epCalDays: days,
+      epCalTimes: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(h => {
+        const on = !!cur && cur.h === h && cur.mi === 0;
+        return { label: hour12(h), bg: on ? 'var(--brand-soft)' : 'var(--paper)', bd: on ? 'var(--brand)' : 'var(--rule)', fg: on ? 'var(--brand-ink)' : 'var(--ink-dim)',
+          pick: () => set(cur || today, h, 0) };
+      }),
+      epCalTime: cur ? `${pad(cur.h)}:${pad(cur.mi)}` : '',
+      onEpCalTime: e => {
+        const t = /^(\d{2}):(\d{2})/.exec(e.target.value || '');
+        if (t) mut(x => { const b = cur || today; x.next_renewal = `${b.y}-${pad(b.mo + 1)}-${pad(b.d)} ${t[1]}:${t[2]}:00`; });
+      },
+      epCalQuick: [
+        { label: 'Today', pick: () => setDate(today) },
+        { label: '1st of next month', pick: () => setDate({ ...addMonths(today, 1), d: 1 }) },
+        { label: ivLabel + (cur ? ' from date' : ''), pick: () => setDate(addMonths(cur || today, iv)) },
+      ],
+    };
   },
 
   // Next renewal estimate — v1's "Plan Estimate Breakdown" dialog, inlined into
@@ -188,21 +277,7 @@ Object.assign(Component.prototype, {
       epBillClearShow: !!Number(ep.billing_user_id),
       epBillClear: () => mut(x => { x.billing_user_id = 0; }),
       epBillNone: !Number(ep.billing_user_id),
-      // datetime-local wants "YYYY-MM-DDTHH:MM:SS"; the API stores "YYYY-MM-DD HH:MM:SS".
-      // Native pickers can't be emptied, and clearing is how accounts are
-      // deactivated (Accounts::update_plan + the renewal cron both treat
-      // empty next_renewal as inactive). Clear remounts the input because
-      // the DC runtime binds value like defaultValue.
-      epRenewal: (ep.next_renewal || '').replace(' ', 'T'),
-      epRenewalA: (this._epRenewalGen || 0) % 2 === 0,
-      epRenewalB: (this._epRenewalGen || 0) % 2 === 1,
-      epRenewalClearShow: !!(ep.next_renewal || '').trim(),
-      epRenewalNone: !(ep.next_renewal || '').trim(),
-      epRenewalClear: () => mut(x => { x.next_renewal = ''; this._epRenewalGen = (this._epRenewalGen || 0) + 1; }),
-      onEpRenewal: e => mut(x => {
-        const v = e.target.value || '';
-        x.next_renewal = v ? (v.replace('T', ' ') + (v.length === 16 ? ':00' : '')) : '';
-      }),
+      ...this.epRenewalPicker(ep, mut),
       epAutoPayBg: ap.bg, epAutoPayJust: ap.just, epAutoPayFlip: ap.flip,
       epAutoSwitchBg: asw.bg, epAutoSwitchJust: asw.just, epAutoSwitchFlip: asw.flip,
       epModeChips: [['standard', 'Standard'], ['per_site', 'Per site']].map(([v, label]) => ({ label, ...chip(ep.billing_mode === v),
