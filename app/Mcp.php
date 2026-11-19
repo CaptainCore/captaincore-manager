@@ -108,7 +108,9 @@ class Mcp {
 			'instructions'    => "{$name} hosts and manages the user's WordPress sites. Call list_sites to find a site, then run_command to run WP-CLI (`wp …`) or shell commands in that site's WordPress directory. "
 				. 'Read the current state before changing anything, and prefer changes WordPress can undo (drafts, post revisions). '
 				. 'Confirm with the user before destructive work such as deleting content, plugins or users, or a search-replace. '
-				. 'Use the staging environment when the user wants to try something safely. Every command is recorded in the account activity log.',
+				. 'Use the staging environment when the user wants to try something safely. Every command is recorded in the account activity log. '
+				. "Everything else the {$name} dashboard does (new sites, backups, domains, DNS, staging deploys, PHP and cache, invites, billing history, support chat) is in its REST API: "
+				. 'call api_docs with a topic to find the endpoint, then api_request to call it as the user.',
 		];
 	}
 
@@ -147,6 +149,38 @@ class Mcp {
 				],
 				'annotations' => [ 'destructiveHint' => true, 'openWorldHint' => false ],
 			],
+			[
+				'name'        => 'api_docs',
+				'title'       => 'Read the API docs',
+				'description' => 'Searches the dashboard\'s REST API reference. With no topic it lists every section and endpoint. '
+					. 'With a topic (a word or a path such as "new site", "backups", "dns" or "/sites/{site_id}/environments") it returns the matching endpoints with their fields and examples. '
+					. 'Paths in the docs are relative to /wp-json/captaincore/v1, which is what api_request expects. Ignore the curl and authentication notes: api_request is already signed in.',
+				'inputSchema' => [
+					'type'       => 'object',
+					'properties' => [
+						'topic' => [ 'type' => 'string', 'description' => 'A word, heading or path to look up.' ],
+					],
+				],
+				'annotations' => [ 'readOnlyHint' => true, 'openWorldHint' => false ],
+			],
+			[
+				'name'        => 'api_request',
+				'title'       => 'Call the dashboard API',
+				'description' => 'Calls one REST API endpoint as the signed-in user, with exactly the access they have in the dashboard. '
+					. 'Look the endpoint up with api_docs first. Example: method POST, path /sites/12/production/cache/clear. '
+					. 'Credentials, two-factor, payment methods, paying invoices and file downloads are not available here; the user does those in the dashboard. '
+					. 'Every call that changes something is recorded in the activity log.',
+				'inputSchema' => [
+					'type'       => 'object',
+					'properties' => [
+						'method' => [ 'type' => 'string', 'enum' => [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ], 'description' => 'HTTP method from the docs.' ],
+						'path'   => [ 'type' => 'string', 'description' => 'Endpoint path relative to /wp-json/captaincore/v1, with ids filled in, such as /sites or /sites/12/environments. A query string is allowed.' ],
+						'params' => [ 'type' => 'object', 'description' => 'The JSON body for POST, PUT, PATCH and DELETE, or query parameters for GET.' ],
+					],
+					'required'   => [ 'method', 'path' ],
+				],
+				'annotations' => [ 'destructiveHint' => true, 'openWorldHint' => false ],
+			],
 		];
 	}
 
@@ -156,6 +190,12 @@ class Mcp {
 		}
 		if ( $name === 'run_command' ) {
 			return self::run_command( $arguments );
+		}
+		if ( $name === 'api_docs' ) {
+			return self::api_docs( $arguments );
+		}
+		if ( $name === 'api_request' ) {
+			return self::api_request( $arguments );
 		}
 		return new \WP_Error( 'unknown_tool', "Unknown tool: {$name}" );
 	}
@@ -276,5 +316,199 @@ class Mcp {
 			$output = substr( $output, 0, self::OUTPUT_LIMIT ) . "\n…output truncated at " . self::OUTPUT_LIMIT . ' bytes. Narrow the command (fields, filters, head) for the rest.';
 		}
 		return self::text_result( $output );
+	}
+
+	/**
+	 * Routes the connector will not call for anyone, with the reason Claude is
+	 * given. Credentials and payments stay with the person: a connector that
+	 * could mint an application password would no longer be a narrower door
+	 * than the dashboard. Downloads and streams write straight to the response
+	 * and would break the JSON-RPC reply.
+	 */
+	const BLOCKED_ROUTES = [
+		'#^/(mcp|oauth|api|cli|login)(/|$)#'                              => 'is not part of the dashboard API.',
+		'#^/run/code$#'                                                   => 'runs code on a site. Use the run_command tool, which logs the command.',
+		'#^/me/application-password#'                                     => 'manages credentials. Application passwords are created and revoked in Profile.',
+		'#^/me/tfa_#'                                                     => 'manages two-factor authentication, which stays in Profile.',
+		'#^/me/profile#'                                                  => 'changes sign-in details (email and password), which stay in Profile.',
+		'#^/sessions#'                                                    => 'manages sign-in sessions, which stay in Profile.',
+		'#^/billing/(pay-invoice|payment-methods|ach/)#'                  => 'moves money or payment details. Paying and payment methods stay in Billing.',
+		'#^/me/api-docs#'                                                 => 'is a download. Use api_docs instead.',
+		'#(^/my-jobs/[^/]+/stream|/download$|/pdf$|/artifact$|^/site/\d+/snapshots/|^/ai-relay/projects/\d+/files/|^/chat/attachments/)#' => 'is a file download or stream, which only works in the browser.',
+	];
+
+	private static function api_docs( $arguments ) {
+		$file = dirname( __DIR__ ) . '/api-docs.md';
+		$docs = is_readable( $file ) ? (string) file_get_contents( $file ) : '';
+		if ( $docs === '' ) {
+			return self::text_result( 'The API docs are not available.', true );
+		}
+
+		// Split into ### endpoint blocks, each remembering its ## section.
+		$blocks  = [];
+		$section = '';
+		$current = null;
+		foreach ( preg_split( '/\R/', $docs ) as $line ) {
+			if ( preg_match( '/^## (?!#)(.+)$/', $line, $m ) ) {
+				if ( $current ) {
+					$blocks[] = $current;
+				}
+				$section = trim( $m[1] );
+				$current = [ 'section' => $section, 'title' => $section, 'text' => $line . "\n" ];
+				continue;
+			}
+			if ( preg_match( '/^### (.+)$/', $line, $m ) ) {
+				if ( $current ) {
+					$blocks[] = $current;
+				}
+				$current = [ 'section' => $section, 'title' => trim( $m[1] ), 'text' => $line . "\n" ];
+				continue;
+			}
+			if ( $current ) {
+				$current['text'] .= $line . "\n";
+			}
+		}
+		if ( $current ) {
+			$blocks[] = $current;
+		}
+
+		$topic = strtolower( trim( (string) ( $arguments['topic'] ?? '' ) ) );
+		if ( $topic === '' ) {
+			$out  = "API reference. Call api_docs with a topic to read an endpoint, then api_request to call it.\n";
+			$last = null;
+			foreach ( $blocks as $block ) {
+				if ( $block['section'] !== $last ) {
+					$out .= "\n## {$block['section']}\n";
+					$last = $block['section'];
+				}
+				if ( $block['title'] !== $block['section'] ) {
+					$route = preg_match( '/^(GET|POST|PUT|PATCH|DELETE)\s+\S+/m', $block['text'], $r ) ? "  `{$r[0]}`" : '';
+					$out  .= "- {$block['title']}{$route}\n";
+				}
+			}
+			return self::text_result( $out );
+		}
+
+		// Match on headings first, then on paths and body text.
+		$words   = array_filter( preg_split( '/\s+/', $topic ) );
+		$scored  = [];
+		foreach ( $blocks as $i => $block ) {
+			$head = strtolower( $block['section'] . ' ' . $block['title'] );
+			$body = strtolower( $block['text'] );
+			$score = 0;
+			foreach ( $words as $word ) {
+				if ( strpos( $head, $word ) !== false ) {
+					$score += 3;
+				} elseif ( strpos( $body, $word ) !== false ) {
+					$score += 1;
+				} else {
+					$score = 0;
+					break;
+				}
+			}
+			if ( $score > 0 ) {
+				$scored[ $i ] = $score;
+			}
+		}
+		if ( empty( $scored ) ) {
+			return self::text_result( "Nothing in the API docs matches \"{$topic}\". Call api_docs with no topic for the full list." );
+		}
+		arsort( $scored );
+		$out = '';
+		foreach ( array_keys( $scored ) as $i ) {
+			$text = $blocks[ $i ]['text'];
+			if ( strlen( $out ) + strlen( $text ) > self::OUTPUT_LIMIT ) {
+				$out .= "\n…more matches. Use a narrower topic.";
+				break;
+			}
+			$out .= "_Section: {$blocks[ $i ]['section']}_\n" . $text . "\n";
+		}
+		return self::text_result( trim( $out ) );
+	}
+
+	private static function api_request( $arguments ) {
+		$method = strtoupper( trim( (string) ( $arguments['method'] ?? 'GET' ) ) );
+		if ( ! in_array( $method, [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ], true ) ) {
+			return self::text_result( 'method must be GET, POST, PUT, PATCH or DELETE.', true );
+		}
+
+		$path = trim( (string) ( $arguments['path'] ?? '' ) );
+		$path = preg_replace( '#^https?://[^/]+#i', '', $path );
+		$path = preg_replace( '#^/?wp-json#', '', $path );
+		$path = preg_replace( '#^/?captaincore/v1#', '', $path );
+		$query = [];
+		if ( strpos( $path, '?' ) !== false ) {
+			[ $path, $qs ] = explode( '?', $path, 2 );
+			parse_str( $qs, $query );
+		}
+		$path = '/' . ltrim( $path, '/' );
+		if ( $path === '/' || strpos( $path, '..' ) !== false || preg_match( '#[^A-Za-z0-9/_.,~=-]#', $path ) ) {
+			return self::text_result( 'path must be an endpoint path such as /sites or /sites/12/environments.', true );
+		}
+		foreach ( self::BLOCKED_ROUTES as $pattern => $reason ) {
+			if ( preg_match( $pattern, $path ) ) {
+				return self::text_result( "{$method} {$path} {$reason}", true );
+			}
+		}
+
+		$params  = isset( $arguments['params'] ) && is_array( $arguments['params'] ) ? $arguments['params'] : [];
+		$request = new \WP_REST_Request( $method, '/captaincore/v1' . $path );
+		$request->set_query_params( $method === 'GET' ? array_merge( $query, $params ) : $query );
+		if ( $method !== 'GET' ) {
+			$request->set_header( 'Content-Type', 'application/json' );
+			$request->set_body( wp_json_encode( (object) $params ) );
+		}
+
+		$response = rest_do_request( $request );
+		$server   = rest_get_server();
+		$data     = $server->response_to_data( $response, false );
+		$status   = $response->get_status();
+
+		if ( $method !== 'GET' && ( $data['code'] ?? '' ) !== 'rest_no_route' ) {
+			self::log_api_call( $method, $path, $params, $status );
+		}
+
+		$body = wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR );
+		if ( strlen( (string) $body ) > self::OUTPUT_LIMIT ) {
+			$body = substr( $body, 0, self::OUTPUT_LIMIT ) . "\n…response truncated at " . self::OUTPUT_LIMIT . ' bytes. Narrow it with query parameters where the docs offer them.';
+		}
+		$text = "HTTP {$status}\n" . $body;
+		return self::text_result( $text, $status >= 400 );
+	}
+
+	/** Writes one activity log row for a connector call that can change something. */
+	private static function log_api_call( $method, $path, $params, $status ) {
+		$entity_type = 'user';
+		$entity_id   = get_current_user_id();
+		$entity_name = wp_get_current_user()->display_name;
+		$account_id  = null;
+
+		if ( preg_match( '#^/sites?/(\d+)#', $path, $m ) ) {
+			$site = Sites::get( (int) $m[1] );
+			if ( $site ) {
+				$entity_type = 'site';
+				$entity_id   = (int) $site->site_id;
+				$entity_name = $site->name;
+				$account_id  = $site->customer_id ? $site->customer_id : null;
+			}
+		} elseif ( preg_match( '#^/domains?/(\d+)#', $path, $m ) ) {
+			$entity_type = 'domain';
+			$entity_id   = (int) $m[1];
+			$entity_name = null;
+		} elseif ( preg_match( '#^/accounts?/(\d+)#', $path, $m ) ) {
+			$entity_type = 'account';
+			$entity_id   = (int) $m[1];
+			$entity_name = null;
+			$account_id  = (int) $m[1];
+		}
+
+		$summary = wp_json_encode( $params, JSON_UNESCAPED_SLASHES );
+		ActivityLog::log( 'called', $entity_type, $entity_id, $entity_name, "Claude called {$method} {$path}", [
+			'method' => $method,
+			'path'   => $path,
+			'params' => mb_substr( (string) $summary, 0, 2000 ),
+			'status' => (int) $status,
+			'via'    => 'claude',
+		], $account_id );
 	}
 }
