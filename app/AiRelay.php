@@ -728,7 +728,13 @@ class AiRelay {
 		if ( ! $project || ! preg_match( '/^[a-f0-9]{16}$/', (string) $file_id ) ) {
 			return new \WP_Error( 'not_found', 'File not found.', [ 'status' => 404 ] );
 		}
+		// Internal notes are hidden from everyone but staff in project(), and
+		// so are their files.
+		$is_admin = ( new User( $user_id, true ) )->is_admin();
 		foreach ( AiRelayMessages::thread( $project->ai_relay_project_id ) as $message ) {
+			if ( ! $is_admin && $message->author === 'internal' ) {
+				continue;
+			}
 			foreach ( (array) json_decode( (string) $message->files, true ) as $file ) {
 				if ( ( $file['id'] ?? '' ) !== $file_id ) {
 					continue;
