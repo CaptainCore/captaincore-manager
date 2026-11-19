@@ -21,9 +21,11 @@ Object.assign(Component.prototype, {
   updateToast(id, text, opts = {}) {
     const kind = opts.kind || 'success';
     this.setState(st => ({ toasts: (st.toasts || []).map(t => t.id === id ? { ...t, text, kind } : t) }));
-    const ms = opts.timeout != null ? opts.timeout : Math.min(12000, Math.max(3200, String(text).length * 60));
-    if (ms) { this._toastTimers = this._toastTimers || {};
-      this._toastTimers[id] = setTimeout(() => this.dismissToast(id), ms); }
+    // A toast moved back to 'loading' persists like a new loading toast.
+    const ms = opts.timeout != null ? opts.timeout : (kind === 'loading' ? 0 : Math.min(12000, Math.max(3200, String(text).length * 60)));
+    this._toastTimers = this._toastTimers || {};
+    clearTimeout(this._toastTimers[id]);
+    if (ms) this._toastTimers[id] = setTimeout(() => this.dismissToast(id), ms);
   },
 
   dismissToast(id) {

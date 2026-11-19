@@ -1484,6 +1484,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			} else {
 				$action       = 'restarted';
 				$operation_id = (string) $restart->operation_id;
+				// Customers' settings card waits on it like on its own restarts.
+				captaincore_kinsta_op_start( (int) $site_id, (object) [ 'environment' => $env, 'environment_id' => (int) $environment_id ], 'restart', $operation_id, [ 'log' => false ] );
 				$reason       = $ssh_ok ? CaptainCore\MonitorRecoveries::describe_workers( $busy, $max ) . '.' : 'SSH could not reach the site.';
 			}
 		}
@@ -7338,6 +7340,87 @@ function captaincore_hosting_target( $env ) {
 // everything else about our servers stays on the operator Hosting tab.
 const CAPTAINCORE_KINSTA_PHP_VERSIONS = [ '8.2', '8.3', '8.4', '8.5' ];
 
+// Kinsta runs a PHP switch, PHP restart or cache clear as an operation: it
+// answers 202 with an operation id and does the work afterwards (a PHP switch
+// can take minutes) and can still fail after accepting it ("Unexpected
+// server-side errors", seen 2026-11-19). So the operation we started is kept
+// per environment, checked with Kinsta on every settings read, and new
+// requests are refused until it ends: the card shows Kinsta's real outcome,
+// and a second change never piles onto one that is still running. The timeline entry is written when
+// Kinsta says it finished, with whoever asked for it.
+function captaincore_kinsta_op_key( $environment_id ) {
+	return 'captaincore_kinsta_op_' . (int) $environment_id;
+}
+
+function captaincore_kinsta_op_labels( $op ) {
+	$env = $op['environment'] ?? 'Production';
+	switch ( $op['kind'] ?? '' ) {
+		case 'php':
+			$v = $op['version'] ?? '';
+			return [ "Switching PHP to {$v}", "Switched {$env} to PHP {$v} at Kinsta", "Kinsta could not switch {$env} to PHP {$v}" ];
+		case 'restart':
+			return [ 'Restarting PHP', "Restarted PHP on {$env} at Kinsta", "Kinsta could not restart PHP on {$env}" ];
+		default:
+			return [ 'Clearing the cache', "Cleared the Kinsta cache of {$env}", "Kinsta could not clear the cache of {$env}" ];
+	}
+}
+
+function captaincore_kinsta_op_start( $site_id, $env, $kind, $operation_id, $extra = [] ) {
+	$op = array_merge( [
+		'kind'         => $kind,
+		'operation_id' => (string) $operation_id,
+		'site_id'      => (int) $site_id,
+		'environment'  => $env->environment,
+		'user_id'      => get_current_user_id(),
+		'started_at'   => time(),
+	], $extra );
+	set_site_transient( captaincore_kinsta_op_key( $env->environment_id ), $op, 30 * MINUTE_IN_SECONDS );
+	delete_site_transient( captaincore_kinsta_op_key( $env->environment_id ) . '_failed' );
+	return $op;
+}
+
+// The environment's running operation after asking Kinsta, or null. A finished
+// one is logged and cleared; a failed one leaves a message for ten minutes.
+// A poll that fails keeps it pending; after 20 minutes it is given up.
+function captaincore_kinsta_op_check( $env ) {
+	$key = captaincore_kinsta_op_key( $env->environment_id );
+	$op  = get_site_transient( $key );
+	if ( ! is_array( $op ) || empty( $op['operation_id'] ) ) {
+		return null;
+	}
+	$res    = CaptainCore\Providers\Kinsta::operation( (int) $op['site_id'], $op['operation_id'] );
+	$status = (string) ( $res->status ?? '' );
+	if ( $status === '202' || ( $status === '' && time() - (int) $op['started_at'] < 20 * MINUTE_IN_SECONDS ) ) {
+		return $op;
+	}
+	delete_site_transient( $key );
+	[ , $done, $failed ] = captaincore_kinsta_op_labels( $op );
+	$log = ! isset( $op['log'] ) || $op['log'];
+	if ( $status === '200' ) {
+		if ( $log ) {
+			CaptainCore\ProcessLog::insert( $done, (int) $op['site_id'], 1, (int) $op['user_id'] );
+		}
+		return null;
+	}
+	// A failed operation says "Operation failed! Please refer to `data`…"; the reason is in data.message.
+	$why = $status === '' ? 'Kinsta did not report back in 20 minutes.' : trim( (string) ( $res->data->message ?? $res->message ?? '' ) );
+	if ( $log ) {
+		CaptainCore\ProcessLog::insert( $failed . ( $why !== '' ? ": {$why}" : '' ), (int) $op['site_id'], 1, (int) $op['user_id'] );
+	}
+	set_site_transient( $key . '_failed', $failed . '. Nothing changed.' . ( $why !== '' ? " Kinsta said: {$why}" : '' ), 10 * MINUTE_IN_SECONDS );
+	return null;
+}
+
+// Refuse a new Kinsta request while one is still running on the environment.
+function captaincore_kinsta_op_busy( $env ) {
+	$op = captaincore_kinsta_op_check( $env );
+	if ( ! $op ) {
+		return null;
+	}
+	[ $label ] = captaincore_kinsta_op_labels( $op );
+	return new WP_Error( 'kinsta_busy', "Kinsta is still working on {$env->environment} ({$label}). Try again when it finishes.", [ 'status' => 409 ] );
+}
+
 function captaincore_site_settings_target( $request ) {
 	$site_id = (int) $request['id'];
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
@@ -7377,7 +7460,7 @@ function captaincore_site_settings_base( $env ) {
 	return [ $config, "{$note} did not apply, so nothing changed." . ( $why !== '' ? " The server said: {$why}" : '' ) ];
 }
 
-function captaincore_site_settings_response( $t ) {
+function captaincore_site_settings_response( $t, $op = false ) {
 	if ( $t['host'] === 'captaincore' ) {
 		[ $config, $failed ] = captaincore_site_settings_base( $t['env'] );
 		$last    = CaptainCore\HostConfigs::latest( $t['env']->environment_id );
@@ -7391,18 +7474,30 @@ function captaincore_site_settings_response( $t ) {
 			'error'     => $failed,
 		];
 	}
+	// The PHP version is only read once no operation is running, so the
+	// card keeps the old version until Kinsta has finished the switch.
+	if ( $op === false ) {
+		$op = captaincore_kinsta_op_check( $t['env'] );
+	}
 	$version  = CaptainCore\Providers\Kinsta::php_version( (int) $t['site']->site_id, $t['env']->environment );
 	$versions = CAPTAINCORE_KINSTA_PHP_VERSIONS;
 	if ( is_string( $version ) && $version !== '' && ! in_array( $version, $versions, true ) ) {
 		array_unshift( $versions, $version );
 	}
+	$failed = get_site_transient( captaincore_kinsta_op_key( $t['env']->environment_id ) . '_failed' );
 	return [
 		'host'      => 'kinsta',
 		'php'       => [ 'version' => is_string( $version ) ? $version : '', 'versions' => $versions ],
 		'cache'     => true,
 		'redirects' => null,
-		'applying'  => false,
-		'error'     => is_wp_error( $version ) ? 'Could not read the PHP version from Kinsta.' : '',
+		'applying'  => (bool) $op,
+		'pending'   => $op ? [
+			'kind'       => $op['kind'],
+			'label'      => captaincore_kinsta_op_labels( $op )[0],
+			'version'    => (string) ( $op['version'] ?? '' ),
+			'started_at' => (int) $op['started_at'],
+		] : null,
+		'error'     => is_wp_error( $version ) ? 'Could not read the PHP version from Kinsta.' : ( is_string( $failed ) ? $failed : '' ),
 	];
 }
 
@@ -7426,12 +7521,15 @@ function captaincore_site_settings_update_func( $request ) {
 			if ( ! in_array( $version, CAPTAINCORE_KINSTA_PHP_VERSIONS, true ) ) {
 				return new WP_Error( 'invalid', "PHP {$version} is not offered.", [ 'status' => 400 ] );
 			}
+			if ( $busy = captaincore_kinsta_op_busy( $t['env'] ) ) {
+				return $busy;
+			}
 			$res = CaptainCore\Providers\Kinsta::set_php_version( $site_id, $label, $version );
 			if ( is_wp_error( $res ) ) {
 				return $res;
 			}
-			CaptainCore\ProcessLog::insert( "Switched {$label} to PHP {$version} at Kinsta", $site_id );
-			return captaincore_site_settings_response( $t ) + [ 'operation_id' => (string) $res->operation_id, 'php_requested' => $version ];
+			$op = captaincore_kinsta_op_start( $site_id, $t['env'], 'php', $res->operation_id, [ 'version' => $version ] );
+			return captaincore_site_settings_response( $t, $op );
 		}
 		[ $config ] = captaincore_site_settings_base( $t['env'] );
 		$config['php']['version'] = $version;
@@ -7461,12 +7559,15 @@ function captaincore_site_restart_php_func( $request ) {
 	$site_id = (int) $t['site']->site_id;
 	$label   = $t['env']->environment;
 	if ( $t['host'] === 'kinsta' ) {
+		if ( $busy = captaincore_kinsta_op_busy( $t['env'] ) ) {
+			return $busy;
+		}
 		$res = CaptainCore\Providers\Kinsta::restart_php( $site_id, $label );
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
-		CaptainCore\ProcessLog::insert( "Restarted PHP on {$label} at Kinsta", $site_id );
-		return [ 'host' => 'kinsta', 'health' => '' ];
+		$op = captaincore_kinsta_op_start( $site_id, $t['env'], 'restart', $res->operation_id );
+		return [ 'host' => 'kinsta', 'health' => '', 'settings' => captaincore_site_settings_response( $t, $op ) ];
 	}
 	$details   = json_decode( (string) $t['env']->details ) ?: new stdClass();
 	$container = (string) ( $details->container ?? '' );
@@ -7493,12 +7594,15 @@ function captaincore_site_cache_clear_func( $request ) {
 	}
 	$site_id = (int) $t['site']->site_id;
 	if ( $t['host'] === 'kinsta' ) {
+		if ( $busy = captaincore_kinsta_op_busy( $t['env'] ) ) {
+			return $busy;
+		}
 		$res = CaptainCore\Providers\Kinsta::clear_cache( $site_id, $t['env']->environment );
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
-		CaptainCore\ProcessLog::insert( 'Cleared the Kinsta cache of ' . $t['env']->environment, $site_id );
-		return [ 'cleared' => null, 'host' => 'kinsta' ];
+		$op = captaincore_kinsta_op_start( $site_id, $t['env'], 'cache', $res->operation_id );
+		return [ 'cleared' => null, 'host' => 'kinsta', 'settings' => captaincore_site_settings_response( $t, $op ) ];
 	}
 	$res = CaptainCore\Run::execute( [ 'host', 'cache', 'clear', captaincore_hosting_target( $t['env'] ), '--json' ] );
 	if ( is_wp_error( $res ) ) {

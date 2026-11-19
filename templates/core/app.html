@@ -1844,12 +1844,12 @@ button.ccc-edited:hover{color:var(--ink)}
                         <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ sr.k }}</span>
                         <div style="flex:1"></div>
                         <sc-if value="{{ sr.hasV }}" hint-placeholder-val="{{ true }}"><span style="font:400 var(--fs-125) var(--mono)">{{ sr.v }}</span></sc-if>
-                        <sc-if value="{{ sr.hasAct2 }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ sr.go2 }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sr.act2 }}</button></sc-if>
-                        <button type="button" onClick="{{ sr.go }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer">{{ sr.act }}</button>
+                        <sc-if value="{{ sr.hasAct2 }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ sr.go2 }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:{{ sr.actCur }};opacity:{{ sr.actOp }}">{{ sr.act2 }}</button></sc-if>
+                        <button type="button" onClick="{{ sr.go }}" style="border:0;background:none;padding:0;font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:{{ sr.actCur }};opacity:{{ sr.actOp }}">{{ sr.act }}</button>
                       </div>
                     </sc-for>
                     <sc-if value="{{ ssetApplying }}" hint-placeholder-val="{{ false }}">
-                      <div class="cc-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule)">Applying a change…</div>
+                      <div class="cc-meta" style="display:flex;align-items:flex-start;gap:8px;padding:8px 16px;border-bottom:1px solid var(--rule)"><span style="flex:none;width:12px;height:12px;margin-top:2px;border:2px solid var(--rule);border-top-color:var(--brand);border-radius:50%;animation:ccspin .8s linear infinite"></span><span>{{ ssetApplyingText }}</span></div>
                     </sc-if>
                     <sc-if value="{{ ssetHasError }}" hint-placeholder-val="{{ false }}">
                       <div class="cc-meta" style="padding:8px 16px;border-bottom:1px solid var(--rule);color:var(--bad)">{{ ssetError }}</div>

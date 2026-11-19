@@ -1409,10 +1409,15 @@ class Kinsta {
      * @return string "200", "202", "500", or "" when the poll itself failed
      */
     public static function operation_status( $site_id, $operation_id ) {
+        return (string) ( self::operation( $site_id, $operation_id )->status ?? "" );
+    }
+
+    /** The whole operation response ({status, message, data}), or null when the poll failed. */
+    public static function operation( $site_id, $operation_id ) {
         $site = \CaptainCore\Sites::get( $site_id );
         self::use_site_provider( $site );
         $response = \CaptainCore\Remote\Kinsta::get( "operations/{$operation_id}" );
-        return (string) ( $response->status ?? "" );
+        return is_object( $response ) ? $response : null;
     }
 
     /**

@@ -23,8 +23,33 @@ Object.assign(Component.prototype, {
     return real ? real.siteId + '|' + (this.state.env || 'Production') : '';
   },
 
+  // A Kinsta operation (PHP switch, restart, cache clear) runs for a while
+  // after Kinsta accepts it, and Kinsta fails anything else sent to that
+  // environment meanwhile. The server keeps the running operation and reports
+  // it as `pending`; the card shows it, holds every control, keeps the old
+  // PHP version, and polls until it ends. The toast that started it stays a
+  // spinner until then and finishes with Kinsta's real outcome.
+  trackKinstaOp(key, tid, kind, env) {
+    this._ssetOp = { key, tid, kind, env };
+  },
+
+  finishKinstaOp(key, res) {
+    const op = this._ssetOp;
+    if (!op || op.key !== key || (res && res.pending)) return;
+    this._ssetOp = null;
+    if (res && res.error) { this.updateToast(op.tid, res.error, { kind: 'error', timeout: 12000 }); return; }
+    const text = op.kind === 'php' ? op.env + ' is now on PHP ' + ((res && res.php && res.php.version) || '?')
+      : op.kind === 'restart' ? 'PHP restarted on ' + op.env : 'Cache cleared at Kinsta';
+    this.updateToast(op.tid, text, { kind: 'success', timeout: 7000 });
+  },
+
   loadSiteSettings(force) {
     const key = this.siteSettingsKey();
+    // Left the environment while Kinsta works: let go of the spinner.
+    if (this._ssetOp && this._ssetOp.key !== key) {
+      this.updateToast(this._ssetOp.tid, 'Kinsta is still working on ' + this._ssetOp.env + '. Its Settings card shows when it is done.', { kind: 'info', timeout: 6000 });
+      this._ssetOp = null;
+    }
     if (!key || (!force && this._sset && this._sset.key === key) || this._ssetLoading === key) return;
     this._ssetLoading = key;
     const [siteId, env] = key.split('|');
@@ -33,11 +58,17 @@ Object.assign(Component.prototype, {
       if (key !== this.siteSettingsKey()) return;
       if (!res || res.code) { this._sset = { key, error: (res && res.message) || 'Could not load the settings' }; this.setState({}); return; }
       this._sset = { key, data: res };
+      this.finishKinstaOp(key, res);
       this.setState({});
-      // While a change is being applied on our servers, check again.
-      clearTimeout(this._ssetPoll);
-      if (res.applying) this._ssetPoll = setTimeout(() => this.loadSiteSettings(true), 5000);
+      this.pollSiteSettings(res);
     }).catch(() => { this._ssetLoading = null; this._sset = { key, error: 'Could not load the settings' }; this.setState({}); });
+  },
+
+  // While a change is applied on our servers, or Kinsta runs an operation,
+  // check again (Kinsta less often: its API rate-limits).
+  pollSiteSettings(res) {
+    clearTimeout(this._ssetPoll);
+    if (res && res.applying) this._ssetPoll = setTimeout(() => this.loadSiteSettings(true), res.host === 'kinsta' ? 8000 : 5000);
   },
 
   saveSiteSettings(body, busyText, doneText) {
@@ -51,11 +82,13 @@ Object.assign(Component.prototype, {
         if (!res || res.code) throw new Error((res && res.message) || 'Could not save');
         this._sset = { key, data: res };
         this.setState({ ssetBusy: false });
-        this.updateToast(tid, doneText, { kind: 'success', timeout: 7000 });
-        clearTimeout(this._ssetPoll);
-        if (res.applying) this._ssetPoll = setTimeout(() => this.loadSiteSettings(true), 5000);
-        // Kinsta switches PHP on its own time: read it back after a while.
-        if (res.operation_id) this._ssetPoll = setTimeout(() => this.loadSiteSettings(true), 45000);
+        if (res.host === 'kinsta' && res.pending) {
+          this.updateToast(tid, doneText, { kind: 'loading' });
+          this.trackKinstaOp(key, tid, res.pending.kind, env);
+        } else {
+          this.updateToast(tid, doneText, { kind: 'success', timeout: 7000 });
+        }
+        this.pollSiteSettings(res);
         return true;
       })
       .catch(e => { this.setState({ ssetBusy: false }); this.updateToast(tid, (e && e.message) || 'Could not save', { kind: 'error', timeout: 9000 }); return false; });
@@ -71,7 +104,14 @@ Object.assign(Component.prototype, {
       .then(res => {
         if (!res || res.code) throw new Error((res && res.message) || 'Could not clear the cache');
         const n = res.cleared;
-        this.updateToast(tid, n === null || n === undefined ? 'Cache cleared at Kinsta' : 'Cache cleared (' + n + ' saved ' + (n === 1 ? 'page' : 'pages') + ')', { kind: 'success', timeout: 5000 });
+        if (res.host === 'kinsta' && res.settings) {
+          this._sset = { key, data: res.settings };
+          this.updateToast(tid, 'Kinsta is clearing the cache of ' + env + '…', { kind: 'loading' });
+          this.trackKinstaOp(key, tid, 'cache', env);
+          this.pollSiteSettings(res.settings);
+        } else {
+          this.updateToast(tid, 'Cache cleared (' + n + ' saved ' + (n === 1 ? 'page' : 'pages') + ')', { kind: 'success', timeout: 5000 });
+        }
         this.setState({ ssetClearing: false });
       })
       .catch(e => { this.setState({ ssetClearing: false }); this.updateToast(tid, (e && e.message) || 'Could not clear the cache', { kind: 'error', timeout: 8000 }); });
@@ -86,10 +126,16 @@ Object.assign(Component.prototype, {
     this.api('/sites/' + siteId + '/' + encodeURIComponent(env) + '/restart-php', { method: 'POST', body: {} })
       .then(res => {
         if (!res || res.code) throw new Error((res && res.message) || 'PHP did not restart');
-        const ok = res.host === 'kinsta' || res.health === '200';
-        this.updateToast(tid, res.host === 'kinsta' ? 'Kinsta is restarting PHP on ' + env
-          : ok ? 'PHP restarted. The site answers again.' : 'PHP restarted, but the site answered ' + (res.health || 'nothing') + '. Check it.',
-          { kind: ok ? 'success' : 'error', timeout: 7000 });
+        if (res.host === 'kinsta' && res.settings) {
+          this._sset = { key, data: res.settings };
+          this.updateToast(tid, 'Kinsta is restarting PHP on ' + env + '…', { kind: 'loading' });
+          this.trackKinstaOp(key, tid, 'restart', env);
+          this.pollSiteSettings(res.settings);
+        } else {
+          const ok = res.health === '200';
+          this.updateToast(tid, ok ? 'PHP restarted. The site answers again.' : 'PHP restarted, but the site answered ' + (res.health || 'nothing') + '. Check it.',
+            { kind: ok ? 'success' : 'error', timeout: 7000 });
+        }
         this.setState({ ssetRestarting: false });
       })
       .catch(e => { this.setState({ ssetRestarting: false }); this.updateToast(tid, (e && e.message) || 'PHP did not restart', { kind: 'error', timeout: 8000 }); });
@@ -107,10 +153,12 @@ Object.assign(Component.prototype, {
     const onKinsta = host === 'kinsta';
 
     const rows = [];
-    const phpV = d ? (d.php.version || '?') : (ss && ss.error ? '?' : '…');
-    rows.push({ k: 'PHP', v: phpV, act: 'Change…', go: () => d && this.setState({ ssetPhpOpen: true, ssetPhpPick: d.php.version }),
-      act2: s.ssetRestarting ? 'Restarting…' : 'Restart', go2: () => d && this.restartSitePhp() });
-    if (!d || d.cache) rows.push({ k: 'Cache', v: '', act: s.ssetClearing ? 'Clearing…' : 'Clear cache', go: () => d && this.clearSiteCache() });
+    const pend = onKinsta && d && d.pending ? d.pending : null;
+    const held = fn => pend ? () => {} : fn;
+    const phpV = d ? (d.php.version || '?') + (pend && pend.kind === 'php' ? ' → ' + pend.version : '') : (ss && ss.error ? '?' : '…');
+    rows.push({ k: 'PHP', v: phpV, act: pend && pend.kind === 'php' ? 'Switching…' : 'Change…', go: held(() => d && this.setState({ ssetPhpOpen: true, ssetPhpPick: d.php.version })),
+      act2: s.ssetRestarting || (pend && pend.kind === 'restart') ? 'Restarting…' : 'Restart', go2: held(() => d && this.restartSitePhp()) });
+    if (!d || d.cache) rows.push({ k: 'Cache', v: '', act: s.ssetClearing || (pend && pend.kind === 'cache') ? 'Clearing…' : 'Clear cache', go: held(() => d && this.clearSiteCache()) });
     if (!onKinsta && (!d || Array.isArray(d.redirects))) {
       const n = d ? d.redirects.length : -1;
       rows.push({ k: 'Redirects', v: n < 0 ? '…' : n === 0 ? 'None' : String(n), act: 'Manage…',
@@ -119,10 +167,14 @@ Object.assign(Component.prototype, {
 
     const out = {
       ssetShow: true,
-      ssetRows: rows.map(r => ({ ...r, hasV: r.v !== '', hasAct2: !!r.act2, act2: r.act2 || '', go2: r.go2 || (() => {}) })),
+      ssetRows: rows.map(r => ({ ...r, hasV: r.v !== '', hasAct2: !!r.act2, act2: r.act2 || '', go2: r.go2 || (() => {}),
+        actOp: pend && r.k !== 'Redirects' ? '.45' : '1', actCur: pend && r.k !== 'Redirects' ? 'default' : 'pointer' })),
       // Our servers sign in with the person's own keys (Profile → SSH keys, my-ssh-keys.js).
       ...(host === 'captaincore' && this.myKeysConnectVals ? this.myKeysConnectVals() : { ssetKeysShow: false }),
       ssetApplying: !!(d && d.applying),
+      ssetApplyingText: pend
+        ? pend.label + ' at Kinsta. This can take a few minutes; the site stays up. Other changes wait until it is done.'
+        : 'Applying a change…',
       ssetError: (ss && ss.error) || (d && d.error) || '',
       ssetHasError: !!((ss && ss.error) || (d && d.error)),
       ssetPhpOpen: false, ssetRdOpen: false
@@ -135,7 +187,7 @@ Object.assign(Component.prototype, {
       out.ssetPhpTitle = 'PHP version for ' + env;
       out.ssetPhpIllo = this.illo ? this.illo('container') : null;
       out.ssetPhpNote = onKinsta
-        ? 'Kinsta restarts PHP on the new version, usually within a minute. Visitors may see a short pause.'
+        ? 'Kinsta restarts PHP on the new version, which can take a few minutes. Visitors may see a short pause. This card shows the new version once Kinsta has finished.'
         : 'The site moves to a fresh build on the new version. A backup is taken first, the site is offline for about 10 seconds, and it is put back on the old version automatically if it stops answering.';
       out.ssetPhpVersions = d.php.versions.map(v => {
         const on = v === pick, cur = v === d.php.version;
@@ -150,7 +202,7 @@ Object.assign(Component.prototype, {
       out.ssetPhpSubmit = () => {
         if (pick === d.php.version || s.ssetBusy) return;
         this.saveSiteSettings({ php_version: pick }, 'Switching ' + env + ' to PHP ' + pick + '…',
-          onKinsta ? 'Kinsta is switching ' + env + ' to PHP ' + pick : env + ' is moving to PHP ' + pick + '. It takes about a minute.')
+          onKinsta ? 'Kinsta is switching ' + env + ' to PHP ' + pick + '. This can take a few minutes…' : env + ' is moving to PHP ' + pick + '. It takes about a minute.')
           .then(ok => { if (ok) this.setState({ ssetPhpOpen: false }); });
       };
     }
