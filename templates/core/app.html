@@ -481,6 +481,26 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .ccc-ccbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:7px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 20%,var(--paper));font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccc-cclabel{font-weight:600;color:var(--ink-dim)}
 .ccc-ccmember{border-color:color-mix(in srgb,var(--brand) 40%,var(--rule))}
+/* Kinsta backups (site Backups tab) */
+.kb-card{margin-top:16px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden}
+.kb-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 6px}
+.kb-title{font:600 var(--fs-14) var(--sans);color:var(--ink)}
+.kb-sub{margin-top:3px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);line-height:1.45}
+.kb-new{display:flex;gap:8px;padding:8px 16px 12px;flex-wrap:wrap}
+.kb-new input{flex:1;min-width:200px;height:34px;box-sizing:border-box;padding:0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--sans);outline:none}
+.kb-new input:focus{border-color:var(--brand)}
+.kb-btn{flex:none;height:34px;padding:0 14px;border:none;border-radius:9px;background:var(--brand);color:#fff;font:600 var(--fs-13) var(--sans);cursor:pointer}
+.kb-btn:hover{filter:brightness(1.08)}
+.kb-note{padding:6px 16px 12px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)}
+.kb-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--rule);flex-wrap:wrap}
+.kb-type{flex:none;font:600 var(--fs-115) var(--sans);border-radius:6px;padding:2px 8px}
+.kb-when{flex:none;font:500 var(--fs-13) var(--sans);color:var(--ink)}
+.kb-rnote{min-width:0;max-width:260px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)}
+.kb-act,.kb-link{border:1px solid var(--rule);border-radius:6px;padding:3px 10px;background:var(--paper);font:500 var(--fs-125) var(--sans);cursor:pointer}
+.kb-act:hover,.kb-link:hover{border-color:var(--brand)}
+.kb-link{color:var(--brand-ink)}
+.kb-del{color:var(--ink-dim)}
+@media (max-width:640px){.kb-rnote{max-width:100%;flex-basis:100%;order:3}}
 .ccs-people{padding:7px 24px}
 .ccc-newalso{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:8px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccc-newalso:empty{display:none}
@@ -2108,6 +2128,41 @@ button.ccc-edited:hover{color:var(--ink)}
           </sc-if>
 
           <sc-if value="{{ tabBackups }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ kbShow }}" hint-placeholder-val="{{ false }}">
+              <div class="kb-card">
+                <div class="kb-head">
+                  <div style="min-width:0;flex:1">
+                    <div class="kb-title">{{ kbTitle }}</div>
+                    <div class="kb-sub">{{ kbSub }}</div>
+                  </div>
+                  <button onClick="{{ kbRefresh }}" class="kb-link" title="Load the list again">Refresh</button>
+                </div>
+                <sc-if value="{{ kbCanBackup }}" hint-placeholder-val="{{ false }}">
+                  <div class="kb-new">
+                    <input value="{{ kbNote }}" onInput="{{ onKbNote }}" onKeyDown="{{ kbNoteKey }}" maxlength="100" placeholder="Note for the backup (optional), like “Before theme changes”" aria-label="Note for the backup">
+                    <button onClick="{{ kbBackupNow }}" class="kb-btn" title="Kinsta makes a manual backup of this environment now">Back up at Kinsta</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ kbFull }}" hint-placeholder-val="{{ false }}"><div class="kb-note">{{ kbFullText }}</div></sc-if>
+                <sc-if value="{{ kbNoStaging }}" hint-placeholder-val="{{ false }}"><div class="kb-note">{{ kbNoStagingText }}</div></sc-if>
+                <sc-if value="{{ kbLoading }}" hint-placeholder-val="{{ false }}"><div class="kb-note">Loading Kinsta’s backups…</div></sc-if>
+                <sc-if value="{{ kbHasErr }}" hint-placeholder-val="{{ false }}"><div class="kb-note" style="color:var(--bad)">{{ kbErr }}</div></sc-if>
+                <sc-if value="{{ kbEmpty }}" hint-placeholder-val="{{ false }}"><div class="kb-note">No backups at Kinsta yet.</div></sc-if>
+                <sc-for list="{{ kbRows }}" as="b" hint-placeholder-count="3">
+                  <div class="kb-row">
+                    <span class="kb-type" style="background:{{ b.typeBg }};color:{{ b.typeFg }}">{{ b.type }}</span>
+                    <span class="kb-when">{{ b.when }}</span>
+                    <span class="kb-rnote ccc-trunc">{{ b.note }}</span>
+                    <div style="flex:1"></div>
+                    <sc-for list="{{ b.restores }}" as="r" hint-placeholder-count="1">
+                      <button onClick="{{ r.go }}" class="kb-act" style="color:{{ r.fg }}">{{ r.label }}</button>
+                    </sc-for>
+                    <sc-if value="{{ b.canDelete }}" hint-placeholder-val="{{ false }}"><button onClick="{{ b.del }}" class="kb-act kb-del" title="Delete this manual backup">Delete</button></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ kbMore }}" hint-placeholder-val="{{ false }}"><button onClick="{{ kbShowAll }}" class="kb-link" style="display:block;margin:10px 16px">{{ kbMoreLabel }}</button></sc-if>
+              </div>
+            </sc-if>
             <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
               <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Restic · daily at 3:00 AM UTC · direct to Backblaze B2 · download any file or the whole site from any date</span>
               <div style="flex:1"></div>

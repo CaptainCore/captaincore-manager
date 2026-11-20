@@ -1857,4 +1857,206 @@ class Kinsta {
         return new \WP_Error( 'domain_not_found', 'Domain not found in Kinsta response.' );
     }
 
+
+    // ── Backups in MyKinsta, for anyone who can reach the site ──────────
+    // Kinsta keeps daily, hourly, system and up to 5 manual backups per
+    // environment. These list them, make a manual one, delete a manual one
+    // and restore one, the same as the Backups page in MyKinsta. Callers
+    // check site access (captaincore_verify_permissions) first.
+
+    const MANUAL_BACKUP_LIMIT = 5;
+
+    /**
+     * The site, its environment row and that environment's Kinsta id, with
+     * the site's own connection key set. WP_Error when it isn't a Kinsta site.
+     */
+    private static function backup_context( $site_id, $environment ) {
+        $site = ( new \CaptainCore\Sites )->get( (int) $site_id );
+        if ( ! $site || $site->provider !== 'kinsta' || empty( $site->provider_site_id ) ) {
+            return new \WP_Error( 'not_kinsta', 'Kinsta backups are only for sites hosted at Kinsta.', [ 'status' => 400 ] );
+        }
+        $env = \CaptainCore\Environments::for_site( (int) $site_id, (string) $environment );
+        if ( ! $env ) {
+            return new \WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+        }
+        self::use_site_provider( $site );
+        $kinsta_env_id = self::get_kinsta_env_id_from_cc_env( $site, $env );
+        if ( is_wp_error( $kinsta_env_id ) ) {
+            return $kinsta_env_id;
+        }
+        return (object) [ 'site' => $site, 'env' => $env, 'kinsta_env_id' => $kinsta_env_id ];
+    }
+
+    /** Kinsta's backup types, in words. */
+    private static function backup_type_label( $type ) {
+        $labels = [ 'manual' => 'Manual', 'autodaily' => 'Daily', 'scheduled' => 'Daily', 'daily' => 'Daily', 'hourly' => 'Hourly', 'autohourly' => 'Hourly', 'systemgen' => 'System', 'system' => 'System', 'external' => 'External', 'downloadable' => 'Download' ];
+        return $labels[ strtolower( (string) $type ) ] ?? ucfirst( (string) $type );
+    }
+
+    private static function fetch_backups( $kinsta_env_id ) {
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$kinsta_env_id}/backups" );
+        if ( ! isset( $response->environment->backups ) || ! is_array( $response->environment->backups ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not answer.';
+            return new \WP_Error( 'kinsta_backups', "Could not load the Kinsta backups: $message", [ 'status' => 502 ] );
+        }
+        return $response->environment->backups;
+    }
+
+    /** The environment's Kinsta backups, newest first. */
+    public static function backups( $site_id, $environment ) {
+        $ctx = self::backup_context( $site_id, $environment );
+        if ( is_wp_error( $ctx ) ) {
+            return $ctx;
+        }
+        $rows = self::fetch_backups( $ctx->kinsta_env_id );
+        if ( is_wp_error( $rows ) ) {
+            return $rows;
+        }
+        $out = [];
+        foreach ( $rows as $b ) {
+            $type  = strtolower( (string) ( $b->type ?? '' ) );
+            $out[] = [
+                'id'         => (int) $b->id,
+                'name'       => (string) ( $b->name ?? '' ),
+                'note'       => [ 'pushToEnvTarget' => 'Before a push', 'Before Restore' => 'Before a restore', 'Daily Auto Backup' => 'Daily backup' ][ (string) ( $b->note ?? '' ) ] ?? (string) ( $b->note ?? '' ),
+                'type'       => $type,
+                'type_label' => self::backup_type_label( $type ),
+                // Kinsta gives milliseconds.
+                'created_at' => (int) floor( ( (float) ( $b->created_at ?? 0 ) ) / 1000 ),
+                'manual'     => $type === 'manual',
+            ];
+        }
+        usort( $out, fn( $a, $b ) => $b['created_at'] <=> $a['created_at'] );
+        $manual = count( array_filter( $out, fn( $b ) => $b['manual'] ) );
+        $targets = [];
+        foreach ( ( new \CaptainCore\Environments )->where( [ 'site_id' => (int) $site_id ] ) as $e ) {
+            $targets[] = (string) $e->environment;
+        }
+        return [
+            'environment'  => (string) $ctx->env->environment,
+            'backups'      => $out,
+            'manual_count' => $manual,
+            'manual_limit' => self::MANUAL_BACKUP_LIMIT,
+            // Where this environment's backups can be restored: a production
+            // backup to any environment of the site, any other only to itself
+            // (Kinsta's rule for standard staging).
+            'restore_to'   => strcasecmp( (string) $ctx->env->environment, 'Production' ) === 0 ? $targets : [ (string) $ctx->env->environment ],
+        ];
+    }
+
+    /** One backup of this environment, or a WP_Error. */
+    private static function find_backup( $ctx, $backup_id ) {
+        $rows = self::fetch_backups( $ctx->kinsta_env_id );
+        if ( is_wp_error( $rows ) ) {
+            return $rows;
+        }
+        foreach ( $rows as $b ) {
+            if ( (int) $b->id === (int) $backup_id ) {
+                return $b;
+            }
+        }
+        return new \WP_Error( 'backup_not_found', 'That backup is not one of this environment\'s.', [ 'status' => 404 ] );
+    }
+
+    private static function backup_action( $operation_id, $command, $ctx, $extra = [] ) {
+        self::add_action( $operation_id, (object) array_merge( [
+            'command'     => $command,
+            'site_id'     => (int) $ctx->site->site_id,
+            'name'        => (string) $ctx->site->name,
+            'environment' => (string) $ctx->env->environment,
+            'provider_id' => $ctx->site->provider_id,
+        ], $extra ) );
+    }
+
+    /** Ask Kinsta for a manual backup now. $note becomes its tag. */
+    public static function create_backup( $site_id, $environment, $note = '' ) {
+        $ctx = self::backup_context( $site_id, $environment );
+        if ( is_wp_error( $ctx ) ) {
+            return $ctx;
+        }
+        $rows = self::fetch_backups( $ctx->kinsta_env_id );
+        if ( is_wp_error( $rows ) ) {
+            return $rows;
+        }
+        $manual = count( array_filter( $rows, fn( $b ) => strtolower( (string) ( $b->type ?? '' ) ) === 'manual' ) );
+        if ( $manual >= self::MANUAL_BACKUP_LIMIT ) {
+            return new \WP_Error( 'manual_limit', 'Kinsta keeps up to ' . self::MANUAL_BACKUP_LIMIT . ' manual backups per environment, and this one has ' . $manual . '. Delete one to make room.', [ 'status' => 409 ] );
+        }
+        $note = trim( preg_replace( '/[\x00-\x1F\x7F]+/u', ' ', (string) $note ) );
+        $note = mb_substr( $note !== '' ? $note : 'Made in Anchor Hosting', 0, 100 );
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$ctx->kinsta_env_id}/manual-backups", [ 'tag' => $note ] );
+        if ( empty( $response->operation_id ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the backup.';
+            return new \WP_Error( 'kinsta_backup_failed', "Kinsta could not start the backup: $message", [ 'status' => 502 ] );
+        }
+        self::backup_action( $response->operation_id, 'kinsta-backup', $ctx, [ 'note' => $note, 'message' => "Backing up {$ctx->env->environment} of {$ctx->site->name} at Kinsta" ] );
+        \CaptainCore\ProcessLog::insert( "Kinsta backup of {$ctx->env->environment}", (int) $site_id );
+        return [ 'operation_id' => $response->operation_id ];
+    }
+
+    /** Delete one of this environment's manual backups. */
+    public static function delete_backup( $site_id, $environment, $backup_id ) {
+        $ctx = self::backup_context( $site_id, $environment );
+        if ( is_wp_error( $ctx ) ) {
+            return $ctx;
+        }
+        $backup = self::find_backup( $ctx, $backup_id );
+        if ( is_wp_error( $backup ) ) {
+            return $backup;
+        }
+        if ( strtolower( (string) ( $backup->type ?? '' ) ) !== 'manual' ) {
+            return new \WP_Error( 'not_manual', 'Only manual backups can be deleted. Kinsta removes the others on its own schedule.', [ 'status' => 400 ] );
+        }
+        $response = \CaptainCore\Remote\Kinsta::delete( "sites/environments/backups/" . (int) $backup_id );
+        if ( empty( $response->operation_id ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the delete.';
+            return new \WP_Error( 'kinsta_delete_failed', "Kinsta could not delete the backup: $message", [ 'status' => 502 ] );
+        }
+        self::backup_action( $response->operation_id, 'kinsta-backup-delete', $ctx, [ 'backup_id' => (int) $backup_id, 'message' => "Deleting a manual backup of {$ctx->env->environment} of {$ctx->site->name}" ] );
+        return [ 'operation_id' => $response->operation_id ];
+    }
+
+    /**
+     * Restore one of this environment's backups onto $target (an environment
+     * of the same site). A production backup may go to any of them; any
+     * other only back onto itself.
+     */
+    public static function restore_backup( $site_id, $environment, $backup_id, $target ) {
+        $ctx = self::backup_context( $site_id, $environment );
+        if ( is_wp_error( $ctx ) ) {
+            return $ctx;
+        }
+        $target_env = \CaptainCore\Environments::for_site( (int) $site_id, (string) $target );
+        if ( ! $target_env ) {
+            return new \WP_Error( 'invalid_target', 'Choose an environment of this site to restore to.', [ 'status' => 400 ] );
+        }
+        $from_live = strcasecmp( (string) $ctx->env->environment, 'Production' ) === 0;
+        if ( ! $from_live && (int) $target_env->environment_id !== (int) $ctx->env->environment_id ) {
+            return new \WP_Error( 'invalid_target', 'A ' . $ctx->env->environment . ' backup can only be restored to ' . $ctx->env->environment . '.', [ 'status' => 400 ] );
+        }
+        $backup = self::find_backup( $ctx, $backup_id );
+        if ( is_wp_error( $backup ) ) {
+            return $backup;
+        }
+        $target_kinsta_id = (int) $target_env->environment_id === (int) $ctx->env->environment_id ? $ctx->kinsta_env_id : self::get_kinsta_env_id_from_cc_env( $ctx->site, $target_env );
+        if ( is_wp_error( $target_kinsta_id ) ) {
+            return $target_kinsta_id;
+        }
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$target_kinsta_id}/backups/restore", [
+            'backup_id'        => (int) $backup_id,
+            'notified_user_id' => self::credentials( 'user_id', $ctx->site->provider_id, $ctx->site ),
+        ] );
+        if ( empty( $response->operation_id ) ) {
+            $message = $response->data->message ?? $response->message ?? 'Kinsta did not accept the restore.';
+            return new \WP_Error( 'kinsta_restore_failed', "Kinsta could not start the restore: $message", [ 'status' => 502 ] );
+        }
+        $when = ! empty( $backup->created_at ) ? gmdate( 'Y-m-d H:i', (int) floor( $backup->created_at / 1000 ) ) . ' UTC' : '';
+        self::backup_action( $response->operation_id, 'kinsta-restore', $ctx, [
+            'backup_id' => (int) $backup_id, 'target_environment' => (string) $target_env->environment,
+            'message'   => "Restoring a {$ctx->env->environment} backup" . ( $when ? " from $when" : '' ) . " to {$target_env->environment} of {$ctx->site->name}",
+        ] );
+        \CaptainCore\ProcessLog::insert( "Restore Kinsta backup to {$target_env->environment}", (int) $site_id );
+        return [ 'operation_id' => $response->operation_id, 'target' => (string) $target_env->environment ];
+    }
+
 }

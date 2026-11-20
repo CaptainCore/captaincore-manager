@@ -2818,6 +2818,7 @@ class Component extends DCLogic {
         regen: () => sn._real ? this.realSnapshotLink(real, sn) : this.runJob('snapshot-link', 'new 24h link · ' + sn.name),
         doDl: () => sn._real ? this.safeOpen(sn._url) : this.runJob('snapshot-download', sn.name) }; }),
       ...(this.computeCaptures ? this.computeCaptures(real, s) : {}),
+      ...(this.computeKinstaBackups ? this.computeKinstaBackups(real, s) : { kbShow: false, kbRows: [] }),
       ...(this.computeRegistry ? this.computeRegistry(real, s) : { regGroups: [], regChips: [], rgOpen: false }),
       ...(this.computeTools ? this.computeTools(real, s) : { siteTools: [], thOpen: false, tlOpen: false, tmOpen: false, tnOpen: false }),
       ...(this.computeEditSite ? this.computeEditSite(real, s) : { edsShow: false, edsOpen: false }),

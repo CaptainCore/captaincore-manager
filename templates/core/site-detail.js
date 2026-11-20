@@ -661,13 +661,24 @@ Object.assign(Component.prototype, {
           if (a.status === 'waiting') this.api('/provider-actions/' + a.provider_action_id + '/run').catch(() => {});
         });
         const mine = actions.find(a => String(a.provider_key) === String(operationId));
+        if (mine) job.paId = mine.provider_action_id;
         if (!mine) {
-          const mins = Math.max(1, Math.round((Date.now() - started) / 60000));
-          job.stream.push('Done. Kinsta finished the copy (about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '). Refreshing the environment\'s details now.');
-          this.finishJob(job, 'done');
-          // Environments changed on the target — refresh the open detail.
-          if (this._detail && this._detail.siteId === siteId) { this._detail = null; this.loadSiteDetail(siteId); }
-          if (target) this.syncDeployedEnv(target.siteId, target.environment, target.name);
+          // Gone from the active list: finished, or failed. Ask which.
+          const verdict = job.paId ? this.api('/provider-actions/' + job.paId).catch(() => null) : Promise.resolve(null);
+          verdict.then(pa => {
+            if (pa && pa.status === 'failed') {
+              job.stream.push('Kinsta reported a problem: ' + (((pa.action || {}).error) || 'the operation failed') + '. Nothing else was changed. Try again, or ask us in chat.');
+              delete this._trackedOps[operationId];
+              this.finishJob(job, 'error');
+              return;
+            }
+            const mins = Math.max(1, Math.round((Date.now() - started) / 60000));
+            job.stream.push((job.doneText || 'Done. Kinsta finished the copy') + ' (about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ').' + (target ? ' Refreshing the environment\'s details now.' : ''));
+            this.finishJob(job, 'done');
+            if (job.onDone) job.onDone();
+            if (this._detail && this._detail.siteId === siteId) { this._detail = null; this.loadSiteDetail(siteId); }
+            if (target) this.syncDeployedEnv(target.siteId, target.environment, target.name);
+          });
           return;
         }
         this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 10) + 6) }));

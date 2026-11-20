@@ -12818,6 +12818,66 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Kinsta's own backups of an environment (the Backups page in MyKinsta),
+	// for anyone who can reach the site: list, make a manual one, delete a
+	// manual one, restore one. Ids come from the URL only.
+	$kinsta_backup_site = function ( WP_REST_Request $request ) {
+		$p = $request->get_url_params();
+		return captaincore_verify_permissions( (int) ( $p['id'] ?? 0 ) ) ? $p : new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	};
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/kinsta-backups', [
+			[
+				'methods'             => 'GET',
+				'callback'            => function ( WP_REST_Request $request ) use ( $kinsta_backup_site ) {
+					$p = $kinsta_backup_site( $request );
+					return is_wp_error( $p ) ? $p : CaptainCore\Providers\Kinsta::backups( (int) $p['id'], (string) $p['environment'] );
+				},
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => function ( WP_REST_Request $request ) use ( $kinsta_backup_site ) {
+					$p = $kinsta_backup_site( $request );
+					if ( is_wp_error( $p ) ) {
+						return $p;
+					}
+					$r = CaptainCore\Providers\Kinsta::create_backup( (int) $p['id'], (string) $p['environment'], (string) ( $request->get_param( 'note' ) ?? '' ) );
+					return is_wp_error( $r ) ? $r : new WP_REST_Response( $r, 202 );
+				},
+				'permission_callback' => 'captaincore_permission_check',
+			],
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/kinsta-backups/(?P<backup_id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) use ( $kinsta_backup_site ) {
+				$p = $kinsta_backup_site( $request );
+				if ( is_wp_error( $p ) ) {
+					return $p;
+				}
+				$r = CaptainCore\Providers\Kinsta::delete_backup( (int) $p['id'], (string) $p['environment'], (int) $p['backup_id'] );
+				return is_wp_error( $r ) ? $r : new WP_REST_Response( $r, 202 );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/kinsta-backups/(?P<backup_id>[\d]+)/restore', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) use ( $kinsta_backup_site ) {
+				$p = $kinsta_backup_site( $request );
+				if ( is_wp_error( $p ) ) {
+					return $p;
+				}
+				$r = CaptainCore\Providers\Kinsta::restore_backup( (int) $p['id'], (string) $p['environment'], (int) $p['backup_id'], (string) ( $request->get_param( 'target' ) ?? '' ) );
+				return is_wp_error( $r ) ? $r : new WP_REST_Response( $r, 202 );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
 	// A customer's teammates, for staff starting a conversation (New message).
 	register_rest_route(
 		'captaincore/v1', '/chat/customers/(?P<id>[\d]+)/teammates', [

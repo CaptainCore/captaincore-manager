@@ -24,7 +24,7 @@ class ProviderAction {
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
             $status          = '';
             $operation_error = '';
-            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "swap-environments" || $action->command == "new-site" || $action->command == "push_environment" ) {
+            if ( in_array( $action->command, [ "deploy-to-staging", "deploy-to-production", "swap-environments", "new-site", "push_environment", "kinsta-backup", "kinsta-backup-delete", "kinsta-restore" ], true ) ) {
                 if ( $action->command == "new-site" && ! empty( $action->intial_response->message ) && $action->intial_response->message == "Too many requests, please try again later." && empty( $provider_action->provider_key )) {
                     $response = $class_name::create_site_request( $action );
                     if ( ! empty( $response->operation_id ) ) {
@@ -78,7 +78,8 @@ class ProviderAction {
                 }
                 $action->error = $operation_error;
                 error_log( "CaptainCore {$action->command} failed for {$entity_name}: {$operation_error}" );
-                ActivityLog::log( 'failed', 'site', null, $entity_name, "Provisioning failed for {$entity_name}: {$operation_error}", [], $action->account_id ?? null );
+                $what = $action->command === "new-site" ? "Provisioning failed for {$entity_name}" : ( ! empty( $action->message ) ? "{$action->message}: failed" : "{$action->command} failed for {$entity_name}" );
+                ActivityLog::log( 'failed', 'site', $action->site_id ?? null, $entity_name, "{$what}: {$operation_error}", [], $action->account_id ?? null );
                 ProviderActions::update( [ "action" => json_encode( $action ), "status" => "failed" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                 continue;
             }
@@ -273,6 +274,21 @@ class ProviderAction {
                 ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
                 return self::active();
             }
+        }
+
+        // Kinsta backups made, deleted or restored from the site's Backups tab.
+        if ( in_array( $current_action->command, [ "kinsta-backup", "kinsta-backup-delete", "kinsta-restore" ], true ) ) {
+            ( new ProviderActions )->update( [
+                'action'     => json_encode( $current_action ),
+                'updated_at' => $time_now,
+                'status'     => "done",
+            ], [ "provider_action_id" => $this->provider_action_id ] );
+            $site      = ! empty( $current_action->site_id ) ? ( new Sites )->get( $current_action->site_id ) : null;
+            $site_name = $site->name ?? ( $current_action->name ?? '' );
+            $verb      = [ "kinsta-backup" => "Backed up", "kinsta-backup-delete" => "Deleted a manual backup of", "kinsta-restore" => "Restored a backup to" ][ $current_action->command ];
+            $where     = $current_action->command === "kinsta-restore" ? ( $current_action->target_environment ?? '' ) : ( $current_action->environment ?? '' );
+            ActivityLog::log( $current_action->command === "kinsta-restore" ? 'restored' : 'backed-up', 'environment', $current_action->site_id ?? null, $site_name, "$verb $where of $site_name at Kinsta", [], $site->customer_id ?? null );
+            return self::active();
         }
 
         if ( $current_action->command == "push_environment" ) {

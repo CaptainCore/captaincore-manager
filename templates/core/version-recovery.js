@@ -529,6 +529,132 @@ Object.assign(Component.prototype, {
       .catch(() => { real.snapshots = []; this.setState({ tick: this.state.tick }); });
   },
 
+  // ── Kinsta backups (MyKinsta's Backups page) ──────────────────
+  // For Kinsta-hosted environments: Kinsta's own daily, system and manual
+  // backups, "Back up now" (a manual backup, up to 5 per environment),
+  // delete a manual one, and restore one onto this or (from production)
+  // another environment. Each action follows Kinsta's operation in the
+  // Activity panel (trackProviderOp) until it lands.
+
+  kbKey(real, env) { return String(real.siteId) + ':' + String(env || '').toLowerCase(); },
+
+  loadKinstaBackups(force) {
+    const real = this._detail;
+    const env = this.state.env;
+    if (!real || !env || !real.site || real.site.provider !== 'kinsta') return;
+    const key = this.kbKey(real, env);
+    real.kb = real.kb || {};
+    if (real.kb[key] && !force && (real.kb[key].loading || real.kb[key].data)) return;
+    const prev = real.kb[key] && real.kb[key].data;
+    real.kb[key] = { loading: true, data: prev || null, err: '' };
+    this.api('/sites/' + real.siteId + '/' + String(env).toLowerCase() + '/kinsta-backups').then(r => {
+      if (!r || r.code) throw new Error((r && r.message) || 'Could not load the Kinsta backups.');
+      real.kb[key] = { loading: false, data: r, err: '' };
+      this.setState({ tick: this.state.tick });
+    }).catch(e => {
+      real.kb[key] = { loading: false, data: prev || null, err: (e && e.message && e.message !== 'auth') ? e.message : 'Could not load the Kinsta backups.' };
+      this.setState({ tick: this.state.tick });
+    });
+  },
+
+  // One Kinsta operation as an Activity line that stays running until
+  // Kinsta finishes, then refreshes the list (and syncs a restored env).
+  kbRun(real, label, lines, request, opts) {
+    const jobId = this.startJob({ label: 'kinsta', target: label, command: 'kinsta', siteId: real.siteId });
+    const job = this._jobObjs[jobId];
+    job.doneText = opts.doneText;
+    job.onDone = () => this.loadKinstaBackups(true);
+    request.then(res => {
+      if (!res || res.code || !res.operation_id) {
+        job.stream.push('Error: ' + ((res && res.message) || 'Kinsta did not accept the request.'));
+        this.finishJob(job, 'error');
+        return;
+      }
+      lines.forEach(l => job.stream.push(l));
+      this.trackProviderOp(job, res.operation_id, real.siteId, 0, opts.target || null);
+    }).catch(err => { job.stream.push('Error: ' + ((err && err.message) || err)); this.finishJob(job, 'error'); });
+    return jobId;
+  },
+
+  kbBackupNow(real, env) {
+    const note = String(this.state.kbNote || '').trim();
+    const label = env + ' of ' + ((real.site && real.site.name) || '');
+    this.setState({ kbNote: '' });
+    this.kbRun(real, label,
+      ['Kinsta is making a manual backup of ' + env + (note ? ' ("' + note + '")' : '') + ': files, database and settings.', 'It usually takes a minute or two, and several minutes for a large site. The site stays up.'],
+      this.api('/sites/' + real.siteId + '/' + env.toLowerCase() + '/kinsta-backups', { method: 'POST', body: { note } }),
+      { doneText: 'Done. The backup is in the list now' });
+  },
+
+  kbRestore(real, env, b, target) {
+    const siteLabel = (real.site && real.site.name) || '';
+    const when = this.fmtEpoch(b.created_at);
+    const prod = /^production$/i.test(target);
+    const title = 'Restore ' + target + ' to ' + when + '?';
+    this.uiConfirm(title + ' This replaces ' + target + '\'s files, database and settings with this ' + env + ' backup (' + b.type_label.toLowerCase() + (b.note ? ', ' + b.note.toLowerCase() : '') + '). Kinsta backs up ' + target + ' first, so the restore can be undone from this list.', {
+      title, label: 'Restore ' + target, danger: prod
+    }).then(ok => {
+      if (!ok) return;
+      this.kbRun(real, env + ' backup → ' + target + ' of ' + siteLabel,
+        ['Kinsta is restoring the ' + env + ' backup from ' + when + ' onto ' + target + '.', 'This usually takes a few minutes. ' + target + ' may be briefly unavailable near the end.'],
+        this.api('/sites/' + real.siteId + '/' + env.toLowerCase() + '/kinsta-backups/' + b.id + '/restore', { method: 'POST', body: { target } }),
+        { doneText: 'Done. ' + target + ' is restored', target: { siteId: real.siteId, environment: target, name: siteLabel } });
+    });
+  },
+
+  kbDelete(real, env, b) {
+    const when = this.fmtEpoch(b.created_at);
+    const title = 'Delete the manual backup from ' + when + '?';
+    this.uiConfirm(title + ' It cannot be undone.', { title, label: 'Delete' }).then(ok => {
+      if (!ok) return;
+      this.kbRun(real, 'manual backup of ' + env,
+        ['Kinsta is deleting the manual backup from ' + when + '.'],
+        this.api('/sites/' + real.siteId + '/' + env.toLowerCase() + '/kinsta-backups/' + b.id, { method: 'DELETE' }),
+        { doneText: 'Deleted' });
+    });
+  },
+
+  computeKinstaBackups(real, s) {
+    const off = { kbShow: false, kbRows: [] };
+    if (!real || !real.site || real.site.provider !== 'kinsta' || !s.env) return off;
+    const env = s.env;
+    const st = (real.kb || {})[this.kbKey(real, env)];
+    if (!st) { setTimeout(() => this.loadKinstaBackups(), 0); return { ...off, kbShow: true, kbTitle: 'Kinsta backups · ' + env, kbLoading: true, kbSub: '' }; }
+    const d = st.data;
+    const all = d ? d.backups : [];
+    const showAll = s.kbAll === this.kbKey(real, env);
+    const rows = showAll ? all : all.slice(0, 8);
+    const full = !!d && d.manual_count >= d.manual_limit;
+    const targets = d ? d.restore_to : [];
+    return {
+      kbShow: true,
+      kbTitle: 'Kinsta backups · ' + env,
+      kbSub: d ? 'Kept by Kinsta: daily backups for at least 14 days, plus up to ' + d.manual_limit + ' manual backups (' + d.manual_count + ' of ' + d.manual_limit + ' made). A restore replaces files, database and settings.' : '',
+      kbLoading: !!st.loading && !d,
+      kbErr: st.err || '', kbHasErr: !!st.err,
+      kbEmpty: !!d && !all.length,
+      kbNote: s.kbNote || '', onKbNote: e => this.setState({ kbNote: e.target.value }),
+      kbNoteKey: e => { if (e.key === 'Enter' && !full) { e.preventDefault(); this.kbBackupNow(real, env); } },
+      kbCanBackup: !!d && !full,
+      kbFull: full,
+      kbFullText: full ? 'All ' + d.manual_limit + ' manual backups are used. Delete one to make room.' : '',
+      // Kinsta restores only into an environment that exists.
+      kbNoStaging: !!d && /^production$/i.test(env) && targets.length < 2,
+      kbNoStagingText: 'To restore a backup into a staging copy instead of production, create a staging environment first: Deploy → Pull to staging.',
+      kbBackupNow: () => this.kbBackupNow(real, env),
+      kbRefresh: () => this.loadKinstaBackups(true),
+      kbRows: rows.map(b => ({
+        key: 'kb' + b.id,
+        type: b.type_label, typeBg: b.manual ? 'var(--brand-soft)' : 'var(--panel-2)', typeFg: b.manual ? 'var(--brand-ink)' : 'var(--ink-dim)',
+        when: this.fmtEpoch(b.created_at), note: b.note || '',
+        restores: targets.map(t => ({ label: 'Restore to ' + t, fg: /^production$/i.test(t) ? 'var(--bad)' : 'var(--brand-ink)', go: () => this.kbRestore(real, env, b, t) })),
+        canDelete: !!b.manual, del: () => this.kbDelete(real, env, b)
+      })),
+      kbMore: !showAll && all.length > 8, kbMoreLabel: 'Show all ' + all.length,
+      kbShowAll: () => this.setState({ kbAll: this.kbKey(real, env) })
+    };
+  },
+
   mapSnapshot(real, r) {
     const boot = window.CC_BOOT || {};
     const now = Date.now() / 1000;
