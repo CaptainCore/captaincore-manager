@@ -591,13 +591,16 @@ Object.assign(Component.prototype, {
       body: { source_environment_id: sourceEnvId, target_environment_id: targetEnvId } })
       .then(res => {
         if (res && res.code) { job.stream.push('Error: ' + (res.message || res.code)); this.finishJob(job, 'error'); return; }
-        job.stream.push((res && res.message) || 'Push requested.');
-        // provider-actions is admin-gated (role_check) — customers keep the
-        // fire-and-forget behavior.
-        if (res && res.operation_id && (window.CC_BOOT || {}).dcRole === 'operator') {
-          job.stream.push('Tracking provider operation ' + res.operation_id + '…');
+        // Everyone follows it to the end: /provider-actions check and run
+        // answer for whoever started the action, customers included. (This
+        // used to finish customers' jobs at once, so the dock said "0
+        // running" while Kinsta was still copying.)
+        if (res && res.operation_id) {
+          job.stream.push('Kinsta started copying ' + label + '. Files and database, then a search and replace of the addresses.');
+          job.stream.push('This usually takes a few minutes. It stays running here until Kinsta finishes.');
           this.trackProviderOp(job, res.operation_id, real.siteId, 0, target);
         } else {
+          job.stream.push((res && res.message) || 'Push requested.');
           this.finishJob(job, 'done');
         }
       })
@@ -642,10 +645,11 @@ Object.assign(Component.prototype, {
   // flips a finished operation to done (v1: runProviderActions).
   trackProviderOp(job, operationId, siteId, attempts, target) {
     attempts = attempts || 0;
+    const started = job.trackStart || (job.trackStart = Date.now());
     // Claim the sync for this op so app.js's pollProviderActions skips it.
     (this._trackedOps = this._trackedOps || {})[operationId] = true;
     if (attempts > 90) { // ~15 min safety cap
-      job.stream.push('Stopped tracking — the operation is taking unusually long. Check the provider dashboard.');
+      job.stream.push('Still running after 15 minutes, which is unusually long. Kinsta keeps working on it; reload the page later to see the result, or ask us in chat.');
       delete this._trackedOps[operationId];
       this.finishJob(job, 'done');
       return;
@@ -658,7 +662,8 @@ Object.assign(Component.prototype, {
         });
         const mine = actions.find(a => String(a.provider_key) === String(operationId));
         if (!mine) {
-          job.stream.push('Provider reports the operation finished.');
+          const mins = Math.max(1, Math.round((Date.now() - started) / 60000));
+          job.stream.push('Done. Kinsta finished the copy (about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '). Refreshing the environment\'s details now.');
           this.finishJob(job, 'done');
           // Environments changed on the target — refresh the open detail.
           if (this._detail && this._detail.siteId === siteId) { this._detail = null; this.loadSiteDetail(siteId); }
@@ -666,10 +671,15 @@ Object.assign(Component.prototype, {
           return;
         }
         this.patchJob(job.id, st => ({ pct: Math.min(90, (st.pct || 10) + 6) }));
+        // A line each minute, so a long copy visibly keeps going.
+        if (attempts > 0 && attempts % 6 === 0) {
+          const mins = Math.round((Date.now() - started) / 60000);
+          job.stream.push('Still copying… ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' so far.');
+        }
         this.trackProviderOp(job, operationId, siteId, attempts + 1, target);
       }).catch(() => {
         // Poll failure (auth/network) — end gracefully rather than spin.
-        job.stream.push('Could not poll operation status; assuming it completes in the background.');
+        job.stream.push('Lost touch with the progress check. The copy keeps going at Kinsta; reload the page in a few minutes to see the result.');
         delete this._trackedOps[operationId];
         this.finishJob(job, 'done');
       });
