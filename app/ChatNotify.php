@@ -490,9 +490,21 @@ class ChatNotify {
 		if ( ! Chat::is_operator( $user_id ) && (int) $conversation->user_id !== (int) $user_id ) {
 			return [];
 		}
-		$customer = (int) $conversation->user_id;
+		return self::teammates_of( (int) $conversation->user_id, self::member_ids( (int) $conversation->chat_conversation_id ) );
+	}
+
+	/**
+	 * Everyone on the customer's accounts where they may see the users
+	 * (full access), less the customer and staff. $members are flagged.
+	 * Callers check who may ask.
+	 */
+	public static function teammates_of( $customer, array $member_ids = [] ) {
+		$customer = (int) $customer;
+		if ( $customer <= 0 || ! get_userdata( $customer ) ) {
+			return [];
+		}
 		$member   = new User( $customer, true );
-		$members  = array_flip( self::member_ids( (int) $conversation->chat_conversation_id ) );
+		$members  = array_flip( array_map( 'intval', $member_ids ) );
 		$out      = [];
 		foreach ( $member->accounts() as $account_id ) {
 			$tier = User::tier_permissions( (string) $member->account_level( (int) $account_id ) );

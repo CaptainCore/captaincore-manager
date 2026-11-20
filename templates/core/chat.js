@@ -165,7 +165,7 @@ Object.assign(Component.prototype, {
     const c = this.chatInit();
     if (!c) return;
     this.chatOpen(0);
-    c.newDraft = true; c.newTo = null; c.toQ = ''; c.newSite = ''; c.siteQ = ''; c.newSubject = '';
+    c.newDraft = true; c.newTo = null; c.toQ = ''; c.newSite = ''; c.siteQ = ''; c.newSubject = ''; c.newAlso = []; c.alsoQ = '';
     this._chatToFocus = true;
     this.chatLoadUsers();
     this.setState({ chatBody: '', chatMode: 'reply' });
@@ -184,8 +184,15 @@ Object.assign(Component.prototype, {
 
   chatPickCustomer(u) {
     const c = this._chat;
-    c.newTo = u; c.toQ = ''; c.newSite = ''; c.siteQ = '';
+    c.newTo = u; c.toQ = ''; c.newSite = ''; c.siteQ = ''; c.newAlso = []; c.alsoQ = '';
     this.chatLoadAccess({ customer_user_id: u.id });
+    // Their teammates, offered as others to include.
+    if (!c.newTeam || c.newTeam.uid !== u.id) {
+      c.newTeam = { uid: u.id, list: [] };
+      this.api('/chat/customers/' + u.id + '/teammates').then(r => {
+        if (c.newTeam && c.newTeam.uid === u.id) { c.newTeam.list = (r && r.teammates) || []; this.setState({}); }
+      }).catch(() => {});
+    }
     this._chatFocus = true;
     this.setState({});
   },
@@ -242,7 +249,8 @@ Object.assign(Component.prototype, {
     if (cb.operator && c.id) { clearTimeout(c.dftTimer); c.dftPending = null; c.dftGen = (c.dftGen || 0) + 1; }
     if (opNew && !c.newTo) { this.setState({ chatSending: false }); this.toast('Choose who to message first.', { kind: 'info' }); return; }
     const fields = Object.assign({ body }, c.id ? { kind: note ? 'note' : 'comment' } : {}, c.id && c.logs.length ? { log_refs: c.logs.map(l => l.id + ':' + l.site_id).join(',') } : {}, !c.id && c.newSite ? { site_id: parseInt(c.newSite, 10) } : {},
-      opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {});
+      opNew ? { customer_user_id: c.newTo.id, subject: String(c.newSubject || '').trim() } : {},
+      opNew && (c.newAlso || []).length ? { teammates: c.newAlso.map(u => u.id).join(',') } : {});
     let payload = fields;
     if (c.files.length) {
       // Attachments go as multipart; the text rides along as fields.
@@ -257,7 +265,7 @@ Object.assign(Component.prototype, {
       if (!r || r.code) throw new Error((r && r.message) || 'Could not send');
       if (r.messages) {
         // A new conversation (a customer's, or one an operator started).
-        c.id = r.conversation.id; c.newDraft = false; c.newSite = ''; c.newTo = null; c.newSubject = ''; c.toQ = '';
+        c.id = r.conversation.id; c.newDraft = false; c.newSite = ''; c.newTo = null; c.newSubject = ''; c.toQ = ''; c.newAlso = []; c.alsoQ = '';
         c.conv = { conversation: r.conversation, messages: r.messages };
         this.chatMergeConv(r.conversation, true);
         this.chatOnMessage(r.messages[0]);
@@ -2597,6 +2605,13 @@ Object.assign(Component.prototype, {
     const toQ = String(c.toQ || '').trim().toLowerCase();
     const users = this._chatUsers;
     const toHits = opNew && !newTo && users && toQ ? users.filter(u => (u.name + ' ' + u.email).toLowerCase().includes(toQ)).slice(0, 8) : [];
+    // Others included from the start: the customer's teammates, or anyone.
+    const also = newTo ? (c.newAlso || []) : [];
+    const taken = id => id === (newTo && newTo.id) || also.some(a => a.id === id);
+    const alsoQ = String(c.alsoQ || '').trim().toLowerCase();
+    const alsoTeam = newTo && c.newTeam && c.newTeam.uid === newTo.id ? c.newTeam.list.filter(t => !taken(t.user_id)) : [];
+    const alsoHits = newTo && alsoQ && users ? users.filter(u => !taken(u.id) && (u.name + ' ' + u.email).toLowerCase().includes(alsoQ)).slice(0, 6) : [];
+    const alsoAdd = u => { if (also.length >= 9) { this.toast('A conversation can include up to 9 others.', { kind: 'info' }); return; } c.newAlso = also.concat([u]); c.alsoQ = ''; this.setState({}); };
     const newSites = newToAcc && Array.isArray(newToAcc.sites) ? newToAcc.sites : [];
     const nsQ = String(c.siteQ || '').trim().toLowerCase();
     const nsHits = newSites.filter(x => !nsQ || (x.name + ' ' + (x.url || '')).toLowerCase().includes(nsQ));
@@ -2611,10 +2626,16 @@ Object.assign(Component.prototype, {
       chatPushGo: e => this.chatPushButton(e),
       chatNewGo: () => this.chatNewForCustomer(),
       chatOpNew: opNew,
-      chatNewCancel: () => { c.newDraft = false; c.newTo = null; this.chatLocalDrop(0); this._chatClear = true; this.setState({ chatBody: '' }); },
+      chatNewCancel: () => { c.newDraft = false; c.newTo = null; c.newAlso = []; c.alsoQ = ''; this.chatLocalDrop(0); this._chatClear = true; this.setState({ chatBody: '' }); },
       chatToPicked: !!newTo, chatToUnpicked: opNew && !newTo,
       chatToName: newTo ? newTo.name : '', chatToEmail: newTo ? newTo.email : '',
-      chatToClear: () => { c.newTo = null; c.newSite = ''; this._chatToFocus = true; this.setState({}); },
+      chatToClear: () => { c.newTo = null; c.newSite = ''; c.newAlso = []; c.alsoQ = ''; this._chatToFocus = true; this.setState({}); },
+      chatAlsoShow: !!newTo,
+      chatAlso: also.map(u => ({ label: u.name || u.email, title: u.email + ' sees this conversation in the Manager and gets the emails for replies they haven\'t read.', remove: () => { c.newAlso = also.filter(a => a !== u); this.setState({}); } })),
+      chatAlsoTeam: alsoTeam.slice(0, 6).map(t => ({ text: t.name || t.email, title: t.email + ' shares an account with ' + newToFirst + (t.chat ? '' : '. Chat isn\'t on for them, so they get the emails only.'), add: () => alsoAdd({ id: t.user_id, name: t.name, email: t.email }) })),
+      chatAlsoHasTeam: alsoTeam.length > 0,
+      chatAlsoQ: c.alsoQ || '', onChatAlsoQ: e => { c.alsoQ = e.target.value; this.setState({}); },
+      chatAlsoHits: alsoHits.map(u => ({ name: u.name || u.email, email: u.email, go: () => alsoAdd(u) })),
       chatToQ: c.toQ || '', onChatToQ: e => { c.toQ = e.target.value; this.setState({}); }, chatToRef: el => this.chatToRef(el),
       chatToHits: toHits.map(u => ({ name: u.name || u.email, email: u.email, go: () => this.chatPickCustomer(u) })),
       chatToLoading: opNew && !newTo && users === null,
@@ -2684,7 +2705,7 @@ Object.assign(Component.prototype, {
       chatPlaceholder: note ? 'Write an internal note. Only staff can see it.' : isOp && !c.id ? 'Write your message…' : isOp ? 'Reply to ' + custFirst : c.id ? 'Write a reply…' : 'How can we help?',
       chatNewHint: !newTo ? 'Choose who to message, then write it here. Enter sends.'
         : newToAcc && newToAcc.chat === false ? 'Chat isn’t on for ' + newToFirst + ' yet, so this goes to ' + newTo.email + ' by email right away. Their reply to that email comes back here.'
-        : newToFirst + ' sees this in the Manager. If it’s still unread after 10 minutes (5 if they’re offline), it goes to ' + newTo.email + ' by email.',
+        : newToFirst + (also.length ? ' and ' + (also.length === 1 ? (also[0].name || also[0].email).split(' ')[0] : also.length + ' others') + ' see' : ' sees') + ' this in the Manager. If it’s still unread after 10 minutes (5 if they’re offline), it goes to ' + newTo.email + (also.length ? ' and the others' : '') + ' by email.',
       chatHint: note ? 'Internal notes are never shown to the customer. **bold**, _italic_, `code` and - lists work.' : isOp ? 'Enter sends, Shift+Enter for a new line. **bold**, _italic_, `code` and - lists work.' + (conv && conv.guest ? ' This contact has no Manager login, so they won’t see replies here.' : '') : '',
       chatTypingShow: !!ty,
       // Operator sidebar

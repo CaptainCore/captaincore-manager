@@ -12818,6 +12818,17 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// A customer's teammates, for staff starting a conversation (New message).
+	register_rest_route(
+		'captaincore/v1', '/chat/customers/(?P<id>[\d]+)/teammates', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return [ 'teammates' => CaptainCore\ChatNotify::teammates_of( (int) $request['id'] ) ];
+			},
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	// People who share an account with the conversation's customer, who
 	// could be added as teammates. For that customer, or staff.
 	register_rest_route(

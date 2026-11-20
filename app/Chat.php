@@ -493,6 +493,19 @@ class Chat {
 		if ( ! $id ) {
 			return new \WP_Error( 'storage', 'Could not save the conversation.', [ 'status' => 500 ] );
 		}
+		// Others in it from the start (teammates, input `teammates`: user ids,
+		// an array or a comma list from a multipart form). Added before the
+		// opening message, so it reaches them in the Manager and by email.
+		$also = $input['teammates'] ?? [];
+		$also = is_array( $also ) ? $also : explode( ',', (string) $also );
+		$also = array_slice( array_values( array_unique( array_filter( array_map( 'intval', $also ), fn( $uid ) => $uid > 0 && $uid !== $customer_id ) ) ), 0, ChatNotify::MAX_PARTICIPANTS );
+		foreach ( $also as $uid ) {
+			$added = ChatNotify::set_participant( $operator_id, $id, [ 'user_id' => $uid ] );
+			if ( is_wp_error( $added ) ) {
+				$who = get_userdata( $uid );
+				self::append( $id, [ 'kind' => 'event', 'internal' => 1, 'author_kind' => 'system', 'body' => 'Could not add ' . ( $who ? $who->display_name : 'user #' . $uid ) . ': ' . $added->get_error_message() ] );
+			}
+		}
 		$message = self::append( $id, [
 			'kind' => 'comment', 'author_kind' => 'operator', 'author_user_id' => (int) $operator_id,
 			'author_name' => $operator ? $operator->display_name : '', 'body' => $body,
