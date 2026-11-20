@@ -425,6 +425,12 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 @media (hover:none){.ccc-react-add{opacity:.55}.ccc-msg .ccc-react-add,.ccc-note .ccc-react-add{opacity:0;pointer-events:none}.ccc-msg[data-acts] .ccc-react-add,.ccc-note[data-acts] .ccc-react-add{opacity:1;pointer-events:auto}}
 .ccc-msg .ccc-edit-btn,.ccc-note .ccc-edit-btn{right:34px}
 .ccc-logbtn{margin-left:-6px}
+.ccc-emobtn{margin-left:-6px}
+.ccc-epick{position:fixed;z-index:96;width:296px;max-width:calc(100vw - 16px);padding:8px;border:1px solid var(--rule);border-radius:14px;background:var(--paper);box-shadow:var(--shadow);animation:ccfade .12s ease}
+.ccc-epick-h{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ink-dim);margin:4px 4px 2px}
+.ccc-epick-g{display:grid;grid-template-columns:repeat(8,1fr);gap:1px}
+.ccc-epick button{height:34px;border:0;border-radius:8px;background:transparent;font-size:20px;line-height:1;cursor:pointer;padding:0}
+.ccc-epick button:hover,.ccc-epick button:focus-visible{background:var(--panel-2);outline:none}
 .ccc-pf-log{max-width:320px}
 .ccc-logs{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-width:560px;width:100%}
 .ccc-log{padding:10px 12px;border:1px solid var(--rule);border-left:3px solid var(--brand);border-radius:10px;background:var(--paper);color:var(--ink);text-align:left}
@@ -5067,6 +5073,7 @@ button.ccc-edited:hover{color:var(--ink)}
                   </sc-if>
                   <div class="ccc-cbox" style="background:var(--panel)">
                     <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
+                    <button onClick="{{ chatEmojiGo }}" data-emoji-btn class="ccc-clip ccc-emobtn" title="Add an emoji" aria-label="Add an emoji" aria-haspopup="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5a4.5 4.5 0 007 0"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg></button>
                     <textarea ref="{{ chatInputRef }}" rows="1" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                     <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                   </div>
@@ -10200,6 +10207,7 @@ button.ccc-edited:hover{color:var(--ink)}
                 </sc-if>
                 <div class="ccc-cbox" style="background:var(--paper);border-color:var(--rule)">
                   <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
+                  <button onClick="{{ chatEmojiGo }}" data-emoji-btn class="ccc-clip ccc-emobtn" title="Add an emoji" aria-label="Add an emoji" aria-haspopup="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5a4.5 4.5 0 007 0"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg></button>
                   <textarea ref="{{ chatInputRef }}" rows="1" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                   <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                 </div>
@@ -10286,6 +10294,7 @@ button.ccc-edited:hover{color:var(--ink)}
                 <div class="ccc-cbox" style="background:{{ chatBoxBg }};border-color:{{ chatBoxRule }}">
                   <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
                   <sc-if value="{{ chatCanLink }}" hint-placeholder-val="{{ false }}"><button onClick="{{ chatLogGo }}" data-log-btn class="ccc-clip ccc-logbtn" title="Link a CaptainCore log" aria-label="Link a CaptainCore log"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg></button></sc-if>
+                  <button onClick="{{ chatEmojiGo }}" data-emoji-btn class="ccc-clip ccc-emobtn" title="Add an emoji" aria-label="Add an emoji" aria-haspopup="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5a4.5 4.5 0 007 0"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg></button>
                   <textarea ref="{{ chatInputRef }}" rows="1" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
                   <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
                 </div>
@@ -10567,6 +10576,7 @@ button.ccc-edited:hover{color:var(--ink)}
           </sc-if>
           <div class="ccc-cbox" style="border-radius:12px;background:var(--panel)">
             <button onClick="{{ chatAttachGo }}" class="ccc-clip" title="Attach files (or drop them here, or paste a screenshot)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.9-8.9a3.7 3.7 0 015.2 5.2l-8.9 8.9a1.8 1.8 0 01-2.6-2.6l8.2-8.2"></path></svg></button>
+            <button onClick="{{ chatEmojiGo }}" data-emoji-btn class="ccc-clip ccc-emobtn" title="Add an emoji" aria-label="Add an emoji" aria-haspopup="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5a4.5 4.5 0 007 0"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg></button>
             <textarea ref="{{ chatInputRef }}" rows="1" onInput="{{ onChatBody }}" onKeyDown="{{ chatKey }}" placeholder="{{ chatPlaceholder }}" style="border:none"></textarea>
             <button onClick="{{ chatSendGo }}" class="ccc-send" title="Send" style="opacity:{{ chatSendOpacity }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
           </div>

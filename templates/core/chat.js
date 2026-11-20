@@ -2246,6 +2246,75 @@ Object.assign(Component.prototype, {
     pick.querySelector('button').focus();
   },
 
+  // The composer's emoji button: a grid of common emoji (recently used
+  // first, kept in this browser) that types the pick at the cursor. The
+  // system pickers (Ctrl+Cmd+Space, Win+.) still work in the box too.
+  CHAT_EMOJI: [
+    ['Smileys', '😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😇 😍 🥰 😘 😋 😜 🤔 🤨 😐 😑 🙄 😏 😬 😌 😴 😎 🤓 🥳 😕 😟 😮 😲 😳 🥺 😢 😭 😤 😡 🤯 😱 🤗 🤭 😓 🙃 😶 🤐 🤷 🤦'],
+    ['Gestures', '👍 👎 👌 ✌️ 🤞 🤝 🙏 👏 🙌 👋 💪 👀 ✋ 🤘 👉 ☝️'],
+    ['Things', '❤️ 🧡 💛 💚 💙 💜 🎉 🎊 🔥 ✨ ⭐ 💯 ✅ ❌ ⚠️ ❓ 💡 🚀 🐛 🔒 🔑 📧 📎 📌 ☕ 🍕 🎂 🎁 ⏰ 📅 🛠️ 💻']
+  ].map(([label, list]) => [label, list.split(' ')]),
+  chatEmojiPicker(btn) {
+    if (this._chatPick) { const was = this._chatPick.btn === btn; this._chatPick.close(); if (was) return; }
+    const box = btn && btn.closest('.ccc-cbox');
+    const t = box && box.querySelector('textarea');
+    if (!t) return;
+    const rkey = 'ccChatEmojiRecent:' + (this.chatBoot().userId || 0);
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem(rkey) || '[]').filter(x => typeof x === 'string').slice(0, 16); } catch (e) {}
+    const groups = (recent.length ? [['Recent', recent]] : []).concat(this.CHAT_EMOJI);
+    const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const pick = document.createElement('div');
+    pick.className = 'ccc-epick';
+    pick.setAttribute('role', 'dialog');
+    pick.setAttribute('aria-label', 'Emoji');
+    pick.innerHTML = groups.map(([label, list]) => '<div class="ccc-epick-h">' + label + '</div><div class="ccc-epick-g">'
+      + list.map(e => '<button type="button" data-emoji="' + esc(e) + '" aria-label="' + esc(e) + '">' + esc(e) + '</button>').join('') + '</div>').join('');
+    document.body.appendChild(pick);
+    const r = btn.getBoundingClientRect();
+    const w = pick.offsetWidth, h = pick.offsetHeight;
+    pick.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + 'px';
+    pick.style.top = (r.top - h - 6 > 8 ? r.top - h - 6 : Math.min(window.innerHeight - h - 8, r.bottom + 6)) + 'px';
+    // Where the cursor was, so a pick lands there even after focus moved.
+    const at = [t.selectionStart ?? t.value.length, t.selectionEnd ?? t.value.length];
+    const close = (refocus) => {
+      document.removeEventListener('mousedown', away, true);
+      document.removeEventListener('keydown', key, true);
+      window.removeEventListener('scroll', onScroll, true);
+      pick.remove();
+      this._chatPick = null;
+      if (refocus) t.focus();
+    };
+    const away = e => { if (!pick.contains(e.target) && !btn.contains(e.target)) close(false); };
+    const onScroll = e => { if (!pick.contains(e.target)) close(false); };
+    const key = e => {
+      if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(true); return; }
+      // Arrow keys move through the grid, eight to a row.
+      const all = [...pick.querySelectorAll('button')];
+      const i = all.indexOf(document.activeElement);
+      if (i < 0) return;
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -8, ArrowDown: 8 }[e.key];
+      if (step) { e.preventDefault(); const n = all[Math.max(0, Math.min(all.length - 1, i + step))]; n.focus(); }
+    };
+    pick.addEventListener('click', e => {
+      const b = e.target.closest('[data-emoji]');
+      if (!b) return;
+      const emoji = b.dataset.emoji;
+      t.focus();
+      t.setRangeText(emoji, at[0], at[1], 'end');
+      at[0] = at[1] = t.selectionEnd;
+      this.chatBodyInput(t, !!this.chatBoot().operator);
+      try { localStorage.setItem(rkey, JSON.stringify([emoji].concat(recent.filter(x => x !== emoji)).slice(0, 16))); } catch (err) {}
+      // Shift+click keeps the picker open for a few in a row.
+      if (!e.shiftKey) close(true);
+    });
+    document.addEventListener('mousedown', away, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('scroll', onScroll, true);
+    this._chatPick = { close: () => close(false), btn };
+    pick.querySelector('button').focus();
+  },
+
   // A keystroke in the reply box. A setState re-renders the whole app
   // (every view's values, the thread, the inbox list), which made typing
   // lag on a busy machine, so the text is kept without a render. Only the
@@ -2498,6 +2567,7 @@ Object.assign(Component.prototype, {
       chatSendOpacity: ((s.chatBody || '').trim() || c.files.length || (c.logs || []).length) && !s.chatSending ? 1 : 0.45,
       chatCanLink: isOp && !!c.id,
       chatLogGo: e => this.chatLogPicker(e && e.currentTarget),
+      chatEmojiGo: e => this.chatEmojiPicker(e && e.currentTarget),
       chatHasLogs: isOp && (c.logs || []).length > 0,
       chatLinked: (c.logs || []).map(l => ({
         key: 'l' + l.id + ':' + l.site_id, title: l.title, sub: [l.site_name, new Date(l.created_at * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), l.public ? '' : 'internal'].filter(Boolean).join(' · '),
