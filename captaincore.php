@@ -1222,6 +1222,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Generate a new snapshot.
 	if ( $command === 'snapshot-add' ) {
 
+		// A snapshot with no size never reached storage (an older CLI recorded
+		// one when the zip failed on a full disk). No record, no "ready" email.
+		$snapshot_storage = (string) ( $post->data->storage ?? '' );
+		if ( ! ctype_digit( $snapshot_storage ) || (int) $snapshot_storage <= 0 ) {
+			return new WP_Error( 'snapshot_empty', 'Snapshot has no archive size, so it was not recorded.', [ 'status' => 400 ] );
+		}
+
 		$snapshot_check = ( new CaptainCore\Snapshots )->get( $post->data->snapshot_id );
 		// Insert new snapshot
 		if ( empty( $snapshot_check ) ) {
@@ -3316,8 +3323,14 @@ function captaincore_sites_snapshot_link_func( WP_REST_Request $request ) {
 		return new WP_Error( 'not_found', 'Snapshot not found for this site.', [ 'status' => 404 ] );
 	}
 
+	// Keep a link that still works, and give it another 24 hours. Minting a
+	// new token every time broke the links already handed out (another tab,
+	// the "snapshot ready" email, a script asking twice), which then failed
+	// with "Invalid Token".
 	$in_24hrs    = date( "Y-m-d H:i:s", strtotime( date( "Y-m-d H:i:s" ) . "+24 hours" ) );
-	$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+	$current     = (string) ( $snapshot->token ?? '' );
+	$still_good  = $current !== '' && ! empty( $snapshot->expires_at ) && strtotime( (string) $snapshot->expires_at ) > time();
+	$token       = $still_good ? $current : bin2hex( openssl_random_pseudo_bytes( 16 ) );
 	( new CaptainCore\Snapshots )->update( [
 		"token"      => $token,
 		"expires_at" => $in_24hrs,
@@ -8734,14 +8747,14 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$snapshot = $db->get( $snapshot_id );
 
 	if ( ! $snapshot || $snapshot->snapshot_name !== $snapshot_name || (int) $snapshot->site_id !== (int) $site_id || empty( $snapshot->token ) || ! hash_equals( (string) $snapshot->token, (string) $token ) ) {
-		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+		return captaincore_snapshot_download_error( 'token_invalid', 'This download link is not valid any more. Open the site\'s Snapshots in Anchor Hosting for a current link.', 403 );
 	}
 
 	// The link is minted with a 24 hour expiry and emailed out, so it outlives
 	// the mailbox it lands in. The interface only hid expired links client
 	// side - enforce it here, where it counts.
 	if ( empty( $snapshot->expires_at ) || strtotime( (string) $snapshot->expires_at ) < time() ) {
-		return new WP_Error( 'token_expired', 'This download link has expired.', [ 'status' => 403 ] );
+		return captaincore_snapshot_download_error( 'token_expired', 'This download link has expired. Open the site\'s Snapshots in Anchor Hosting for a new one.', 403 );
 	}
 
 	// The dispatch server answers with the signed storage URL, but it answers
@@ -8750,9 +8763,29 @@ function captaincore_site_snapshot_download_func( $request ) {
 	// the browser nowhere; say what happened instead.
 	$snapshot_url = trim( (string) captaincore_snapshot_download_link( $snapshot_id ) );
 	if ( ! preg_match( '#^https?://#i', $snapshot_url ) || ! wp_http_validate_url( $snapshot_url ) ) {
-		return new WP_Error( 'snapshot_unavailable', 'This snapshot is no longer available for download.', [ 'status' => 502 ] );
+		return captaincore_snapshot_download_error( 'snapshot_unavailable', 'This snapshot\'s file is not in storage, so it cannot be downloaded. Please make a new snapshot, or contact support.', 502 );
 	}
 	wp_redirect( $snapshot_url );
+	exit;
+}
+
+/**
+ * A snapshot download that can't go ahead. People open these links in a
+ * browser (the Download button, the "snapshot ready" email), so a browser
+ * gets a short page that says what happened; scripts get the JSON error.
+ */
+function captaincore_snapshot_download_error( $code, $message, $status ) {
+	$accept = (string) ( $_SERVER['HTTP_ACCEPT'] ?? '' );
+	if ( stripos( $accept, 'text/html' ) === false ) {
+		return new WP_Error( $code, $message, [ 'status' => $status ] );
+	}
+	status_header( (int) $status );
+	nocache_headers();
+	header( 'Content-Type: text/html; charset=utf-8' );
+	$title = $status === 502 ? 'Snapshot unavailable' : 'Link not valid';
+	echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html( $title ) . '</title>'
+		. '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f7f9;color:#1d2330;font:16px/1.5 system-ui,-apple-system,sans-serif}main{max-width:440px;margin:24px;padding:28px 30px;background:#fff;border:1px solid #e3e6ec;border-radius:14px}h1{margin:0 0 8px;font-size:20px}p{margin:0 0 16px;color:#4a5263}a{color:#1d4ed8}@media (prefers-color-scheme:dark){body{background:#12151c;color:#e6e9ef}main{background:#1a1f29;border-color:#2a3140}p{color:#a9b1c1}a{color:#7aa2ff}}</style></head>'
+		. '<body><main><h1>' . esc_html( $title ) . '</h1><p>' . esc_html( $message ) . '</p><p><a href="' . esc_url( home_url( '/account/' ) ) . '">Open Anchor Hosting</a></p></main></body></html>';
 	exit;
 }
 
