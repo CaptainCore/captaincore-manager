@@ -502,6 +502,15 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .kb-del{color:var(--ink-dim)}
 @media (max-width:640px){.kb-rnote{max-width:100%;flex-basis:100%;order:3}}
 .ccs-people{padding:7px 24px}
+/* @mentions: the picker above the composer and the highlight in messages */
+.ccc-mpick{position:fixed;z-index:96;min-width:220px;max-width:min(320px,calc(100vw - 16px));padding:4px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);box-shadow:var(--shadow);animation:ccfade .12s ease}
+.ccc-mrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;font:400 var(--fs-13) var(--sans);color:var(--ink)}
+.ccc-mrow-on,.ccc-mrow:hover{background:var(--panel-2)}
+.ccc-mname{flex:1;min-width:0;font-weight:500}
+.ccc-mrole{flex:none;font-size:var(--fs-115);color:var(--ink-dim)}
+.ccc-mention{font-weight:600;color:var(--brand-ink);background:color-mix(in srgb,var(--brand) 12%,transparent);border-radius:4px;padding:0 3px}
+.ccc-mention-me{background:color-mix(in srgb,var(--warn) 28%,transparent);color:var(--ink)}
+.ccc-me .ccc-mention{color:inherit;background:rgba(255,255,255,.22)}
 /* Who is in a shared conversation: overlapping faces, then names */
 .ccc-faces-row{display:flex;align-items:center;gap:8px;min-width:0;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccs-people .ccc-faces-row{margin-right:6px;font-size:var(--fs-125);color:var(--ink)}

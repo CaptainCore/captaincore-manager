@@ -1253,7 +1253,8 @@ Object.assign(Component.prototype, {
     // conversation's customer.
     const avatarOf = m => m.author_avatar || (m.author_kind === 'customer' && !this.chatFromOther(m) ? conv.customer_avatar : '') || '';
     // The text, or the inline editor while this message is being edited.
-    const body = (m, cls) => c.edit && c.edit.id === m.id ? this.chatEditHtml() : (m.body ? '<div class="' + cls + '">' + this.chatText(m.body) + '</div>' : '');
+    const people = this.chatThreadPeople();
+    const body = (m, cls) => c.edit && c.edit.id === m.id ? this.chatEditHtml() : (m.body ? '<div class="' + cls + '">' + this.chatMentions(this.chatText(m.body), people) + '</div>' : '');
     // "edited": operators open the earlier versions from it.
     const edited = m => {
       if (!m.edited_at) return '';
@@ -2054,27 +2055,148 @@ Object.assign(Component.prototype, {
     }).catch(() => {});
   },
 
-  // Who is in a shared conversation, as faces: staff who wrote in it, the
-  // customer, then the teammates. Empty unless it has a teammate.
-  chatFaces() {
+  // Everyone on the thread: staff who wrote a comment, the customer, then
+  // the teammates. Used for the faces and for @mentions.
+  chatThreadPeople() {
     const c = this._chat;
     const cb = this.chatBoot();
     const conv = c && c.conv && c.conv.conversation;
-    if (!conv || !conv.customer_user_id) return [];
-    const members = (c.conv.participants || []).filter(p => p.member && p.status === 'active');
-    if (!members.length) return [];
+    if (!conv) return [];
     const out = [], seen = {};
-    const add = (id, name, avatar, staff) => {
+    const add = (id, name, avatar, role) => {
       const k = id ? 'u' + id : 'n' + name;
       if (seen[k] || !name) return;
       seen[k] = true;
-      out.push({ name, avatar: avatar || '', staff, you: !!id && id === cb.userId });
+      out.push({ id: id || 0, name: String(name), avatar: avatar || '', role, staff: role === 'Staff', you: !!id && id === cb.userId });
     };
-    (c.conv.messages || []).forEach(m => { if (m.kind === 'comment' && m.author_kind === 'operator' && m.via !== 'bot') add(m.author_user_id, m.author_name, m.author_avatar, true); });
-    add(conv.customer_user_id, conv.customer_name || conv.customer_email, conv.customer_avatar, false);
-    members.forEach(p => add(p.user_id, p.name || p.email, p.avatar, false));
-    // You first, then everyone else in the order above.
+    (c.conv.messages || []).forEach(m => { if (m.kind === 'comment' && m.author_kind === 'operator' && m.via !== 'bot') add(m.author_user_id, m.author_name, m.author_avatar, 'Staff'); });
+    if (conv.customer_user_id) add(conv.customer_user_id, conv.customer_name || conv.customer_email, conv.customer_avatar, 'Customer');
+    (c.conv.participants || []).filter(p => p.member && p.status === 'active').forEach(p => add(p.user_id, p.name || p.email, p.avatar, 'Teammate'));
+    return out;
+  },
+
+  // Who is in a shared conversation, as faces. Empty unless it has a
+  // teammate. You first, then everyone else in thread order.
+  chatFaces() {
+    const c = this._chat;
+    const conv = c && c.conv && c.conv.conversation;
+    if (!conv || !conv.customer_user_id) return [];
+    if (!(c.conv.participants || []).some(p => p.member && p.status === 'active')) return [];
+    const out = this.chatThreadPeople();
     return out.filter(p => p.you).concat(out.filter(p => !p.you));
+  },
+
+  // ── @mentions ─────────────────────────────────────────────────────────
+  // Typing "@" in a composer offers the people on the thread; a pick types
+  // "@Full Name " (plain text, so emails and API readers see it as written).
+  // Rendering highlights "@Full Name", and "@First" when that first name is
+  // unique on the thread, outside code and links.
+
+  chatMentionCheck(t, isOp) {
+    const pos = t.selectionStart;
+    if (pos == null || pos !== t.selectionEnd) { this.chatMentionClose(); return; }
+    const m = t.value.slice(0, pos).match(/(^|[\s(])@([^\s@]{0,30})$/);
+    if (!m) { this.chatMentionClose(); return; }
+    const q = m[2].toLowerCase();
+    const list = this.chatThreadPeople().filter(p => !p.you && (!q || p.name.toLowerCase().startsWith(q) || p.name.toLowerCase().split(/\s+/).some(w => w.startsWith(q)))).slice(0, 6);
+    if (!list.length) { this.chatMentionClose(); return; }
+    const prev = this._mention;
+    this._mention = { t, isOp, start: pos - m[2].length - 1, end: pos, list, idx: prev && prev.t === t ? Math.min(prev.idx, list.length - 1) : 0 };
+    this.chatMentionRender();
+  },
+
+  chatMentionRender() {
+    const mn = this._mention;
+    if (!mn) return;
+    let el = this._mentionEl;
+    if (!el) {
+      el = this._mentionEl = document.createElement('div');
+      el.className = 'ccc-mpick';
+      el.setAttribute('role', 'listbox');
+      // mousedown, not click: keep the focus (and the cursor) in the box.
+      el.addEventListener('mousedown', e => {
+        const row = e.target.closest('[data-mi]');
+        if (!row) return;
+        e.preventDefault();
+        this.chatMentionPick(+row.dataset.mi);
+      });
+      document.body.appendChild(el);
+    }
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    el.innerHTML = mn.list.map((p, i) => '<div class="ccc-mrow' + (i === mn.idx ? ' ccc-mrow-on' : '') + '" data-mi="' + i + '" role="option" aria-selected="' + (i === mn.idx) + '">' +
+      '<span class="ccc-av" style="width:24px;height:24px;font-size:10px;background:' + this.chatColor(p.name) + '">' + esc(this.chatInitials(p.name)) + this.chatAvImg(p.avatar) + '</span>' +
+      '<span class="ccc-mname ccc-trunc">' + esc(p.name) + '</span><span class="ccc-mrole">' + esc(p.role) + '</span></div>').join('');
+    el.querySelectorAll('img').forEach(img => img.addEventListener('error', () => { img.style.display = 'none'; }, { once: true }));
+    const r = mn.t.getBoundingClientRect();
+    const h = el.offsetHeight, w = el.offsetWidth;
+    el.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + 'px';
+    el.style.top = (r.top - h - 6 > 8 ? r.top - h - 6 : r.bottom + 6) + 'px';
+  },
+
+  chatMentionPick(i) {
+    const mn = this._mention;
+    const p = mn && mn.list[i];
+    if (!p) return;
+    const t = mn.t;
+    t.focus();
+    t.setRangeText('@' + p.name + ' ', mn.start, mn.end, 'end');
+    this.chatMentionClose();
+    this.chatBodyInput(t, mn.isOp);
+  },
+
+  chatMentionClose() {
+    this._mention = null;
+    if (this._mentionEl) { this._mentionEl.remove(); this._mentionEl = null; }
+  },
+
+  // Keys while the list is open. True when the key was the list's.
+  chatMentionKey(e) {
+    const mn = this._mention;
+    if (!mn || e.target !== mn.t) return false;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      mn.idx = (mn.idx + (e.key === 'ArrowDown' ? 1 : -1) + mn.list.length) % mn.list.length;
+      this.chatMentionRender();
+    } else if ((e.key === 'Enter' && !e.shiftKey && !e.isComposing) || e.key === 'Tab') {
+      this.chatMentionPick(mn.idx);
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      this.chatMentionClose();
+    } else return false;
+    e.preventDefault();
+    return true;
+  },
+
+  // Highlight @mentions of people on the thread in rendered message HTML.
+  chatMentions(html, people) {
+    if (!html || html.indexOf('@') < 0 || !people || !people.length) return html;
+    const esc = v => String(v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const firstOf = n => n.split(/\s+/)[0];
+    const firstCount = {};
+    people.forEach(p => { const f = firstOf(p.name).toLowerCase(); firstCount[f] = (firstCount[f] || 0) + 1; });
+    const keys = [];
+    people.forEach(p => {
+      keys.push({ k: esc(p.name), p });
+      const f = firstOf(p.name);
+      if (f !== p.name && firstCount[f.toLowerCase()] === 1) keys.push({ k: esc(f), p });
+    });
+    keys.sort((a, b) => b.k.length - a.k.length);
+    const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(^|[\\s(])@(' + keys.map(x => reEsc(x.k)).join('|') + ')(?![\\w\\u00C0-\\u024F])', 'gi');
+    let skip = 0;
+    return html.split(/(<[^>]+>)/).map(seg => {
+      if (seg.charAt(0) === '<') {
+        if (/^<(code|pre|a)[\s>]/i.test(seg)) skip++;
+        else if (/^<\/(code|pre|a)>/i.test(seg)) skip = Math.max(0, skip - 1);
+        return seg;
+      }
+      if (skip) return seg;
+      return seg.replace(re, (all, pre, name) => {
+        const hit = keys.find(x => x.k.toLowerCase() === name.toLowerCase());
+        const p = hit && hit.p;
+        if (!p) return all;
+        return pre + '<span class="ccc-mention' + (p.you ? ' ccc-mention-me' : '') + '" title="' + esc(p.name + ' · ' + (p.you ? 'You' : p.role)) + '">@' + name + '</span>';
+      });
+    }).join('');
   },
 
   // Writes the faces and their names into el (a ref): overlapping avatars
@@ -2483,6 +2605,7 @@ Object.assign(Component.prototype, {
     else this.state.chatBody = v;
     t.style.height = 'auto';
     t.style.height = Math.min(t.scrollHeight, 180) + 'px';
+    this.chatMentionCheck(t, isOp);
     this.chatTyping(v);
     const c = this._chat;
     if (isOp && c && c.id) this.chatDraftEdited(v);
@@ -2529,6 +2652,8 @@ Object.assign(Component.prototype, {
     // A pasted screenshot (or copied file) attaches instead of pasting text.
     if (!el._cccPaste) {
       el._cccPaste = true;
+      // The @mention list closes when the box loses focus.
+      el.addEventListener('blur', () => setTimeout(() => { if (this._mention && this._mention.t === el && document.activeElement !== el) this.chatMentionClose(); }, 120));
       el.addEventListener('paste', e => {
         const files = e.clipboardData && e.clipboardData.files;
         if (files && files.length) { e.preventDefault(); this.chatAddFiles(files); }
@@ -2730,6 +2855,7 @@ Object.assign(Component.prototype, {
       chatBody: s.chatBody || '',
       onChatBody: e => this.chatBodyInput(e.target, isOp),
       chatKey: e => {
+        if (this.chatMentionKey(e)) return;
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.chatSend(); }
         // Up in an empty composer edits your last message, as in Slack.
         else if (e.key === 'ArrowUp' && !e.target.value && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && this.chatEditLast()) e.preventDefault();
