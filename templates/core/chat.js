@@ -125,6 +125,8 @@ Object.assign(Component.prototype, {
       if (c.id !== id) return;
       c.convLoading = false;
       if (!r || r.code || !r.conversation) {
+        // A teammate who left, or was taken off, a shared conversation.
+        if (quiet && r && r.code === 'not_found' && !this.chatBoot().operator) { this.chatDropConv(id); return; }
         if (!quiet) { c.conv = null; c.convErr = (r && r.message) || 'Conversation not found.'; }
         this.setState({});
         return;
@@ -139,6 +141,7 @@ Object.assign(Component.prototype, {
       this.setState({});
       this.chatMarkRead();
       if (this.chatBoot().operator) { this.chatLoadHistory(r.conversation); this.chatLoadAccess(r.conversation); }
+      else if (r.conversation.customer_user_id === this.chatBoot().userId) this.chatLoadTeam(r.conversation.id);
     }).catch(() => { if (c.id === id) { c.convLoading = false; if (!quiet) c.convErr = 'Could not load this conversation.'; this.setState({}); } });
   },
 
@@ -757,7 +760,8 @@ Object.assign(Component.prototype, {
       // customer's own conversation.
       if (cb.operator && !u.operator) {
         const conv = c.list.find(x => x.id === ev.conversation_id) || (c.conv && c.conv.conversation.id === ev.conversation_id ? c.conv.conversation : null);
-        if (!conv || conv.customer_user_id !== u.id) return;
+        const shared = c.conv && c.conv.conversation.id === ev.conversation_id && (c.conv.participants || []).some(p => p.member && p.user_id === u.id);
+        if (!conv || (conv.customer_user_id !== u.id && !shared)) return;
       }
       // A customer's draft preview carries text ('' once they clear it).
       const hasText = typeof ev.text === 'string';
@@ -767,8 +771,11 @@ Object.assign(Component.prototype, {
       clearTimeout(c.typingTimer);
       c.typingTimer = setTimeout(() => this.setState({}), (hasText ? 8000 : 4000) + 100);
     } else if (ev.type === 'read') {
-      if (c.conv && c.conv.conversation.id === ev.conversation_id)
-        c.conv.customer_last_read_message_id = Math.max(c.conv.customer_last_read_message_id || 0, ev.message_id || 0);
+      if (c.conv && c.conv.conversation.id === ev.conversation_id) {
+        const mr = ev.user_id && ev.user_id !== c.conv.conversation.customer_user_id ? (c.conv.member_reads || []).find(x => x.user_id === ev.user_id) : null;
+        if (mr) mr.last_read = Math.max(mr.last_read || 0, ev.message_id || 0);
+        else if (!ev.user_id || ev.user_id === c.conv.conversation.customer_user_id) c.conv.customer_last_read_message_id = Math.max(c.conv.customer_last_read_message_id || 0, ev.message_id || 0);
+      }
     } else if (ev.type === 'presence') {
       c.online = !!ev.operators_online;
     }
@@ -857,6 +864,9 @@ Object.assign(Component.prototype, {
     const frame = { type: 'typing', conversation_id: c.id };
     // Operators name the customer. A note in progress goes to operators only.
     if (cb.operator) frame.customer_user_id = this.state.chatMode === 'note' || !c.conv ? 0 : c.conv.conversation.customer_user_id;
+    // And the teammates on a shared conversation.
+    const team = frame.customer_user_id && c.conv ? (c.conv.participants || []).filter(p => p.member && p.user_id).map(p => p.user_id) : [];
+    if (team.length) frame.also = team;
     c.ws.send(JSON.stringify(frame));
   },
 
@@ -1259,8 +1269,10 @@ Object.assign(Component.prototype, {
           (cont ? '' : '<div class="ccc-mh"><b>' + esc(name) + '</b>' + (m.author_kind === 'operator' ? '<span class="ccc-staff">Staff</span>' : '') + viaTag(m) + '<span class="ccc-t">' + esc(time(m.created_at)) + '</span>' + edited(m) + '</div>') +
           body(m, 'ccc-mb') + (cont && m.edited_at ? '<div class="ccc-edline">' + edited(m) + '</div>' : '') + this.chatLogsHtml(m) + this.chatFilesHtml(m.attachments) + orig(m) + this.chatReactsHtml(m) + '</div>' + this.chatEditBtn(m) + this.chatReactBtn(m) + '</div>';
       } else {
-        const me = m.author_kind === 'customer' && !this.chatFromOther(m);
-        const cont = prev && prev.author_kind === m.author_kind && this.chatFromOther(prev) === this.chatFromOther(m) && m.created_at - prev.created_at < 300;
+        // The customer's own messages are theirs; on a shared conversation a
+        // teammate's own are the ones they wrote.
+        const me = m.author_kind === 'customer' && (conv.customer_user_id === cb.userId ? !this.chatFromOther(m) : !!m.author_user_id && m.author_user_id === cb.userId);
+        const cont = prev && prev.author_kind === m.author_kind && this.chatFromOther(prev) === this.chatFromOther(m) && prev.author_name === m.author_name && m.created_at - prev.created_at < 300;
         out += '<div data-mid="' + m.id + '" class="ccc-bub ' + (me ? 'ccc-me' : 'ccc-them') + '">' +
           (me ? '' : '<span class="ccc-av ccc-av-sm" style="background:' + this.chatColor(name) + ';visibility:' + (cont ? 'hidden' : 'visible') + '">' + esc(this.chatInitials(name)) + this.chatAvImg(avatarOf(m)) + '</span>') +
           (me ? this.chatEditBtn(m) + this.chatReactBtn(m) : '') +
@@ -1278,7 +1290,11 @@ Object.assign(Component.prototype, {
       const answered = lastOp && msgs.some(m => m.kind === 'comment' && m.author_kind === 'customer' && m.id > lastOp.id);
       if (lastOp && !lastOp.imported && !answered) {
         const first = esc(String(conv.customer_name || 'the customer').split(' ')[0]);
-        if ((c.conv.customer_last_read_message_id || 0) >= lastOp.id) out += '<div class="ccc-seen">Seen by ' + first + '</div>';
+        // Who has read it: the customer, then teammates on a shared conversation.
+        const seen = [((c.conv.customer_last_read_message_id || 0) >= lastOp.id) ? first : '']
+          .concat((c.conv.member_reads || []).filter(x => (x.last_read || 0) >= lastOp.id).map(x => esc(String(x.name || '').split(' ')[0]))).filter(Boolean);
+        const and = l => l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
+        if (seen.length) out += '<div class="ccc-seen">Seen by ' + and(seen) + '</div>';
         else {
           const mailed = msgs.some(m => m.kind === 'event' && m.id > lastOp.id && / emailed to /.test(m.body || ''));
           out += '<div class="ccc-seen ccc-unseen">Not seen by ' + first + ' yet' + (mailed ? ' · emailed' : '') + '</div>';
@@ -1912,16 +1928,30 @@ Object.assign(Component.prototype, {
   chatCcVals() {
     const c = this._chat;
     const conv = c && c.conv && c.conv.conversation;
-    if (!conv || !this.chatBoot().operator || !conv.customer_user_id) return { chatCcShow: false, chatCcActive: [], chatCcSuggested: [] };
+    if (!conv || !this.chatBoot().operator || !conv.customer_user_id) return { chatCcShow: false, chatCcActive: [], chatCcSuggested: [], chatCcMembers: [], chatCcTeam: [] };
     const list = c.conv.participants || [];
     const active = list.filter(p => p.status === 'active');
+    const members = active.filter(p => p.member);
+    const emailed = active.filter(p => !p.member);
     const adding = c.ccAdding === conv.id;
     const label = p => p.name ? p.name : p.email;
     const first = String(conv.customer_name || 'the customer').split(' ')[0];
+    const team = adding && c.team && c.team.id === conv.id ? c.team.list.filter(t => !active.some(p => p.user_id === t.user_id)) : [];
     return {
       chatCcShow: list.length > 0 || adding,
-      chatCcHasActive: active.length > 0,
-      chatCcActive: active.map(p => ({
+      chatCcHasMembers: members.length > 0,
+      chatCcMembers: members.map(p => ({
+        label: label(p), title: (p.name ? p.name + ' <' + p.email + '>' : p.email) + '. A teammate of ' + first + ': sees this conversation in the Manager, and gets the emails for replies they haven\'t read.',
+        removeTitle: 'Take ' + label(p) + ' off this conversation',
+        remove: () => this.chatCcSet(p.email, 'removed', '', p.user_id)
+      })),
+      chatCcTeam: team.slice(0, 6).map(t => ({
+        text: (t.name || t.email) + ' shares an account with ' + first,
+        title: t.email + (t.chat ? '' : '. Chat isn\'t on for them, so they get the emails only.') + ' Add to let them see and reply to this conversation.',
+        add: () => this.chatCcSet(t.email, 'active', t.name, t.user_id).then(ok => { if (ok) this.chatCcCancel(); })
+      })),
+      chatCcHasActive: emailed.length > 0,
+      chatCcActive: emailed.map(p => ({
         label: label(p), title: (p.name ? p.name + ' <' + p.email + '>' : p.email) + '. Cc\'d on every reply email; their email replies post here.',
         removeTitle: 'Stop emailing ' + p.email,
         remove: () => this.chatCcSet(p.email, 'removed')
@@ -1951,6 +1981,7 @@ Object.assign(Component.prototype, {
     const c = this._chat;
     if (!c || !c.conv) return;
     c.ccAdding = c.conv.conversation.id;
+    this.chatLoadTeam(c.conv.conversation.id);
     c.ccDraft = '';
     c.ccFocus = true;
     this.setState({});
@@ -1973,17 +2004,22 @@ Object.assign(Component.prototype, {
     this.chatCcSet(email, 'active', m ? m[1].trim() : '').then(ok => { if (ok) this.chatCcCancel(); });
   },
 
-  chatCcSet(email, status, name) {
+  chatCcSet(email, status, name, userId) {
     const c = this._chat;
     const id = c.conv && c.conv.conversation.id;
     if (!id) return Promise.resolve(false);
-    const body = { email, status };
+    const body = userId ? { user_id: userId, status } : { email, status };
     if (name) body.name = name;
+    const leaving = status === 'removed' && userId && userId === this.chatBoot().userId;
     return this.api('/chat/conversations/' + id + '/participants', { method: 'POST', body }).then(r => {
-      if (!r || r.code || !r.participants) throw new Error((r && r.message) || 'Could not change who is emailed');
+      if (!r || r.code || !r.participants) throw new Error((r && r.message) || 'Could not change who is on this conversation');
+      if (leaving) { this.chatDropConv(id); this.toast('You left the conversation.'); return true; }
       if (c.conv && c.conv.conversation.id === id) c.conv.participants = r.participants;
+      if (c.team && c.team.id === id) c.team.list.forEach(t => { t.member = r.participants.some(p => p.member && p.user_id === t.user_id); });
       this.setState({});
-      if (status === 'active') this.toast(email + ' is Cc\'d on the reply emails from now on.');
+      const added = status === 'active' && r.participants.find(p => p.email === String(email || '').toLowerCase() || (userId && p.user_id === userId));
+      if (added && added.member) this.toast((added.name || added.email) + ' can see this conversation now, and gets the emails for replies they haven\'t read.');
+      else if (status === 'active') this.toast(email + ' is Cc\'d on the reply emails from now on.');
       return true;
     }).catch(err => {
       this.toast(err && err.message && err.message !== 'auth' ? err.message : 'Could not change who is emailed', { kind: 'error' });
@@ -1991,11 +2027,72 @@ Object.assign(Component.prototype, {
     });
   },
 
-  // A message from a participant: by email, from someone with no login,
-  // on a conversation that belongs to a customer.
+  // ── teammates (shared conversations) ─────────────────────────────────
+  // People on the customer's accounts (GET /teammates) who can be added to
+  // a conversation. They see it in the Manager, reply and react there, and
+  // get the emails only for replies they haven't read. The customer adds
+  // and removes them; a teammate can leave.
+
+  chatLoadTeam(id) {
+    const c = this._chat;
+    if (!id || (c.team && c.team.id === id)) return;
+    c.team = { id, list: [] };
+    this.api('/chat/conversations/' + id + '/teammates').then(r => {
+      if (c.team && c.team.id === id) { c.team.list = (r && r.teammates) || []; this.setState({}); }
+    }).catch(() => {});
+  },
+
+  // The Support page's people bar (customers).
+  chatTeamVals() {
+    const c = this._chat;
+    const cb = this.chatBoot();
+    const conv = c && c.conv && c.conv.conversation;
+    const none = { supPeopleShow: false, supPeople: [], supPeopleAddable: [] };
+    if (!conv || cb.operator || !conv.customer_user_id) return none;
+    const owner = conv.customer_user_id === cb.userId;
+    const active = (c.conv.participants || []).filter(p => p.status === 'active');
+    const team = c.team && c.team.id === conv.id ? c.team.list : [];
+    const addable = owner ? team.filter(t => !active.some(p => p.user_id === t.user_id || p.email === String(t.email).toLowerCase())) : [];
+    const picking = c.teamPick === conv.id;
+    const ownerFirst = String(conv.customer_name || 'the owner').split(' ')[0];
+    return {
+      supPeopleShow: active.length > 0 || addable.length > 0,
+      supPeopleHasLabel: active.length > 0,
+      supPeopleLabel: owner ? 'Shared with' : 'With ' + ownerFirst + ' and',
+      supPeople: active.map(p => {
+        const self = p.user_id && p.user_id === cb.userId;
+        const label = self ? 'You' : (p.name || p.email);
+        return {
+          label: p.member ? label : label + ' (email only)',
+          title: p.member ? (self ? 'You can see and reply to this conversation.' : (p.name || p.email) + ' can see and reply to this conversation.') : p.email + ' gets the reply emails and can answer by email.',
+          canRemove: owner || self,
+          removeTitle: self ? 'Leave this conversation' : 'Remove ' + (p.name || p.email),
+          remove: () => {
+            if (self && !window.confirm('Leave this conversation? You won\'t see it any more unless ' + ownerFirst + ' adds you again.')) return;
+            this.chatCcSet(p.email, 'removed', '', p.user_id || 0);
+          }
+        };
+      }),
+      supPeopleCanAdd: addable.length > 0 && !picking,
+      supPeopleAddStart: () => { c.teamPick = conv.id; this.setState({}); },
+      supPeoplePicking: picking,
+      supPeopleAddCancel: () => { c.teamPick = 0; this.setState({}); },
+      supPeopleAddable: addable.map(t => ({
+        text: t.name || t.email,
+        title: t.email + (t.chat ? ' shares an account with you.' : '. Chat isn\'t on for them yet, so they get the reply emails only.'),
+        add: () => this.chatCcSet(t.email, 'active', t.name, t.user_id).then(ok => { if (ok) { c.teamPick = 0; this.setState({}); } })
+      }))
+    };
+  },
+
+  // A message from someone on the customer's side who isn't the customer:
+  // a teammate on a shared conversation (their own login), or a participant
+  // with no login replying by email.
   chatFromOther(m) {
     const conv = this._chat.conv && this._chat.conv.conversation;
-    return !!(conv && conv.customer_user_id && m.author_kind === 'customer' && m.via === 'email' && !m.author_user_id);
+    if (!(conv && conv.customer_user_id && m.author_kind === 'customer')) return false;
+    if (m.author_user_id) return m.author_user_id !== conv.customer_user_id;
+    return m.via === 'email';
   },
 
   // ── edits ─────────────────────────────────────────────────────────────
@@ -2648,7 +2745,8 @@ Object.assign(Component.prototype, {
       supNoneTitle: c.filter === 'open' ? 'Nothing open right now' : c.filter === 'closed' ? 'Nothing resolved yet' : 'No conversations yet',
       supNoneText: c.filter === 'all' ? 'Ask about a site, billing or anything else. Every conversation stays here, including replies you send by email.' : 'Start a new conversation, or look under All for past ones.',
       supLetter: conv ? (String(conv.subject || '?').trim().charAt(0).toUpperCase() || '?') : '', supLetterBg: conv ? this.chatColor(conv.subject || String(conv.id)) : '',
-      supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? 'you' : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies', ...(c.conv && (c.conv.participants || []).length ? ['Replies also emailed to ' + c.conv.participants.map(p => p.name || p.email).join(', ')] : [])].join(' · ') : '',
+      supMeta: conv ? ['Started' + (supMsgs[0] ? ' by ' + (supMsgs[0].author_kind === 'customer' ? ((supMsgs[0].author_user_id || conv.customer_user_id) === cb.userId ? 'you' : (supMsgs[0].author_name || conv.customer_name || 'your teammate')) : (supMsgs[0].author_name || brand)) : '') + ' on ' + fullDate(conv.created_at), supReplies === 1 ? '1 reply' : supReplies + ' replies'].join(' · ') : '',
+      ...this.chatTeamVals(),
       supCanResolve: !!(conv && conv.status !== 'closed'),
       supHint: conv && conv.status === 'closed' ? 'This conversation is resolved. Replying reopens it.' : 'Enter sends, Shift+Enter for a new line.' + (c.online ? '' : ' If you leave, we’ll reply by email.'),
       supStarted: conv ? fullDate(conv.created_at) : '', supLast: conv ? fullDate(conv.last_message_at) : '',

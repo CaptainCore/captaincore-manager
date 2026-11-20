@@ -480,6 +480,8 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 /* Others on a conversation's emails (operators): under the header */
 .ccc-ccbar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:7px 20px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--panel-2) 20%,var(--paper));font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccc-cclabel{font-weight:600;color:var(--ink-dim)}
+.ccc-ccmember{border-color:color-mix(in srgb,var(--brand) 40%,var(--rule))}
+.ccs-people{padding:7px 24px}
 .ccc-ccchip{display:inline-flex;align-items:center;gap:4px;max-width:100%;height:24px;padding:0 4px 0 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans)}
 .ccc-ccchip button{width:18px;height:18px;border:0;border-radius:999px;background:none;color:var(--ink-dim);cursor:pointer;font-size:10px;line-height:1}
 .ccc-ccchip button:hover{background:var(--panel-2);color:var(--ink)}
@@ -5053,6 +5055,22 @@ button.ccc-edited:hover{color:var(--ink)}
                   <button onClick="{{ chatWResolve }}" title="Mark as resolved" style="flex:none;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);cursor:pointer;white-space:nowrap">Resolve</button>
                 </sc-if>
               </div>
+              <sc-if value="{{ supPeopleShow }}" hint-placeholder-val="{{ false }}">
+                <div class="ccc-ccbar ccs-people">
+                  <sc-if value="{{ supPeopleHasLabel }}" hint-placeholder-val="{{ false }}"><span class="ccc-cclabel">{{ supPeopleLabel }}</span></sc-if>
+                  <sc-for list="{{ supPeople }}" as="p" hint-placeholder-count="1">
+                    <span class="ccc-ccchip" title="{{ p.title }}"><span class="ccc-trunc">{{ p.label }}</span><sc-if value="{{ p.canRemove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ p.remove }}" title="{{ p.removeTitle }}" aria-label="{{ p.removeTitle }}">✕</button></sc-if></span>
+                  </sc-for>
+                  <sc-if value="{{ supPeoplePicking }}" hint-placeholder-val="{{ false }}">
+                    <span class="ccc-cclabel">Add a teammate</span>
+                    <sc-for list="{{ supPeopleAddable }}" as="t" hint-placeholder-count="1">
+                      <span class="ccc-ccsug" title="{{ t.title }}"><span class="ccc-trunc">{{ t.text }}</span><button class="ccc-ccyes" onClick="{{ t.add }}">Add</button></span>
+                    </sc-for>
+                    <button class="ccc-ccbtn" onClick="{{ supPeopleAddCancel }}">Cancel</button>
+                  </sc-if>
+                  <sc-if value="{{ supPeopleCanAdd }}" hint-placeholder-val="{{ false }}"><button class="ccc-ccbtn ccc-ccplus" onClick="{{ supPeopleAddStart }}" title="Let someone on your account see and reply to this conversation">+ Add a teammate</button></sc-if>
+                </div>
+              </sc-if>
               <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>
             </sc-if>
             <sc-if value="{{ supComposer }}" hint-placeholder-val="{{ false }}">
@@ -10235,6 +10253,10 @@ button.ccc-edited:hover{color:var(--ink)}
             </div>
             <sc-if value="{{ chatCcShow }}" hint-placeholder-val="{{ false }}">
               <div class="ccc-ccbar">
+                <sc-if value="{{ chatCcHasMembers }}" hint-placeholder-val="{{ false }}"><span class="ccc-cclabel" title="Teammates of the customer: they see this conversation in the Manager and reply there.">Teammates</span></sc-if>
+                <sc-for list="{{ chatCcMembers }}" as="p" hint-placeholder-count="1">
+                  <span class="ccc-ccchip ccc-ccmember" title="{{ p.title }}"><span class="ccc-trunc">{{ p.label }}</span><button onClick="{{ p.remove }}" title="{{ p.removeTitle }}" aria-label="{{ p.removeTitle }}">✕</button></span>
+                </sc-for>
                 <sc-if value="{{ chatCcHasActive }}" hint-placeholder-val="{{ false }}"><span class="ccc-cclabel" title="Cc'd on every reply email. Their email replies post here.">Also emailed</span></sc-if>
                 <sc-for list="{{ chatCcActive }}" as="p" hint-placeholder-count="1">
                   <span class="ccc-ccchip" title="{{ p.title }}"><span class="ccc-trunc">{{ p.label }}</span><button onClick="{{ p.remove }}" title="{{ p.removeTitle }}" aria-label="{{ p.removeTitle }}">✕</button></span>
@@ -10242,12 +10264,15 @@ button.ccc-edited:hover{color:var(--ink)}
                 <sc-for list="{{ chatCcSuggested }}" as="p" hint-placeholder-count="1">
                   <span class="ccc-ccsug" title="{{ p.title }}"><span class="ccc-trunc">{{ p.text }}</span><button class="ccc-ccyes" onClick="{{ p.add }}">Add</button><button onClick="{{ p.dismiss }}">Dismiss</button></span>
                 </sc-for>
+                <sc-for list="{{ chatCcTeam }}" as="t" hint-placeholder-count="1">
+                  <span class="ccc-ccsug" title="{{ t.title }}"><span class="ccc-trunc">{{ t.text }}</span><button class="ccc-ccyes" onClick="{{ t.add }}">Add</button></span>
+                </sc-for>
                 <sc-if value="{{ chatCcAdding }}" hint-placeholder-val="{{ false }}">
                   <input class="ccc-ccin" type="email" ref="{{ chatCcRef }}" value="{{ chatCcDraft }}" onInput="{{ chatCcInput }}" onKeyDown="{{ chatCcKey }}" placeholder="Name <name@example.com>" aria-label="Email address to add">
                   <button class="ccc-ccbtn" onClick="{{ chatCcSave }}">Add</button>
                   <button class="ccc-ccbtn" onClick="{{ chatCcCancel }}">Cancel</button>
                 </sc-if>
-                <sc-if value="{{ chatCcCanAdd }}" hint-placeholder-val="{{ false }}"><button class="ccc-ccbtn ccc-ccplus" onClick="{{ chatCcStart }}" title="Cc someone else on the reply emails">+ Add</button></sc-if>
+                <sc-if value="{{ chatCcCanAdd }}" hint-placeholder-val="{{ false }}"><button class="ccc-ccbtn ccc-ccplus" onClick="{{ chatCcStart }}" title="Add a teammate of the customer, or Cc someone on the reply emails">+ Add</button></sc-if>
               </div>
             </sc-if>
             <div class="ccc-thread" ref="{{ chatThreadRef }}"></div>

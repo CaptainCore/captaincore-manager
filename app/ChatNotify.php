@@ -247,8 +247,9 @@ class ChatNotify {
 		ksort( $all );
 		$all  = array_values( $all );
 		$last = (int) end( $all )->chat_message_id;
-		// Participants are on it only when it has something they haven't had.
-		$cc   = $others ? array_map( fn( $p ) => self::mailbox( $p->name, $p->email ), self::active( (int) $conversation_id ) ) : [];
+		// Participants are on it only when it has something they haven't had
+		// (a teammate who read it in the Manager has had it).
+		$cc   = $others ? array_values( array_map( fn( $p ) => self::mailbox( $p->name, $p->email ), array_filter( self::active( (int) $conversation_id ), fn( $p ) => (int) $p->notified_message_id < $last ) ) ) : [];
 		if ( $replies ) {
 			ChatConversations::update( [ 'notified_message_id' => $last ], [ 'chat_conversation_id' => (int) $conversation_id ] );
 			$to = $user->user_email;
@@ -265,7 +266,13 @@ class ChatNotify {
 		$files   = Chat::attachments_for( array_map( fn( $r ) => (int) $r->chat_message_id, array_merge( $all, $earlier ) ) );
 		// Only the customer can open the conversation; an email to the
 		// participants alone has no button.
-		Mailer::send_chat_replies( $user, $conversation, $all, $files, self::reply_address( $conversation_id ), $replies && Chat::enabled_for( (int) $user->ID ), self::message_id( $conversation_id, $last ), $earlier, $to, $cc );
+		if ( ! $to ) {
+			return false;
+		}
+		// The Open conversation button: for the customer, or when it goes
+		// only to teammates who can open it in the Manager.
+		$can_open = $replies ? Chat::enabled_for( (int) $user->ID ) : self::all_members( (int) $conversation_id, array_merge( [ $to ], $cc ) );
+		Mailer::send_chat_replies( $user, $conversation, $all, $files, self::reply_address( $conversation_id ), $can_open, self::message_id( $conversation_id, $last ), $earlier, $to, $cc );
 
 		$sent_to = array_merge( [ self::address_of( $to ) ], array_map( [ __CLASS__, 'address_of' ], $cc ) );
 		$event   = Chat::append( (int) $conversation_id, [
@@ -288,6 +295,21 @@ class ChatNotify {
 			"SELECT * FROM $p WHERE chat_conversation_id = %d AND status = 'active' ORDER BY chat_participant_id ASC",
 			$conversation_id
 		) ) ?: [];
+	}
+
+	/** Whether every one of these mailboxes is a teammate with chat on. */
+	private static function all_members( $conversation_id, $mailboxes ) {
+		$by_email = [];
+		foreach ( self::active( $conversation_id ) as $p ) {
+			$by_email[ $p->email ] = (int) $p->user_id;
+		}
+		foreach ( $mailboxes as $box ) {
+			$uid = $by_email[ self::address_of( $box ) ] ?? 0;
+			if ( $uid <= 0 || ! Chat::enabled_for( $uid ) ) {
+				return false;
+			}
+		}
+		return (bool) $mailboxes;
 	}
 
 	/** Operator comments not yet emailed to every active participant. */
@@ -322,81 +344,221 @@ class ChatNotify {
 			if ( ! $operator && $r->status !== 'active' ) {
 				continue;
 			}
-			$out[] = [ 'id' => (int) $r->chat_participant_id, 'email' => $r->email, 'name' => $r->name, 'status' => $r->status ];
+			$uid   = (int) ( $r->user_id ?? 0 );
+			$out[] = [ 'id' => (int) $r->chat_participant_id, 'email' => $r->email, 'name' => $r->name, 'status' => $r->status, 'user_id' => $uid ?: null, 'member' => $uid > 0 ];
 		}
 		return $out;
 	}
 
 	/**
 	 * Add someone to the emails (status active), stop emailing them or
-	 * dismiss a suggestion (status removed). Operators only. Leaves an
-	 * internal event so the thread shows who changed it.
+	 * dismiss a suggestion (status removed). Someone with a login becomes a
+	 * teammate on the conversation (user_id set): they see it in the
+	 * Manager, reply, react and read there, and still get the emails for
+	 * what they haven't read. Leaves an event so the thread shows who
+	 * changed it (visible to the customer when it is about a teammate).
 	 *
-	 * @param array $input email, status (active|removed), name (optional)
+	 * Operators may add anyone by address or user_id. The customer who owns
+	 * the conversation may add a teammate (user_id, from teammates()) and
+	 * remove anyone added. A teammate may only leave (remove themselves).
+	 *
+	 * @param array $input email or user_id, status (active|removed), name (optional)
 	 */
 	public static function set_participant( $user_id, $conversation_id, $input ) {
 		global $wpdb;
 		$conversation = Chat::viewable( $user_id, $conversation_id );
-		if ( ! $conversation || ! Chat::is_operator( $user_id ) ) {
+		if ( ! $conversation ) {
 			return new \WP_Error( 'not_found', 'Conversation not found.', [ 'status' => 404 ] );
 		}
+		$operator = Chat::is_operator( $user_id );
+		$owner    = (int) $conversation->user_id === (int) $user_id;
 		if ( (int) $conversation->user_id <= 0 ) {
 			return new \WP_Error( 'guest', 'Guest conversations are not emailed, so nobody can be added.', [ 'status' => 400 ] );
 		}
-		$email  = self::address_of( $input['email'] ?? '' );
 		$status = (string) ( $input['status'] ?? 'active' );
-		if ( $email === '' ) {
-			return new \WP_Error( 'bad_email', 'That is not an email address.', [ 'status' => 400 ] );
-		}
 		if ( ! in_array( $status, [ 'active', 'removed' ], true ) ) {
 			return new \WP_Error( 'bad_status', 'Status is active or removed.', [ 'status' => 400 ] );
 		}
+		$target = null;
+		if ( ! empty( $input['user_id'] ) ) {
+			$target = get_userdata( (int) $input['user_id'] );
+			if ( ! $target ) {
+				return new \WP_Error( 'bad_user', 'That person was not found.', [ 'status' => 400 ] );
+			}
+			$email = strtolower( (string) $target->user_email );
+		} else {
+			$email = self::address_of( $input['email'] ?? '' );
+		}
+		if ( $email === '' ) {
+			return new \WP_Error( 'bad_email', 'That is not an email address.', [ 'status' => 400 ] );
+		}
 		$p   = $wpdb->base_prefix . 'captaincore_chat_participants';
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $p WHERE chat_conversation_id = %d AND email = %s", $conversation_id, $email ) );
-		$now = gmdate( 'Y-m-d H:i:s' );
+		if ( ! $operator ) {
+			$me = get_userdata( (int) $user_id );
+			if ( $status === 'active' ) {
+				$ids = array_column( self::teammates( $user_id, $conversation_id ), 'user_id' );
+				if ( ! $owner || ! $target || ! in_array( (int) $target->ID, $ids, true ) ) {
+					return new \WP_Error( 'not_allowed', 'You can add people who share an account with you.', [ 'status' => 403 ] );
+				}
+			} elseif ( ! $row || $row->status !== 'active' || ( ! $owner && ( ! $me || strtolower( $me->user_email ) !== $email ) ) ) {
+				return new \WP_Error( 'not_allowed', $owner ? 'That person is not on this conversation.' : 'You can only leave a conversation yourself.', [ 'status' => 403 ] );
+			}
+		}
+		// An address that belongs to a login (never staff) makes a teammate.
+		if ( ! $target && $status === 'active' ) {
+			$found = get_user_by( 'email', $email );
+			if ( $found && ! Chat::is_operator( (int) $found->ID ) ) {
+				$target = $found;
+			}
+		}
+		$member_id = $target && ! Chat::is_operator( (int) $target->ID ) ? (int) $target->ID : 0;
 		if ( $status === 'active' ) {
 			$why = self::not_addable( $conversation, $email );
 			if ( $why !== '' ) {
 				return new \WP_Error( 'not_addable', $why, [ 'status' => 400 ] );
 			}
 			if ( ( ! $row || $row->status !== 'active' ) && count( self::active( $conversation_id ) ) >= self::MAX_PARTICIPANTS ) {
-				return new \WP_Error( 'too_many', 'A conversation can email at most ' . self::MAX_PARTICIPANTS . ' other people.', [ 'status' => 400 ] );
+				return new \WP_Error( 'too_many', 'A conversation can have at most ' . self::MAX_PARTICIPANTS . ' other people.', [ 'status' => 400 ] );
 			}
 		}
-		if ( $row && $row->status === $status ) {
-			return [ 'participants' => self::participants( $conversation_id, true ) ];
+		if ( $row && $row->status === $status && ( $status !== 'active' || (int) $row->user_id === $member_id ) ) {
+			return [ 'participants' => self::participants( $conversation_id, $operator ) ];
 		}
 		if ( ! $row && $status === 'removed' ) {
-			return [ 'participants' => self::participants( $conversation_id, true ) ];
+			return [ 'participants' => self::participants( $conversation_id, $operator ) ];
 		}
-		$name = self::display_name( $input['name'] ?? ( $row->name ?? '' ) );
+		$name = self::display_name( $input['name'] ?? ( $row && $row->name !== '' ? $row->name : ( $target ? $target->display_name : '' ) ) );
 		// Starting now: they get replies from here on, the earlier ones as
-		// context under the first one.
+		// context under the first one. A teammate reads the rest in the Manager.
 		$m    = $wpdb->base_prefix . 'captaincore_chat_messages';
 		$mark = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(MAX(chat_message_id), 0) FROM $m WHERE chat_conversation_id = %d", $conversation_id ) );
+		$was_member = $row && $row->status === 'active' && (int) $row->user_id > 0;
 		if ( $row ) {
-			$set = [ 'status' => $status, 'name' => $name, 'added_by' => (int) $user_id, 'updated_at' => $now ];
+			$set = [ 'status' => $status, 'name' => $name, 'added_by' => (int) $user_id, 'updated_at' => $now = gmdate( 'Y-m-d H:i:s' ) ];
 			if ( $status === 'active' ) {
-				$set['notified_message_id'] = $mark;
+				$set['user_id'] = $member_id;
+				if ( $row->status !== 'active' ) {
+					$set['notified_message_id'] = $mark;
+				}
 			}
 			ChatParticipants::update( $set, [ 'chat_participant_id' => (int) $row->chat_participant_id ] );
 		} else {
+			$now = gmdate( 'Y-m-d H:i:s' );
 			ChatParticipants::insert( [
-				'chat_conversation_id' => (int) $conversation_id, 'email' => $email, 'name' => $name, 'status' => 'active',
+				'chat_conversation_id' => (int) $conversation_id, 'email' => $email, 'name' => $name, 'status' => 'active', 'user_id' => $member_id,
 				'added_by' => (int) $user_id, 'notified_message_id' => $mark, 'created_at' => $now, 'updated_at' => $now,
 			] );
 		}
-		$who   = get_userdata( (int) $user_id );
-		$label = $name !== '' ? $name . ' (' . $email . ')' : $email;
-		$body  = $status === 'active' ? 'added ' . $label . ' to the emails'
-			: ( $row && $row->status === 'suggested' ? 'dismissed ' . $label . ' from the email suggestions' : 'stopped emailing ' . $label );
+		self::$members = [];
+		$who    = get_userdata( (int) $user_id );
+		$actor  = $who ? $who->display_name : 'Someone';
+		$label  = $name !== '' ? $name . ' (' . $email . ')' : $email;
+		$member = $status === 'active' ? $member_id > 0 : $was_member;
+		if ( $member ) {
+			// About a teammate: everyone on the conversation sees it.
+			$plain = $name !== '' ? $name : $email;
+			$body  = $status === 'active' ? $actor . ' added ' . $plain . ' to the conversation'
+				: ( $who && strtolower( $who->user_email ) === $email ? $plain . ' left the conversation' : $actor . ' removed ' . $plain . ' from the conversation' );
+		} else {
+			$body = $actor . ' ' . ( $status === 'active' ? 'added ' . $label . ' to the emails'
+				: ( $row && $row->status === 'suggested' ? 'dismissed ' . $label . ' from the email suggestions' : 'stopped emailing ' . $label ) );
+		}
 		$event = Chat::append( (int) $conversation_id, [
-			'kind' => 'event', 'internal' => 1, 'author_kind' => 'system',
-			'body' => ( $who ? $who->display_name : 'Someone' ) . ' ' . $body,
+			'kind' => 'event', 'internal' => $member ? 0 : 1, 'author_kind' => 'system', 'body' => $body,
 		] );
+		// Someone who just left (or was removed) still hears about it in this
+		// request, so their screens drop the conversation.
+		if ( $status === 'removed' && $was_member ) {
+			ChatRelay::also_for( (int) $conversation_id, [ (int) $row->user_id ] );
+		}
 		Chat::emit( 'message.created', Chat::present_conversation( ChatConversations::get( (int) $conversation_id ), false ), $event );
 		self::emit_participants( $conversation );
-		return [ 'participants' => self::participants( $conversation_id, true ) ];
+		return [ 'participants' => self::participants( $conversation_id, $operator ) ];
+	}
+
+	/**
+	 * People who could join the conversation as teammates: everyone on an
+	 * account where its customer may see the account's users (full access),
+	 * less the customer and staff. For the customer who owns it, or staff.
+	 */
+	public static function teammates( $user_id, $conversation_id ) {
+		$conversation = Chat::viewable( $user_id, $conversation_id );
+		if ( ! $conversation || (int) $conversation->user_id <= 0 ) {
+			return [];
+		}
+		if ( ! Chat::is_operator( $user_id ) && (int) $conversation->user_id !== (int) $user_id ) {
+			return [];
+		}
+		$customer = (int) $conversation->user_id;
+		$member   = new User( $customer, true );
+		$members  = array_flip( self::member_ids( (int) $conversation->chat_conversation_id ) );
+		$out      = [];
+		foreach ( $member->accounts() as $account_id ) {
+			$tier = User::tier_permissions( (string) $member->account_level( (int) $account_id ) );
+			if ( empty( $tier['users'] ) ) {
+				continue;
+			}
+			foreach ( ( new Account( (int) $account_id, true ) )->users() as $u ) {
+				$uid = (int) $u['user_id'];
+				if ( $uid === $customer || isset( $out[ $uid ] ) || Chat::is_operator( $uid ) ) {
+					continue;
+				}
+				$out[ $uid ] = [
+					'user_id' => $uid,
+					'name'    => html_entity_decode( (string) $u['name'] ),
+					'email'   => (string) $u['email'],
+					'chat'    => Chat::enabled_for( $uid ),
+					'member'  => isset( $members[ $uid ] ),
+				];
+			}
+		}
+		$out = array_values( $out );
+		usort( $out, fn( $a, $b ) => strcasecmp( $a['name'], $b['name'] ) );
+		return array_slice( $out, 0, 50 );
+	}
+
+	// ── teammates ───────────────────────────────────────────────────────
+
+	/** conversation id => member user ids, for this request. */
+	private static $members = [];
+
+	/** User ids of the conversation's teammates (active participants with a login). */
+	public static function member_ids( $conversation_id ) {
+		global $wpdb;
+		$conversation_id = (int) $conversation_id;
+		if ( $conversation_id <= 0 ) {
+			return [];
+		}
+		if ( ! isset( self::$members[ $conversation_id ] ) ) {
+			$p = $wpdb->base_prefix . 'captaincore_chat_participants';
+			self::$members[ $conversation_id ] = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+				"SELECT user_id FROM $p WHERE chat_conversation_id = %d AND status = 'active' AND user_id > 0 ORDER BY chat_participant_id ASC",
+				$conversation_id
+			) ) ?: [] );
+		}
+		return self::$members[ $conversation_id ];
+	}
+
+	public static function is_member( $conversation_id, $user_id ) {
+		return (int) $user_id > 0 && in_array( (int) $user_id, self::member_ids( $conversation_id ), true );
+	}
+
+	/**
+	 * A teammate read or replied up to $message_id: none of it is emailed to
+	 * them. If that leaves nothing for anyone, the pending email is dropped.
+	 */
+	public static function member_seen( $conversation_id, $user_id, $message_id ) {
+		global $wpdb;
+		$p = $wpdb->base_prefix . 'captaincore_chat_participants';
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE $p SET notified_message_id = GREATEST(notified_message_id, %d) WHERE chat_conversation_id = %d AND user_id = %d AND status = 'active'",
+			(int) $message_id, (int) $conversation_id, (int) $user_id
+		) );
+		$conversation = ChatConversations::get( (int) $conversation_id );
+		if ( $conversation && (int) $conversation->user_id > 0 ) {
+			self::cancel_if_read( (int) $conversation_id, (int) $conversation->user_id );
+		}
 	}
 
 	/** Why $email can't be a participant here, or ''. */
@@ -635,9 +797,11 @@ class ChatNotify {
 		}
 
 		if ( $participant ) {
+			// A teammate's email reply is theirs, as if written in the Manager.
+			$puser   = (int) $participant->user_id > 0 ? get_userdata( (int) $participant->user_id ) : null;
 			$message = Chat::append( $conversation_id, [
-				'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => 0,
-				'author_name' => $participant->name !== '' ? $participant->name : $participant->email,
+				'kind' => 'comment', 'author_kind' => 'customer', 'author_user_id' => $puser ? (int) $puser->ID : 0,
+				'author_name' => $puser ? $puser->display_name : ( $participant->name !== '' ? $participant->name : $participant->email ),
 				'body' => $body !== '' ? $body : '(sent ' . ( count( $files ) === 1 ? 'a file' : 'files' ) . ')',
 				'via' => 'email', 'original' => mb_substr( $original, 0, 100000 ), 'external_id' => $external, 'email_from' => $from,
 			] );
@@ -668,6 +832,9 @@ class ChatNotify {
 				ON DUPLICATE KEY UPDATE last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id)), updated_at = VALUES(updated_at)",
 				$user->ID, $conversation_id, $message['id'], gmdate( 'Y-m-d H:i:s' )
 			) );
+		}
+		if ( $participant && (int) $participant->user_id > 0 ) {
+			self::member_seen( $conversation_id, (int) $participant->user_id, (int) $message['id'] );
 		}
 		// Others on the customer's (or a participant's) email: suggested to
 		// operators, never added on their own.

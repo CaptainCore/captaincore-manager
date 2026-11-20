@@ -205,13 +205,49 @@ class ChatRelay {
 		if ( $url === '' || ! self::configured() ) {
 			return;
 		}
-		$body = wp_json_encode( [
+		$payload = [
 			'event'            => $event,
 			'customer_user_id' => max( 0, (int) $customer_user_id ),
 			'internal'         => (bool) $internal,
-		], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		];
+		// Teammates on a shared conversation get what the customer gets.
+		$also = ! $internal && (int) $customer_user_id > 0 ? self::also( (int) ( $event['conversation_id'] ?? 0 ), (int) $customer_user_id ) : [];
+		if ( $also ) {
+			$payload['also'] = $also;
+		}
+		$code = self::send( $url, $payload );
+		// A relay from before teammates refuses the field: deliver without it.
+		if ( $code === 400 && $also && ! get_site_transient( 'captaincore_chat_relay_no_also' ) ) {
+			set_site_transient( 'captaincore_chat_relay_no_also', 1, HOUR_IN_SECONDS );
+		}
+		if ( $code === 400 && $also ) {
+			unset( $payload['also'] );
+			self::send( $url, $payload );
+		}
+	}
+
+	/** conversation id => user ids that hear about it in this request though no longer on it. */
+	private static $also_extra = [];
+
+	public static function also_for( $conversation_id, array $user_ids ) {
+		self::$also_extra[ (int) $conversation_id ] = array_values( array_unique( array_merge( self::$also_extra[ (int) $conversation_id ] ?? [], array_map( 'intval', $user_ids ) ) ) );
+	}
+
+	/** The teammates to name in `also`, never the customer, at most 20. */
+	private static function also( $conversation_id, $customer_user_id ) {
+		if ( $conversation_id <= 0 || get_site_transient( 'captaincore_chat_relay_no_also' ) ) {
+			return [];
+		}
+		$ids = array_merge( ChatNotify::member_ids( $conversation_id ), self::$also_extra[ $conversation_id ] ?? [] );
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ), fn( $id ) => $id > 0 && $id !== $customer_user_id ) ) );
+		return array_slice( $ids, 0, 20 );
+	}
+
+	/** Sign and post one publish body. Returns the HTTP code (0 on failure). */
+	private static function send( $url, $payload ) {
+		$body = wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		if ( ! $body ) {
-			return;
+			return 0;
 		}
 		$ts       = (string) time();
 		$sig      = self::b64url( sodium_crypto_sign_detached( self::PUBLISH_CONTEXT . $ts . '.' . $body, self::secret_key() ) );
@@ -245,5 +281,6 @@ class ChatRelay {
 		if ( $code !== 200 && $code !== 409 && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'CaptainCore Chat: publish failed (' . ( is_wp_error( $response ) ? $response->get_error_message() : 'HTTP ' . $code ) . ')' );
 		}
+		return $code;
 	}
 }

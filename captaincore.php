@@ -12770,13 +12770,32 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Others on a conversation's emails (ChatNotify::set_participant).
-	// Operators only: { email, status: active|removed, name }.
+	// Others on a conversation: Cc'd on the emails, and teammates (people
+	// with a login) who see it in the Manager (ChatNotify::set_participant).
+	// { email | user_id, status: active|removed, name }. Operators add
+	// anyone; the customer adds a teammate from /teammates and removes
+	// anyone added; a teammate may only remove themselves.
 	register_rest_route(
 		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/participants', [
 			'methods'             => 'POST',
 			'callback'            => function ( WP_REST_Request $request ) {
 				return CaptainCore\ChatNotify::set_participant( get_current_user_id(), (int) $request['id'], (array) $request->get_json_params() );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	// People who share an account with the conversation's customer, who
+	// could be added as teammates. For that customer, or staff.
+	register_rest_route(
+		'captaincore/v1', '/chat/conversations/(?P<id>[\d]+)/teammates', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$uid = get_current_user_id();
+				if ( ! CaptainCore\Chat::viewable( $uid, (int) $request['id'] ) ) {
+					return new WP_Error( 'not_found', 'Conversation not found.', [ 'status' => 404 ] );
+				}
+				return [ 'teammates' => CaptainCore\ChatNotify::teammates( $uid, (int) $request['id'] ) ];
 			},
 			'permission_callback' => 'captaincore_permission_check',
 		]

@@ -154,7 +154,11 @@ class Chat {
 		if ( ! self::enabled_for( $user_id ) ) {
 			return null;
 		}
-		return (int) $conversation->user_id === (int) $user_id && (int) $user_id > 0 ? $conversation : null;
+		if ( (int) $user_id <= 0 ) {
+			return null;
+		}
+		// The customer's own, or one they shared with this teammate.
+		return (int) $conversation->user_id === (int) $user_id || ChatNotify::is_member( (int) $conversation->chat_conversation_id, (int) $user_id ) ? $conversation : null;
 	}
 
 	private static function not_found() {
@@ -188,7 +192,10 @@ class Chat {
 		$args  = [ $operator ? 'customer' : 'operator', (int) $user_id, $operator ? 'operator' : 'customer' ];
 
 		if ( ! $operator ) {
-			$where[] = 'c.user_id = %d';
+			// Their own, and those shared with them as a teammate.
+			$p       = $wpdb->base_prefix . 'captaincore_chat_participants';
+			$where[] = "(c.user_id = %d OR EXISTS (SELECT 1 FROM $p pp WHERE pp.chat_conversation_id = c.chat_conversation_id AND pp.user_id = %d AND pp.status = 'active'))";
+			$args[]  = (int) $user_id;
 			$args[]  = (int) $user_id;
 		} else {
 			if ( ! empty( $q['customer'] ) ) {
@@ -285,6 +292,12 @@ class Chat {
 		if ( $operator ) {
 			// "Seen by <customer>" receipt.
 			$out['customer_last_read_message_id'] = self::last_read( (int) $conversation->user_id, (int) $conversation->chat_conversation_id );
+			// And each teammate's, for the "Seen by" receipt.
+			$out['member_reads'] = array_map( fn( $uid ) => [
+				'user_id'   => $uid,
+				'name'      => self::user_name( $uid, 'Teammate' ),
+				'last_read' => self::last_read( $uid, (int) $conversation->chat_conversation_id ),
+			], ChatNotify::member_ids( (int) $conversation->chat_conversation_id ) );
 			$out['draft']                         = self::draft( (int) $conversation->chat_conversation_id );
 		}
 		return $out;
@@ -575,6 +588,9 @@ class Chat {
 			ChatNotify::schedule( (int) $conversation->chat_conversation_id, ChatRelay::last_customer_delivery() );
 		} elseif ( ! $operator ) {
 			ChatPush::customer_message( $updated, $message );
+			if ( (int) $conversation->user_id !== (int) $user_id ) {
+				ChatNotify::member_seen( (int) $conversation->chat_conversation_id, (int) $user_id, (int) $message['id'] );
+			}
 		}
 		self::emit( 'conversation.updated', $updated );
 		return [ 'message' => $message, 'conversation' => self::present_conversation( ChatConversations::get( $conversation->chat_conversation_id ), $operator ) ];
@@ -743,8 +759,12 @@ class Chat {
 			$user_id, $conversation->chat_conversation_id, $message_id, gmdate( 'Y-m-d H:i:s' )
 		) );
 		if ( ! self::is_operator( $user_id ) ) {
-			ChatNotify::cancel_if_read( (int) $conversation->chat_conversation_id, (int) $user_id );
-			do_action( 'captaincore_chat_event', [ 'type' => 'read', 'conversation_id' => (int) $conversation->chat_conversation_id, 'message_id' => (int) $message_id ], 0, true );
+			if ( (int) $conversation->user_id === (int) $user_id ) {
+				ChatNotify::cancel_if_read( (int) $conversation->chat_conversation_id, (int) $user_id );
+			} else {
+				ChatNotify::member_seen( (int) $conversation->chat_conversation_id, (int) $user_id, (int) $message_id );
+			}
+			do_action( 'captaincore_chat_event', [ 'type' => 'read', 'conversation_id' => (int) $conversation->chat_conversation_id, 'message_id' => (int) $message_id, 'user_id' => (int) $user_id ], 0, true );
 		}
 		return true;
 	}

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 83;
+    const REQUIRED_VERSION = 84;
 
     private static function _table() {
         global $wpdb;
@@ -1720,10 +1720,12 @@ class DB {
             status varchar(12) NOT NULL DEFAULT 'suggested',
             added_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             notified_message_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (chat_participant_id),
-        UNIQUE KEY conversation_email (chat_conversation_id,email)
+        UNIQUE KEY conversation_email (chat_conversation_id,email),
+        KEY user_status (user_id,status)
         ) $charset_collate;";
 
         dbDelta($sql);
