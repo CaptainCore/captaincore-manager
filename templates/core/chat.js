@@ -266,9 +266,13 @@ Object.assign(Component.prototype, {
       if (r.messages) {
         // A new conversation (a customer's, or one an operator started).
         c.id = r.conversation.id; c.newDraft = false; c.newSite = ''; c.newTo = null; c.newSubject = ''; c.toQ = ''; c.newAlso = []; c.alsoQ = '';
-        c.conv = { conversation: r.conversation, messages: r.messages };
+        c.conv = { conversation: r.conversation, messages: r.messages, participants: [] };
         this.chatMergeConv(r.conversation, true);
         this.chatOnMessage(r.messages[0]);
+        // The create response carries only the opening message. Load the
+        // rest (teammates added with it, their "added" events, read marks)
+        // so the people bar shows who is on it straight away.
+        this.chatLoadConv(c.id, true);
       } else {
         this.chatMergeConv(r.conversation);
         this.chatOnMessage(r.message);
@@ -1299,14 +1303,14 @@ Object.assign(Component.prototype, {
       if (lastOp && !lastOp.imported && !answered) {
         const first = esc(String(conv.customer_name || 'the customer').split(' ')[0]);
         // Who has read it: the customer, then teammates on a shared conversation.
-        const seen = [((c.conv.customer_last_read_message_id || 0) >= lastOp.id) ? first : '']
-          .concat((c.conv.member_reads || []).filter(x => (x.last_read || 0) >= lastOp.id).map(x => esc(String(x.name || '').split(' ')[0]))).filter(Boolean);
-        const and = l => l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
-        if (seen.length) out += '<div class="ccc-seen">Seen by ' + and(seen) + '</div>';
-        else {
-          const mailed = msgs.some(m => m.kind === 'event' && m.id > lastOp.id && / emailed to /.test(m.body || ''));
-          out += '<div class="ccc-seen ccc-unseen">Not seen by ' + first + ' yet' + (mailed ? ' · emailed' : '') + '</div>';
-        }
+        const people = [{ name: first, read: (c.conv.customer_last_read_message_id || 0) >= lastOp.id }]
+          .concat((c.conv.member_reads || []).map(x => ({ name: esc(String(x.name || '').split(' ')[0]), read: (x.last_read || 0) >= lastOp.id })));
+        const seen = people.filter(p => p.read).map(p => p.name), unseen = people.filter(p => !p.read).map(p => p.name);
+        const list = (l, word) => l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' ' + word + ' ' + l[l.length - 1];
+        const mailed = msgs.some(m => m.kind === 'event' && m.id > lastOp.id && / emailed to /.test(m.body || ''));
+        if (!unseen.length) out += '<div class="ccc-seen">Seen by ' + list(seen, 'and') + '</div>';
+        else if (seen.length) out += '<div class="ccc-seen">Seen by ' + list(seen, 'and') + ' · not yet by ' + list(unseen, 'or') + (mailed ? ' · emailed' : '') + '</div>';
+        else out += '<div class="ccc-seen ccc-unseen">Not seen by ' + list(unseen, 'or') + ' yet' + (mailed ? ' · emailed' : '') + '</div>';
       }
     }
     const ty = c.typing[conv.id];
@@ -2662,7 +2666,10 @@ Object.assign(Component.prototype, {
       // The page it started on (Intercom recorded it): host + path, short.
       chatSrcUrl: conv && /^https?:\/\//i.test(conv.source_url || '') ? conv.source_url : '',
       chatSrcLabel: conv && conv.source_url ? (() => { try { const u = new URL(conv.source_url); const t = u.host + u.pathname.replace(/\/$/, ''); return t.length > 48 ? t.slice(0, 47) + '…' : t; } catch (e) { return ''; } })() : '',
-      chatSub: conv ? [conv.customer_email || (conv.guest ? 'Guest' : ''), conv.source === 'intercom' ? 'Imported from Intercom' : 'Started in chat', 'Opened ' + this.chatAgo(conv.created_at) + ' ago'].filter(Boolean).join(' · ') : '',
+      chatSub: conv ? [conv.customer_email || (conv.guest ? 'Guest' : ''),
+        // Teammates on a shared conversation, by name.
+        ...(() => { const t = ((c.conv && c.conv.participants) || []).filter(p => p.member && p.status === 'active').map(p => p.name || p.email); return t.length ? ['with ' + (t.length < 3 ? t.join(' and ') : t.slice(0, 2).join(', ') + ' and ' + (t.length - 2) + ' more')] : []; })(),
+        conv.source === 'intercom' ? 'Imported from Intercom' : 'Started in chat', 'Opened ' + this.chatAgo(conv.created_at) + ' ago'].filter(Boolean).join(' · ') : '',
       chatStatusLabel: conv ? statusChip(conv).label : '', chatStatusBg: conv ? statusChip(conv).bg : '', chatStatusFg: conv ? statusChip(conv).fg : '',
       chatActions: actions,
       chatThreadRef: el => this.chatThreadRef(el),
