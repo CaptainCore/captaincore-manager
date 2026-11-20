@@ -502,6 +502,13 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
 .kb-del{color:var(--ink-dim)}
 @media (max-width:640px){.kb-rnote{max-width:100%;flex-basis:100%;order:3}}
 .ccs-people{padding:7px 24px}
+/* Who is in a shared conversation: overlapping faces, then names */
+.ccc-faces-row{display:flex;align-items:center;gap:8px;min-width:0;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
+.ccs-people .ccc-faces-row{margin-right:6px;font-size:var(--fs-125);color:var(--ink)}
+.ccc-faces{display:inline-flex;flex:none;padding-left:4px}
+.ccc-face{width:var(--fs);height:var(--fs);margin-left:-5px;font-size:calc(var(--fs) * .4);box-shadow:0 0 0 2px var(--paper)}
+.ccc-face-more{background:var(--panel-2);color:var(--ink-dim)}
+.ccc-faces-t{min-width:0}
 .ccc-newalso{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:8px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)}
 .ccc-newalso:empty{display:none}
 .ccc-ccchip{display:inline-flex;align-items:center;gap:4px;max-width:100%;height:24px;padding:0 4px 0 9px;border:1px solid var(--rule);border-radius:999px;background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans)}
@@ -5114,6 +5121,8 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
               <sc-if value="{{ supPeopleShow }}" hint-placeholder-val="{{ false }}">
                 <div class="ccc-ccbar ccs-people">
+                  <sc-if value="{{ supFacesShow }}" hint-placeholder-val="{{ false }}"><div class="ccc-faces-row" ref="{{ supFacesRef }}"></div></sc-if>
+                  <sc-if value="{{ supLeaveShow }}" hint-placeholder-val="{{ false }}"><button class="ccc-ccbtn" onClick="{{ supLeave }}" title="Stop seeing this conversation">Leave</button></sc-if>
                   <sc-if value="{{ supPeopleHasLabel }}" hint-placeholder-val="{{ false }}"><span class="ccc-cclabel">{{ supPeopleLabel }}</span></sc-if>
                   <sc-for list="{{ supPeople }}" as="p" hint-placeholder-count="1">
                     <span class="ccc-ccchip" title="{{ p.title }}"><span class="ccc-trunc">{{ p.label }}</span><sc-if value="{{ p.canRemove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ p.remove }}" title="{{ p.removeTitle }}" aria-label="{{ p.removeTitle }}">✕</button></sc-if></span>
@@ -10608,7 +10617,8 @@ button.ccc-edited:hover{color:var(--ink)}
         </sc-if>
         <div style="flex:1;min-width:0">
           <div class="ccc-trunc" style="font:600 var(--fs-14) var(--sans)">{{ chatWTitle }}</div>
-          <div style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ chatWOnlineBg }}"></span>{{ chatWSub }}</div>
+          <sc-if value="{{ chatWShared }}" hint-placeholder-val="{{ false }}"><div class="ccc-faces-row" ref="{{ chatWFacesRef }}"></div></sc-if>
+          <sc-if value="{{ chatWSolo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:6px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)"><span style="width:7px;height:7px;border-radius:50%;background:{{ chatWOnlineBg }}"></span>{{ chatWSub }}</div></sc-if>
         </div>
         <sc-if value="{{ chatWCanResolve }}" hint-placeholder-val="{{ false }}">
           <sc-if value="{{ chatWThread }}" hint-placeholder-val="{{ false }}">

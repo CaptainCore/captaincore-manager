@@ -345,7 +345,7 @@ class ChatNotify {
 				continue;
 			}
 			$uid   = (int) ( $r->user_id ?? 0 );
-			$out[] = [ 'id' => (int) $r->chat_participant_id, 'email' => $r->email, 'name' => $r->name, 'status' => $r->status, 'user_id' => $uid ?: null, 'member' => $uid > 0 ];
+			$out[] = [ 'id' => (int) $r->chat_participant_id, 'email' => $r->email, 'name' => $r->name, 'status' => $r->status, 'user_id' => $uid ?: null, 'member' => $uid > 0, 'avatar' => $r->status === 'active' ? Chat::avatar( $uid, (string) $r->email ) : '' ];
 		}
 		return $out;
 	}

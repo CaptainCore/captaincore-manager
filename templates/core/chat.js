@@ -2054,6 +2054,48 @@ Object.assign(Component.prototype, {
     }).catch(() => {});
   },
 
+  // Who is in a shared conversation, as faces: staff who wrote in it, the
+  // customer, then the teammates. Empty unless it has a teammate.
+  chatFaces() {
+    const c = this._chat;
+    const cb = this.chatBoot();
+    const conv = c && c.conv && c.conv.conversation;
+    if (!conv || !conv.customer_user_id) return [];
+    const members = (c.conv.participants || []).filter(p => p.member && p.status === 'active');
+    if (!members.length) return [];
+    const out = [], seen = {};
+    const add = (id, name, avatar, staff) => {
+      const k = id ? 'u' + id : 'n' + name;
+      if (seen[k] || !name) return;
+      seen[k] = true;
+      out.push({ name, avatar: avatar || '', staff, you: !!id && id === cb.userId });
+    };
+    (c.conv.messages || []).forEach(m => { if (m.kind === 'comment' && m.author_kind === 'operator' && m.via !== 'bot') add(m.author_user_id, m.author_name, m.author_avatar, true); });
+    add(conv.customer_user_id, conv.customer_name || conv.customer_email, conv.customer_avatar, false);
+    members.forEach(p => add(p.user_id, p.name || p.email, p.avatar, false));
+    // You first, then everyone else in the order above.
+    return out.filter(p => p.you).concat(out.filter(p => !p.you));
+  },
+
+  // Writes the faces and their names into el (a ref): overlapping avatars
+  // with initials under each picture, then "You, Colby and Austin".
+  chatFacesRef(el, size) {
+    if (!el) return;
+    const faces = this.chatFaces();
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const first = p => p.you ? 'You' : String(p.name).split(' ')[0];
+    const names = faces.map(first);
+    const text = names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+    const html = faces.length ? '<span class="ccc-faces" style="--fs:' + (size || 22) + 'px">' + faces.slice(0, 6).map((p, i) =>
+      '<span class="ccc-av ccc-face" style="background:' + this.chatColor(p.name) + ';z-index:' + (10 - i) + '" title="' + esc(p.name + (p.you ? ' (you)' : '') + (p.staff ? ' · Staff' : '')) + '">' + esc(this.chatInitials(p.name)) + this.chatAvImg(p.avatar) + '</span>').join('') +
+      (faces.length > 6 ? '<span class="ccc-av ccc-face ccc-face-more">+' + (faces.length - 6) + '</span>' : '') +
+      '</span><span class="ccc-faces-t ccc-trunc" title="' + esc(faces.map(p => p.name + (p.staff ? ' (staff)' : '')).join(', ')) + '">' + esc(text) + '</span>' : '';
+    if (el._ccFaces === html) return;
+    el._ccFaces = html;
+    el.innerHTML = html;
+    el.querySelectorAll('img').forEach(img => img.addEventListener('error', () => { img.style.display = 'none'; }, { once: true }));
+  },
+
   // The Support page's people bar (customers).
   chatTeamVals() {
     const c = this._chat;
@@ -2067,24 +2109,28 @@ Object.assign(Component.prototype, {
     const addable = owner ? team.filter(t => !active.some(p => p.user_id === t.user_id || p.email === String(t.email).toLowerCase())) : [];
     const picking = c.teamPick === conv.id;
     const ownerFirst = String(conv.customer_name || 'the owner').split(' ')[0];
+    const shared = active.some(p => p.member);
+    const me = active.find(p => p.member && p.user_id === cb.userId);
+    // The faces say who is in it; chips are for managing. The customer gets
+    // a chip with ✕ for everyone added; a teammate sees only the people who
+    // are emailed without a login, and a Leave button.
+    const chips = owner ? active : active.filter(p => !p.member);
     return {
-      supPeopleShow: active.length > 0 || addable.length > 0,
-      supPeopleHasLabel: active.length > 0,
-      supPeopleLabel: owner ? 'Shared with' : 'With ' + ownerFirst + ' and',
-      supPeople: active.map(p => {
-        const self = p.user_id && p.user_id === cb.userId;
-        const label = self ? 'You' : (p.name || p.email);
-        return {
-          label: p.member ? label : label + ' (email only)',
-          title: p.member ? (self ? 'You can see and reply to this conversation.' : (p.name || p.email) + ' can see and reply to this conversation.') : p.email + ' gets the reply emails and can answer by email.',
-          canRemove: owner || self,
-          removeTitle: self ? 'Leave this conversation' : 'Remove ' + (p.name || p.email),
-          remove: () => {
-            if (self && !window.confirm('Leave this conversation? You won\'t see it any more unless ' + ownerFirst + ' adds you again.')) return;
-            this.chatCcSet(p.email, 'removed', '', p.user_id || 0);
-          }
-        };
-      }),
+      supPeopleShow: shared || active.length > 0 || addable.length > 0,
+      supFacesShow: shared,
+      supFacesRef: el => this.chatFacesRef(el, 24),
+      supPeopleHasLabel: chips.length > 0,
+      supPeopleLabel: owner ? 'Shared with' : 'Also emailed',
+      supLeaveShow: !!me,
+      supLeave: () => this.uiConfirm('Leave this conversation? You won\'t see it any more unless ' + ownerFirst + ' adds you again.', { label: 'Leave', danger: true })
+        .then(ok => { if (ok) this.chatCcSet(me.email, 'removed', '', me.user_id); }),
+      supPeople: chips.map(p => ({
+        label: p.member ? (p.name || p.email) : (p.name || p.email) + ' (email only)',
+        title: p.member ? (p.name || p.email) + ' can see and reply to this conversation.' : p.email + ' gets the reply emails and can answer by email.',
+        canRemove: owner,
+        removeTitle: 'Remove ' + (p.name || p.email),
+        remove: () => this.chatCcSet(p.email, 'removed', '', p.user_id || 0)
+      })),
       supPeopleCanAdd: addable.length > 0 && !picking,
       supPeopleAddStart: () => { c.teamPick = conv.id; this.setState({}); },
       supPeoplePicking: picking,
@@ -2745,6 +2791,9 @@ Object.assign(Component.prototype, {
       chatWNew: () => { this.chatOpen(0); c.newDraft = true; this._chatFocus = true; this.setState({ chatWView: 'thread' }); },
       chatWTitle: wView === 'thread' && conv ? conv.subject : brand,
       chatWSub: c.online ? 'We’re online now' : 'We’ll reply by email if you leave',
+      // A shared conversation shows who is in it instead.
+      chatWShared: !!(c.id && conv && this.chatFaces().length), chatWSolo: !(c.id && conv && this.chatFaces().length),
+      chatWFacesRef: el => this.chatFacesRef(el, 20),
       chatWOnlineBg: c.online ? 'var(--ok)' : 'var(--ink-dim)',
       chatWHello: 'Hi ' + (first || 'there') + ' 👋',
       chatWHasRows: rows.length > 0,
