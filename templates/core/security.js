@@ -649,12 +649,12 @@ Object.assign(Component.prototype, {
   // signal); a row's dossier loads on expand from GET /admin-watches/{id}, and
   // Clear / Flag post /admin-watches/{id}/review.
   SIG_VIEWS: [['attention', 'Needs attention'], ['watch', 'On watch'], ['unreviewed', 'Unreviewed'], ['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']],
-  WATCH_TRIGGER_LABEL: { new_admin_capable_account: 'New admin', new_super_admin: 'New super admin', injected_caps: 'Injected caps' },
+  WATCH_TRIGGER_LABEL: { new_admin_capable_account: 'New admin', new_super_admin: 'New super admin', injected_caps: 'Injected caps', new_admin_app_password: 'New app password' },
   SIG_VERDICT_STYLE: { compromise: ['var(--bad-soft)', 'var(--bad)'], residue: ['var(--warn-soft)', 'var(--ink)'], actionable: ['var(--warn-soft)', 'var(--ink)'],
     'needs-human': ['var(--brand-soft)', 'var(--brand-ink)'], benign: ['var(--ok-soft)', 'var(--ok)'], '': ['var(--panel-2)', 'var(--ink-dim)'] },
   SIG_SOURCE_LABEL: { capture: 'Injection', 'core-checksum': 'Core checksum', config: 'Role settings', session: 'Sessions', 'db-scan': 'Database', native: 'Files', 'native-full': 'Files (full)',
     provenance: 'Root files', 'provenance-scan': 'Root files (rules)', 'hidden-plugin': 'Hidden plugin', media: 'Media', wordfence: 'Wordfence',
-    license: 'License', 'domain-change': 'Domain change', hosting: 'Hosting' },
+    license: 'License', 'domain-change': 'Domain change', hosting: 'Hosting', 'security-log': 'Security log', 'runtime-log': 'Runtime log', 'web-risk': 'Web Risk' },
 
   sigQuery(s) {
     const q = { view: s.sigView || 'attention', source: s.sigSource || '', search: s.sigSearch || '', page: s.sigPage || 1 };

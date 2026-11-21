@@ -114,6 +114,38 @@ class SessionAnomalyDetector {
 			$a[] = self::mk( 'new_super_admin', 'high', "New super admin granted: {$sa}", "db:user/{$sa}" );
 		}
 
+		// Rule 7 — new application password on an existing admin-capable account.
+		// Application passwords outlive a password reset and are a common persistence
+		// mechanism on hijacked accounts. Only compare when the previous snapshot also
+		// carried the app_passwords field so legacy snapshots never false-alarm.
+		foreach ( $new_acc as $login => $acc ) {
+			if ( ! isset( $prev_acc[ $login ] ) || ! array_key_exists( 'app_passwords', $prev_acc[ $login ] ) || ! is_array( $prev_acc[ $login ]['app_passwords'] ) ) {
+				continue;
+			}
+			$prev_aps = self::app_password_keys( $prev_acc[ $login ]['app_passwords'] );
+			$added    = [];
+			foreach ( (array) ( $acc['app_passwords'] ?? [] ) as $ap ) {
+				$ap  = (array) $ap;
+				$key = self::app_password_key( $ap );
+				if ( $key === '' || isset( $prev_aps[ $key ] ) ) {
+					continue;
+				}
+				$label = ( $ap['name'] ?? '' ) !== '' ? $ap['name'] : '(unnamed)';
+				$meta  = [];
+				if ( ! empty( $ap['created'] ) ) {
+					$meta[] = 'created ' . $ap['created'] . ' UTC';
+				}
+				if ( ! empty( $ap['last_ip'] ) ) {
+					$meta[] = 'last IP ' . $ap['last_ip'];
+				}
+				$added[] = $meta ? "{$label} (" . implode( ', ', $meta ) . ')' : $label;
+			}
+			if ( $added ) {
+				$a[] = self::mk( 'new_admin_app_password', 'high',
+					"New application password on existing admin-capable account '{$login}': " . implode( '; ', $added ), "db:user/{$login}" );
+			}
+		}
+
 		return self::finalize( $a );
 	}
 
@@ -177,6 +209,26 @@ class SessionAnomalyDetector {
 			$acc = (array) $acc;
 			if ( isset( $acc['login'] ) ) {
 				$o[ $acc['login'] ] = $acc;
+			}
+		}
+		return $o;
+	}
+
+	private static function app_password_key( $ap ) {
+		$name    = trim( (string) ( $ap['name'] ?? '' ) );
+		$created = trim( (string) ( $ap['created'] ?? '' ) );
+		if ( $name === '' && $created === '' ) {
+			return '';
+		}
+		return $name . '|' . $created;
+	}
+
+	private static function app_password_keys( $list ) {
+		$o = [];
+		foreach ( (array) $list as $ap ) {
+			$k = self::app_password_key( (array) $ap );
+			if ( $k !== '' ) {
+				$o[ $k ] = true;
 			}
 		}
 		return $o;

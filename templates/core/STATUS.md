@@ -15,6 +15,13 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## Behavioral & persistence security signals (2026-11-21)
+
+Closed three detection gaps on the unified Security → Signals bus (`MalwareFindings`):
+- **Existing-admin application passwords** (`app/SessionAnomalyDetector.php`, `app/AdminWatches.php`): Rule 7 (`new_admin_app_password`, severity `high`) detects any newly created application password on an existing admin-capable account (guarded so legacy snapshots without `app_passwords` never false-alarm) and automatically opens a 7-day `AdminWatch` (label "New app password" in `security.js`).
+- **Google Web Risk → Signals** (`app/WebRiskCheck.php`, `app/MalwareFindings.php`): `WebRiskCheck::run()` now calls `MalwareFindings::sync_state(..., 'web-risk', ...)` per checked production environment so Safe Browsing hits appear immediately on the priority attention list and auto-resolve when cleared.
+- **Behavioral log sources** (`app/MalwareFindings.php`, `templates/core/security.js`): `security-log` (high-risk `captaincore_security_log` events) and `runtime-log` (PHP `eval()'d code` error-log tells) are wired into `is_priority()` (critical → immediate attention list, high/medium → daily review) and labelled in the Signals UI. Verified locally via `php -l`, `node --check`, and `wp eval`.
+
 ## Backups tab: snapshot wording (2026-11-13)
 The backup row's "Restore…" never restored anything: it runs `snapshot
 generate <site> --backup-id=<id>`, which zips the site as it was at that

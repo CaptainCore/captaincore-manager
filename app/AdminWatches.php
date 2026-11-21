@@ -26,7 +26,7 @@ class AdminWatches extends DB {
 	static $primary_key = 'admin_watch_id';
 
 	const DAYS     = 7;
-	const TRIGGERS = [ 'new_admin_capable_account', 'new_super_admin', 'injected_caps' ];
+	const TRIGGERS = [ 'new_admin_capable_account', 'new_super_admin', 'injected_caps', 'new_admin_app_password' ];
 	const OUTCOMES = [ 'ok', 'clear', 'flag' ];
 
 	/**

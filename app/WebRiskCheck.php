@@ -119,13 +119,28 @@ class WebRiskCheck {
 			}
 
 			if ( isset( $result->threat ) && ! empty( $result->threat ) ) {
+				$types = (array) ( $result->threat->threatTypes ?? [] );
 				$threats_found[] = [
 					'site_id'      => $site->site_id,
 					'site_name'    => $site->name,
 					'home_url'     => $site->home_url,
-					'threat_types' => $result->threat->threatTypes ?? [],
+					'threat_types' => $types,
 					'expire_time'  => $result->threat->expireTime ?? null,
 				];
+				sort( $types );
+				$label = implode( ', ', $types ) ?: 'THREAT';
+				MalwareFindings::sync_state( (int) $site->site_id, (int) $site->environment_id, 'Production', 'web-risk', [ (object) [
+					'filename'              => (string) $site->home_url,
+					'signature_id'          => 'web-risk-flagged',
+					'signature_name'        => 'Google Web Risk: ' . $label,
+					'signature_description' => 'Google Web Risk flagged ' . $site->home_url . ' (' . $label . ').',
+					'matched_text'          => $label,
+					'severity'              => 'critical',
+					'family'                => 'reputation',
+					'content_hash'          => hash( 'sha256', $site->home_url . '|' . $label ),
+				] ] );
+			} else {
+				MalwareFindings::sync_state( (int) $site->site_id, (int) $site->environment_id, 'Production', 'web-risk', [] );
 			}
 
 			$progress->tick();
@@ -198,7 +213,7 @@ class WebRiskCheck {
 		$table_sites        = $wpdb->prefix . 'captaincore_sites';
 
 		return $wpdb->get_results( "
-			SELECT e.site_id, e.home_url, s.name 
+			SELECT e.site_id, e.environment_id, e.home_url, s.name 
 			FROM {$table_environments} e
 			JOIN {$table_sites} s ON e.site_id = s.site_id
 			WHERE e.environment = 'Production' 
