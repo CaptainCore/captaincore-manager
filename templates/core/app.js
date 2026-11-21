@@ -2303,7 +2303,9 @@ class Component extends DCLogic {
       mgHost: 'mg.' + d.name,
       mgRecs, mgEvents: this.MG_EVENTS,
       mgSupp: '2 bounces · 0 unsubscribes · 0 complaints',
-      mgSuppOpen: false, mgDeployOpen: false, mgRotOpen: false, mgLogOpen: false, mgOpenSupp: () => {}, mgOpenRotate: () => {}, mgOpenLog: () => {},
+      // mgLogOpen is not defaulted here: the log dialog is shared with the
+      // site page, whose values come first (domains.js mgLogVals).
+      mgSuppOpen: false, mgDeployOpen: false, mgRotOpen: false, mgOpenSupp: () => {}, mgOpenRotate: () => {}, mgOpenLog: () => {},
       mgOpenDeploy: () => this.runJob('deploy-mailgun', d.name + ' → SMTP on connected site'),
       dnsNotice: false, dnsNoticeText: '', dnsShowActivate: false, activateZone: () => {},
       fwdActive: true, fwdInactive: false, fwdLoading: false, fwdNotice: false, fwdNoticeText: '', activateFwd: () => {},

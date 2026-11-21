@@ -9858,7 +9858,12 @@ function captaincore_domain_mailgun_message_func( $request ) {
         return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
     }
 
-    $message = CaptainCore\Remote\Mailgun::stored_message( $details->mailgun_zone, (string) $request->get_param( 'url' ) );
+    return captaincore_mailgun_message_payload( $details->mailgun_zone, (string) $request->get_param( 'url' ) );
+}
+
+/** The parts of one stored message the log viewer shows, for a zone. */
+function captaincore_mailgun_message_payload( $zone, $url ) {
+    $message = CaptainCore\Remote\Mailgun::stored_message( $zone, (string) $url );
     if ( is_wp_error( $message ) ) {
         return $message;
     }
@@ -9887,6 +9892,77 @@ function captaincore_domain_mailgun_message_func( $request ) {
         'headers'     => $headers,
         'attachments' => $attachments,
     ];
+}
+
+/**
+ * The Mailgun zone one environment sends through, for the site page's email
+ * log. Only offered when the environment's own mail plugin sends through a
+ * zone in our account (details.email_route, status anchor) AND the person
+ * can open the domain that owns that zone. Site access alone is not enough:
+ * the log shows every message the zone sent, so it follows domain access.
+ *
+ * @return array|WP_Error [ zone, domain_id, domain ]
+ */
+function captaincore_site_email_log_source( $site_id, $environment ) {
+    global $wpdb;
+    $site_id = (int) $site_id;
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+    $env = CaptainCore\Environments::for_site( $site_id, (string) $environment );
+    if ( ! $env ) {
+        return new WP_Error( 'environment_not_found', 'Environment not found.', [ 'status' => 404 ] );
+    }
+    $details = json_decode( (string) $env->details );
+    $route   = $details->email_route ?? null;
+    $zone    = strtolower( trim( (string) ( $route->domain ?? '' ) ) );
+    if ( ! $route || ( $route->status ?? '' ) !== 'anchor' || $zone === '' ) {
+        return new WP_Error( 'email_log_unavailable', 'This environment does not send through Anchor Mailgun, so there is no email log to show.', [ 'status' => 404 ] );
+    }
+    $rows = $wpdb->get_results( $wpdb->prepare(
+        "SELECT domain_id, name FROM {$wpdb->base_prefix}captaincore_domains WHERE LOWER(JSON_UNQUOTE(JSON_EXTRACT(details, '$.mailgun_zone'))) = %s ORDER BY domain_id",
+        $zone
+    ) );
+    if ( empty( $rows ) ) {
+        return new WP_Error( 'email_log_unavailable', "The sending domain {$zone} is not linked to a domain here yet.", [ 'status' => 404 ] );
+    }
+    $domains = new CaptainCore\Domains();
+    foreach ( $rows as $row ) {
+        if ( $domains->verify( (int) $row->domain_id ) ) {
+            return [ 'zone' => $zone, 'domain_id' => (int) $row->domain_id, 'domain' => (string) $row->name ];
+        }
+    }
+    return new WP_Error( 'email_log_no_domain_access', 'The email log for ' . $zone . ' is only shown to people with access to that domain.', [ 'status' => 403 ] );
+}
+
+/** Mailgun events for an environment's sending zone (same shape as the domain route). */
+function captaincore_site_email_log_events( WP_REST_Request $request ) {
+    $p   = $request->get_url_params();
+    $src = captaincore_site_email_log_source( $p['id'] ?? 0, $p['environment'] ?? '' );
+    if ( is_wp_error( $src ) ) {
+        return $src;
+    }
+    $page_url = (string) $request->get_param( 'page_url' );
+    if ( $page_url !== '' ) {
+        $res = CaptainCore\Remote\Mailgun::page( $src['zone'], $page_url );
+        return ( is_object( $res ) && isset( $res->items ) ) ? $res : new WP_Error( 'invalid_page', 'Not a page of this email log.', [ 'status' => 400 ] );
+    }
+    $params = [ 'limit' => min( 300, max( 1, (int) ( $request->get_param( 'limit' ) ?: 100 ) ) ) ];
+    $event  = (string) $request->get_param( 'event' );
+    if ( in_array( $event, [ 'accepted', 'delivered', 'failed', 'rejected', 'complained', 'opened', 'clicked', 'unsubscribed', 'stored' ], true ) ) {
+        $params['event'] = $event;
+    }
+    foreach ( [ 'message-id', 'recipient' ] as $key ) {
+        $v = trim( (string) $request->get_param( $key ) );
+        if ( $v !== '' ) {
+            $params[ $key ] = substr( $v, 0, 300 );
+        }
+    }
+    $res = CaptainCore\Remote\Mailgun::get( "v3/{$src['zone']}/events", $params );
+    if ( ! is_object( $res ) || ! isset( $res->items ) || ! is_array( $res->items ) ) {
+        return new WP_Error( 'mailgun_unavailable', 'Could not read Mailgun’s log right now.', [ 'status' => 502 ] );
+    }
+    return $res;
 }
 
 /**
@@ -12825,6 +12901,36 @@ function captaincore_register_rest_endpoints() {
 		$p = $request->get_url_params();
 		return captaincore_verify_permissions( (int) ( $p['id'] ?? 0 ) ) ? $p : new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	};
+	// Site page email log: the environment's Anchor Mailgun zone, gated by
+	// access to the domain that owns it (captaincore_site_email_log_source).
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/email-logs', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$p = $request->get_url_params();
+				return captaincore_site_email_log_source( $p['id'] ?? 0, $p['environment'] ?? '' );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/email-logs/events', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_email_log_events',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/email-logs/message', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$p   = $request->get_url_params();
+				$src = captaincore_site_email_log_source( $p['id'] ?? 0, $p['environment'] ?? '' );
+				return is_wp_error( $src ) ? $src : captaincore_mailgun_message_payload( $src['zone'], (string) $request->get_param( 'url' ) );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/kinsta-backups', [
 			[

@@ -240,7 +240,7 @@ Object.assign(Component.prototype, {
         : card('Storage', e.storage ? this.fmtStorage(e.storage) : '—', 'Files on the server', DIM, op ? 'hosting' : null);
       return { hCards: [uptime, backup, card('Site', 'Plain HTML', 'No WordPress or database', DIM, op ? 'hosting' : null), storage, vis] };
     }
-    const em = this.emailCardVals(d, card, OK, WARN, BAD, DIM);
+    const em = this.emailCardVals(d, card, OK, WARN, BAD, DIM, real, e.environment || this.state.env);
     return Object.assign({ hCards: em.card ? [uptime, backup, updates, wp, em.card, vis] : [uptime, backup, updates, wp, vis] }, em.vals);
   },
 
@@ -251,9 +251,61 @@ Object.assign(Component.prototype, {
   // changed and each mail plugin's settings (secrets already redacted).
   EMAIL_PRIORITY: ['stale-password', 'test-mode', 'mail-blocked'],
 
-  emailCardVals(d, card, OK, WARN, BAD, DIM) {
+  // Email log on the site page (GET /sites/{id}/{env}/email-logs): the
+  // environment's Anchor Mailgun zone, offered only when the server says this
+  // person can open the domain that owns it. The holder is also the source
+  // the shared log dialog (domains.js mgLog*) reads from.
+  emLogHolder(real, env) {
+    const e = String(env || '').toLowerCase();
+    const key = String(real.siteId) + ':' + e;
+    real.emLog = real.emLog || {};
+    return real.emLog[key] || (real.emLog[key] = { key, base: '/sites/' + real.siteId + '/' + e + '/email-logs', state: '' });
+  },
+
+  loadEmailLogRecent(h, force) {
+    if (h.state && !force) return;
+    h.state = 'loading'; h.note = '';
+    this.setState({});
+    const fail = msg => { h.state = 'err'; h.note = msg || 'Could not load the email log.'; this.setState({}); };
+    this.api(h.base).then(src => {
+      if (!src || src.code || !src.zone) { h.state = 'denied'; h.note = (src && src.message) || 'The email log is not available here.'; this.setState({}); return; }
+      h.zone = src.zone;
+      return this.api(h.base + '/events?limit=6').then(res => {
+        if (!res || res.code || !Array.isArray(res.items)) return fail(res && res.message);
+        h.state = 'ok'; h.recent = res.items;
+        this.setState({});
+      });
+    }).catch(() => fail());
+  },
+
+  emailLogVals(r, real, env) {
+    if (!real || !real.siteId || !env || r.status !== 'anchor') return { emLogShow: false };
+    const h = this.emLogHolder(real, env);
+    const dialog = this._mgLog === h ? this.mgLogVals() : {};
+    if (!this.state.emOpen) return Object.assign({ emLogShow: false }, dialog);
+    if (!h.state) setTimeout(() => this.loadEmailLogRecent(h), 0);
+    const { evWhen, evText, evBadge } = this.mgLogHelpers();
+    const open = ev => {
+      this.mgLogStart(h, h.base, h.zone || '', h.zone || 'this sending domain');
+      this.setState({ mgLogOpen: true, mgLogQ: '' });
+      this.loadMailgunLog(h.logFilter || '');
+      if (ev) this.openMailgunLogEvent(ev);
+    };
+    const rows = h.state === 'ok' ? (h.recent || []).map(ev => { const b = evBadge(ev);
+      return { when: evWhen(ev), badge: b.label, badgeFg: b.fg, badgeBg: b.bg, text: evText(ev), open: () => open(ev) }; }) : [];
+    const note = h.state === 'loading' || !h.state ? 'Loading recent email…'
+      : h.state === 'ok' && !rows.length ? 'No email in Mailgun’s log for ' + h.zone + ' yet.'
+      : h.state === 'ok' ? '' : h.note;
+    return Object.assign(dialog, {
+      emLogShow: true, emLogZone: h.zone || r.domain || '',
+      emLogCanOpen: h.state === 'ok', emLogOpenAll: () => open(null),
+      emLogNote: !!note, emLogNoteText: note, emLogRows: rows });
+  },
+
+  emailCardVals(d, card, OK, WARN, BAD, DIM, real, env) {
     const r = d && d.email_route;
     if (!r || typeof r !== 'object') return { card: null, vals: { emOpen: false } };
+    const logVals = this.emailLogVals(r, real, env);
     const issues = Array.isArray(r.issues) ? r.issues : [];
     const bad = issues.some(i => this.EMAIL_PRIORITY.includes(i.key));
     const tone = bad ? BAD : issues.length ? WARN : r.status === 'anchor' ? OK : DIM;
@@ -263,7 +315,7 @@ Object.assign(Component.prototype, {
       : [r.plugin_name, r.domain, log ? (Number(log.sent) || 0) + ' sent this week' : ''].filter(Boolean).join(' · ') || (r.status === 'php_mail' ? 'No mail plugin' : ' ');
     const open = !!this.state.emOpen;
     const c = { ...card('Email', r.label || 'Unknown', sub, tone), go: () => this.setState({ emOpen: !open }), cursor: 'pointer' };
-    if (!open) return { card: c, vals: { emOpen: false } };
+    if (!open) return { card: c, vals: Object.assign({ emOpen: false }, logVals) };
     const yes = v => v ? 'Yes' : 'No';
     const rows = [
       ['Sends through', r.label + (r.status === 'anchor' ? ' (our account)' : '')],
@@ -289,6 +341,6 @@ Object.assign(Component.prototype, {
     return { card: c, vals: {
       emOpen: true, emClose: () => this.setState({ emOpen: false }), emTitle: 'Email: ' + (r.label || 'Unknown'), emTone: tone,
       emIssues: issues.map(i => ({ label: i.label, tone: this.EMAIL_PRIORITY.includes(i.key) ? BAD : WARN })), emHasIssues: issues.length > 0,
-      emRows: rows, emChanges: changes, emHasChanges: changes.length > 0, emMailers: mailers, emHasMailers: mailers.length > 0 } };
+      emRows: rows, emChanges: changes, emHasChanges: changes.length > 0, emMailers: mailers, emHasMailers: mailers.length > 0, ...logVals } };
   }
 });

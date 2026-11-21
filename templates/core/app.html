@@ -110,6 +110,18 @@
 .cc-em-rows dd{margin:2px 0 0;font:500 var(--fs-13) var(--sans);overflow-wrap:anywhere}
 .cc-em-change{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;font:400 var(--fs-13) var(--sans);padding:5px 0;border-top:1px solid var(--rule)}
 .cc-em-when{font:500 var(--fs-12) var(--mono);color:var(--ink-dim);min-width:150px}
+.cc-em-loghead{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:16px 0 8px}
+.cc-em-loghead h4{margin:0;white-space:nowrap}
+.cc-em-zone{font:400 var(--fs-12) var(--mono);color:var(--ink-dim)}
+.cc-em-logbtn{border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:7px;cursor:pointer}
+.cc-em-logbtn:hover{border-color:var(--brand)}
+.cc-em-lognote{font:400 var(--fs-13) var(--sans);color:var(--ink-dim);padding:4px 0}
+.cc-em-logrow{display:flex;align-items:center;gap:10px;padding:6px 4px;border-top:1px solid var(--rule);font:400 var(--fs-13) var(--sans);cursor:pointer;border-radius:4px;min-width:0}
+.cc-em-logrow:hover{background:var(--panel-2)}
+.cc-em-logrow .cc-em-when{min-width:110px;flex:none}
+.cc-em-badge{flex:none;min-width:84px;box-sizing:border-box;text-align:center;font:600 var(--fs-11) var(--sans);border-radius:6px;padding:2px 8px}
+.cc-em-logtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:600px){.cc-em-logrow{flex-wrap:wrap}.cc-em-logrow .cc-em-when{min-width:0}.cc-em-logtext{flex-basis:100%;white-space:normal}}
 .cc-em-set{border-top:1px solid var(--rule);padding:6px 0}
 .cc-em-set summary{cursor:pointer;font:500 var(--fs-13) var(--sans)}
 .cc-em-set pre{margin:8px 0 2px;max-height:320px;overflow:auto;background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-12) var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
@@ -1707,6 +1719,22 @@ button.ccc-edited:hover{color:var(--ink)}
                     <div><dt>{{ r.k }}</dt><dd>{{ r.v }}</dd></div>
                   </sc-for>
                 </dl>
+                <sc-if value="{{ emLogShow }}" hint-placeholder-val="{{ false }}">
+                  <div class="cc-em-loghead">
+                    <h4>Email log</h4>
+                    <span class="cc-em-zone">{{ emLogZone }}</span>
+                    <div style="flex:1"></div>
+                    <sc-if value="{{ emLogCanOpen }}" hint-placeholder-val="{{ false }}">
+                      <button type="button" onClick="{{ emLogOpenAll }}" class="cc-em-logbtn">View all logs →</button>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ emLogNote }}" hint-placeholder-val="{{ false }}">
+                    <div class="cc-em-lognote">{{ emLogNoteText }}</div>
+                  </sc-if>
+                  <sc-for list="{{ emLogRows }}" as="lr" hint-placeholder-count="5">
+                    <div class="cc-em-logrow" onClick="{{ lr.open }}"><span class="cc-em-when">{{ lr.when }}</span><span class="cc-em-badge" style="color:{{ lr.badgeFg }};background:{{ lr.badgeBg }}">{{ lr.badge }}</span><span class="cc-em-logtext">{{ lr.text }}</span></div>
+                  </sc-for>
+                </sc-if>
                 <sc-if value="{{ emHasChanges }}" hint-placeholder-val="{{ false }}">
                   <h4>Changes</h4>
                   <sc-for list="{{ emChanges }}" as="c" hint-placeholder-count="1">
@@ -9280,7 +9308,7 @@ button.ccc-edited:hover{color:var(--ink)}
           <sc-if value="{{ mgLogList }}" hint-placeholder-val="{{ true }}">
             <span style="font:600 var(--fs-15) var(--sans)">Email log</span>
           </sc-if>
-          <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ mgHost }}</span>
+          <span style="font:400 var(--fs-125) var(--mono);color:var(--ink-dim)">{{ mgLogHost }}</span>
           <div style="flex:1"></div>
           <span onClick="{{ mgLogRefresh }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer;border:1px solid var(--rule);border-radius:6px;padding:3px 9px" style-hover="border-color:var(--brand)">Refresh</span>
           <span onClick="{{ closeMgLog }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
