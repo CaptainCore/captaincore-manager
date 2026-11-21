@@ -13,18 +13,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Mailgun {
-	
+
+    /**
+     * The Mailgun API key: the "key" credential of the Mailgun provider
+     * (Settings → Providers), else the legacy MAILGUN_API_KEY constant.
+     */
+    public static function key() {
+        static $key = null;
+        if ( $key !== null ) {
+            return $key;
+        }
+        $credentials = ( new \CaptainCore\Provider( "mailgun" ) )->credentials();
+        foreach ( (array) $credentials as $credential ) {
+            if ( isset( $credential->name, $credential->value ) && $credential->name == "key" && trim( (string) $credential->value ) !== "" ) {
+                return $key = trim( (string) $credential->value );
+            }
+        }
+        return $key = defined( 'MAILGUN_API_KEY' ) ? (string) MAILGUN_API_KEY : "";
+    }
     public static function get( $command, $data = [] ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
-            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        if ( self::key() === '' ) {
+            return (object) [ 'errors' => [ 'No Mailgun API key. Add one to the Mailgun provider.' ] ];
         }
 
         $args = [
             'timeout' => 120,
             'headers' => [
                 'Content-type'       => 'application/json',
-                'Authorization'      => 'Basic '. base64_encode( "api:". MAILGUN_API_KEY ),
+                'Authorization'      => 'Basic '. base64_encode( "api:". self::key() ),
             ]
         ];
 
@@ -42,7 +59,7 @@ class Mailgun {
 
     public static function page( $domain, $page ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+        if ( self::key() === '' ) {
             return;
         }
 
@@ -70,7 +87,7 @@ class Mailgun {
             'timeout' => 120,
             'headers' => [
                 'Content-type'       => 'application/json',
-                'Authorization'      => 'Basic '. base64_encode( "api:". MAILGUN_API_KEY ),
+                'Authorization'      => 'Basic '. base64_encode( "api:". self::key() ),
             ]
         ];
 
@@ -94,8 +111,8 @@ class Mailgun {
      */
     public static function stored_message( $domain, $url ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
-            return new \WP_Error( 'mailgun_not_configured', 'MAILGUN_API_KEY constant is not defined.', [ 'status' => 500 ] );
+        if ( self::key() === '' ) {
+            return new \WP_Error( 'mailgun_not_configured', 'No Mailgun API key. Add one to the Mailgun provider.', [ 'status' => 500 ] );
         }
 
         $parts = wp_parse_url( (string) $url );
@@ -113,7 +130,7 @@ class Mailgun {
             'timeout' => 30,
             'headers' => [
                 'Accept'        => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode( 'api:' . MAILGUN_API_KEY ),
+                'Authorization' => 'Basic ' . base64_encode( 'api:' . self::key() ),
             ],
         ] );
 
@@ -137,8 +154,8 @@ class Mailgun {
 
     public static function post( $command, $post = [] ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
-            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        if ( self::key() === '' ) {
+            return (object) [ 'errors' => [ 'No Mailgun API key. Add one to the Mailgun provider.' ] ];
         }
 
         // Generate a boundary
@@ -164,7 +181,7 @@ class Mailgun {
             'timeout' => 120,
             'headers' => [
                 'Content-type'  => "multipart/form-data; boundary=$boundary",
-                'Authorization' => 'Basic '. base64_encode( "api:". MAILGUN_API_KEY ),
+                'Authorization' => 'Basic '. base64_encode( "api:". self::key() ),
             ],
             'body'    => $body,
             'method'  => 'POST',
@@ -181,8 +198,8 @@ class Mailgun {
 
     public static function put( $command, $post = [] ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
-            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        if ( self::key() === '' ) {
+            return (object) [ 'errors' => [ 'No Mailgun API key. Add one to the Mailgun provider.' ] ];
         }
 
          // Generate a boundary
@@ -208,7 +225,7 @@ class Mailgun {
             'timeout' => 120,
             'headers' => [
                 'Content-type'  => "application/json",
-                'Authorization' => 'Basic '. base64_encode( "api:". MAILGUN_API_KEY ),
+                'Authorization' => 'Basic '. base64_encode( "api:". self::key() ),
             ],
             'method'  => 'PUT',
         ];
@@ -228,15 +245,15 @@ class Mailgun {
 
     public static function delete( $command, $data = [] ) {
 
-        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
-            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        if ( self::key() === '' ) {
+            return (object) [ 'errors' => [ 'No Mailgun API key. Add one to the Mailgun provider.' ] ];
         }
 
         $args = [
             'timeout' => 120,
             'headers' => [
                 'Content-type'       => 'application/json',
-                'Authorization'      => 'Basic '. base64_encode( "api:". MAILGUN_API_KEY ),
+                'Authorization'      => 'Basic '. base64_encode( "api:". self::key() ),
             ],
             'method'  => 'DELETE',
         ];
