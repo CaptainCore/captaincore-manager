@@ -84,6 +84,7 @@ class Component extends DCLogic {
     cardDlgOpen: false, cardErr: "", cardSaving: false, chartHoverIdx: -1, chartHoverX: 0, chartHoverY: 0,
     achDlgOpen: false, achName: '', achErr: '', achSaving: false,
     verifyDlgOpen: false, verifyToken: null, verifyByAmounts: false, verifyCode: '', verifyA1: '', verifyA2: '', verifyErr: '', verifySaving: false,
+    refDlgOpen: false, refQtys: {}, refAmt: '', refReason: '', refRestock: true, refApiRefund: true, refErr: '', refSaving: false,
     profName: 'Austin Ginder', profEmail: 'austin@anchor.host', tfa: 'off', tfaCode: '', appPw: '', sessions: null,
     tpOpen: false, tpQ: '', termSel: [], cookOpen: false, cookQ: '',
     schedOpen: false, schedDate: '', schedTime: '', schedErr: '', schedBusy: false,
@@ -1549,7 +1550,7 @@ class Component extends DCLogic {
       // Terminal schedule + public-recipe confirm
       schedOpen: false, crRecipe: 0,
       // Profile / billing
-      sessModalOpen: false, billAddrOpen: false, cardDlgOpen: false, achDlgOpen: false, verifyDlgOpen: false, adOpen: false,
+      sessModalOpen: false, billAddrOpen: false, cardDlgOpen: false, achDlgOpen: false, verifyDlgOpen: false, refDlgOpen: false, adOpen: false,
       // Site detail
       nsuOpen: false, dsuOpen: false, asgOpen: false, edsOpen: false, eeOpen: false,
       aaOpen: false, shareDlgOpen: false, udOpen: false, fmViewOpen: false,

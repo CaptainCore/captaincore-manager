@@ -6943,6 +6943,7 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 	}
 	$order_data       = (object) $order->get_data();
 	$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+	$is_admin         = $user->is_admin();
 	$order_line_items = [];
 	foreach ( $order_items as $item_id => $item ) {
 		$order_line_items[] = [
@@ -6953,15 +6954,35 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 		];
 	}
 
-	$refunds = $order->get_refunds();
+	$refunds        = $order->get_refunds();
+	$refund_records = [];
 	foreach ( $refunds as $item ) {
-		$order_line_items[] = [
-			"name"        => "Refund",
-			"quantity"    => "1",
-			"description" => $item->get_post_title(),
-			"total"       => "-" . $item->get_formatted_refund_amount(),
+		$refund_by     = (int) $item->get_refunded_by();
+		$refund_user   = $refund_by ? get_userdata( $refund_by ) : false;
+		$refund_date   = $item->get_date_created();
+		$refund_reason = (string) $item->get_reason();
+		$row           = [
+			"name"          => "Refund",
+			"quantity"      => "1",
+			"description"   => $refund_reason !== '' ? $refund_reason : $item->get_post_title(),
+			"total"         => "-" . $item->get_formatted_refund_amount(),
+			"is_refund"     => true,
+			"refund_date"   => $refund_date ? $refund_date->getTimestamp() : null,
+			"refund_reason" => $refund_reason,
 		];
-		$order_data->total = $order_data->total - $item->get_amount();
+		if ( $is_admin ) {
+			$row["refund_id"] = $item->get_id();
+			$row["refund_by"] = $refund_user ? $refund_user->display_name : '';
+			$refund_records[] = [
+				"id"     => $item->get_id(),
+				"date"   => $refund_date ? $refund_date->getTimestamp() : null,
+				"amount" => (float) $item->get_amount(),
+				"reason" => $refund_reason,
+				"by"     => $refund_user ? $refund_user->display_name : '',
+			];
+		}
+		$order_line_items[] = $row;
+		$order_data->total  = $order_data->total - $item->get_amount();
 	}
 
 	$payment_method_title = $order->get_payment_method_title();
@@ -6984,7 +7005,7 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 		);
 	}
 
-	return [
+	$response = [
 		"order_id"       => $order_data->id,
 		"created_at"     => $order_data->date_created->getTimestamp(),
 		"status"         => $order_data->status,
@@ -6992,6 +7013,233 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 		"payment_method" => $payment_method_string,
 		"paid_on"        => $paid_on,
 		"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
+	];
+
+	if ( $is_admin ) {
+		$remaining    = max( 0.0, (float) $order->get_remaining_refund_amount() );
+		$refund_lines = [];
+		foreach ( $order_items as $item_id => $item ) {
+			$qty          = max( 1, (int) $item->get_quantity() );
+			$qty_refunded = abs( (int) $order->get_qty_refunded_for_item( $item_id ) );
+			$qty_left     = max( 0, $qty - $qty_refunded );
+			$line_total   = (float) $item->get_total();
+			$line_tax     = (float) $item->get_total_tax();
+			$taxes_data   = $item->get_taxes();
+			$taxes        = [];
+			if ( ! empty( $taxes_data['total'] ) && is_array( $taxes_data['total'] ) ) {
+				foreach ( $taxes_data['total'] as $tax_id => $tax_val ) {
+					if ( (float) $tax_val > 0 ) {
+						$taxes[] = [
+							"id"    => (int) $tax_id,
+							"total" => (float) $tax_val,
+						];
+					}
+				}
+			}
+			$refund_lines[] = [
+				"id"           => (int) $item_id,
+				"name"         => $item->get_name(),
+				"quantity"     => $qty,
+				"qty_refunded" => $qty_refunded,
+				"qty_left"     => $qty_left,
+				"total"        => $line_total,
+				"total_tax"    => $line_tax,
+				"unit_total"   => ( $line_total + $line_tax ) / $qty,
+				"taxes"        => $taxes,
+			];
+		}
+
+		$gateway_out = null;
+		$gateway     = function_exists( 'wc_get_payment_gateway_by_order' ) ? wc_get_payment_gateway_by_order( $order ) : false;
+		if ( $gateway ) {
+			try {
+				$gw_title = (string) $gateway->get_title();
+			} catch ( \Throwable $e ) {
+				$gw_title = (string) ( $gateway->title ?? '' );
+			}
+			$can_gw = false;
+			try {
+				$can_gw = method_exists( $gateway, 'can_refund_order' )
+					? (bool) $gateway->can_refund_order( $order )
+					: (bool) $gateway->supports( 'refunds' );
+			} catch ( \Throwable $e ) {
+				$can_gw = false;
+			}
+			$gateway_out = [
+				"id"         => $gateway->id,
+				"title"      => $gw_title !== '' ? $gw_title : (string) $gateway->get_method_title(),
+				"can_refund" => $can_gw,
+			];
+		}
+
+		$response["refund_state"] = [
+			"refundable"     => round( $remaining, 2 ),
+			"order_total"    => (float) $order->get_total(),
+			"total_refunded" => (float) $order->get_total_refunded(),
+			"lines"          => $refund_lines,
+			"refunds"        => $refund_records,
+			"gateway"        => $gateway_out,
+		];
+	}
+
+	return $response;
+}
+
+function captaincore_invoices_refund_create_func( WP_REST_Request $request ) {
+	if ( ! function_exists( 'wc_get_order' ) || ! function_exists( 'wc_create_refund' ) ) {
+		return new WP_Error( 'no_wc', 'WooCommerce is not available.', [ 'status' => 400 ] );
+	}
+
+	$order_id = (int) $request['id'];
+	$order    = wc_get_order( $order_id );
+	if ( ! $order || ! is_a( $order, 'WC_Order' ) || $order->get_status() === 'trash' ) {
+		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+
+	$remaining = max( 0.0, (float) $order->get_remaining_refund_amount() );
+	$amount    = round( (float) $request->get_param( 'amount' ), 2 );
+	if ( $amount <= 0 || $amount > $remaining + 0.001 ) {
+		return new WP_Error(
+			'invalid_amount',
+			sprintf( 'Enter a refund amount between $0.01 and $%s.', number_format( $remaining, 2, '.', '' ) ),
+			[ 'status' => 400 ]
+		);
+	}
+	if ( $amount > $remaining ) {
+		$amount = round( $remaining, 2 );
+	}
+
+	$reason        = sanitize_text_field( (string) ( $request->get_param( 'reason' ) ?? '' ) );
+	$api_refund    = (bool) $request->get_param( 'api_refund' );
+	$restock_param = $request->get_param( 'restock_items' );
+	$restock_items = $restock_param === null ? true : (bool) $restock_param;
+
+	if ( $api_refund ) {
+		$gateway = function_exists( 'wc_get_payment_gateway_by_order' ) ? wc_get_payment_gateway_by_order( $order ) : false;
+		$can_gw  = false;
+		if ( $gateway ) {
+			try {
+				$can_gw = method_exists( $gateway, 'can_refund_order' )
+					? (bool) $gateway->can_refund_order( $order )
+					: (bool) $gateway->supports( 'refunds' );
+			} catch ( \Throwable $e ) {
+				$can_gw = false;
+			}
+		}
+		if ( ! $can_gw ) {
+			return new WP_Error( 'gateway_cannot_refund', 'This invoice’s payment gateway cannot process automatic refunds.', [ 'status' => 400 ] );
+		}
+	}
+
+	$line_items     = [];
+	$raw_line_items = $request->get_param( 'line_items' );
+	if ( is_array( $raw_line_items ) && ! empty( $raw_line_items ) ) {
+		$order_items = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+		foreach ( $raw_line_items as $li ) {
+			if ( ! is_array( $li ) || empty( $li['id'] ) ) {
+				continue;
+			}
+			$item_id = (int) $li['id'];
+			if ( ! isset( $order_items[ $item_id ] ) ) {
+				continue;
+			}
+			$item     = $order_items[ $item_id ];
+			$qty_max  = max( 0, (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item_id ) ) );
+			$qty      = max( 0, min( $qty_max, (int) ( $li['quantity'] ?? 0 ) ) );
+			$ref_tot  = isset( $li['refund_total'] ) ? round( max( 0.0, (float) $li['refund_total'] ), 2 ) : 0.0;
+			$ref_tax  = [];
+			if ( ! empty( $li['refund_tax'] ) && is_array( $li['refund_tax'] ) ) {
+				foreach ( $li['refund_tax'] as $t ) {
+					if ( is_array( $t ) && isset( $t['id'], $t['refund_total'] ) && (float) $t['refund_total'] > 0 ) {
+						$ref_tax[ (int) $t['id'] ] = round( (float) $t['refund_total'], 2 );
+					}
+				}
+			}
+			if ( $qty > 0 || $ref_tot > 0 || ! empty( $ref_tax ) ) {
+				$line_items[ $item_id ] = [
+					'qty'          => $qty,
+					'refund_total' => $ref_tot,
+					'refund_tax'   => $ref_tax,
+				];
+			}
+		}
+	}
+
+	$refund = wc_create_refund( [
+		'order_id'       => $order_id,
+		'amount'         => $amount,
+		'reason'         => $reason !== '' ? $reason : null,
+		'line_items'     => $line_items,
+		'refund_payment' => $api_refund,
+		'restock_items'  => $restock_items,
+	] );
+
+	if ( is_wp_error( $refund ) ) {
+		return new WP_Error( 'refund_failed', $refund->get_error_message(), [ 'status' => 400 ] );
+	}
+	if ( ! $refund ) {
+		return new WP_Error( 'refund_failed', 'Could not create refund.', [ 'status' => 500 ] );
+	}
+
+	$desc = sprintf(
+		'Refunded $%s%s%s',
+		number_format( (float) $refund->get_amount(), 2, '.', '' ),
+		$api_refund ? ' via gateway' : ' (manual record)',
+		$reason !== '' ? " — {$reason}" : ''
+	);
+	CaptainCore\ActivityLog::log( 'refunded', 'invoice', $order_id, "Invoice #{$order_id}", $desc );
+	if ( function_exists( 'wc_delete_shop_order_transients' ) ) {
+		wc_delete_shop_order_transients( $order_id );
+	}
+	if ( class_exists( 'WC_Cache_Helper' ) ) {
+		WC_Cache_Helper::invalidate_cache_group( 'orders' );
+	}
+
+	return [
+		'success'   => true,
+		'refund_id' => $refund->get_id(),
+		'invoice'   => captaincore_invoices_get_func( $request ),
+	];
+}
+
+function captaincore_invoices_refund_delete_func( WP_REST_Request $request ) {
+	if ( ! function_exists( 'wc_get_order' ) ) {
+		return new WP_Error( 'no_wc', 'WooCommerce is not available.', [ 'status' => 400 ] );
+	}
+
+	$order_id  = (int) $request['id'];
+	$refund_id = (int) $request['refund_id'];
+	$order     = wc_get_order( $order_id );
+	if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
+		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+
+	$refund = wc_get_order( $refund_id );
+	if ( ! $refund || ! is_a( $refund, 'WC_Order_Refund' ) || (int) $refund->get_parent_id() !== $order_id ) {
+		return new WP_Error( 'refund_not_found', 'Refund record not found on this invoice.', [ 'status' => 404 ] );
+	}
+
+	$amount = (float) $refund->get_amount();
+	$refund->delete( true );
+	do_action( 'woocommerce_refund_deleted', $refund_id, $order_id );
+	if ( function_exists( 'wc_delete_shop_order_transients' ) ) {
+		wc_delete_shop_order_transients( $order_id );
+	}
+	if ( class_exists( 'WC_Cache_Helper' ) ) {
+		WC_Cache_Helper::invalidate_cache_group( 'orders' );
+	}
+
+	CaptainCore\ActivityLog::log(
+		'deleted',
+		'invoice',
+		$order_id,
+		"Invoice #{$order_id}",
+		sprintf( 'Deleted refund record #%d ($%s)', $refund_id, number_format( $amount, 2, '.', '' ) )
+	);
+
+	return [
+		'success' => true,
+		'invoice' => captaincore_invoices_get_func( $request ),
 	];
 }
 
@@ -12680,6 +12928,22 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_invoices_pdf_func',
 			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invoices/(?P<id>[\d]+)/refunds', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_invoices_refund_create_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invoices/(?P<id>[\d]+)/refunds/(?P<refund_id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_invoices_refund_delete_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 

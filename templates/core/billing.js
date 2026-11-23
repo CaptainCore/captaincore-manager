@@ -335,6 +335,46 @@ Object.assign(Component.prototype, {
     // WooCommerce customer — send them to the address dialog instead of
     // letting the charge fail with a bare gateway error.
     const addrMiss = (this._hydrated && bill && !bill.error) ? this.billMissing(bill.address) : [];
+    const isOp = ((window.CC_BOOT && window.CC_BOOT.dcRole) || (this.props && this.props.role) || 'operator') === 'operator';
+    const rs = (d && d.refund_state) ? d.refund_state : null;
+    const refundable = rs ? Math.max(0, Number(rs.refundable) || 0) : 0;
+    const invCanRefund = !!(this._hydrated && isOp && d && status !== 'trash' && refundable > 0.001);
+    const fmtMoney = n => '$' + (Number(n) || 0).toFixed(2);
+    const paidOnRaw = d && d.paid_on ? String(d.paid_on).trim() : '';
+    const invPaidOn = paidOnRaw ? (/^paid on /i.test(paidOnRaw) ? paidOnRaw : 'Paid on ' + paidOnRaw) : '';
+    const refLinesRaw = (rs && Array.isArray(rs.lines)) ? rs.lines.filter(l => (Number(l.qty_left) || 0) > 0) : [];
+    const refQtys = s.refQtys || {};
+    const recalcRefAmt = nextQtys => {
+      let sum = 0, any = false;
+      refLinesRaw.forEach(l => {
+        const n = Math.max(0, Math.min(Number(l.qty_left) || 0, parseInt(nextQtys[l.id], 10) || 0));
+        if (n > 0) { any = true; sum += (Number(l.unit_total) || 0) * n; }
+      });
+      return (any ? Math.min(sum, refundable) : refundable).toFixed(2);
+    };
+    const refLines = refLinesRaw.map(l => {
+      const left = Number(l.qty_left) || 0;
+      const done = Number(l.qty_refunded) || 0;
+      const qtyVal = refQtys[l.id] != null ? String(refQtys[l.id]) : '0';
+      return {
+        id: l.id,
+        name: l.name || '',
+        meta: (done > 0 ? (done + ' of ' + l.quantity + ' refunded · ') : '') + fmtMoney(l.unit_total) + ' each',
+        max: String(left),
+        qty: qtyVal,
+        onQty: e => {
+          const raw = e.target.value;
+          const n = raw === '' ? 0 : Math.max(0, Math.min(left, parseInt(raw, 10) || 0));
+          const next = { ...(this.state.refQtys || {}), [l.id]: n };
+          this.setState({ refQtys: next, refAmt: recalcRefAmt(next), refErr: '' });
+        }
+      };
+    });
+    const gw = rs && rs.gateway ? rs.gateway : null;
+    const refCanGw = !!(gw && gw.can_refund);
+    const refNoGwNote = gw
+      ? (gw.title + ' cannot send money back itself: this records the refund, and the money moves back outside the site.')
+      : 'This records the refund; the money moves back outside the site.';
     return {
       invPayMethods,
       invHasMethods: invPayMethods.length > 0,
@@ -377,19 +417,169 @@ Object.assign(Component.prototype, {
       invStatus: status || '—',
       invStBg: paid ? 'var(--ok-soft)' : canPay ? 'var(--warn-soft)' : 'var(--panel-2)',
       invDate: d ? (d._dateLabel || (d.created_at && this.fmtEpoch ? this.fmtEpoch(d.created_at) : '')) : '',
-      invLines: d ? (Array.isArray(d.line_items) ? d.line_items : []).map(li => ({
-        name: li.name || '',
-        qty: String(li.quantity || 1),
-        desc: (Array.isArray(li.description) ? li.description : []).map(m => txt(m.value)).filter(Boolean).join('\n'),
-        total: txt(li.total)
-      })) : [],
+      invLines: d ? (Array.isArray(d.line_items) ? d.line_items : []).map(li => {
+        const isRefund = !!li.is_refund;
+        let desc = '';
+        if (isRefund) {
+          const bits = [];
+          if (li.refund_date && this.fmtEpoch) bits.push(this.fmtEpoch(li.refund_date));
+          if (li.refund_by) bits.push('by ' + li.refund_by);
+          if (li.refund_reason) bits.push(li.refund_reason);
+          else if (typeof li.description === 'string' && li.description) bits.push(txt(li.description));
+          desc = bits.join(' · ');
+        } else if (Array.isArray(li.description)) {
+          desc = li.description.map(m => txt(m.value)).filter(Boolean).join('\n');
+        } else if (typeof li.description === 'string') {
+          desc = txt(li.description);
+        }
+        const canDel = !!(this._hydrated && isOp && isRefund && li.refund_id);
+        return {
+          name: li.name || '',
+          qty: isRefund ? '' : String(li.quantity || 1),
+          desc,
+          total: txt(li.total),
+          canDel,
+          del: () => canDel ? this.deleteInvRefund(id, li.refund_id) : null
+        };
+      }) : [],
       invTotal: d ? '$' + (Number(String(d.total).replace(/[^0-9.]/g, '')) || 0).toFixed(2) : '',
       invPayMethod: d ? txt(d.payment_method) : '',
-      invPaidOn: d && d.paid_on ? String(d.paid_on) : '',
-      invHasPaidOn: !!(d && d.paid_on),
+      invPaidOn,
+      invHasPaidOn: !!invPaidOn,
       invCanPay: !!d && canPay,
+      invCanRefund,
+      openInvRefund: () => {
+        if (!invCanRefund) return;
+        this.setState({
+          refDlgOpen: true,
+          refQtys: {},
+          refAmt: refundable.toFixed(2),
+          refReason: '',
+          refRestock: true,
+          refApiRefund: refCanGw,
+          refErr: '',
+          refSaving: false
+        });
+      },
+      closeInvRefund: () => this.setState({ refDlgOpen: false, refSaving: false, refErr: '' }),
+      refDlgOpen: !!s.refDlgOpen && invCanRefund,
+      refDlgTitle: 'Refund Invoice #' + id,
+      refLines,
+      refHasLines: refLines.length > 0,
+      refMax: refundable.toFixed(2),
+      refMaxLabel: 'Amount (max ' + fmtMoney(refundable) + ')',
+      refAmt: s.refAmt != null ? String(s.refAmt) : refundable.toFixed(2),
+      onRefAmt: e => this.setState({ refAmt: e.target.value, refErr: '' }),
+      refReason: s.refReason || '',
+      onRefReason: e => this.setState({ refReason: e.target.value, refErr: '' }),
+      refRestockMark: s.refRestock ? '\u2713' : '',
+      toggleRefRestock: () => this.setState(st => ({ refRestock: !st.refRestock })),
+      refCanGw,
+      refNoGw: !refCanGw,
+      refGwLabel: gw ? ('Also refund via ' + gw.title) : '',
+      refGwMark: (refCanGw && s.refApiRefund) ? '\u2713' : '',
+      toggleRefGw: () => this.setState(st => ({ refApiRefund: !st.refApiRefund })),
+      refNoGwNote,
+      refErr: s.refErr || '',
+      refSaving: !!s.refSaving,
+      refSubmitLabel: s.refSaving ? 'Refunding…' : 'Issue refund',
+      submitInvRefund: () => this.submitInvRefund(id, rs, refLinesRaw),
       invPdf: () => this._hydrated ? this.downloadInvoicePdf(id) : null
     };
+  },
+
+  async submitInvRefund(orderId, rs, refLinesRaw) {
+    if (this.state.refSaving || !rs) return;
+    const max = Math.max(0, Number(rs.refundable) || 0);
+    const amt = parseFloat(this.state.refAmt);
+    const reason = (this.state.refReason || '').trim();
+    if (!amt || amt <= 0 || amt > max + 0.001) {
+      this.setState({ refErr: 'Enter an amount between $0.01 and $' + max.toFixed(2) + '.' });
+      return;
+    }
+    const gw = rs.gateway;
+    const viaGateway = !!(gw && gw.can_refund && this.state.refApiRefund);
+    const ok = await this.uiConfirm(
+      'Refund $' + amt.toFixed(2) + ' on invoice #' + orderId + '?\n\n' +
+      (viaGateway
+        ? 'The gateway is asked to send the money back to the customer. A refund already sent cannot be recalled.'
+        : 'This records the refund on the invoice; the money itself moves outside the site.'),
+      { label: 'Refund', danger: true }
+    );
+    if (!ok) return;
+
+    const qtys = this.state.refQtys || {};
+    const lineItems = [];
+    (refLinesRaw || []).forEach(l => {
+      const n = Math.max(0, Math.min(Number(l.qty_left) || 0, parseInt(qtys[l.id], 10) || 0));
+      if (n <= 0) return;
+      const qty = Math.max(1, Number(l.quantity) || 1);
+      lineItems.push({
+        id: l.id,
+        quantity: n,
+        refund_total: ((Number(l.total) || 0) / qty * n).toFixed(2),
+        refund_tax: (Array.isArray(l.taxes) ? l.taxes : []).filter(t => Number(t.total) > 0).map(t => ({
+          id: t.id,
+          refund_total: ((Number(t.total) || 0) / qty * n).toFixed(2)
+        }))
+      });
+    });
+
+    this.setState({ refSaving: true, refErr: '' });
+    const tid = this.toast('Refunding $' + amt.toFixed(2) + '…', { kind: 'loading' });
+    const body = {
+      amount: amt.toFixed(2),
+      reason,
+      api_refund: viaGateway,
+      restock_items: !!this.state.refRestock
+    };
+    if (lineItems.length) body.line_items = lineItems;
+
+    this.api('/invoices/' + orderId + '/refunds', { method: 'POST', body }).then(res => {
+      if (!res || res.code || !res.success) {
+        const msg = (res && (res.message || res.error)) || 'Could not issue refund.';
+        this.setState({ refSaving: false, refErr: String(msg) });
+        this.updateToast(tid, String(msg), { kind: 'error' });
+        return;
+      }
+      if (res.invoice && this._invoiceView && String(this._invoiceView.id) === String(orderId)) {
+        this._invoiceView.data = res.invoice;
+      }
+      this.setState({ refDlgOpen: false, refSaving: false, refErr: '' });
+      this.updateToast(tid, 'Refunded $' + amt.toFixed(2), { kind: 'success' });
+      this.loadBilling(true);
+      if (this._invoiceFrom && this._invoiceFrom.accountId && this._accCache) {
+        delete this._accCache[String(this._invoiceFrom.accountId)];
+      }
+    }).catch(() => {
+      this.setState({ refSaving: false, refErr: 'Could not issue refund.' });
+      this.updateToast(tid, 'Could not issue refund', { kind: 'error' });
+    });
+  },
+
+  async deleteInvRefund(orderId, refundId) {
+    const ok = await this.uiConfirm(
+      'Delete this refund record?\n\nIts amount is restored to the invoice totals. Money already sent back through the gateway is not pulled back.',
+      { label: 'Delete refund', danger: true }
+    );
+    if (!ok) return;
+    const tid = this.toast('Deleting refund record…', { kind: 'loading' });
+    this.api('/invoices/' + orderId + '/refunds/' + refundId, { method: 'DELETE' }).then(res => {
+      if (!res || res.code || !res.success) {
+        const msg = (res && (res.message || res.error)) || 'Could not delete refund record.';
+        this.updateToast(tid, String(msg), { kind: 'error' });
+        return;
+      }
+      if (res.invoice && this._invoiceView && String(this._invoiceView.id) === String(orderId)) {
+        this._invoiceView.data = res.invoice;
+      }
+      this.setState({});
+      this.updateToast(tid, 'Refund record deleted', { kind: 'success' });
+      this.loadBilling(true);
+      if (this._invoiceFrom && this._invoiceFrom.accountId && this._accCache) {
+        delete this._accCache[String(this._invoiceFrom.accountId)];
+      }
+    }).catch(() => this.updateToast(tid, 'Could not delete refund record', { kind: 'error' }));
   },
 
   downloadInvoicePdf(orderId) {
