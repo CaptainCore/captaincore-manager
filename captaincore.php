@@ -1680,12 +1680,24 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$current_site = ( new CaptainCore\Sites )->get( $post->data->site_id );
 
-		// Merge incoming details with existing to preserve server-side flags (e.g., removed)
+		// Merge incoming details with existing to preserve server-side flags (e.g., removed, last_remote_sync_at).
+		// Explicit null values remove the key so the CLI can clear transient flags like connection_errors.
 		if ( isset( $post->data->details ) ) {
 			$existing_details = isset( $current_site->details ) ? json_decode( $current_site->details ) : (object) [];
+			if ( ! is_object( $existing_details ) ) {
+				$existing_details = (object) [];
+			}
 			$incoming_details = json_decode( $post->data->details );
-			if ( $incoming_details ) {
-				foreach ( $incoming_details as $key => $value ) {
+			if ( is_object( $incoming_details ) ) {
+				$manager_owned = [ 'last_remote_sync_at' ];
+				foreach ( get_object_vars( $incoming_details ) as $key => $value ) {
+					if ( in_array( $key, $manager_owned, true ) && isset( $existing_details->$key ) ) {
+						continue;
+					}
+					if ( $value === null ) {
+						unset( $existing_details->$key );
+						continue;
+					}
 					$existing_details->$key = $value;
 				}
 			}
@@ -1745,7 +1757,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		CaptainCore\Sites::update_environments_cache( $site_id );
 		
 		// Mark Site as updated
-		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at ], [ "site_id" => $site_id ] );
+		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at ?? date( "Y-m-d H:i:s" ) ], [ "site_id" => $site_id ] );
 
 		$response = [
 			"response"        => "Completed update-environment for $site_id",
