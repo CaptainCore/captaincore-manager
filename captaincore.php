@@ -3221,16 +3221,18 @@ function captaincore_sites_stats_func( WP_REST_Request $request ) {
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$from_at    = $request->get_param( 'from_at' );
-	$to_at      = $request->get_param( 'to_at' );
-	$before     = ! empty( $from_at ) ? strtotime( $from_at ) : '';
-	$after      = ! empty( $to_at ) ? strtotime( $to_at ) : '';
-	$grouping   = strtolower( $request->get_param( 'grouping' ) ?? '' );
-	$fathom_id  = $request->get_param( 'fathom_id' );
-	$environment = $request->get_param( 'environment' );
-	$response   = ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
+	$from_at     = $request->get_param( 'from_at' );
+	$to_at       = $request->get_param( 'to_at' );
+	$before      = ! empty( $from_at ) ? strtotime( $from_at ) : '';
+	$after       = ! empty( $to_at ) ? strtotime( $to_at ) : '';
+	$grouping    = strtolower( $request->get_param( 'grouping' ) ?? '' );
+	$fathom_id   = $request->get_param( 'fathom_id' );
+	$environment = $request->get_param( 'environment' ) ?: 'production';
+	$response    = ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
 	if ( is_wp_error( $response ) ) {
-		return new WP_Error( 'stats_error', $response->get_error_message(), [ 'status' => 400 ] );
+		$data   = $response->get_error_data();
+		$status = is_array( $data ) && ! empty( $data['status'] ) ? (int) $data['status'] : 400;
+		return new WP_Error( $response->get_error_code() ?: 'stats_error', $response->get_error_message(), [ 'status' => $status ] );
 	}
 	return $response;
 }
@@ -3245,8 +3247,9 @@ function captaincore_sites_stats_top_pages_func( WP_REST_Request $request ) {
 	$before      = ! empty( $from_at ) ? strtotime( $from_at ) : '';
 	$after       = ! empty( $to_at ) ? strtotime( $to_at ) : '';
 	$limit       = (int) ( $request->get_param( 'limit' ) ?: 10 );
-	$environment = $request->get_param( 'environment' );
-	return ( new CaptainCore\Site( $site_id ) )->top_pages( $environment, $before, $after, $limit );
+	$environment = $request->get_param( 'environment' ) ?: 'production';
+	$fathom_id   = $request->get_param( 'fathom_id' ) ?: '';
+	return ( new CaptainCore\Site( $site_id ) )->top_pages( $environment, $before, $after, $limit, $fathom_id );
 }
 
 function captaincore_sites_stats_top_referrers_func( WP_REST_Request $request ) {
@@ -3259,8 +3262,9 @@ function captaincore_sites_stats_top_referrers_func( WP_REST_Request $request ) 
 	$before      = ! empty( $from_at ) ? strtotime( $from_at ) : '';
 	$after       = ! empty( $to_at ) ? strtotime( $to_at ) : '';
 	$limit       = (int) ( $request->get_param( 'limit' ) ?: 10 );
-	$environment = $request->get_param( 'environment' );
-	return ( new CaptainCore\Site( $site_id ) )->top_referrers( $environment, $before, $after, $limit );
+	$environment = $request->get_param( 'environment' ) ?: 'production';
+	$fathom_id   = $request->get_param( 'fathom_id' ) ?: '';
+	return ( new CaptainCore\Site( $site_id ) )->top_referrers( $environment, $before, $after, $limit, $fathom_id );
 }
 
 function captaincore_accounts_update_func( WP_REST_Request $request ) {
@@ -5493,7 +5497,7 @@ function captaincore_site_analytics_func( $request ) {
 	$before      = strtotime( $request['from_at'] ?? '' );
 	$after       = strtotime( $request['to_at'] ?? '' );
 	$grouping    = strtolower( $request['grouping'] ?? '' );
-	$environment = $request['environment'];
+	$environment = ! empty( $request['environment'] ) ? $request['environment'] : 'production';
 	$fathom_id   = $request['fathom_id'];
 	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
 }

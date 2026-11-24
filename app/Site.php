@@ -1723,6 +1723,10 @@ class Site {
 
     public function stats( $environment = "production", $before = "", $after = "", $grouping = "month", $fathom_id = "" ) {
 
+        if ( empty( $environment ) ) {
+            $environment = 'production';
+        }
+
         if ( empty( $after ) ) {
             $after = date( 'Y-m-d H:i:s' );
         }
@@ -1746,7 +1750,7 @@ class Site {
             }
         }
         if ( empty( $selected_environment ) ) {
-            return;
+            return new \WP_Error( 'environment_not_found', "Environment '{$environment}' not found.", [ 'status' => 404 ] );
         }
         $fathom_ids = array_column( $selected_environment->fathom_analytics, "code" );
 
@@ -1775,7 +1779,14 @@ class Site {
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
 
+        if ( is_wp_error( $response ) ) {
+            return [ "Error" => "There was a problem retrieving stats." ];
+        }
+
         $stats    = json_decode( $response['body'] );
+        if ( ! is_array( $stats ) ) {
+            return [ "Error" => "There was a problem retrieving stats." ];
+        }
         if ( $grouping == "hour" ) {
             foreach ( $stats as $stat ) {
                 $stat->date = date('M d Y ga', strtotime( $stat->date ) );
@@ -1802,7 +1813,7 @@ class Site {
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
 
-        $site     = json_decode( $response['body'] );
+        $site        = is_wp_error( $response ) ? null : json_decode( $response['body'] );
         $stats_count = count( $stats );
         $response = [
             "fathom_id" => $fathom_id,
@@ -1818,7 +1829,11 @@ class Site {
         return $response;
     }
 
-    public function top_pages( $environment = "production", $before = "", $after = "", $limit = 10 ) {
+    public function top_pages( $environment = "production", $before = "", $after = "", $limit = 10, $fathom_id = "" ) {
+
+        if ( empty( $environment ) ) {
+            $environment = 'production';
+        }
 
         if ( empty( $after ) ) {
             $after = time();
@@ -1830,6 +1845,7 @@ class Site {
 
         $before = date( 'Y-m-d H:i:s', $before );
         $after  = date( 'Y-m-d H:i:s', $after );
+        $limit  = max( 1, (int) $limit );
 
         $environments = self::environments();
         foreach( $environments as $e ) {
@@ -1846,9 +1862,13 @@ class Site {
             return [];
         }
 
-        $fathom_id = $fathom_ids[0];
+        if ( empty( $fathom_id ) ) {
+            $fathom_id = $fathom_ids[0];
+        } elseif ( ! in_array( strtolower( (string) $fathom_id ), array_map( 'strtolower', $fathom_ids ), true ) ) {
+            return [];
+        }
 
-        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id={$fathom_id}&aggregates=visits,uniques,pageviews&field_grouping=pathname&date_from={$before}&date_to={$after}&sort_by=pageviews:desc&limit={$limit}";
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=" . rawurlencode( $fathom_id ) . "&aggregates=visits,uniques,pageviews&field_grouping=pathname&date_from={$before}&date_to={$after}&sort_by=pageviews:desc&limit={$limit}";
         $response = wp_remote_get( $url, [
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
@@ -1866,7 +1886,11 @@ class Site {
         return $pages;
     }
 
-    public function top_referrers( $environment = "production", $before = "", $after = "", $limit = 10 ) {
+    public function top_referrers( $environment = "production", $before = "", $after = "", $limit = 10, $fathom_id = "" ) {
+
+        if ( empty( $environment ) ) {
+            $environment = 'production';
+        }
 
         if ( empty( $after ) ) {
             $after = time();
@@ -1878,6 +1902,7 @@ class Site {
 
         $before = date( 'Y-m-d H:i:s', $before );
         $after  = date( 'Y-m-d H:i:s', $after );
+        $limit  = max( 1, (int) $limit );
 
         $environments = self::environments();
         foreach( $environments as $e ) {
@@ -1894,9 +1919,13 @@ class Site {
             return [];
         }
 
-        $fathom_id = $fathom_ids[0];
+        if ( empty( $fathom_id ) ) {
+            $fathom_id = $fathom_ids[0];
+        } elseif ( ! in_array( strtolower( (string) $fathom_id ), array_map( 'strtolower', $fathom_ids ), true ) ) {
+            return [];
+        }
 
-        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id={$fathom_id}&aggregates=visits,uniques,pageviews&field_grouping=referrer_hostname&date_from={$before}&date_to={$after}&sort_by=visits:desc&limit={$limit}";
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=" . rawurlencode( $fathom_id ) . "&aggregates=visits,uniques,pageviews&field_grouping=referrer_hostname&date_from={$before}&date_to={$after}&sort_by=visits:desc&limit={$limit}";
         $response = wp_remote_get( $url, [
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
