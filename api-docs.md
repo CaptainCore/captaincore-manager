@@ -108,8 +108,12 @@ curl -X POST -u user:pass \
 
 **Response:**
 ```json
-{"status": "completed", "response": "https://example.com\n"}
+{"status": "completed", "exit_code": 0, "response": "https://example.com\n"}
 ```
+
+If the remote command exits non-zero, `status` is `"failed"` with the process `exit_code` and combined stdout/stderr in `response`. Transport or CLI-server errors return HTTP `502` (`cli_request_failed`).
+
+**Escaping & large payloads:** `code` is sent verbatim (backslashes and quotes are preserved). Scripts larger than ~48 KB automatically transfer via a server-side payload file instead of command-line arguments. Note that WP-CLI's `wp eval-file <path>` runs a regex (`replace_path_consts`) that can hit PHP's PCRE backtrack limit on large PHP files with repeated quotes/commas and exit 0 with empty output; pass `--use-include` or pipe via stdin (`wp eval-file -`) for large PHP scripts.
 
 ### Long-running commands (async)
 

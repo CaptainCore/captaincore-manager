@@ -3705,8 +3705,13 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		$args = array_merge( [ 'quicksave', 'show-changes' ], $sites, [ $value ] );
 	}
 	if ( $cmd == 'run' ) {
-		$code = base64_encode( stripslashes_deep( $value ) );
-		$args = array_merge( [ 'run' ], $sites, [ '--code=' . $code ] );
+		$code = base64_encode( (string) $value );
+		if ( strlen( $code ) > 65536 ) {
+			$args    = array_merge( [ 'run' ], $sites );
+			$payload = $code;
+		} else {
+			$args = array_merge( [ 'run' ], $sites, [ '--code=' . $code ] );
+		}
 	}
 	if ( $cmd == 'backup_download' ) {
 		$run_in_background_silent = true;
@@ -3742,7 +3747,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 			if ( ( $arguments['value'] ?? '' ) !== 'command' ) {
 				return new WP_Error( 'invalid_command', 'Unsupported manage option.', [ 'status' => 400 ] );
 			}
-			$args = array_merge( [ $subcommand ], $sites, [ '--command=' . stripslashes( $arguments['input'] ) ] );
+			$args = array_merge( [ $subcommand ], $sites, [ '--command=' . (string) $arguments['input'] ] );
 		}
 	}
 	if ( $cmd == 'quicksave_file_diff' ) {
@@ -5469,21 +5474,31 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
     // Dedup targets and format command. The argv-array form is used so each
     // target stays a discrete argument - a string command is re-tokenized by
     // the CLI server, where a target carrying whitespace would become two.
+    // Do not call stripslashes_deep(): $code arrives from decoded JSON or the
+    // recipes table unslashed, so stripslashes destroys regexes and escapes.
     $targets      = array_values( array_unique( $targets ) );
-    $encoded_code = base64_encode( stripslashes_deep( $code ) );
+    $encoded_code = base64_encode( (string) $code );
 
-    // Dispatch to CLI
-    $command = array_merge( [ 'run' ], $targets, [ '--code=' . $encoded_code ] );
+    // Dispatch to CLI. Large scripts travel in the structured payload field
+    // (written to a temp file on the CLI server) so they never hit Linux's
+    // 128 KB single-argument execve limit (MAX_ARG_STRLEN).
+    if ( strlen( $encoded_code ) > 65536 ) {
+        $command = array_merge( [ 'run' ], $targets );
+        $payload = $encoded_code;
+    } else {
+        $command = array_merge( [ 'run' ], $targets, [ '--code=' . $encoded_code ] );
+        $payload = '';
+    }
 
     if ( captaincore_is_api_request( $request ) ) {
         $async = ! empty( $request->get_json_params()['async'] );
         if ( $async ) {
-            return CaptainCore\Run::background_task( $command );
+            return CaptainCore\Run::background_task( $command, $payload );
         }
-        return CaptainCore\Run::execute( $command );
+        return CaptainCore\Run::execute( $command, $payload );
     }
 
-    return CaptainCore\Run::task( $command );
+    return CaptainCore\Run::task( $command, $payload );
 }
 
 function captaincore_site_analytics_func( $request ) {

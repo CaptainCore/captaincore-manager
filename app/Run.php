@@ -166,7 +166,24 @@ class Run {
             return new \WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
         }
 
-        return [ "status" => "completed", "response" => $response["body"] ];
+        $http_code = (int) wp_remote_retrieve_response_code( $response );
+        $body      = (string) wp_remote_retrieve_body( $response );
+        if ( $http_code < 200 || $http_code >= 300 ) {
+            $message = trim( $body ) !== '' ? trim( $body ) : "CLI server returned HTTP {$http_code}.";
+            return new \WP_Error( 'cli_request_failed', $message, [ 'status' => 502 ] );
+        }
+
+        $exit_header = wp_remote_retrieve_header( $response, 'x-captaincore-exit-code' );
+        if ( $exit_header !== '' && is_numeric( $exit_header ) ) {
+            $exit_code = (int) $exit_header;
+            return [
+                "status"    => $exit_code === 0 ? "completed" : "failed",
+                "exit_code" => $exit_code,
+                "response"  => $body,
+            ];
+        }
+
+        return [ "status" => "completed", "response" => $body ];
     }
 
     public static function background_task( $command = "", $payload = "" ) {

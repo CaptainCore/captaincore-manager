@@ -303,19 +303,27 @@ class Mcp {
 			'via'     => 'claude',
 		], $site->customer_id ? $site->customer_id : null );
 
-		$result = Run::execute( [ 'run', "{$site->site}-{$environment}", '--code=' . base64_encode( $command ) ] );
+		$encoded = base64_encode( $command );
+		if ( strlen( $encoded ) > 65536 ) {
+			$result = Run::execute( [ 'run', "{$site->site}-{$environment}" ], $encoded );
+		} else {
+			$result = Run::execute( [ 'run', "{$site->site}-{$environment}", '--code=' . $encoded ] );
+		}
 		if ( is_wp_error( $result ) ) {
 			return self::text_result( 'The command could not be dispatched: ' . $result->get_error_message(), true );
 		}
 
 		$output = trim( (string) ( $result['response'] ?? '' ) );
+		$failed = ( $result['status'] ?? '' ) === 'failed';
 		if ( $output === '' ) {
-			$output = '(no output)';
+			$output = $failed && isset( $result['exit_code'] )
+				? '(no output; exited with status ' . (int) $result['exit_code'] . ')'
+				: '(no output)';
 		}
 		if ( strlen( $output ) > self::OUTPUT_LIMIT ) {
 			$output = substr( $output, 0, self::OUTPUT_LIMIT ) . "\n…output truncated at " . self::OUTPUT_LIMIT . ' bytes. Narrow the command (fields, filters, head) for the rest.';
 		}
-		return self::text_result( $output );
+		return self::text_result( $output, $failed );
 	}
 
 	/**
