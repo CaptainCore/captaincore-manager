@@ -418,7 +418,8 @@ class AiRelay {
 
 	/**
 	 * Staff edits: status (building / preview / cancelled), preview link, the
-	 * staff-held site to hand over at launch, and the display name.
+	 * staff-held site to hand over at launch, the display name, and whether
+	 * it is hidden from the Sites page.
 	 */
 	public static function update_project( $user_id, $project_id, $input ) {
 		if ( ! ( new User( $user_id, true ) )->is_admin() ) {
@@ -465,6 +466,18 @@ class AiRelay {
 			}
 			$data['reviewed_message_id'] = $upto;
 			$data['reviewed_at']         = current_time( 'mysql' );
+		}
+		// Hidden from the Sites page up to a post the operator saw, so a post
+		// after it brings the project back. 0 shows it again.
+		if ( isset( $input['hidden_message_id'] ) ) {
+			$upto  = (int) $input['hidden_message_id'];
+			$posts = array_filter( AiRelayMessages::thread( $project->ai_relay_project_id ), function ( $m ) {
+				return in_array( $m->author, [ 'customer', 'staff' ], true );
+			} );
+			if ( $upto && ! in_array( $upto, array_map( 'intval', array_column( $posts, 'ai_relay_message_id' ) ), true ) ) {
+				return new \WP_Error( 'invalid_message', 'That post is not in this project.', [ 'status' => 400 ] );
+			}
+			$data['hidden_message_id'] = $upto;
 		}
 		$status = $data['status'] ?? $project->status;
 		if ( $status === 'preview' && ( $data['preview_url'] ?? $project->preview_url ) === '' ) {
@@ -1204,9 +1217,14 @@ class AiRelay {
 			// Who spoke last in the thread (internal notes left out): 'staff'
 			// means the build is waiting on the customer.
 			global $wpdb;
-			$view['last_author']        = (string) $wpdb->get_var( $wpdb->prepare(
-				"SELECT author FROM {$wpdb->prefix}captaincore_ai_relay_messages WHERE ai_relay_project_id = %d AND author IN ('customer', 'staff') ORDER BY ai_relay_message_id DESC LIMIT 1",
+			$last                       = $wpdb->get_row( $wpdb->prepare(
+				"SELECT ai_relay_message_id, author FROM {$wpdb->prefix}captaincore_ai_relay_messages WHERE ai_relay_project_id = %d AND author IN ('customer', 'staff') ORDER BY ai_relay_message_id DESC LIMIT 1",
 				$project->ai_relay_project_id ) );
+			$view['last_author']        = $last ? (string) $last->author : '';
+			$view['last_post_id']       = $last ? (int) $last->ai_relay_message_id : 0;
+			// Hidden until someone posts after the post it was hidden at.
+			$hidden                     = (int) ( $project->hidden_message_id ?? 0 );
+			$view['hidden']             = $hidden > 0 && $hidden >= $view['last_post_id'];
 		}
 		return $view;
 	}

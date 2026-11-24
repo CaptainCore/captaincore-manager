@@ -1337,7 +1337,7 @@ button.ccc-edited:hover{color:var(--ink)}
           <sc-if value="{{ rlShow }}" hint-placeholder-val="{{ false }}">
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:14px">
               <sc-for list="{{ rlRows }}" as="r" hint-placeholder-count="1">
-                <section onClick="{{ r.open }}" style="border:1px dashed var(--brand);border-radius:13px;background:var(--paper);padding:13px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px" style-hover="border-style:solid;background:var(--panel-2)">
+                <section onClick="{{ r.open }}" onContextMenu="{{ r.ctx }}" style="border:1px dashed var(--brand);border-radius:13px;background:var(--paper);padding:13px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px" style-hover="border-style:solid;background:var(--panel-2)">
                   <div style="display:flex;align-items:center;gap:8px">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--brand-ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"></path><path d="M19 16v4M17 18h4"></path></svg>
                     <span style="font:600 var(--fs-14) var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
@@ -1351,10 +1351,18 @@ button.ccc-edited:hover{color:var(--ink)}
           </sc-if>
           <sc-if value="{{ rlWaitShow }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:10px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px">
-              <span>AI Relay, waiting on the customer:</span>
-              <sc-for list="{{ rlWaitRows }}" as="w" hint-placeholder-count="1">
-                <span><a onClick="{{ w.open }}" title="{{ w.tip }}" style="color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="text-decoration-color:var(--ink)">{{ w.name }}</a>{{ w.sep }}</span>
-              </sc-for>
+              <sc-if value="{{ rlHasWait }}" hint-placeholder-val="{{ true }}">
+                <span>AI Relay, waiting on the customer:</span>
+                <sc-for list="{{ rlWaitRows }}" as="w" hint-placeholder-count="1">
+                  <span><a onClick="{{ w.open }}" onContextMenu="{{ w.ctx }}" title="{{ w.tip }}" style="color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="text-decoration-color:var(--ink)">{{ w.name }}</a>{{ w.sep }}</span>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ rlHasHidden }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ rlHidToggle }}" title="{{ rlHidTip }}" aria-expanded="{{ rlHidOpen }}" style="border:0;background:none;padding:0;font:400 var(--fs-125) var(--sans);color:var(--ink-dim);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="color:var(--ink);text-decoration-color:var(--ink)">{{ rlHidLabel }}</button>
+                <sc-for list="{{ rlHidRows }}" as="w" hint-placeholder-count="0">
+                  <span><a onClick="{{ w.open }}" onContextMenu="{{ w.ctx }}" title="{{ w.tip }}" style="color:var(--ink-dim);cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px" style-hover="color:var(--ink);text-decoration-color:var(--ink)">{{ w.name }}</a>{{ w.sep }}</span>
+                </sc-for>
+              </sc-if>
             </div>
           </sc-if>
           <!-- ══ Site requests queue (customer submissions; operators step them Requested → Preparing → Ready) ══ -->

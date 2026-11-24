@@ -124,6 +124,31 @@ Object.assign(Component.prototype, {
     }).catch(() => { this.setState({ rlSaving: false }); this.toast('Could not save', { kind: 'error' }); });
   },
 
+  // Right-click a project on the Sites page (operators).
+  relayCtxEntries(p) {
+    return [
+      { label: 'Open project', act: () => this.openRelay(p.id) },
+      ...(p.preview_url ? [{ label: 'Open preview', act: () => this.safeOpen(p.preview_url) }] : []),
+      ...(p.site_id ? [{ label: 'Open site', act: () => this.openSite(String(p.site_id)) }] : []),
+      { label: 'Copy project link', act: () => this.ctxCopy(location.origin + '/account/ai-relay/' + p.id, 'Project link') },
+      ...(p.user_email ? [{ label: 'Copy customer email', act: () => this.ctxCopy(p.user_email, 'Customer email') }] : []),
+      p.hidden ? { label: 'Show again', act: () => this.relayHide(p, false) }
+               : { label: 'Hide until next post', act: () => this.relayHide(p, true) }
+    ];
+  },
+
+  // Hide up to the post on screen, so one that lands meanwhile still shows.
+  relayHide(p, hide) {
+    if (hide && !p.last_post_id) return;
+    this.api('/ai-relay/projects/' + p.id, { method: 'PUT', body: { hidden_message_id: hide ? p.last_post_id : 0 } }).then(res => {
+      if (!res || res.code) { this.toast((res && res.message) || 'Could not update ' + p.name, { kind: 'error' }); return; }
+      const row = (this._relayProjects || []).find(x => String(x.id) === String(p.id));
+      if (row) { const { messages, ...rest } = res; Object.assign(row, rest); }
+      this.setState(hide ? { rlHidOpen: false } : {});
+      this.toast(hide && !res.hidden ? p.name + ' has a newer post, so it stays' : hide ? p.name + ' hidden until the next post' : p.name + ' is showing again', { kind: hide && !res.hidden ? 'info' : 'success' });
+    }).catch(() => this.toast('Could not update ' + p.name, { kind: 'error' }));
+  },
+
   async relayLaunch() {
     const rel = this._relay;
     if (!rel || !rel.data || this.state.rlLaunching) return;
@@ -162,26 +187,37 @@ Object.assign(Component.prototype, {
     const human = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
 
     // ── Sites page cards ──
-    const out = { rlShow: false, rlRows: [], rlWaitShow: false, rlWaitRows: [], showRelay: s.route === 'relay' };
+    const out = { rlShow: false, rlRows: [], rlWaitShow: false, rlHasWait: false, rlWaitRows: [], rlHasHidden: false, rlHidOpen: false, rlHidRows: [], showRelay: s.route === 'relay' };
     if (this._hydrated && s.route === 'sites' && this._relayProjects === undefined && !this._rlLoading)
       setTimeout(() => this.loadRelayProjects(), 0);
     const all = (this._relayProjects || []).filter(p => p.status === 'building' || p.status === 'preview');
     // Operators only get a card for a build that needs them: the customer
     // spoke last (or nobody has yet). Builds waiting on the customer (staff
     // spoke last, so whatever they sent was answered) shrink to one line.
-    const waiting = isOp ? all.filter(p => p.last_author === 'staff') : [];
-    const list = all.filter(p => !waiting.includes(p));
-    if (waiting.length) {
-      out.rlWaitShow = true;
-      out.rlWaitRows = waiting.map((p, i) => ({ id: 'rlw' + p.id, name: p.name, sep: i < waiting.length - 1 ? ',' : '',
-        tip: (p.account || '') + ' · ' + p.status_label + ' · last reply ' + when(p.last_message_at), open: () => this.openRelay(p.id) }));
-    }
+    // A project hidden from the right-click menu stays out of both until
+    // someone posts again (the server works out `hidden`).
+    const hidden = isOp ? all.filter(p => p.hidden) : [];
+    const waiting = isOp ? all.filter(p => p.last_author === 'staff' && !p.hidden) : [];
+    const list = all.filter(p => !waiting.includes(p) && !hidden.includes(p));
+    const names = rows => rows.map((p, i) => ({ id: 'rlw' + p.id, name: p.name, sep: i < rows.length - 1 ? ',' : '',
+      tip: (p.account || '') + ' · ' + p.status_label + ' · last reply ' + when(p.last_message_at), open: () => this.openRelay(p.id),
+      ctx: isOp ? (e) => this.openCtxMenu(e, this.relayCtxEntries(p)) : undefined }));
+    out.rlWaitRows = names(waiting);
+    out.rlHasWait = waiting.length > 0;
+    out.rlHasHidden = hidden.length > 0;
+    out.rlWaitShow = out.rlHasWait || out.rlHasHidden;
+    out.rlHidOpen = !!s.rlHidOpen && out.rlHasHidden;
+    out.rlHidRows = out.rlHidOpen ? names(hidden) : [];
+    out.rlHidLabel = hidden.length + ' hidden' + (out.rlHidOpen ? ':' : '');
+    out.rlHidTip = out.rlHidOpen ? 'Tuck the hidden projects away' : 'Show the hidden AI Relay projects';
+    out.rlHidToggle = () => this.setState({ rlHidOpen: !s.rlHidOpen });
     if (list.length) {
       out.rlShow = true;
       out.rlRows = list.map(p => {
         const c = chip(p.status);
         return { id: 'rl' + p.id, name: p.name, acc: p.account, status: p.status_label, chipBg: c.bg, chipFg: c.fg,
           sub: 'Updated ' + when(p.last_message_at), canLaunch: !!p.can_launch && !isOp,
+          ctx: isOp ? (e) => this.openCtxMenu(e, this.relayCtxEntries(p)) : undefined,
           open: () => this.openRelay(p.id) };
       });
     }

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DB {
 
     /** Schema level this build expects. Bump when a migration is added. */
-    const REQUIRED_VERSION = 84;
+    const REQUIRED_VERSION = 85;
 
     private static function _table() {
         global $wpdb;
@@ -1258,6 +1258,7 @@ class DB {
             provider_action_id bigint(20) UNSIGNED DEFAULT 0,
             reviewed_message_id bigint(20) UNSIGNED DEFAULT 0,
             reviewed_at datetime DEFAULT NULL,
+            hidden_message_id bigint(20) UNSIGNED DEFAULT 0,
             launched_at datetime DEFAULT NULL,
             last_message_at datetime DEFAULT NULL,
             created_at datetime NOT NULL,
