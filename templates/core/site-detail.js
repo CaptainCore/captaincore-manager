@@ -43,6 +43,7 @@ Object.assign(Component.prototype, {
     this.api('/sites/' + id + '/details').then(d => {
       detail.site = d && d.site; detail.account = d && d.account;
       detail.domains = (d && d.domains) || []; detail.sharedWith = (d && d.shared_with) || [];
+      detail.kinstaAccess = !!(d && d.kinsta_access);
       this.syncFleetFromDetail(detail);
       bump();
     }).catch(() => bump());

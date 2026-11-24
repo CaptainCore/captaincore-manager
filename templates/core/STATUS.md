@@ -15,6 +15,10 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## MyKinsta access (2026-11-24)
+
+- **Invites from the site page** (`app/KinstaAccess.php`, `templates/core/kinsta-access.js`, `app.html` Accounts card + dialog): `GET/POST /sites/{id}/kinsta-access` (`email`, `role` site-admin | site-developer) and `POST …/kinsta-access/remove` (emails the team; Kinsta's API has no way to cancel an invite or remove a user). Kinsta's key is company-wide, so every guard is ours: URL site id only, site access, `captaincore_can_share_site()` (shared with `/sites/{id}/invite`), active + not up for removal, house Kinsta connection, UUID link, reach every other site on the same Kinsta site (same Kinsta id, or same SSH user, never by address or port, which go stale), then Kinsta's own record must match (company id, and site name = our SSH username). Company members and existing site members are never sent a role. 20 invites a day per customer; every attempt is in the activity log. `/sites/{id}/details` carries `kinsta_access` so the row only shows where it works.
+
 ## API & analytics improvements (2026-11-24)
 
 - **Stats default environment** (`app/Site.php`, `captaincore.php`): omitting `environment` on `GET /sites/{id}/stats`, `/stats/top-pages`, `/stats/top-referrers`, and `POST /site/{id}/analytics` now defaults to `production` instead of passing `null` (which matched no environment). Requesting an unknown environment returns HTTP 404 (`environment_not_found`) instead of `null`.

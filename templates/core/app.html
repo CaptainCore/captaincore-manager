@@ -1978,6 +1978,15 @@ button.ccc-edited:hover{color:var(--ink)}
                       </sc-if>
                     </div>
                   </sc-for>
+                  <sc-if value="{{ kaShow }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ openKa }}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font:500 var(--fs-13) var(--sans);color:var(--ink)">MyKinsta</span>
+                        <span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Invite people to this site at Kinsta</span>
+                      </span>
+                      <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);flex:none">Manage…</span>
+                    </div>
+                  </sc-if>
                   <div style="display:flex;gap:8px;padding:9px 12px;background:var(--panel)">
                     <input value="{{ shareDraft }}" onInput="{{ onShareDraft }}" placeholder="Account name or email…" style="flex:1;min-width:0;height:30px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--sans);padding:0 9px;outline:none">
                     <button onClick="{{ doShare }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:5px 11px;border-radius:7px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Share</button>
@@ -10142,6 +10151,78 @@ button.ccc-edited:hover{color:var(--ink)}
             </div>
           </div>
         </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ MyKinsta access dialog (kinsta-access.js) ══ -->
+  <sc-if value="{{ kaOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeKa }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
+      <div onClick="{{ stopProp }}" style="width:540px;max-width:calc(100vw - 40px);max-height:82vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">MyKinsta access</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeKa }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:400 var(--fs-13)/1.5 var(--sans);color:var(--ink)">{{ kaTitle }}</span>
+          <input value="{{ kaEmail }}" onInput="{{ onKaEmail }}" onKeyDown="{{ kaKey }}" placeholder="Email address" style="flex:none;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Role</span>
+            <div style="display:flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px">
+              <sc-for list="{{ kaRoles }}" as="kr" hint-placeholder-count="2">
+                <span onClick="{{ kr.go }}" style="font:500 var(--fs-125) var(--sans);color:{{ kr.fg }};background:{{ kr.bg }};box-shadow:{{ kr.shadow }};padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap">{{ kr.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">{{ kaRoleText }}</span>
+          <sc-if value="{{ kaAlsoShow }}" hint-placeholder-val="{{ false }}">
+            <span style="border-left:3px solid var(--warn);background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ kaAlso }}</span>
+          </sc-if>
+          <sc-if value="{{ kaHasErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--bad)">{{ kaErr }}</span>
+          </sc-if>
+          <sc-if value="{{ kaHasNote }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ok)">{{ kaNote }}</span>
+          </sc-if>
+          <div style="flex:none;border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+            <div style="padding:8px 12px;background:var(--panel);font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">People with MyKinsta access to this site</div>
+            <sc-if value="{{ kaLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 12px;border-top:1px solid var(--rule);font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Loading from Kinsta…</div>
+            </sc-if>
+            <sc-if value="{{ kaHasLoadErr }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 12px;border-top:1px solid var(--rule);font:400 var(--fs-125) var(--sans);color:var(--bad)">{{ kaLoadErr }}</div>
+            </sc-if>
+            <sc-if value="{{ kaEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 12px;border-top:1px solid var(--rule);font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">Nobody yet.</div>
+            </sc-if>
+            <sc-for list="{{ kaRows }}" as="kp" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--rule)">
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:500 var(--fs-13) var(--sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ kp.name }}</span>
+                  <sc-if value="{{ kp.hasEmail }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:block;font:400 var(--fs-115) var(--sans);color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ kp.email }}</span>
+                  </sc-if>
+                </span>
+                <span style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);flex:none">{{ kp.role }}</span>
+                <sc-if value="{{ kp.pending }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:500 var(--fs-115) var(--sans);background:var(--panel-2);color:var(--ink-dim);border-radius:99px;padding:2px 9px;flex:none">Invited</span>
+                </sc-if>
+                <sc-if value="{{ kp.canAsk }}" hint-placeholder-val="{{ false }}">
+                  <span onClick="{{ kp.ask }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer;flex:none" style-hover="color:var(--bad)">Request removal</span>
+                </sc-if>
+                <sc-if value="{{ kp.asked }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim);flex:none">Removal requested</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <div style="flex:1"></div>
+          <span onClick="{{ closeKa }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Close</span>
+          <button onClick="{{ kaSend }}" style="border:none;background:{{ kaSendBg }};color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ kaSendLabel }}</button>
+        </div>
       </div>
     </div>
   </sc-if>

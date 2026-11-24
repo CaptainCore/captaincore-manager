@@ -4280,6 +4280,7 @@ function captaincore_sites_details_func( WP_REST_Request $request ) {
 		"account"     => $account,
 		"domains"     => $domains,
 		"shared_with" => $shared_with,
+		"kinsta_access" => CaptainCore\KinstaAccess::available( $post_id ),
 	];
 }
 
@@ -9640,6 +9641,31 @@ function captaincore_site_invite_preview_func( $request ) {
     ];
 }
 
+/**
+ * Whether the current user may bring other people to a site: full or
+ * full-billing on an account that grants it (the owning account, the customer
+ * account, or one it is shared with). Reaching the site is checked separately.
+ */
+function captaincore_can_share_site( $site ) {
+    $user = new CaptainCore\User;
+    if ( $user->is_admin() ) {
+        return true;
+    }
+    $granting = [ (int) $site->account_id, (int) $site->customer_id ];
+    foreach ( ( new CaptainCore\AccountSite )->where( [ "site_id" => $site->site_id ] ) as $pivot ) {
+        $granting[] = (int) $pivot->account_id;
+    }
+    foreach ( array_filter( array_unique( $granting ) ) as $granting_id ) {
+        if ( ! $user->verify_accounts( [ $granting_id ] ) ) {
+            continue;
+        }
+        if ( in_array( $user->account_level( $granting_id ), [ 'full-billing', 'full' ], true ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function captaincore_site_invite_func( $request ) {
     $site_id = $request['id'];
     $email   = $request->get_param('email');
@@ -9672,25 +9698,10 @@ function captaincore_site_invite_func( $request ) {
     // managing a customer site share it without being a member of the
     // customer account, while sites-only tiers still cannot add people.
     $user = new CaptainCore\User;
+    if ( ! captaincore_can_share_site( $site ) ) {
+        return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
+    }
     if ( ! $user->is_admin() ) {
-        $granting = [ (int) $site->account_id, (int) $site->customer_id ];
-        foreach ( ( new CaptainCore\AccountSite )->where( [ "site_id" => $site_id ] ) as $pivot ) {
-            $granting[] = (int) $pivot->account_id;
-        }
-        $allowed = false;
-        foreach ( array_filter( array_unique( $granting ) ) as $granting_id ) {
-            if ( ! $user->verify_accounts( [ $granting_id ] ) ) {
-                continue;
-            }
-            if ( in_array( $user->account_level( $granting_id ), [ 'full-billing', 'full' ], true ) ) {
-                $allowed = true;
-                break;
-            }
-        }
-        if ( ! $allowed ) {
-            return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
-        }
-
         // Sharing a site is for bringing OTHER people in. A self-invite turns
         // it into a self-promotion primitive: the sender is vetted against an
         // account that grants the site, but the membership lands in the linked
@@ -13330,6 +13341,37 @@ function captaincore_register_rest_endpoints() {
 		$p = $request->get_url_params();
 		return captaincore_verify_permissions( (int) ( $p['id'] ?? 0 ) ) ? $p : new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	};
+	// MyKinsta access to a site (KinstaAccess). The site id comes from the URL
+	// only, so a body cannot name another site.
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/kinsta-access', [
+			[
+				'methods'             => 'GET',
+				'callback'            => function ( WP_REST_Request $request ) {
+					return CaptainCore\KinstaAccess::people( $request->get_url_params()['id'] ?? 0 );
+				},
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => function ( WP_REST_Request $request ) {
+					return CaptainCore\KinstaAccess::invite( $request->get_url_params()['id'] ?? 0, $request->get_param( 'email' ), $request->get_param( 'role' ) );
+				},
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			'show_in_index' => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/kinsta-access/remove', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return CaptainCore\KinstaAccess::request_removal( $request->get_url_params()['id'] ?? 0, $request->get_param( 'email' ) );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
 	// Site page email log: the environment's Anchor Mailgun zone, gated by
 	// access to the domain that owns it (captaincore_site_email_log_source).
 	register_rest_route(

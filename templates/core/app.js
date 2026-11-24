@@ -2728,6 +2728,7 @@ class Component extends DCLogic {
         this.setState(st => ({ shared: [...(st.shared || this.SHARED_INIT), { uid: Date.now(), name: v, people: 0, level: 'Sites only', pending: true }], shareDraft: '' }));
         this.runJob('grant-access', v + ' → ' + site.name); },
       ...this.computeShareDialog(real, s, site),
+      ...(this.kinstaAccessVals ? this.kinstaAccessVals(real, s) : { kaShow: false, kaOpen: false }),
       // Not for an environment on our servers (a Kinsta site's Development, say): no phpMyAdmin there.
       showPma: (!!(real && real.site && ['kinsta', 'rocketdotnet'].includes(real.site.provider)) && !(this.siteSettingsHost && this.siteSettingsHost(real, s) === 'captaincore')) || (!real && !window.CC_BOOT),
       openPma: () => { if (real) this.realPhpMyAdmin(real, s); },

@@ -1238,8 +1238,8 @@ class Kinsta {
 
     // Gives existing company members site-admin on one site. Kinsta adds the
     // capability to what each user already has (verified 2026-10-30), so only
-    // the new site is sent. Emails that are not company members are skipped;
-    // the API cannot invite by email.
+    // the new site is sent. Emails that are not company members are skipped
+    // here; inviting someone new is KinstaAccess.
     public static function invite_emails( $emails = [], $site_id = "", $provider_id = "" ) {
         $emails = array_filter( array_map( 'strtolower', array_map( 'trim', (array) $emails ) ) );
         if ( empty( $emails ) || empty( $site_id ) ) {

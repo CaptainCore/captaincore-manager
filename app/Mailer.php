@@ -1444,6 +1444,24 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  MYKINSTA REMOVAL REQUEST (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_kinsta_removal_request( $site, $email, $user ) {
+        $rows = '';
+        foreach ( [ 'Remove' => $email, 'Site' => $site->name . " (#{$site->site_id})", 'Requested by' => ( $user->name ?? '' ) . ' (#' . ( $user->user_id ?? 0 ) . ')' ] as $label => $value ) {
+            $rows .= "<tr><td style='padding: 5px 0; color: #666D7A; font-size: 14px;'>" . esc_html( $label ) . "</td><td style='padding: 5px 0; color: #15181D; font-weight: 600; text-align: right;'>" . esc_html( $value ) . '</td></tr>';
+        }
+        $url     = esc_url( "https://my.kinsta.com/sites/details/{$site->provider_site_id}" );
+        $content = "<div style='text-align: left; font-size: 16px; line-height: 1.6; color: #565C66;'>
+            <p style='margin-bottom: 25px;'>Kinsta's API cannot remove people, so this one is done in MyKinsta: open the site, then User management.</p>
+            <div style='background-color: #ffffff; border: 1px solid #E3E7EE; border-radius: 6px; padding: 20px; margin-bottom: 25px;'><table width='100%' cellpadding='0' cellspacing='0'>{$rows}</table></div>
+            <p><a href='{$url}'>Open the site in MyKinsta</a></p>
+        </div>";
+        $headers = empty( $user->email ) ? [] : [ 'Reply-To: ' . ( empty( $user->name ) ? $user->email : "{$user->name} <{$user->email}>" ) ];
+        self::send_email_with_layout( get_option( 'admin_email' ), get_bloginfo( 'name' ) . ' - MyKinsta Removal Request', 'MyKinsta Removal Requested', $site->name, $content, $headers );
+    }
+
+    /* -------------------------------------------------------------------------
      *  SITE AUDIT REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_audit_request( $site, $environment, $user, $report_type, $notes, $is_request ) {
