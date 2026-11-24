@@ -53,7 +53,7 @@ Object.assign(Component.prototype, {
       }
       if (!here()) { this.toast(res.message, { kind: 'success' }); return; }
       if (Array.isArray(res.members)) this._ka = { siteId, data: Object.assign({}, (this._ka && this._ka.data) || {}, res) };
-      this.setState({ kaBusy: false, kaEmail: res.status === 'sent' ? '' : this.state.kaEmail, kaNote: res.message });
+      this.setState({ kaBusy: false, kaEmail: ['sent', 'granted'].includes(res.status) ? '' : this.state.kaEmail, kaNote: res.message });
     }).catch(err => {
       const msg = err && err.message === 'auth' ? 'Your access level does not allow sending invites.' : 'The invite could not be sent.';
       if (here()) this.setState({ kaBusy: false, kaErr: msg }); else this.toast(msg, { kind: 'error' });

@@ -287,8 +287,8 @@ class KinstaAccess {
 		$op       = $accepted ? (string) ( $response->operation_id ?? '' ) : '';
 		// Kinsta answers 202 and sends the invite a moment later.
 		$op_safe = preg_match( '/^[A-Za-z0-9:_-]{1,200}$/', $op );
-		for ( $i = 0; $accepted && $op_safe && $i < 4; $i++ ) {
-			sleep( 2 );
+		for ( $i = 0; $accepted && $op_safe && $i < 8; $i++ ) {
+			sleep( 1 );
 			$state = Remote\Kinsta::get( "operations/{$op}" );
 			$code  = (int) ( $state->status ?? 0 );
 			if ( $code === 200 ) {
@@ -311,6 +311,11 @@ class KinstaAccess {
 
 		$fresh = self::company( $site, $id );
 		$after = is_wp_error( $fresh ) ? $people : self::for_site( $site, $fresh );
+		// Someone already in the Kinsta company gets the site at once, with
+		// nothing to accept; their other sites are unchanged (seen 2026-11-24).
+		if ( in_array( $email, array_map( 'strtolower', array_column( $after['members'], 'email' ) ), true ) ) {
+			return [ 'status' => 'granted', 'message' => "{$email} now has MyKinsta access to {$site->name}." ] + $after;
+		}
 		return [ 'status' => 'sent', 'message' => "MyKinsta invite sent to {$email}." ] + $after;
 	}
 
