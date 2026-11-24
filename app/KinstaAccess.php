@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Kinsta's key belongs to the whole company. It can invite anyone to any site,
  * so nothing here trusts Kinsta to scope a request: the caller names one
- * CaptainCore site, one email address and one of the two site roles, and the
+ * CaptainCore site, up to ten email addresses and one of the two site roles, and the
  * company and Kinsta site ids are always looked up here.
  *
  * Kinsta's API cannot cancel an invite or take access away, so removal is a
@@ -23,6 +23,7 @@ class KinstaAccess {
 
 	const ROLES       = [ 'site-admin', 'site-developer' ];
 	const DAILY_LIMIT = 20;
+	const MAX_EMAILS  = 10; // Kinsta's limit per invite.
 	const UUID        = '/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i';
 
 	/** Whether the current user can manage MyKinsta access to a site. No calls to Kinsta. */
@@ -80,10 +81,10 @@ class KinstaAccess {
 	/**
 	 * Other sites on the same Kinsta site: the same Kinsta id, or the same SSH
 	 * user, which is the Kinsta site's name. Inactive ones count, since their
-	 * files may still be there. Address and port are left out: staging has its
+	 * files may still be there, unless only active ones are asked for. Address and port are left out: staging has its
 	 * own port, and a stale record can hold an old address or port.
 	 */
-	private static function site_ids_sharing( $site ) {
+	public static function site_ids_sharing( $site, $active_only = false ) {
 		global $wpdb;
 		$b   = $wpdb->base_prefix;
 		$ids = $wpdb->get_col( $wpdb->prepare(
@@ -95,7 +96,10 @@ class KinstaAccess {
 			   AND ( e.server_id IS NULL OR e.server_id <= 0 ) AND ( o.server_id IS NULL OR o.server_id <= 0 )",
 			$site->provider_site_id, $site->site_id, $site->site_id
 		) );
-		return array_values( array_unique( array_map( 'intval', $ids ) ) );
+		$ids = array_values( array_unique( array_map( 'intval', $ids ) ) );
+		return ! $active_only ? $ids : array_values( array_filter( $ids, function ( $id ) {
+			return ( Sites::get( $id )->status ?? '' ) === 'active';
+		} ) );
 	}
 
 	/**
@@ -223,63 +227,110 @@ class KinstaAccess {
 		ActivityLog::log( $action, 'site', $site->site_id, $site->name, $description, $context, $site->customer_id ? $site->customer_id : $site->account_id );
 	}
 
-	/** Invite one address to one site. */
-	public static function invite( $site_id, $email, $role ) {
+	/**
+	 * The addresses in a string separated by commas, semicolons or whitespace.
+	 *
+	 * @return array|\WP_Error
+	 */
+	private static function clean_emails( $emails ) {
+		$list = is_string( $emails ) ? preg_split( '/[\s,;]+/', $emails, -1, PREG_SPLIT_NO_EMPTY ) : [];
+		if ( ! $list ) {
+			return new \WP_Error( 'invalid_email', 'Enter a valid email address.', [ 'status' => 400 ] );
+		}
+		$clean = [];
+		foreach ( $list as $email ) {
+			$ok = self::clean_email( $email );
+			if ( $ok === '' ) {
+				return new \WP_Error( 'invalid_email', substr( sanitize_text_field( $email ), 0, 100 ) . ' is not a valid email address. Nothing was sent.', [ 'status' => 400 ] );
+			}
+			$clean[ $ok ] = $ok;
+		}
+		if ( count( $clean ) > self::MAX_EMAILS ) {
+			return new \WP_Error( 'too_many_emails', 'Invite up to ' . self::MAX_EMAILS . ' people at a time.', [ 'status' => 400 ] );
+		}
+		return array_values( $clean );
+	}
+
+	private static function join( $emails ) {
+		return wp_sprintf_l( '%l', $emails );
+	}
+
+	/** Invite up to ten addresses to one site, with one role. */
+	public static function invite( $site_id, $emails, $role ) {
 		$site = self::check( $site_id );
 		if ( is_wp_error( $site ) ) {
 			return $site;
 		}
-		$email = self::clean_email( $email );
-		if ( $email === '' ) {
-			return new \WP_Error( 'invalid_email', 'Enter one valid email address.', [ 'status' => 400 ] );
+		$emails = self::clean_emails( $emails );
+		if ( is_wp_error( $emails ) ) {
+			return $emails;
 		}
 		if ( ! is_string( $role ) || ! in_array( $role, self::ROLES, true ) ) {
 			return new \WP_Error( 'invalid_role', 'Choose site administrator or site developer.', [ 'status' => 400 ] );
 		}
-		if ( ! ( new User )->is_admin() && self::recent_attempts( [ 'invited_mykinsta', 'failed_mykinsta_invite' ] ) >= self::DAILY_LIMIT ) {
-			return new \WP_Error( 'too_many', 'You have sent a lot of MyKinsta invites today. Try again tomorrow or contact us.', [ 'status' => 429 ] );
+		// Each address counts, so a list is not a way around the limit.
+		if ( ! ( new User )->is_admin() && self::recent_attempts( [ 'invited_mykinsta', 'failed_mykinsta_invite' ] ) + count( $emails ) > self::DAILY_LIMIT ) {
+			return new \WP_Error( 'too_many', 'That is more than ' . self::DAILY_LIMIT . ' MyKinsta invites in a day. Try again tomorrow or contact us.', [ 'status' => 429 ] );
 		}
 		// A double click must not send two invites.
-		$lock = 'cc_mykinsta_' . md5( $site->site_id . '|' . $email );
-		if ( get_transient( $lock ) ) {
-			return new \WP_Error( 'busy', 'An invite to this address is already on its way.', [ 'status' => 429 ] );
+		$locks = [];
+		foreach ( $emails as $email ) {
+			$locks[ $email ] = 'cc_mykinsta_' . md5( $site->site_id . '|' . $email );
+			if ( get_transient( $locks[ $email ] ) ) {
+				return new \WP_Error( 'busy', "An invite to {$email} is already on its way.", [ 'status' => 429 ] );
+			}
 		}
-		set_transient( $lock, 1, MINUTE_IN_SECONDS );
+		foreach ( $locks as $lock ) {
+			set_transient( $lock, 1, MINUTE_IN_SECONDS );
+		}
+		$unlock = function ( $which = null ) use ( $locks ) {
+			foreach ( $which === null ? $locks : array_intersect_key( $locks, array_flip( $which ) ) as $lock ) {
+				delete_transient( $lock );
+			}
+		};
 
 		$id = self::verify_link( $site );
 		if ( is_wp_error( $id ) ) {
-			delete_transient( $lock );
+			$unlock();
 			return $id;
 		}
 		$company = self::company( $site, $id );
 		if ( is_wp_error( $company ) ) {
-			delete_transient( $lock );
+			$unlock();
 			return $company;
 		}
 
 		// Never send a role for someone who already has access: it could lower
 		// a co-owner's role, or pull one of our own people down to one site.
 		$people = self::for_site( $site, $company );
+		$exists = [];
 		foreach ( $company['users'] as $u ) {
-			if ( strtolower( (string) ( $u->user->email ?? '' ) ) !== $email ) {
+			$email = strtolower( (string) ( $u->user->email ?? '' ) );
+			if ( ! in_array( $email, $emails, true ) ) {
 				continue;
 			}
 			$company_level = array_filter( (array) ( $u->capabilities ?? [] ), function ( $c ) { return empty( $c->site_id ); } );
 			if ( $company_level || self::role_on( $u->capabilities ?? [], $site->provider_site_id ) !== '' ) {
-				delete_transient( $lock );
-				return [ 'status' => 'exists', 'message' => "{$email} already has MyKinsta access to {$site->name}." ] + $people;
+				$exists[] = $email;
 			}
 		}
-		foreach ( $people['pending'] as $p ) {
-			if ( strtolower( $p['email'] ) === $email ) {
-				delete_transient( $lock );
-				return [ 'status' => 'pending', 'message' => "{$email} already has an invite to {$site->name} waiting." ] + $people;
-			}
+		$pending = array_values( array_diff( array_intersect( $emails, array_map( 'strtolower', array_column( $people['pending'], 'email' ) ) ), $exists ) );
+		$send    = array_values( array_diff( $emails, $exists, $pending ) );
+		$notes   = [];
+		if ( $exists ) {
+			$notes[] = self::join( $exists ) . ( count( $exists ) === 1 ? ' already has' : ' already have' ) . " MyKinsta access to {$site->name}.";
+		}
+		if ( $pending ) {
+			$notes[] = self::join( $pending ) . ( count( $pending ) === 1 ? ' already has an invite' : ' already have invites' ) . " to {$site->name} waiting.";
+		}
+		$unlock( array_merge( $exists, $pending ) );
+		if ( ! $send ) {
+			return [ 'status' => $exists ? 'exists' : 'pending', 'message' => implode( ' ', $notes ) ] + $people;
 		}
 
 		Providers\Kinsta::use_site_provider( $site );
 		$response = Remote\Kinsta::post( "company/{$id}/site-invites", [
-			'emails'            => [ $email ],
+			'emails'            => $send,
 			'site_capabilities' => [ [ 'site_id' => (string) $site->provider_site_id, 'role' => $role ] ],
 		] );
 		$accepted = is_object( $response ) && (int) ( $response->status ?? 0 ) >= 200 && (int) $response->status < 300;
@@ -300,23 +351,35 @@ class KinstaAccess {
 			}
 		}
 
-		$label   = $role === 'site-admin' ? 'site administrator' : 'site developer';
-		$context = [ 'email' => $email, 'role' => $role, 'operation_id' => $op ];
+		// One entry per address, sent or not.
+		$label = $role === 'site-admin' ? 'site administrator' : 'site developer';
+		foreach ( $send as $email ) {
+			$context = [ 'email' => $email, 'role' => $role, 'operation_id' => $op ];
+			if ( $accepted ) {
+				self::log( 'invited_mykinsta', $site, "Invited {$email} to {$site->name} in MyKinsta as {$label}", $context );
+			} else {
+				self::log( 'failed_mykinsta_invite', $site, "Could not invite {$email} to {$site->name} in MyKinsta", $context + [ 'error' => $error ] );
+			}
+		}
 		if ( ! $accepted ) {
-			delete_transient( $lock );
-			self::log( 'failed_mykinsta_invite', $site, "Could not invite {$email} to {$site->name} in MyKinsta", $context + [ 'error' => $error ] );
+			$unlock( $send );
 			return new \WP_Error( 'kinsta_invite_failed', "Kinsta did not send the invite: {$error}", [ 'status' => 502 ] );
 		}
-		self::log( 'invited_mykinsta', $site, "Invited {$email} to {$site->name} in MyKinsta as {$label}", $context );
 
 		$fresh = self::company( $site, $id );
 		$after = is_wp_error( $fresh ) ? $people : self::for_site( $site, $fresh );
 		// Someone already in the Kinsta company gets the site at once, with
 		// nothing to accept; their other sites are unchanged (seen 2026-11-24).
-		if ( in_array( $email, array_map( 'strtolower', array_column( $after['members'], 'email' ) ), true ) ) {
-			return [ 'status' => 'granted', 'message' => "{$email} now has MyKinsta access to {$site->name}." ] + $after;
+		$granted = array_values( array_intersect( $send, array_map( 'strtolower', array_column( $after['members'], 'email' ) ) ) );
+		$invited = array_values( array_diff( $send, $granted ) );
+		$done    = [];
+		if ( $granted ) {
+			$done[] = self::join( $granted ) . ( count( $granted ) === 1 ? ' now has' : ' now have' ) . " MyKinsta access to {$site->name}.";
 		}
-		return [ 'status' => 'sent', 'message' => "MyKinsta invite sent to {$email}." ] + $after;
+		if ( $invited ) {
+			$done[] = ( count( $invited ) === 1 ? 'MyKinsta invite' : 'MyKinsta invites' ) . ' sent to ' . self::join( $invited ) . '.';
+		}
+		return [ 'status' => $invited ? 'sent' : 'granted', 'message' => implode( ' ', array_merge( $done, $notes ) ) ] + $after;
 	}
 
 	/** Ask the team to take someone off a site. Kinsta's API cannot. */

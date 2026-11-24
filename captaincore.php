@@ -1437,6 +1437,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// names the run checked. Keeps CaptainCore\MonitorIncidents current for agents; the
 	// monitor emails above are unchanged.
 	if ( $command === 'monitor-state' && ! empty( $post->data ) ) {
+		// Bot protection must keep letting this server's checks through.
+		CaptainCore\KinstaBots::remember_monitor( CaptainCore\GeoIP::client_ip() );
 		$synced   = CaptainCore\MonitorIncidents::sync( $post->data->down ?? [], $post->data->checked ?? [] );
 		$response = [ 'response' => 'Monitor state stored' ] + $synced;
 	}
@@ -7783,6 +7785,10 @@ function captaincore_kinsta_op_key( $environment_id ) {
 }
 
 function captaincore_kinsta_op_labels( $op ) {
+	// Bot protection changes carry their own (KinstaBots).
+	if ( ! empty( $op['labels'] ) && is_array( $op['labels'] ) && count( $op['labels'] ) === 3 ) {
+		return $op['labels'];
+	}
 	$env = $op['environment'] ?? 'Production';
 	switch ( $op['kind'] ?? '' ) {
 		case 'php':
@@ -14454,6 +14460,23 @@ function captaincore_register_rest_endpoints() {
 				'callback'            => 'captaincore_site_settings_update_func',
 				'permission_callback' => 'captaincore_permission_check',
 			],
+		]
+	);
+
+	// Kinsta's bot protection of one environment (KinstaBots).
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/bot-protection', [
+			[
+				'methods'             => 'GET',
+				'callback'            => [ 'CaptainCore\KinstaBots', 'read' ],
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => [ 'CaptainCore\KinstaBots', 'change' ],
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			'show_in_index' => false,
 		]
 	);
 

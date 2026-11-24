@@ -169,6 +169,7 @@ return array(
     'CaptainCore\\JobTokens' => $baseDir . '/app/JobTokens.php',
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
     'CaptainCore\\KinstaAccess' => $baseDir . '/app/KinstaAccess.php',
+    'CaptainCore\\KinstaBots' => $baseDir . '/app/KinstaBots.php',
     'CaptainCore\\Licenses' => $baseDir . '/app/Licenses.php',
     'CaptainCore\\Mailer' => $baseDir . '/app/Mailer.php',
     'CaptainCore\\MailgunCLI' => $baseDir . '/app/MailgunCLI.php',

@@ -1428,6 +1428,11 @@ class Kinsta {
         return is_wp_error( $env ) ? $env : $env->id;
     }
 
+    /** Kinsta's id of one environment, with Remote\Kinsta set to the site's own key. */
+    public static function environment_id( $site_id, $environment ) {
+        return self::resolve_env_id( $site_id, strtolower( $environment ) );
+    }
+
     /** The Kinsta environment object for a CaptainCore site + environment. */
     private static function resolve_env( $site_id, $environment = 'production' ) {
         $kinsta_env_name = ( $environment == 'production' ) ? 'live' : $environment;

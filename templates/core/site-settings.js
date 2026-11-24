@@ -143,7 +143,7 @@ Object.assign(Component.prototype, {
 
   siteSettingsVals(real, s) {
     const host = this.siteSettingsHost(real, s);
-    const off = { ssetShow: false, ssetPhpOpen: false, ssetRdOpen: false, ssetKeysShow: false };
+    const off = { ssetShow: false, ssetPhpOpen: false, ssetRdOpen: false, ssetKeysShow: false, kbotOpen: false };
     if (!host) return off;
     const key = this.siteSettingsKey();
     if (!this._sset || this._sset.key !== key) setTimeout(() => this.loadSiteSettings(), 0);
@@ -159,6 +159,8 @@ Object.assign(Component.prototype, {
     rows.push({ k: 'PHP', v: phpV, act: pend && pend.kind === 'php' ? 'Switching…' : 'Change…', go: held(() => d && this.setState({ ssetPhpOpen: true, ssetPhpPick: d.php.version })),
       act2: s.ssetRestarting || (pend && pend.kind === 'restart') ? 'Restarting…' : 'Restart', go2: held(() => d && this.restartSitePhp()) });
     if (!d || d.cache) rows.push({ k: 'Cache', v: '', act: s.ssetClearing || (pend && pend.kind === 'cache') ? 'Clearing…' : 'Clear cache', go: held(() => d && this.clearSiteCache()) });
+    // Level, AI crawlers, automations and exceptions (kinsta-bots.js).
+    if (onKinsta && this.openBots) rows.push({ k: 'Bot protection', v: '', act: 'Manage…', go: () => this.openBots() });
     if (!onKinsta && (!d || Array.isArray(d.redirects))) {
       const n = d ? d.redirects.length : -1;
       rows.push({ k: 'Redirects', v: n < 0 ? '…' : n === 0 ? 'None' : String(n), act: 'Manage…',
@@ -168,7 +170,7 @@ Object.assign(Component.prototype, {
     const out = {
       ssetShow: true,
       ssetRows: rows.map(r => ({ ...r, hasV: r.v !== '', hasAct2: !!r.act2, act2: r.act2 || '', go2: r.go2 || (() => {}),
-        actOp: pend && r.k !== 'Redirects' ? '.45' : '1', actCur: pend && r.k !== 'Redirects' ? 'default' : 'pointer' })),
+        actOp: pend && !['Redirects', 'Bot protection'].includes(r.k) ? '.45' : '1', actCur: pend && !['Redirects', 'Bot protection'].includes(r.k) ? 'default' : 'pointer' })),
       // Our servers sign in with the person's own keys (Profile → SSH keys, my-ssh-keys.js).
       ...(host === 'captaincore' && this.myKeysConnectVals ? this.myKeysConnectVals() : { ssetKeysShow: false }),
       ssetApplying: !!(d && d.applying),
@@ -177,7 +179,8 @@ Object.assign(Component.prototype, {
         : 'Applying a change…',
       ssetError: (ss && ss.error) || (d && d.error) || '',
       ssetHasError: !!((ss && ss.error) || (d && d.error)),
-      ssetPhpOpen: false, ssetRdOpen: false
+      ssetPhpOpen: false, ssetRdOpen: false,
+      ...(onKinsta && this.kinstaBotsVals ? this.kinstaBotsVals(real, s) : { kbotOpen: false })
     };
 
     // PHP version dialog.

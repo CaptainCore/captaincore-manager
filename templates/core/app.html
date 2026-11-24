@@ -10155,6 +10155,135 @@ button.ccc-edited:hover{color:var(--ink)}
     </div>
   </sc-if>
 
+  <!-- ══ Bot protection dialog (Kinsta environments, kinsta-bots.js) ══ -->
+  <sc-if value="{{ kbotOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeKbot }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:6vh 20px">
+      <div onClick="{{ stopProp }}" style="width:620px;max-width:calc(100vw - 40px);max-height:86vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <span style="font:600 var(--fs-15) var(--sans)">{{ kbotTitle }}</span>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeKbot }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ kbotLoading }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ kbotLoadingText }}</span>
+          </sc-if>
+          <sc-if value="{{ kbotHasLoadErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 var(--fs-13)/1.5 var(--sans);color:var(--bad)">{{ kbotLoadErr }}</span>
+          </sc-if>
+          <sc-if value="{{ kbotReady }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ kbotLocked }}" hint-placeholder-val="{{ false }}">
+              <span style="border-left:3px solid var(--warn);background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">This site shares its Kinsta site with others, so changes have to be arranged with us.</span>
+            </sc-if>
+            <sc-if value="{{ kbotWaf }}" hint-placeholder-val="{{ false }}">
+              <span style="border-left:3px solid var(--warn);background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">Kinsta has custom firewall rules on this environment, which can override the settings here.</span>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 var(--fs-13) var(--sans)">Protection level</span>
+              <sc-for list="{{ kbotLevels }}" as="lv" hint-placeholder-count="4">
+                <div onClick="{{ lv.go }}" style="cursor:{{ lv.cursor }};border:1px solid {{ lv.bd }};background:{{ lv.bg }};border-radius:11px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start">
+                  <span style="width:16px;height:16px;border:1px solid var(--rule);border-radius:50%;display:inline-grid;place-items:center;font:700 10px var(--sans);color:var(--brand-ink);flex:none;margin-top:2px;background:var(--paper)">{{ lv.mark }}</span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="font:600 var(--fs-13) var(--sans);color:var(--ink)">{{ lv.label }}</span>
+                    <span style="font:400 var(--fs-125)/1.45 var(--sans);color:var(--ink-dim)">{{ lv.desc }}</span>
+                  </div>
+                  <sc-if value="{{ lv.cur }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:500 var(--fs-115) var(--sans);background:var(--panel-2);color:var(--ink-dim);border-radius:99px;padding:2px 9px;flex:none">Current</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ kbotWarnShow }}" hint-placeholder-val="{{ false }}">
+                <span style="border-left:3px solid var(--warn);background:var(--panel-2);border-radius:8px;padding:10px 12px;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)">{{ kbotWarn }}</span>
+              </sc-if>
+              <sc-if value="{{ kbotMonitorNote }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">An exception for our uptime monitor is added first, so it can keep checking the site.</span>
+              </sc-if>
+              <sc-if value="{{ kbotMonitorMissing }}" hint-placeholder-val="{{ false }}">
+                <span style="border-left:3px solid var(--warn);background:var(--panel-2);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink)"><span style="flex:1">Our uptime monitor has no exception, so it may report this site as down.</span><span onClick="{{ kbotAllowMonitor }}" style="font:500 var(--fs-125) var(--sans);color:var(--brand-ink);cursor:pointer;flex:none">Allow it</span></span>
+              </sc-if>
+              <sc-if value="{{ kbotLevelChanged }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="flex:1"></div>
+                  <span onClick="{{ kbotLevelCancel }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
+                  <button onClick="{{ kbotSaveLevel }}" style="border:none;background:var(--brand);opacity:{{ kbotLevelOp }};color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:8px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ kbotLevelLabel }}</button>
+                </div>
+              </sc-if>
+            </div>
+            <div style="flex:none;border:1px solid var(--rule);border-radius:11px;overflow:hidden">
+              <sc-for list="{{ kbotToggles }}" as="tg" hint-placeholder-count="2">
+                <div onClick="{{ tg.go }}" style="display:flex;align-items:center;gap:14px;padding:11px 13px;border-bottom:1px solid var(--rule);margin-bottom:-1px;cursor:{{ tg.cursor }};opacity:{{ tg.op }}">
+                  <span style="flex:1;min-width:0">
+                    <span style="display:block;font:600 var(--fs-13) var(--sans);color:var(--ink)">{{ tg.label }}</span>
+                    <span style="display:block;font:400 var(--fs-125)/1.45 var(--sans);color:var(--ink-dim)">{{ tg.desc }}</span>
+                  </span>
+                  <span style="width:34px;height:20px;border-radius:99px;background:{{ tg.bgc }};display:flex;align-items:center;padding:2px;justify-content:{{ tg.just }};flex:none;transition:background .15s"><span style="width:16px;height:16px;border-radius:50%;background:white"></span></span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font:600 var(--fs-13) var(--sans)">Exceptions</span>
+                <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ kbotCount }}</span>
+              </div>
+              <span style="font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">Allow, challenge or block matching traffic at any level. When several match, Allow wins over Challenge, and Challenge over Block. They apply to this environment only.</span>
+              <div style="border:1px solid var(--rule);border-radius:11px;overflow:hidden">
+                <sc-if value="{{ kbotNoRules }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:10px 12px;font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">No exceptions.</div>
+                </sc-if>
+                <sc-for list="{{ kbotRules }}" as="br" hint-placeholder-count="0">
+                  <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--rule);margin-bottom:-1px">
+                    <span style="font:500 var(--fs-115) var(--sans);background:{{ br.bg }};color:{{ br.fg }};border-radius:99px;padding:2px 9px;flex:none">{{ br.action }}</span>
+                    <span style="flex:1;min-width:0;font:400 var(--fs-125) var(--mono);color:var(--ink);overflow-wrap:anywhere">{{ br.value }}</span>
+                    <span style="font:400 var(--fs-115) var(--sans);color:var(--ink-dim);flex:none">{{ br.type }}</span>
+                    <sc-if value="{{ br.canRemove }}" hint-placeholder-val="{{ false }}">
+                      <span onClick="{{ br.remove }}" title="Remove exception" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer;flex:none" style-hover="color:var(--bad)">✕</span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ kbotAddShow }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:11px;padding:11px 12px;background:var(--panel)">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <div style="display:flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px">
+                      <sc-for list="{{ kbotActions }}" as="ka" hint-placeholder-count="3">
+                        <span onClick="{{ ka.go }}" style="font:500 var(--fs-125) var(--sans);color:{{ ka.fg }};background:{{ ka.bg }};box-shadow:{{ ka.shadow }};padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap">{{ ka.label }}</span>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px;flex-wrap:wrap">
+                      <sc-for list="{{ kbotTypes }}" as="kt" hint-placeholder-count="4">
+                        <span onClick="{{ kt.go }}" style="font:500 var(--fs-125) var(--sans);color:{{ kt.fg }};background:{{ kt.bg }};box-shadow:{{ kt.shadow }};padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap">{{ kt.label }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <input value="{{ kbotValue }}" onInput="{{ onKbotValue }}" onKeyDown="{{ kbotValueKey }}" placeholder="{{ kbotPlaceholder }}" style="flex:1;min-width:0;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--mono);padding:0 11px;outline:none">
+                    <sc-if value="{{ kbotCountryShow }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim);flex:none">{{ kbotCountryName }}</span>
+                    </sc-if>
+                    <button onClick="{{ kbotAdd }}" style="border:1px solid var(--rule);background:var(--paper);opacity:{{ kbotAddOp }};color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer;flex:none" style-hover="border-color:var(--brand)">Add exception</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ kbotFull }}" hint-placeholder-val="{{ false }}">
+                <span style="font:400 var(--fs-125) var(--sans);color:var(--ink-dim)">That is all Kinsta allows. Remove one to add another.</span>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ kbotHasErr }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:10px 18px;border-top:1px solid var(--rule);font:500 var(--fs-125)/1.5 var(--sans);color:var(--bad)">{{ kbotErr }}</div>
+        </sc-if>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--rule)">
+          <sc-if value="{{ kbotBusyShow }}" hint-placeholder-val="{{ false }}">
+            <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">{{ kbotBusyText }}</span>
+          </sc-if>
+          <div style="flex:1"></div>
+          <span onClick="{{ closeKbot }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Close</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- ══ MyKinsta access dialog (kinsta-access.js) ══ -->
   <sc-if value="{{ kaOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeKa }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:9vh 20px">
@@ -10166,7 +10295,7 @@ button.ccc-edited:hover{color:var(--ink)}
         </div>
         <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
           <span style="font:400 var(--fs-13)/1.5 var(--sans);color:var(--ink)">{{ kaTitle }}</span>
-          <input value="{{ kaEmail }}" onInput="{{ onKaEmail }}" onKeyDown="{{ kaKey }}" placeholder="Email address" style="flex:none;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
+          <input value="{{ kaEmail }}" onInput="{{ onKaEmail }}" onKeyDown="{{ kaKey }}" placeholder="Email addresses, up to 10, separated by commas" style="flex:none;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-13) var(--sans);padding:0 11px;outline:none">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <span style="font:500 var(--fs-125) var(--sans);color:var(--ink-dim)">Role</span>
             <div style="display:flex;gap:2px;background:var(--panel-2);border-radius:8px;padding:2px">

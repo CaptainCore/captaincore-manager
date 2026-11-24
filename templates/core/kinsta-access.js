@@ -17,6 +17,13 @@ Object.assign(Component.prototype, {
     return r ? r[1] : role;
   },
 
+  // Addresses separated by commas, semicolons, spaces or new lines.
+  kaEmails(text) {
+    const all = String(text || '').split(/[\s,;]+/).filter(Boolean);
+    const ok = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+    return { list: [...new Set(all.filter(ok).map(e => e.toLowerCase()))], bad: all.filter(e => !ok(e)) };
+  },
+
   openKinstaAccess() {
     const real = this._detail;
     if (!real) return;
@@ -41,8 +48,10 @@ Object.assign(Component.prototype, {
   sendKinstaInvite() {
     const siteId = this.state.kaSite;
     if (!siteId || this.state.kaBusy) return;
-    const email = (this.state.kaEmail || '').trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setState({ kaErr: 'Enter a valid email address.' }); return; }
+    const { list, bad } = this.kaEmails(this.state.kaEmail);
+    if (!list.length || bad.length) { this.setState({ kaErr: bad.length ? bad[0] + ' is not a valid email address.' : 'Enter a valid email address.' }); return; }
+    if (list.length > 10) { this.setState({ kaErr: 'Invite up to 10 people at a time.' }); return; }
+    const email = list.join(',');
     this.setState({ kaBusy: true, kaErr: '', kaNote: '' });
     const here = () => this.state.kaSite === siteId && this.state.kaOpen;
     this.api('/sites/' + siteId + '/kinsta-access', { method: 'POST', body: { email, role: this.state.kaRole } }).then(res => {
@@ -73,8 +82,8 @@ Object.assign(Component.prototype, {
 
   kinstaAccessVals(real, s) {
     const role = s.kaRole || 'site-admin';
-    const email = (s.kaEmail || '').trim();
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const typed = this.kaEmails(s.kaEmail);
+    const valid = typed.list.length > 0 && typed.list.length <= 10 && !typed.bad.length;
     const ka = this._ka && this._ka.siteId === s.kaSite ? this._ka : null;
     const d = ka && ka.data;
     const row = (p, pending) => {
@@ -91,7 +100,7 @@ Object.assign(Component.prototype, {
       openKa: () => this.openKinstaAccess(),
       kaOpen: !!s.kaOpen && !!real && s.kaSite === real.siteId,
       closeKa: () => this.setState({ kaOpen: false }),
-      kaTitle: 'Invite someone to ' + name + ' in MyKinsta, Kinsta’s own dashboard. They get this site only, and the invite helps them create a MyKinsta account if they need one.',
+      kaTitle: 'Invite people to ' + name + ' in MyKinsta, Kinsta’s own dashboard. They get this site only, and the invite helps them create a MyKinsta account if they need one.',
       kaEmail: s.kaEmail || '', onKaEmail: e => this.setState({ kaEmail: e.target.value, kaErr: '', kaNote: '' }),
       kaKey: e => { if (e.key === 'Enter') this.sendKinstaInvite(); },
       kaRoles: this.KA_ROLES.map(([id, label]) => ({ label,
@@ -105,7 +114,7 @@ Object.assign(Component.prototype, {
       kaLoading: !ka, kaRows: rows, kaEmpty: !!d && !rows.length,
       kaLoadErr: (ka && ka.error) || '', kaHasLoadErr: !!(ka && ka.error),
       kaErr: s.kaErr || '', kaHasErr: !!s.kaErr, kaNote: s.kaNote || '', kaHasNote: !!s.kaNote,
-      kaSendLabel: s.kaBusy ? 'Sending…' : 'Send invite',
+      kaSendLabel: s.kaBusy ? 'Sending…' : typed.list.length > 1 ? 'Send ' + typed.list.length + ' invites' : 'Send invite',
       kaSendBg: valid && !s.kaBusy ? 'var(--brand)' : 'var(--rule)',
       kaSend: () => this.sendKinstaInvite()
     };
