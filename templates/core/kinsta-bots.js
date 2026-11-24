@@ -57,7 +57,7 @@ Object.assign(Component.prototype, {
         const failed = prev.waiting ? res.error : '';
         this._kbot = { ...prev, data: res, error: '', waiting: false };
         this.setState({ kbotBusy: '', kbotPick: '', kbotErr: failed || '', ...(prev.waiting && !failed ? { kbotValue: '' } : {}) });
-        if (prev.waiting && !failed) this.toast('Bot protection updated', { kind: 'success' });
+        if (prev.waiting && !failed) this.toast('Bot protection updated. It takes effect in about a minute.', { kind: 'success', timeout: 7000 });
       }
     }).catch(err => {
       if (!here()) return;
