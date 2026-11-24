@@ -3216,9 +3216,143 @@ function captaincore_sites_stats_share_func( WP_REST_Request $request ) {
 	return [ 'success' => true ];
 }
 
+function captaincore_extract_stats_token( WP_REST_Request $request ) {
+	$auth = trim( (string) $request->get_header( 'authorization' ) );
+	if ( preg_match( '/^Bearer\s+(ccst_[a-f0-9]{32,128})$/i', $auth, $m ) ) {
+		return $m[1];
+	}
+	$alt = trim( (string) $request->get_header( 'x-captaincore-stats-token' ) );
+	if ( preg_match( '/^(ccst_[a-f0-9]{32,128})$/i', $alt, $m ) ) {
+		return $m[1];
+	}
+	return '';
+}
+
+function captaincore_verify_site_stats_token( $site_id, WP_REST_Request $request ) {
+	$raw = captaincore_extract_stats_token( $request );
+	if ( $raw === '' ) {
+		return false;
+	}
+	$site = CaptainCore\Sites::get( (int) $site_id );
+	if ( ! $site || ( $site->status ?? '' ) !== 'active' ) {
+		return false;
+	}
+	$details = json_decode( (string) ( $site->details ?? '' ) );
+	$stored  = is_object( $details ) && ! empty( $details->stats_token->hash ) ? (string) $details->stats_token->hash : '';
+	if ( $stored === '' ) {
+		return false;
+	}
+	return hash_equals( $stored, hash( 'sha256', $raw ) );
+}
+
+function captaincore_stats_read_permission_check( WP_REST_Request $request ) {
+	if ( is_user_logged_in() ) {
+		return true;
+	}
+	return captaincore_verify_site_stats_token( (int) $request['id'], $request );
+}
+
+function captaincore_verify_stats_read_access( $site_id, WP_REST_Request $request ) {
+	if ( is_user_logged_in() && captaincore_verify_permissions( $site_id ) ) {
+		return true;
+	}
+	return captaincore_verify_site_stats_token( (int) $site_id, $request );
+}
+
+function captaincore_sites_stats_token_get_func( WP_REST_Request $request ) {
+	$site_id = (int) $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$site = CaptainCore\Sites::get( $site_id );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	$details = json_decode( (string) ( $site->details ?? '' ) );
+	$meta    = is_object( $details ) && ! empty( $details->stats_token->hash ) ? $details->stats_token : null;
+	return [
+		'configured' => (bool) $meta,
+		'hint'       => $meta ? (string) ( $meta->hint ?? '' ) : '',
+		'created_at' => $meta ? (string) ( $meta->created_at ?? '' ) : '',
+	];
+}
+
+function captaincore_sites_stats_token_create_func( WP_REST_Request $request ) {
+	$site_id = (int) $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$site = CaptainCore\Sites::get( $site_id );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	$raw        = 'ccst_' . bin2hex( random_bytes( 24 ) );
+	$hint       = 'ccst_…' . substr( $raw, -4 );
+	$created_at = gmdate( 'Y-m-d H:i:s' );
+
+	$details = json_decode( (string) ( $site->details ?? '' ) );
+	if ( ! is_object( $details ) ) {
+		$details = new stdClass();
+	}
+	$rotated = ! empty( $details->stats_token->hash );
+	$details->stats_token = (object) [
+		'hash'       => hash( 'sha256', $raw ),
+		'hint'       => $hint,
+		'created_at' => $created_at,
+		'created_by' => get_current_user_id(),
+	];
+	CaptainCore\Sites::update( [ 'details' => wp_json_encode( $details ) ], [ 'site_id' => $site_id ] );
+
+	CaptainCore\ActivityLog::log(
+		'updated',
+		'site',
+		$site_id,
+		$site->name,
+		$rotated ? 'Rotated read-only stats token' : 'Generated read-only stats token',
+		[ 'hint' => $hint ],
+		$site->customer_id ? (int) $site->customer_id : null
+	);
+
+	return [
+		'configured' => true,
+		'token'      => $raw,
+		'hint'       => $hint,
+		'created_at' => $created_at,
+	];
+}
+
+function captaincore_sites_stats_token_delete_func( WP_REST_Request $request ) {
+	$site_id = (int) $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$site = CaptainCore\Sites::get( $site_id );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+	$details = json_decode( (string) ( $site->details ?? '' ) );
+	if ( is_object( $details ) && isset( $details->stats_token ) ) {
+		unset( $details->stats_token );
+		CaptainCore\Sites::update( [ 'details' => wp_json_encode( $details ) ], [ 'site_id' => $site_id ] );
+		CaptainCore\ActivityLog::log(
+			'updated',
+			'site',
+			$site_id,
+			$site->name,
+			'Revoked read-only stats token',
+			[],
+			$site->customer_id ? (int) $site->customer_id : null
+		);
+	}
+	return [
+		'configured' => false,
+		'revoked'    => true,
+	];
+}
+
 function captaincore_sites_stats_func( WP_REST_Request $request ) {
 	$site_id    = $request['id'];
-	if ( ! captaincore_verify_permissions( $site_id ) ) {
+	if ( ! captaincore_verify_stats_read_access( $site_id, $request ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 	$from_at     = $request->get_param( 'from_at' );
@@ -3239,7 +3373,7 @@ function captaincore_sites_stats_func( WP_REST_Request $request ) {
 
 function captaincore_sites_stats_top_pages_func( WP_REST_Request $request ) {
 	$site_id = $request['id'];
-	if ( ! captaincore_verify_permissions( $site_id ) ) {
+	if ( ! captaincore_verify_stats_read_access( $site_id, $request ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 	$from_at     = $request->get_param( 'from_at' );
@@ -3254,7 +3388,7 @@ function captaincore_sites_stats_top_pages_func( WP_REST_Request $request ) {
 
 function captaincore_sites_stats_top_referrers_func( WP_REST_Request $request ) {
 	$site_id = $request['id'];
-	if ( ! captaincore_verify_permissions( $site_id ) ) {
+	if ( ! captaincore_verify_stats_read_access( $site_id, $request ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 	$from_at     = $request->get_param( 'from_at' );
@@ -13693,7 +13827,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_sites_stats_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_stats_read_permission_check',
 		]
 	);
 
@@ -13701,7 +13835,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/top-pages', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_sites_stats_top_pages_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_stats_read_permission_check',
 		]
 	);
 
@@ -13709,7 +13843,27 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/top-referrers', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_sites_stats_top_referrers_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_stats_read_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/token', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_sites_stats_token_get_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_sites_stats_token_create_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => 'captaincore_sites_stats_token_delete_func',
+				'permission_callback' => 'captaincore_permission_check',
+			],
 		]
 	);
 

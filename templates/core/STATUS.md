@@ -15,6 +15,12 @@ pre-rename filenames, and this directory itself was `templates/core-v3/` until
 Full design brief: `../../captaincore-v2-design-spec.md` (Appendix B is the
 "nothing gets lost" completeness contract; §10 is the slice rollout order).
 
+## API & analytics improvements (2026-11-24)
+
+- **Stats default environment** (`app/Site.php`, `captaincore.php`): omitting `environment` on `GET /sites/{id}/stats`, `/stats/top-pages`, `/stats/top-referrers`, and `POST /site/{id}/analytics` now defaults to `production` instead of passing `null` (which matched no environment). Requesting an unknown environment returns HTTP 404 (`environment_not_found`) instead of `null`.
+- **`/run/code` escaping, errors, and large payloads** (`captaincore.php`, `app/Run.php`, `app/Mcp.php`, CLI `server/server.go`, `cmd/run.go`, `app/run`): removed `stripslashes_deep()` so backslashes survive verbatim; `Run::execute()` now surfaces CLI HTTP failures as `WP_Error` (502) and reads `X-CaptainCore-Exit-Code` (`status: "failed"` + `exit_code` on non-zero exits); scripts over 64 KB base64 travel via the CLI server's structured `payload` file instead of `--code=` argv/envp.
+- **Read-only site stats token** (`captaincore.php`, `templates/core/stats.js`, `app.html`, `api-docs.md`): `GET/POST/DELETE /sites/{id}/stats/token` manages a per-site `ccst_…` bearer token (SHA-256 hash stored in `site.details.stats_token`) accepted only on that active site's three read-only `GET /stats*` endpoints. Surfaced as a card on the Stats tab (generate, one-time copy, rotate, revoke). Verified locally via `php -l`, `node --check`, and `wp eval`.
+
 ## Behavioral & persistence security signals (2026-11-21)
 
 Closed three detection gaps on the unified Security → Signals bus (`MalwareFindings`):

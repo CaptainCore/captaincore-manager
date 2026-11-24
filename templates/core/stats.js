@@ -41,6 +41,7 @@ Object.assign(Component.prototype, {
     const key = [real.siteId, e.environment, s.statG, s.statR].join('|');
     const cur = st.current && st.current.key === key ? st.current : null;
     const tracker = this.statTracker(real, s);
+    this.loadStatsToken(real.siteId);
     if (!tracker) {
       if (!(cur && cur.empty)) { st.current = { key, empty: true }; st.pages = st.refs = null; this.setState({}); }
       return;
@@ -119,6 +120,91 @@ Object.assign(Component.prototype, {
     return out;
   },
 
+  loadStatsToken(siteId) {
+    if (!siteId) return;
+    const tok = this._statsToken = this._statsToken || {};
+    if (tok.siteId === siteId && (tok.loaded || tok.loading)) return;
+    this._statsToken = { siteId, loading: true, loaded: false, configured: false, hint: '', createdAt: '', plain: '', busy: false };
+    this.api('/sites/' + siteId + '/stats/token').then(res => {
+      if (!this._statsToken || this._statsToken.siteId !== siteId) return;
+      this._statsToken.loading = false;
+      this._statsToken.loaded = true;
+      if (res && typeof res.configured === 'boolean') {
+        this._statsToken.configured = res.configured;
+        this._statsToken.hint = res.hint || '';
+        this._statsToken.createdAt = res.created_at || '';
+      }
+      this.setState({});
+    }).catch(() => {
+      if (this._statsToken && this._statsToken.siteId === siteId) {
+        this._statsToken.loading = false;
+        this._statsToken.loaded = true;
+        this.setState({});
+      }
+    });
+  },
+
+  generateStatsToken() {
+    const real = this._detail;
+    if (!real) return;
+    const siteId = real.siteId;
+    const tok = this._statsToken = this._statsToken && this._statsToken.siteId === siteId
+      ? this._statsToken
+      : { siteId, loaded: true, configured: false, hint: '', createdAt: '', plain: '', busy: false };
+    if (tok.busy) return;
+    tok.busy = true;
+    this.setState({});
+    this.api('/sites/' + siteId + '/stats/token', { method: 'POST' }).then(res => {
+      if (!this._statsToken || this._statsToken.siteId !== siteId) return;
+      tok.busy = false;
+      if (res && res.token) {
+        tok.configured = true;
+        tok.hint = res.hint || '';
+        tok.createdAt = res.created_at || '';
+        tok.plain = res.token;
+      }
+      this.setState({});
+    }).catch(() => {
+      if (this._statsToken && this._statsToken.siteId === siteId) {
+        tok.busy = false;
+        this.setState({});
+      }
+    });
+  },
+
+  revokeStatsToken() {
+    const real = this._detail;
+    if (!real) return;
+    const siteId = real.siteId;
+    const tok = this._statsToken;
+    if (!tok || tok.siteId !== siteId || tok.busy) return;
+    tok.busy = true;
+    this.setState({});
+    this.api('/sites/' + siteId + '/stats/token', { method: 'DELETE' }).then(() => {
+      if (!this._statsToken || this._statsToken.siteId !== siteId) return;
+      tok.busy = false;
+      tok.configured = false;
+      tok.hint = '';
+      tok.createdAt = '';
+      tok.plain = '';
+      this.setState({});
+    }).catch(() => {
+      if (this._statsToken && this._statsToken.siteId === siteId) {
+        tok.busy = false;
+        this.setState({});
+      }
+    });
+  },
+
+  copyStatsToken() {
+    const tok = this._statsToken;
+    if (!tok || !tok.plain) return;
+    try { navigator.clipboard.writeText(tok.plain); } catch (e) {}
+    this.setState({ copied: 'stattoken' });
+    clearTimeout(this._ct);
+    this._ct = setTimeout(() => this.setState({ copied: '' }), 1400);
+  },
+
   // Placeholder while the site detail hydrates — avoids flashing the design's
   // mock stats (9,120 visitors…) before the real Fathom data loads.
   emptyStatVals() {
@@ -126,7 +212,10 @@ Object.assign(Component.prototype, {
       statTilesBig: ['Visitors', 'Pageviews', 'Avg time on site', 'Bounce rate'].map(k => ({ k, v: '—', delta: '', deltaFg: 'var(--ink-dim)' })),
       statBars: [], topPages: [], topRefs: [],
       statsShowPerf: false, chartMove: () => {}, chartLeave: () => {}, chartTipShow: false, chartTipLeft: 0, chartTipTop: 0, chartTipDate: '', chartTipViews: '', chartTipVisits: '',
-      statsNotice: true, statsNoticeText: 'Loading analytics…'
+      statsNotice: true, statsNoticeText: 'Loading analytics…',
+      statTokenCardShow: false, statTokenConfigured: false, statTokenStatus: '', statTokenGenLabel: 'Generate token',
+      statTokenShowPlain: false, statTokenPlain: '', statTokenCopyLabel: 'Copy',
+      onStatTokenGenerate: () => {}, onStatTokenRevoke: () => {}, onStatTokenCopy: () => {}
     };
   },
 
@@ -195,7 +284,30 @@ Object.assign(Component.prototype, {
         try { navigator.clipboard.writeText(url); } catch (e) {}
         this.setState({ copied: 'statlink' }); clearTimeout(this._ct);
         this._ct = setTimeout(() => this.setState({ copied: '' }), 1400);
-      }
+      },
+      ...(() => {
+        const real = this._detail;
+        const tok = this._statsToken && real && this._statsToken.siteId === real.siteId ? this._statsToken : null;
+        const configured = !!(tok && tok.configured);
+        const created = tok && tok.createdAt ? tok.createdAt.slice(0, 10) : '';
+        const status = !tok || tok.loading
+          ? 'Checking token…'
+          : configured
+            ? 'Active (' + (tok.hint || 'ccst_…') + ')' + (created ? ' · created ' + created : '') + ' · read-only stats endpoints for this site only.'
+            : 'No token yet. Create a read-only token for this site\'s stats endpoints (cannot run commands or access other sites).';
+        return {
+          statTokenCardShow: !!(real && this.statTracker(real, s)),
+          statTokenConfigured: configured,
+          statTokenStatus: status,
+          statTokenGenLabel: tok && tok.busy ? 'Working…' : (configured ? 'Rotate token' : 'Generate token'),
+          statTokenShowPlain: !!(tok && tok.plain),
+          statTokenPlain: (tok && tok.plain) || '',
+          statTokenCopyLabel: s.copied === 'stattoken' ? 'Copied' : 'Copy',
+          onStatTokenGenerate: () => this.generateStatsToken(),
+          onStatTokenRevoke: () => this.revokeStatsToken(),
+          onStatTokenCopy: () => this.copyStatsToken()
+        };
+      })()
     };
   }
 

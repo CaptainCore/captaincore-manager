@@ -2101,6 +2101,28 @@ button.ccc-edited:hover{color:var(--ink)}
                 </sc-if>
               </div>
             </sc-if>
+            <sc-if value="{{ statTokenCardShow }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);padding:14px 16px">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                  <div style="min-width:0">
+                    <div style="font:600 var(--fs-14) var(--sans)">Read-only stats API token</div>
+                    <div style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ statTokenStatus }}</div>
+                  </div>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ onStatTokenGenerate }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--brand)">{{ statTokenGenLabel }}</button>
+                  <sc-if value="{{ statTokenConfigured }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ onStatTokenRevoke }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--danger);font:500 var(--fs-125) var(--sans);padding:6px 12px;border-radius:8px;cursor:pointer" style-hover="border-color:var(--danger)">Revoke</button>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ statTokenShowPlain }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:10px;padding:10px 12px;border:1px solid var(--rule);border-radius:9px;background:var(--panel);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <code style="font:400 var(--fs-12) var(--mono);word-break:break-all;flex:1">{{ statTokenPlain }}</code>
+                    <button onClick="{{ onStatTokenCopy }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--brand-ink);font:500 var(--fs-12) var(--sans);padding:4px 10px;border-radius:6px;cursor:pointer" style-hover="border-color:var(--brand)">{{ statTokenCopyLabel }}</button>
+                    <div style="width:100%;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">Shown once. Send as <code>Authorization: Bearer &lt;token&gt;</code> to <code>/stats</code>, <code>/stats/top-pages</code>, or <code>/stats/top-referrers</code>.</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ tabAddons }}" hint-placeholder-val="{{ false }}">

@@ -1800,7 +1800,9 @@ Empty/missing cache yields `{}`. Refresh users with `POST /sites/cli` `command: 
 GET /sites/{site_id}/stats
 ```
 
-Aggregated visits, pageviews, bounce rate, and average duration. Environment match is case-insensitive. Defaults: last year through now, grouping `month`, first Fathom ID on that environment.
+Aggregated visits, pageviews, bounce rate, and average duration. Environment match is case-insensitive. Defaults: last year through now, grouping `month`, environment `production`, first Fathom ID on that environment.
+
+This endpoint (along with `/stats/top-pages` and `/stats/top-referrers`) also accepts a site-scoped, read-only stats token via `Authorization: Bearer ccst_…` (or `X-CaptainCore-Stats-Token: ccst_…`), without needing account-wide credentials.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -1824,7 +1826,7 @@ curl -u user:pass \
 }
 ```
 
-Missing Fathom config: `{ "Error": "There was a problem retrieving stats." }`.
+Missing Fathom config: `{ "Error": "There was a problem retrieving stats." }`. Unknown environment: HTTP `404` (`environment_not_found`).
 
 `POST /site/{site_id}/analytics` is an older alias of the same call (fields in the JSON body).
 
@@ -1833,7 +1835,7 @@ Missing Fathom config: `{ "Error": "There was a problem retrieving stats." }`.
 GET /sites/{site_id}/stats/top-pages
 ```
 
-Fathom pathnames for the range. Default window is **last 30 days** if dates are omitted (unlike `/stats`, which defaults to 1 year).
+Fathom pathnames for the range. Default window is **last 30 days** if dates are omitted (unlike `/stats`, which defaults to 1 year). Accepts a site-scoped stats token (`Authorization: Bearer ccst_…`).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -1841,6 +1843,7 @@ Fathom pathnames for the range. Default window is **last 30 days** if dates are 
 | `to_at` | string | No | End date |
 | `environment` | string | No | Case-insensitive; default `production` |
 | `limit` | integer | No | Default `10` |
+| `fathom_id` | string | No | Override tracker ID |
 
 ```bash
 curl -u user:pass \
@@ -1858,7 +1861,7 @@ No tracker → `[]`.
 GET /sites/{site_id}/stats/top-referrers
 ```
 
-Same date/environment/`limit` params as top-pages. Grouped by `referrer_hostname`, sorted by visits.
+Same date/environment/`limit`/`fathom_id` params as top-pages. Accepts a site-scoped stats token (`Authorization: Bearer ccst_…`). Grouped by `referrer_hostname`, sorted by visits.
 
 ```bash
 curl -u user:pass \
@@ -1868,6 +1871,39 @@ curl -u user:pass \
 ```json
 [{"referrer_hostname": "google.com", "visits": 400, "uniques": 350, "pageviews": 520}]
 ```
+
+### Read-only stats token
+```
+GET    /sites/{site_id}/stats/token
+POST   /sites/{site_id}/stats/token
+DELETE /sites/{site_id}/stats/token
+```
+
+Manages a per-site, read-only token (`ccst_…`) scoped strictly to `GET /sites/{site_id}/stats`, `/stats/top-pages`, and `/stats/top-referrers` for that single active site. It cannot access other sites, share settings, `/run/code`, or any other endpoint. Only the SHA-256 hash is stored, so `POST` returns the raw token once (rotating any previous token).
+
+```bash
+# Generate or rotate
+curl -X POST -u user:pass \
+  https://{your-site}/wp-json/captaincore/v1/sites/135/stats/token
+```
+
+```json
+{
+  "configured": true,
+  "token": "ccst_0123456789abcdef…",
+  "hint": "ccst_…cdef",
+  "created_at": "2026-11-24 15:20:00"
+}
+```
+
+Use the token from a client site or cron job without storing account-wide credentials:
+
+```bash
+curl -H "Authorization: Bearer ccst_0123456789abcdef…" \
+  "https://{your-site}/wp-json/captaincore/v1/sites/135/stats?from_at=2026-10-01&to_at=2026-10-31&grouping=day"
+```
+
+`GET` returns `{ "configured": bool, "hint": "ccst_…cdef", "created_at": "…" }`. `DELETE` revokes the token and returns `{ "configured": false, "revoked": true }`.
 
 ### Share site stats
 ```

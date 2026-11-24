@@ -2657,7 +2657,7 @@ class Component extends DCLogic {
       topPages: [['/', '4,812'], ['/shop/', '2,391'], ['/about/', '1,204'], ['/blog/summer-arrangements/', '986'], ['/contact/', '743']].map(([k, v]) => ({ k, v })),
       topRefs: [['direct', '4,201'], ['google.com', '3,104'], ['instagram.com', '1,822'], ['facebook.com', '640'], ['pinterest.com', '512']].map(([k, v]) => ({ k, v })),
       perfRows: [['TTFB (p75)', '142 ms'], ['Largest Contentful Paint (p75)', '1.8 s'], ['Checks · last 24h', '288 · all passing']].map(([k, v]) => ({ k, v })),
-      ...(real ? this.realStatVals(s, site) : (window.CC_BOOT ? this.emptyStatVals() : { statsNotice: false, statsNoticeText: '' })),
+      ...(real ? this.realStatVals(s, site) : (window.CC_BOOT ? this.emptyStatVals() : { statsNotice: false, statsNoticeText: '', statTokenCardShow: false })),
       // Performance monitor (performance.js) — guarded, later mixin.
       ...(this.computePerf ? this.computePerf(s) : { pmCardShow: false, pmOpen: false }),
       // Site removal — request (any role) vs hard delete (operators only).
