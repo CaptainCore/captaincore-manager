@@ -238,7 +238,8 @@ Object.assign(Component.prototype, {
         bg: i === idx ? 'var(--panel-2)' : 'transparent',
         rowRef: el => { if (el && i === idx && el._ccIdx !== idx + ':' + (s.histQ || '')) { el._ccIdx = idx + ':' + (s.histQ || ''); el.scrollIntoView({ block: 'nearest' }); } else if (el && i !== idx) el._ccIdx = ''; },
         pick: () => this.termHistPick(r.c),
-        remove: e => { e.stopPropagation(); this.termHistRemove(r.c); }
+        // The next row moves under the pointer, so a double-click takes one only.
+        remove: e => { e.stopPropagation(); if (e.detail < 2) this.termHistRemove(r.c); }
       })),
       histEmpty: open && !rows.length,
       histEmptyText: (s.histQ || '').trim() ? 'No matching commands.' : 'No commands yet. The ones you run show up here.',
@@ -248,7 +249,8 @@ Object.assign(Component.prototype, {
       histClearShow: open && this.termHistAll().length > 0,
       histClearLabel: s.histArm ? 'Clear everything?' : 'Clear',
       histClearFg: s.histArm ? 'var(--bad)' : 'var(--ink-dim)',
-      histClear: () => s.histArm ? this.termHistClear() : this.setState({ histArm: true })
+      // A double-click only asks: its second click must not answer.
+      histClear: e => { if (e.detail > 1) return; if (this.state.histArm) this.termHistClear(); else this.setState({ histArm: true }); }
     };
   }
 
