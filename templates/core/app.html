@@ -10504,7 +10504,11 @@ button.ccc-edited:hover{color:var(--ink)}
             <div style="font:500 var(--fs-13) var(--sans);color:var(--bad);background:var(--bad-soft);border-radius:9px;padding:9px 12px">{{ e.text }}</div>
           </sc-for>
         </div>
-        <div style="flex:none;display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid var(--rule)">
+        <div style="flex:none;display:flex;align-items:center;gap:8px;padding:13px 18px;border-top:1px solid var(--rule)">
+          <sc-if value="{{ udShowWelcome }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ udSendWelcome }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink);font:600 var(--fs-13) var(--sans);padding:8px 13px;border-radius:9px;cursor:pointer" style-hover="border-color:var(--brand);color:var(--brand-ink)">{{ udWelcomeLabel }}</button>
+          </sc-if>
+          <div style="flex:1"></div>
           <button onClick="{{ udClose }}" style="border:1px solid var(--rule);background:transparent;color:var(--ink-dim);font:600 var(--fs-14) var(--sans);padding:8px 14px;border-radius:9px;cursor:pointer" style-hover="background:var(--panel-2);color:var(--ink)">Cancel</button>
           <button onClick="{{ udSubmit }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-14) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">{{ udSubmitLabel }}</button>
         </div>

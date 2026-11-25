@@ -832,7 +832,7 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     static public function notify_new_user( $user_id = "" ) {
         $user = get_userdata( $user_id );
-        if ( ! $user ) return;
+        if ( ! $user ) return false;
 
         // 1. Prepare Data
         $config        = Configurations::get();
@@ -846,7 +846,7 @@ class Mailer {
         // 2. Generate One-time Password Set-up Link
         $key = get_password_reset_key( $user );
         if ( is_wp_error( $key ) ) {
-            return;
+            return $key;
         }
         $action_link = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user->user_login ), 'login' );
 
@@ -882,6 +882,8 @@ class Mailer {
             "Account Created", 
             $content_html 
         );
+
+        return true;
     }
 
     /* -------------------------------------------------------------------------

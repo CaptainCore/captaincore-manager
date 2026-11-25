@@ -1536,6 +1536,27 @@ class User {
     }
 
     /**
+     * Ensure the user holds a role accepted by has_known_role().
+     * Newsletter signups only carry `email_subscriber`, which keeps Sites,
+     * Domains and Accounts empty until `subscriber` is added. Uses add_role()
+     * so `email_subscriber` remains intact.
+     *
+     * @return bool True when `subscriber` was added.
+     */
+    public function ensure_known_role() {
+        $wp_user = get_user_by( 'ID', $this->user_id );
+        if ( ! $wp_user ) {
+            return false;
+        }
+        if ( ! array_intersect( [ 'subscriber', 'customer', 'administrator', 'editor' ], (array) $wp_user->roles ) ) {
+            $wp_user->add_role( 'subscriber' );
+            $this->roles = $wp_user->roles;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * @deprecated Use has_known_role(). Kept so nothing outside this tree breaks.
      */
     public function role_check() {
@@ -1572,6 +1593,10 @@ class User {
                 $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => $level ] );
             }
 
+        }
+
+        if ( ! empty( $account_ids ) ) {
+            $this->ensure_known_role();
         }
 
     }
@@ -1619,6 +1644,10 @@ class User {
         $level = self::safe_account_level( $level );
         foreach ( array_diff( $account_ids, $current_account_ids ) as $account_id ) {
             $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => $level ] );
+        }
+
+        if ( ! empty( $account_ids ) ) {
+            $this->ensure_known_role();
         }
 
     }

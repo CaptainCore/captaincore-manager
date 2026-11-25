@@ -4,6 +4,7 @@
 //   POST /users          — create {first_name,last_name,email,login,account_ids} → {errors?}
 //   GET  /users/{id}     — fetch for edit (includes account_ids)
 //   PUT  /users/{id}     — update {user_id,name,first_name,last_name,email,account_ids} → {errors?}
+//   POST /users/{id}/welcome — ensure subscriber role + send welcome email
 // New users are created as subscribers with a generated password and get the
 // Mailer::notify_new_user welcome email — same as v1.
 
@@ -51,7 +52,7 @@ Object.assign(Component.prototype, {
   },
 
   userDlgDefaults() {
-    return { udOpen: false, udMode: 'create', udId: 0, udFirst: '', udLast: '', udEmail: '', udLogin: '', udName: '', udAccounts: [], udAcq: '', udErrors: [], udBusy: false };
+    return { udOpen: false, udMode: 'create', udId: 0, udFirst: '', udLast: '', udEmail: '', udLogin: '', udName: '', udAccounts: [], udAcq: '', udErrors: [], udBusy: false, udWelcomeBusy: false };
   },
 
   openNewUser() { this.setState({ ...this.userDlgDefaults(), udOpen: true }); },
@@ -90,6 +91,30 @@ Object.assign(Component.prototype, {
     }
   },
 
+  sendUserWelcome(id, email) {
+    if (!id) return;
+    this._welcomeBusy = this._welcomeBusy || {};
+    if (this._welcomeBusy[id]) return;
+    this._welcomeBusy[id] = true;
+    const inDialog = this.state.udOpen && this.state.udMode === 'edit' && this.state.udId === id;
+    if (inDialog) this.setState({ udWelcomeBusy: true, udErrors: [] });
+    this.api('/users/' + id + '/welcome', { method: 'POST' }).then(res => {
+      delete this._welcomeBusy[id];
+      if (this._users && res && Array.isArray(res.roles)) {
+        this._users = this._users.map(u => (u.user_id === id ? { ...u, roles: res.roles } : u));
+      }
+      if (this.state.udOpen && this.state.udId === id) this.setState({ udWelcomeBusy: false });
+      else this.setState({});
+      const to = (res && res.email) || email || ('user #' + id);
+      this.toast('Welcome email sent to ' + to + '.', { kind: 'success' });
+    }).catch(err => {
+      delete this._welcomeBusy[id];
+      const msg = (err && err.message) || 'Could not send welcome email.';
+      if (this.state.udOpen && this.state.udId === id) this.setState({ udWelcomeBusy: false, udErrors: [msg] });
+      else this.toast(msg, { kind: 'error' });
+    });
+  },
+
   computeUsersPage(s) {
     const active = s.route === 'users';
     if (active && window.CC_BOOT && !this._users) setTimeout(() => this.loadUsersPage(), 0);
@@ -111,12 +136,13 @@ Object.assign(Component.prototype, {
       avatarRef: el => this.thumbFallbackRef(el),
       username: u.username,
       email: u.email,
-      role: Array.isArray(u.roles) && u.roles.length ? u.roles[0] : '',
+      role: Array.isArray(u.roles) && u.roles.length ? (u.roles.find(r => r !== 'email_subscriber') || u.roles[0]) : '',
       switchUrl: u.switch_to_url || '#',
       switchDisplay: u.switch_to_url ? 'inline-flex' : 'none',
       edit: () => this.openEditUser(u.user_id),
       ctx: (e) => this.openCtxMenu(e, [
         { label: 'Edit user', act: () => this.openEditUser(u.user_id) },
+        { label: 'Send welcome email', act: () => this.sendUserWelcome(u.user_id, u.email) },
         ...(u.switch_to_url ? [{ label: 'Access as ' + (u.name || u.username), act: () => { window.location.href = u.switch_to_url; } }] : []),
         ...accountChips(u).slice(0, 3).map(a => ({ label: 'Open account ' + a.name, act: () => this.openAccount(a.id) })),
         { label: 'Copy email', act: () => this.ctxCopy(u.email, 'email') }
@@ -153,7 +179,10 @@ Object.assign(Component.prototype, {
       udSuggestions, udChips,
       udErrors: (s.udErrors || []).map(text => ({ text })),
       udSubmitLabel: s.udBusy ? 'Working…' : (s.udMode === 'edit' ? 'Save user' : 'Create user'),
-      udSubmit: () => this.submitUserDialog()
+      udSubmit: () => this.submitUserDialog(),
+      udShowWelcome: s.udMode === 'edit' && !!s.udId,
+      udWelcomeLabel: s.udWelcomeBusy ? 'Sending…' : 'Send welcome email',
+      udSendWelcome: () => this.sendUserWelcome(s.udId, s.udEmail)
     };
   }
 

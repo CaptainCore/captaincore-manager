@@ -6802,7 +6802,12 @@ function captaincore_users_create_func( WP_REST_Request $request ) {
 	}
 
 	if ( filter_var( $account->email, FILTER_VALIDATE_EMAIL ) && email_exists( $account->email ) ) {
-		$errors[] = "Email address is taken.";
+		$existing = get_user_by( 'email', $account->email );
+		if ( $existing && ! ( new CaptainCore\User( $existing->ID, true ) )->has_known_role() ) {
+			$errors[] = "Email address already exists as an email subscriber. Edit that user to assign accounts and send a welcome email.";
+		} else {
+			$errors[] = "Email address is taken.";
+		}
 	}
 
 	if ( count( $errors ) == 0 ) {
@@ -6838,6 +6843,31 @@ function captaincore_users_update_func( WP_REST_Request $request ) {
 	$value    = $request->get_json_params();
 	$response = ( new CaptainCore\Users )->update( $value );
 	return $response;
+}
+
+function captaincore_users_welcome_func( WP_REST_Request $request ) {
+	$user_id = (int) $request['id'];
+	$wp_user = get_user_by( 'ID', $user_id );
+	if ( ! $wp_user ) {
+		return new WP_Error( 'not_found', 'User not found.', [ 'status' => 404 ] );
+	}
+	$cc_user  = new CaptainCore\User( $user_id, true );
+	$promoted = $cc_user->ensure_known_role();
+	$result   = CaptainCore\Mailer::notify_new_user( $user_id );
+	if ( is_wp_error( $result ) ) {
+		return new WP_Error( 'welcome_failed', $result->get_error_message(), [ 'status' => 400 ] );
+	}
+	if ( ! $result ) {
+		return new WP_Error( 'welcome_failed', 'Could not send welcome email.', [ 'status' => 500 ] );
+	}
+	$fresh = get_user_by( 'ID', $user_id );
+	return [
+		'sent'     => true,
+		'user_id'  => $user_id,
+		'email'    => $wp_user->user_email,
+		'promoted' => $promoted,
+		'roles'    => $fresh ? array_values( (array) $fresh->roles ) : [],
+	];
 }
 
 function captaincore_me_profile_update_func( WP_REST_Request $request ) {
@@ -13041,6 +13071,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/users/(?P<id>[\d]+)', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_users_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/users/(?P<id>[\d]+)/welcome', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_users_welcome_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
