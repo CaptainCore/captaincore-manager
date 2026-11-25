@@ -51,6 +51,7 @@ Object.assign(Component.prototype, {
     if (!targets.length) { this.setState({ tpOpen: true, cookOpen: false }); return; }
     const where = targets.length === 1 ? targets[0].label : targets.length + ' environments';
     const firstLine = cmd.split('\n')[0];
+    this.termHistAdd(this.state.termCmd);
     this.setState({ termCmd: '' });
     if (this._termEl) { this._termEl.value = ''; this._termEl.style.height = 'auto'; }
     // Session model: one activity row per target set. Same targets → append
@@ -98,6 +99,7 @@ Object.assign(Component.prototype, {
       this.setState({ schedErr: 'Pick a date and time.' });
       return;
     }
+    this.termHistAdd(s.termCmd);
     this.setState({ schedBusy: true, schedErr: '' });
     const run_at = { date: s.schedDate, time: s.schedTime,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
@@ -127,15 +129,9 @@ Object.assign(Component.prototype, {
   },
 
   insertRecipe(recipe) {
-    const content = recipe.content || '';
-    this.setState({ termCmd: content, cookOpen: false, cookQ: '' });
-    const el = this._termEl;
-    if (el) {
-      el.value = content;
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-      el.focus();
-    }
+    this._termNav = null;
+    this.setState({ cookOpen: false, cookQ: '' });
+    this.setTermInput(recipe.content || '');
   },
 
   // Public (system) recipes never land in the input — picking one opens a
@@ -200,6 +196,8 @@ Object.assign(Component.prototype, {
         pick: () => r.public == 1 ? this.confirmRecipeRun(r) : this.insertRecipe(r) }));
     const crRecipe = s.crRecipe ? recipes.find(x => String(x.recipe_id) === String(s.crRecipe)) : null;
     return {
+      // term-history.js loads after app.js: guard per the render-time mixin rule.
+      ...(this.computeTermHist ? this.computeTermHist(s) : { histOpen: false, histRows: [] }),
       termCmd: s.termCmd || '',
       // The textarea has no value binding (the DC runtime treats value like
       // defaultValue), so a FRESH mount starts empty even when state.termCmd
@@ -213,6 +211,7 @@ Object.assign(Component.prototype, {
         this._termEl = el;
         if (el && el._seeded !== true) {
           el._seeded = true;
+          el.addEventListener('keydown', e => this.termKeydown(e)); // ↑ ↓ ⌃R (term-history.js)
           const pending = this.state.termCmd || '';
           if (pending) {
             el.value = pending;
@@ -252,14 +251,14 @@ Object.assign(Component.prototype, {
       termTargetClearable: explicit,
       termTargetClear: () => this.setState({ termSel: [] }),
       tpOpen: s.tpOpen, tpQ: s.tpQ || '',
-      tpToggle: () => this.setState(st => ({ tpOpen: !st.tpOpen, cookOpen: false, tpQ: '' })),
+      tpToggle: () => this.setState(st => ({ tpOpen: !st.tpOpen, cookOpen: false, histOpen: false, tpQ: '' })),
       tpClose: () => this.setState({ tpOpen: false }),
       onTpQ: e => this.setState({ tpQ: e.target.value }),
       tpCount: selSet.size + ' selected',
       tpResults,
       cookOpen: s.cookOpen, cookQ: s.cookQ || '',
       // Search autofocus rides the shared leadFocusRef (app.js) in the markup.
-      cookToggle: () => { this.setState(st => ({ cookOpen: !st.cookOpen, tpOpen: false, cookQ: '' })); this.loadRecipes(); },
+      cookToggle: () => { this.setState(st => ({ cookOpen: !st.cookOpen, tpOpen: false, histOpen: false, cookQ: '' })); this.loadRecipes(); },
       cookClose: () => this.setState({ cookOpen: false }),
       onCookQ: e => this.setState({ cookQ: e.target.value }),
       cookResults,

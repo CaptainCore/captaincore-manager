@@ -1368,6 +1368,20 @@ The UI was restyled to the Minn Admin design system (Austin's ask, mockup first 
   auto-growing textarea (Enter = newline, ⌘⏎ = run; cleared via `this._termEl` ref
   because the DC runtime binds value like defaultValue). Dispatch:
   `POST /run/code { environments: [ids], code }` → one combined streamed job.
+- **`term-history.js`** — command history for the dock terminal (2026-11-24).
+  Browser only: `localStorage['ccTermHistory:<userId>']` (200 commands, 90 days;
+  per user id so User Switching never mixes two people's commands), nothing on
+  the server. Commands that look like they hold a secret (`HIST_SECRET`), start
+  with a space, run past 4000 characters, or run while saving is off
+  (`ccTermHistoryOff:<userId>`) stay in `_termMem` until reload. ↑ on the first
+  line / ↓ on the last walk history (`termHistMove`, readline-style: the line
+  being typed and edits to recalled lines survive the walk); a fresh recall keeps
+  walking through multi-line commands. ⌃R or the History chip opens the popover
+  (search, pick, remove one, clear, saving on/off). Picking only fills the input,
+  never runs. Recalling never changes the target. `setTermInput(v)` is the one
+  way to put text in the command line from code. Recipe runs by id are not kept.
+  The keydown listener is bound in `termRef` on real mount; the popover's Esc is
+  a document capture listener, since the shell's Esc would close the dock.
 - **`home.js`** — home-screen truth. `hydrateHome()` (fired from `componentDidMount`,
   parallel to `hydrate()`) pulls `/activity-logs?per_page=20` (both roles, self-scoped)
   plus `/security-threats` and `/update-queue` (operator only — a 403 in `api()` would

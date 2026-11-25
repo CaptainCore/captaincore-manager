@@ -216,6 +216,7 @@ input:not([style*="border:none"]):not([style*="border-style: none"]):focus,texta
   .cc-plf-body{flex-direction:column !important}
   .cc-plf-side{width:100% !important;max-height:150px;border-right:none !important;border-bottom:1px solid var(--rule)}
 }
+@media (max-width:760px){.cc-term-hint{display:none}}
 .cc-kbd{display:inline-block;font:500 var(--fs-115) var(--mono);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;background:var(--panel);color:var(--ink);white-space:nowrap;vertical-align:baseline}
 .cc-help h4{margin:16px 0 4px;font:700 var(--fs-13) var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
 .cc-help p{margin:0 0 4px}
@@ -6722,13 +6723,45 @@ button.ccc-edited:hover{color:var(--ink)}
                 </div>
               </div>
             </sc-if>
+            <sc-if value="{{ histOpen }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ histClose }}" style="position:fixed;inset:0;z-index:64"></div>
+              <div style="position:absolute;bottom:calc(100% + 10px);left:10px;right:10px;z-index:65;background:var(--paper);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;animation:ccfade .12s ease">
+                <div style="padding:10px 10px 8px;border-bottom:1px solid var(--rule)">
+                  <input ref="{{ histSearchRef }}" value="{{ histQ }}" onInput="{{ onHistQ }}" placeholder="Search history…" aria-label="Search command history" style="width:100%;box-sizing:border-box;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 10px;outline:none">
+                </div>
+                <div style="max-height:min(250px,34vh);overflow-y:auto;padding:4px">
+                  <sc-if value="{{ histEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:14px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim);text-align:center">{{ histEmptyText }}</div>
+                  </sc-if>
+                  <sc-for list="{{ histRows }}" as="h" hint-placeholder-count="6">
+                    <div ref="{{ h.rowRef }}" onClick="{{ h.pick }}" title="{{ h.full }}" style="display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:7px;cursor:pointer;background:{{ h.bg }}" style-hover="background:var(--panel-2)">
+                      <span style="flex:1;min-width:0;font:400 var(--fs-125) var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.text }}</span>
+                      <sc-if value="{{ h.mem }}" hint-placeholder-val="{{ false }}">
+                        <span title="Not saved. Gone when you reload." style="flex:none;font:600 10.5px var(--sans);color:var(--warn);background:var(--warn-soft);border-radius:99px;padding:2px 8px">Not saved</span>
+                      </sc-if>
+                      <span style="flex:none;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ h.when }}</span>
+                      <button onClick="{{ h.remove }}" title="Remove from history" aria-label="Remove from history" style="flex:none;border:none;background:none;cursor:pointer;color:var(--ink-dim);width:20px;height:20px;display:grid;place-items:center;border-radius:5px;padding:0;font:400 var(--fs-11) var(--sans)" style-hover="background:var(--rule);color:var(--ink)">✕</button>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:8px 12px;border-top:1px solid var(--rule);font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">
+                  <span style="min-width:0">{{ histNote }}</span>
+                  <span style="flex:1"></span>
+                  <span onClick="{{ histSaveToggle }}" style="flex:none;font-weight:500;color:var(--brand-ink);cursor:pointer">{{ histSaveLabel }}</span>
+                  <sc-if value="{{ histClearShow }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ histClear }}" style="flex:none;font-weight:500;color:{{ histClearFg }};cursor:pointer" style-hover="color:var(--bad)">{{ histClearLabel }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
             <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 0">
-              <span onClick="{{ tpToggle }}" title="Select target environments" style="display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--mono);color:{{ termTargetFg }};background:{{ termTargetBg }};cursor:pointer;border:1px solid transparent;border-radius:7px;padding:3px 10px 3px 8px" style-hover="border-color:var(--brand)">
+              <span onClick="{{ tpToggle }}" title="Select target environments" style="min-width:0;display:inline-flex;align-items:center;gap:6px;font:500 var(--fs-12) var(--mono);color:{{ termTargetFg }};background:{{ termTargetBg }};cursor:pointer;border:1px solid transparent;border-radius:7px;padding:3px 10px 3px 8px" style-hover="border-color:var(--brand)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
-                <span>{{ termTargetLabel }}</span>
+                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ termTargetLabel }}</span>
               </span>
-              <span onClick="{{ cookToggle }}" title="Cookbook recipes" style="display:inline-flex;align-items:center;font:500 var(--fs-12) var(--mono);color:var(--brand-ink);background:var(--brand-soft);cursor:pointer;border:1px solid transparent;border-radius:7px;padding:3px 10px" style-hover="border-color:var(--brand)">Cookbook</span>
-              <span style="margin-left:auto;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">⌘⏎ run · ⌃` toggle</span>
+              <span onClick="{{ cookToggle }}" title="Cookbook recipes" style="flex:none;display:inline-flex;align-items:center;font:500 var(--fs-12) var(--mono);color:var(--brand-ink);background:var(--brand-soft);cursor:pointer;border:1px solid transparent;border-radius:7px;padding:3px 10px" style-hover="border-color:var(--brand)">Cookbook</span>
+              <span onClick="{{ histToggle }}" title="Command history (⌃R)" style="flex:none;display:inline-flex;align-items:center;font:500 var(--fs-12) var(--mono);color:var(--brand-ink);background:var(--brand-soft);cursor:pointer;border:1px solid transparent;border-radius:7px;padding:3px 10px" style-hover="border-color:var(--brand)">History</span>
+              <span class="cc-term-hint" style="margin-left:auto;flex:none;font:400 var(--fs-12) var(--mono);color:var(--ink-dim)">↑↓ history · ⌘⏎ run</span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-end;padding:8px 12px 12px">
               <textarea ref="{{ termRef }}" onInput="{{ onTermCmd }}" rows="1" placeholder="Run a command across the fleet…" spellcheck="false" style="flex:1;min-width:0;box-sizing:border-box;background:var(--panel);border:1px solid var(--rule);border-radius:9px;outline:none;color:var(--ink);font:400 var(--fs-13)/1.5 var(--mono);resize:none;padding:9px 12px;min-height:38px;max-height:160px;overflow-y:auto"></textarea>
@@ -6823,7 +6856,7 @@ button.ccc-edited:hover{color:var(--ink)}
           <p>Press <span class="cc-kbd">⌘K</span> from any screen and start typing. It searches every site and domain you can see and lists commands: open the terminal, jump to Billing or Security, run bulk tools on filtered sites, hide the sidebar. <span class="cc-kbd">↑</span> <span class="cc-kbd">↓</span> move through results and <span class="cc-kbd">⏎</span> picks one. The search box at the top of the sidebar opens the same palette.</p>
 
           <h4>The terminal</h4>
-          <p><span class="cc-kbd">⌃`</span> opens the activity dock: a streamed console for every job plus a command line that runs against one site, a hand-picked set, or every site matching the current filter. <span class="cc-kbd">⌘⏎</span> runs the command. Hover any output line for a copy button, or right-click a job to copy its whole output or cancel it while it runs.</p>
+          <p><span class="cc-kbd">⌃`</span> opens the activity dock: a streamed console for every job plus a command line that runs against one site, a hand-picked set, or every site matching the current filter. <span class="cc-kbd">⌘⏎</span> runs the command. <span class="cc-kbd">↑</span> and <span class="cc-kbd">↓</span> step through commands you ran before, and <span class="cc-kbd">⌃R</span> or History searches them. History is kept in this browser only. Commands that look like they contain a password or key, and any you start with a space, are not saved. Hover any output line for a copy button, or right-click a job to copy its whole output or cancel it while it runs.</p>
 
           <h4>Right-click almost anything</h4>
           <p>Rows in Sites, Domains, Accounts and Users, jobs in the dock, the theme button, and the Sites view switcher all answer a right-click with quick actions. When in doubt, right-click.</p>
@@ -6833,6 +6866,8 @@ button.ccc-edited:hover{color:var(--ink)}
             <span class="cc-kbd">⌘K</span><span>Command palette: sites, domains, accounts and commands</span>
             <span class="cc-kbd">⌃`</span><span>Show or hide the terminal dock</span>
             <span class="cc-kbd">⌘⏎</span><span>Run the terminal command · submit a timeline note</span>
+            <span class="cc-kbd">↑ ↓</span><span>In the terminal: step through command history</span>
+            <span class="cc-kbd">⌃R</span><span>In the terminal: search command history</span>
             <span class="cc-kbd">⌘.</span><span>Show or hide the sidebar</span>
             <span class="cc-kbd">↑ ↓ ⏎</span><span>Move through palette results and pick one</span>
             <span class="cc-kbd">Esc</span><span>Close menus and dialogs, one layer at a time</span>
