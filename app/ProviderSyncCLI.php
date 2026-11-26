@@ -45,6 +45,15 @@ class ProviderSyncCLI {
 	 * : Compute diffs but don't write changes to the DB, trigger site syncs,
 	 *   or stamp last_remote_sync_at.
 	 *
+	 * [--prune-missing]
+	 * : Auto-remove non-Production provider-hosted environments confirmed
+	 *   absent from the provider for at least 20 hours (two-strike grace
+	 *   period; never touches Production or self-hosted environments).
+	 *
+	 * [--has-extra-envs]
+	 * : Only process sites that currently have at least one non-Production
+	 *   provider-hosted environment (e.g. Staging).
+	 *
 	 * [--verbose]
 	 * : Print the full change list for each updated site.
 	 *
@@ -53,22 +62,25 @@ class ProviderSyncCLI {
 	 *     wp captaincore provider-sync --site=2912
 	 *     wp captaincore provider-sync --limit=10 --dry-run
 	 *     wp captaincore provider-sync --provider=kinsta --stale=6d
-	 *     wp captaincore provider-sync --throttle=5 --verbose
+	 *     wp captaincore provider-sync --provider=kinsta --stale=6d --limit=500 --throttle=1 --prune-missing
+	 *     wp captaincore provider-sync --provider=kinsta --has-extra-envs --prune-missing --dry-run
 	 *
 	 * @when after_wp_load
 	 */
 	public function __invoke( $args = [], $assoc_args = [] ) {
-		$provider = isset( $assoc_args['provider'] ) ? (string) $assoc_args['provider'] : '';
-		$site_id  = isset( $assoc_args['site'] ) ? (int) $assoc_args['site'] : 0;
-		$throttle = isset( $assoc_args['throttle'] ) ? (float) $assoc_args['throttle'] : 3;
-		$limit    = isset( $assoc_args['limit'] ) ? (int) $assoc_args['limit'] : 0;
-		$stale    = isset( $assoc_args['stale'] ) ? (string) $assoc_args['stale'] : '';
-		$dry_run  = isset( $assoc_args['dry-run'] );
-		$verbose  = isset( $assoc_args['verbose'] );
+		$provider       = isset( $assoc_args['provider'] ) ? (string) $assoc_args['provider'] : '';
+		$site_id        = isset( $assoc_args['site'] ) ? (int) $assoc_args['site'] : 0;
+		$throttle       = isset( $assoc_args['throttle'] ) ? (float) $assoc_args['throttle'] : 3;
+		$limit          = isset( $assoc_args['limit'] ) ? (int) $assoc_args['limit'] : 0;
+		$stale          = isset( $assoc_args['stale'] ) ? (string) $assoc_args['stale'] : '';
+		$dry_run        = isset( $assoc_args['dry-run'] );
+		$prune_missing  = isset( $assoc_args['prune-missing'] );
+		$has_extra_envs = isset( $assoc_args['has-extra-envs'] );
+		$verbose        = isset( $assoc_args['verbose'] );
 
 		$site_ids = $site_id
 			? $this->single_site_ids( $site_id )
-			: $this->select_site_ids( $provider, $stale, $limit );
+			: $this->select_site_ids( $provider, $stale, $limit, $has_extra_envs );
 
 		$total = count( $site_ids );
 		if ( $total === 0 ) {
@@ -77,14 +89,16 @@ class ProviderSyncCLI {
 		}
 
 		\WP_CLI::log( sprintf(
-			'Processing %d site(s)%s%s%s',
+			'Processing %d site(s)%s%s%s%s%s',
 			$total,
 			$provider ? " provider={$provider}" : '',
 			$stale ? " stale>{$stale}" : '',
+			$has_extra_envs ? ' has-extra-envs' : '',
+			$prune_missing ? ' prune-missing' : '',
 			$dry_run ? ' (dry run)' : ''
 		) );
 
-		$counts = [ 'updated' => 0, 'in-sync' => 0, 'skipped' => 0, 'error' => 0 ];
+		$counts = [ 'updated' => 0, 'in-sync' => 0, 'skipped' => 0, 'error' => 0, 'removed' => 0, 'marked_missing' => 0 ];
 		$started = microtime( true );
 
 		foreach ( $site_ids as $i => $current_id ) {
@@ -99,7 +113,7 @@ class ProviderSyncCLI {
 			$provider_label = $site->provider ?: 'none';
 
 			try {
-				$result = ( new Site( $current_id ) )->remote_sync( $dry_run );
+				$result = ( new Site( $current_id ) )->remote_sync( $dry_run, $prune_missing );
 			} catch ( \Throwable $e ) {
 				$counts['error']++;
 				\WP_CLI::warning( sprintf(
@@ -112,6 +126,8 @@ class ProviderSyncCLI {
 
 			$status  = $result['status'] ?? 'error';
 			$counts[ $status ] = ( $counts[ $status ] ?? 0 ) + 1;
+			$counts['removed']        += count( $result['removed'] ?? [] );
+			$counts['marked_missing'] += count( $result['marked_missing'] ?? [] );
 
 			$line = sprintf( '[%d/%d] %s (%s) — %s', $i + 1, $total, $name, $provider_label, $status );
 			if ( $status === 'updated' ) {
@@ -122,6 +138,8 @@ class ProviderSyncCLI {
 				$line .= ': ' . implode( ', ', $summary );
 			} elseif ( in_array( $status, [ 'error', 'skipped' ], true ) ) {
 				$line .= ': ' . ( $result['message'] ?? '' );
+			} elseif ( ! empty( $result['marked_missing'] ) ) {
+				$line .= ': marked missing [' . implode( ', ', $result['marked_missing'] ) . ']';
 			}
 			\WP_CLI::log( $line );
 
@@ -144,9 +162,10 @@ class ProviderSyncCLI {
 
 		$elapsed = microtime( true ) - $started;
 		\WP_CLI::success( sprintf(
-			'Done in %s. updated=%d in-sync=%d skipped=%d error=%d',
+			'Done in %s. updated=%d in-sync=%d skipped=%d error=%d removed=%d marked_missing=%d',
 			$this->format_elapsed( $elapsed ),
-			$counts['updated'], $counts['in-sync'], $counts['skipped'], $counts['error']
+			$counts['updated'], $counts['in-sync'], $counts['skipped'], $counts['error'],
+			$counts['removed'], $counts['marked_missing']
 		) );
 	}
 
@@ -165,9 +184,10 @@ class ProviderSyncCLI {
 	 * then oldest last_remote_sync_at). Applies --provider, --stale and
 	 * --limit filters.
 	 */
-	protected function select_site_ids( $provider, $stale, $limit ) {
+	protected function select_site_ids( $provider, $stale, $limit, $has_extra_envs = false ) {
 		global $wpdb;
-		$table = $wpdb->prefix . 'captaincore_sites';
+		$table     = $wpdb->prefix . 'captaincore_sites';
+		$env_table = $wpdb->prefix . 'captaincore_environments';
 
 		$where   = [ "status = 'active'" ];
 		$prepare = [];
@@ -175,6 +195,10 @@ class ProviderSyncCLI {
 		if ( $provider !== '' ) {
 			$where[]   = 'provider = %s';
 			$prepare[] = $provider;
+		}
+
+		if ( $has_extra_envs ) {
+			$where[] = "EXISTS ( SELECT 1 FROM {$env_table} e WHERE e.site_id = {$table}.site_id AND LOWER( e.environment ) != 'production' AND COALESCE( e.server_id, 0 ) = 0 )";
 		}
 
 		$stale_seconds = $this->parse_duration( $stale );

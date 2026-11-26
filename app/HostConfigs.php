@@ -44,7 +44,7 @@ class HostConfigs extends DB {
 	];
 
 	/** Environment details keys only the Manager writes; CLI syncs never overwrite them. */
-	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container', 'restore', 'restored', 'kinsta_env_id' ];
+	const MANAGER_DETAILS = [ 'container', 'container_ip', 'start', 'wp_admin', 'removed_container', 'restore', 'restored', 'kinsta_env_id', 'provider_missing_since' ];
 
 	// Account names a container already has (or that read as a system account):
 	// a site called one of these logs in as <name>-site instead.

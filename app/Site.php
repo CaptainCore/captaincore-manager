@@ -9,6 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Site {
 
+    /**
+     * Minimum time a non-Production environment must be confirmed absent from
+     * its hosting provider (with Production still live) before auto-pruning.
+     * 20 hours spans two consecutive nightly backup/sync runs while safely
+     * outlasting transient provider operations (staging resets/recreates).
+     */
+    const MISSING_ENV_PRUNE_GRACE_SECONDS = 72000;
+
     protected $site_id = "";
     protected $environment = "";
 
@@ -563,14 +571,20 @@ class Site {
      *     'warnings' => string[],
      *   ]
      *
-     * @param bool $dry_run When true, diffs are computed but no writes occur.
+     * @param bool $dry_run       When true, diffs are computed but no writes occur.
+     * @param bool $prune_missing When true, remove non-Production provider-hosted
+     *                            environments confirmed absent for at least
+     *                            MISSING_ENV_PRUNE_GRACE_SECONDS while Production
+     *                            is still present at the provider.
      */
-    public function remote_sync( $dry_run = false ) {
+    public function remote_sync( $dry_run = false, $prune_missing = false ) {
         $result = [
-            'status'   => 'in-sync',
-            'message'  => '',
-            'changes'  => [],
-            'warnings' => [],
+            'status'         => 'in-sync',
+            'message'        => '',
+            'changes'        => [],
+            'warnings'       => [],
+            'removed'        => [],
+            'marked_missing' => [],
         ];
 
         $site = ( new Sites )->get( $this->site_id );
@@ -646,16 +660,81 @@ class Site {
             $remote_by_label[ $remote_env['environment'] ] = $remote_env;
         }
 
-        $local_envs   = ( new Environments )->where( [ 'site_id' => $this->site_id ] );
-        $fields       = [ 'address', 'port', 'username', 'password', 'home_directory' ];
-        $local_labels = [];
+        $local_envs            = ( new Environments )->where( [ 'site_id' => $this->site_id ] );
+        $fields                = [ 'address', 'port', 'username', 'password', 'home_directory' ];
+        $local_labels          = [];
+        $has_remote_production = isset( $remote_by_label['Production'] );
 
         foreach ( $local_envs as $local_env ) {
             $local_labels[] = $local_env->environment;
+            $env_details    = $this->decode_details( $local_env );
+
             if ( ! isset( $remote_by_label[ $local_env->environment ] ) ) {
-                $result['warnings'][] = "Local '{$local_env->environment}' environment has no match on {$site->provider}";
+                // Only non-Production environments hosted at the site's provider
+                // (never self-hosted server_id > 0, never Production, never when
+                // the provider response didn't positively include Production)
+                // are eligible for missing-environment tracking and pruning.
+                $eligible_for_prune = $has_remote_production
+                    && strcasecmp( (string) $local_env->environment, 'Production' ) !== 0
+                    && (int) ( $local_env->server_id ?? 0 ) === 0;
+
+                if ( ! $eligible_for_prune ) {
+                    $result['warnings'][] = "Local '{$local_env->environment}' environment has no match on {$site->provider}";
+                    continue;
+                }
+
+                $missing_since = isset( $env_details['provider_missing_since'] ) ? (string) $env_details['provider_missing_since'] : '';
+                $missing_ts    = $missing_since !== '' ? strtotime( $missing_since . ' UTC' ) : false;
+                $elapsed       = $missing_ts !== false ? ( time() - $missing_ts ) : 0;
+
+                if ( $prune_missing && $missing_ts !== false && $elapsed >= self::MISSING_ENV_PRUNE_GRACE_SECONDS ) {
+                    if ( ! $dry_run ) {
+                        ( new Environments )->delete( (int) $local_env->environment_id );
+                        Sites::update_environments_cache( $this->site_id );
+                        ActivityLog::log(
+                            'deleted',
+                            'site',
+                            $this->site_id,
+                            $site->name,
+                            "Auto-removed {$local_env->environment} environment for {$site->name} (absent on {$site->provider} since {$missing_since} UTC)",
+                            [],
+                            $site->customer_id ? $site->customer_id : null
+                        );
+                        ProcessLog::insert(
+                            "Auto-removed {$local_env->environment} environment (no longer exists on {$site->provider})",
+                            $this->site_id
+                        );
+                    }
+                    $result['removed'][] = $local_env->environment;
+                    $result['changes'][] = [
+                        'environment' => $local_env->environment,
+                        'field'       => 'removed',
+                        'before'      => "missing since {$missing_since} UTC",
+                        'after'       => $dry_run ? 'would remove' : 'removed',
+                    ];
+                    continue;
+                }
+
+                // Strike 1 (or still within the grace window): mark missing without deleting.
+                if ( $missing_since === '' ) {
+                    $missing_since = gmdate( 'Y-m-d H:i:s' );
+                    if ( ! $dry_run ) {
+                        $env_details['provider_missing_since'] = $missing_since;
+                        ( new Environments )->update(
+                            [ 'details' => wp_json_encode( $env_details ) ],
+                            [ 'environment_id' => $local_env->environment_id ]
+                        );
+                    }
+                    $result['marked_missing'][] = $local_env->environment;
+                    $result['warnings'][]       = "Local '{$local_env->environment}' environment has no match on {$site->provider}; marked missing (grace period 20h before auto-prune)";
+                } else {
+                    $age_hours                  = round( max( 0, $elapsed ) / 3600, 1 );
+                    $result['marked_missing'][] = $local_env->environment;
+                    $result['warnings'][]       = "Local '{$local_env->environment}' environment has no match on {$site->provider} (missing {$age_hours}h; waiting for 20h grace period)";
+                }
                 continue;
             }
+
             $remote_env = $remote_by_label[ $local_env->environment ];
             $update     = [];
             foreach ( $fields as $field ) {
@@ -674,6 +753,11 @@ class Site {
                         'after'       => self::mask_value( $field, $remote_value ),
                     ];
                 }
+            }
+            // Environment is present at the provider — clear any prior missing mark.
+            if ( isset( $env_details['provider_missing_since'] ) ) {
+                unset( $env_details['provider_missing_since'] );
+                $update['details'] = wp_json_encode( $env_details );
             }
             if ( ! empty( $update ) && ! $dry_run ) {
                 $update['updated_at'] = date( 'Y-m-d H:i:s' );

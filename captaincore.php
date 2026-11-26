@@ -1768,6 +1768,41 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
+	// Reconcile a site's environments with its hosting provider (two-strike safe prune for missing non-Production envs).
+	if ( $command === 'reconcile-environment' and ! empty( $post->site_id ) ) {
+		$target_env = isset( $post->data->environment ) ? sanitize_text_field( (string) $post->data->environment ) : '';
+		$result     = ( new CaptainCore\Site( (int) $post->site_id ) )->remote_sync( false, true );
+
+		$removed = false;
+		if ( $target_env !== '' && ! empty( $result['removed'] ) ) {
+			foreach ( $result['removed'] as $r ) {
+				if ( strcasecmp( $r, $target_env ) === 0 ) {
+					$removed = true;
+					break;
+				}
+			}
+		}
+
+		$marked_missing = false;
+		if ( $target_env !== '' && ! empty( $result['marked_missing'] ) ) {
+			foreach ( $result['marked_missing'] as $m ) {
+				if ( strcasecmp( $m, $target_env ) === 0 ) {
+					$marked_missing = true;
+					break;
+				}
+			}
+		}
+
+		$response = [
+			'status'         => $result['status'] ?? 'error',
+			'message'        => $result['message'] ?? '',
+			'removed'        => $removed,
+			'marked_missing' => $marked_missing,
+			'removed_envs'   => $result['removed'] ?? [],
+			'warnings'       => $result['warnings'] ?? [],
+		];
+	}
+
 	// Sync site data
 	if ( $command === 'sync-data' and ! empty( $post->data ) ) {
 		
@@ -1795,6 +1830,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			}
 		}
 		$details = CaptainCore\PublicKeys::note_live( $details, $keys_live_before );
+		// A successful SSH/WP sync proves the environment exists — clear any prior missing-from-provider mark.
+		unset( $details->provider_missing_since );
 
 		// How this environment sends email, from the `email` probe: the route,
 		// what changed since the last sync, and (production, below) signals.
@@ -4264,6 +4301,7 @@ function captaincore_site_environment_delete_func( WP_REST_Request $request ) {
 	// listing reads; without this the deleted environment kept showing there.
 	CaptainCore\Sites::update_environments_cache( $site_id );
 	CaptainCore\ActivityLog::log( 'deleted', 'site', $site_id, $current->name, "Deleted {$environment->environment} environment record for {$current->name}", [], $current->customer_id ? $current->customer_id : null );
+	CaptainCore\Run::CLI( "site sync {$site_id}" );
 	return [ 'response' => 'Successfully deleted environment' ];
 }
 
