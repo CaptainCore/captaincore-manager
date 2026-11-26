@@ -156,7 +156,11 @@ Object.assign(Component.prototype, {
       hoverShow: !!sample,
       hoverX: hov ? ((hoverAt * stepX) / W * 100).toFixed(3) + '%' : '0%',
       hoverY: hov ? (y(hov.v) / H * 100).toFixed(3) + '%' : '0%',
-      hoverVal: sample ? this.pmFmt(sample[def.key], def.digits) + (def.unit || '') : ''
+      hoverVal: sample && sample[def.key] != null
+        ? this.pmFmt(sample[def.key], def.digits) + (def.unit || '')
+          + (def.codeKey && sample[def.codeKey] != null && sample[def.codeKey] !== 200
+            ? ' (' + (sample[def.codeKey] === 0 ? 'timeout' : sample[def.codeKey]) + ')' : '')
+        : '—'
     };
   },
 
@@ -167,6 +171,7 @@ Object.assign(Component.prototype, {
     const data = (this._perf && this._perf.data) || null;
     const samples = data ? data.samples : [];
     const maxWorkers = data ? (data.max_workers || 0) : 0;
+    const hasPhp = samples.some(x => x.php_resp != null);
     const vals = k => samples.map(x => x[k]).filter(v => v != null);
     const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
     const peak = a => a.length ? Math.max.apply(null, a) : 0;
@@ -184,9 +189,11 @@ Object.assign(Component.prototype, {
     const defs = [
       { key: 'db', title: 'DB Connections', yLabel: 'Connections', color: '#00c853', digits: 0 },
       { key: 'load', title: 'Server Load', yLabel: 'Load', color: '#00a6d6', digits: 2 },
-      { key: 'resp', title: 'Response Time (seconds)', yLabel: 'Seconds', color: '#8a5cf6', digits: 3, unit: 's' },
+      { key: 'resp', codeKey: 'code', title: 'Response Time (seconds)', yLabel: 'Seconds', color: '#8a5cf6', digits: 3, unit: 's' },
       { key: 'workers', title: 'PHP Workers', yLabel: 'Workers', color: '#f57c00', digits: 0, ceiling: maxWorkers }
-    ];
+    ].concat(hasPhp ? [
+      { key: 'php_resp', codeKey: 'php_code', title: 'PHP Response Time (seconds)', yLabel: 'Seconds', color: '#14b8a6', digits: 3, unit: 's' }
+    ] : []);
 
     return {
       // ── Stats-tab card ──────────────────────────────────────────────
@@ -232,7 +239,10 @@ Object.assign(Component.prototype, {
         { k: 'Peak Load', v: this.pmFmt(peak(vals('load')), 2), c: '#e53935' },
         { k: 'Avg Response', v: this.pmFmt(avg(vals('resp')), 4) + 's', c: '#8a5cf6' },
         { k: 'Peak Response', v: this.pmFmt(peak(vals('resp')), 3) + 's', c: '#e53935' }
-      ].concat(maxWorkers > 0 ? [{ k: 'Peak Workers', v: this.pmFmt(peak(vals('workers')), 0) + '/' + maxWorkers, c: '#f57c00' }] : []),
+      ].concat(hasPhp ? [
+        { k: 'Avg PHP', v: this.pmFmt(avg(vals('php_resp')), 4) + 's', c: '#14b8a6' },
+        { k: 'Peak PHP', v: this.pmFmt(peak(vals('php_resp')), 3) + 's', c: '#e53935' }
+      ] : []).concat(maxWorkers > 0 ? [{ k: 'Peak Workers', v: this.pmFmt(peak(vals('workers')), 0) + '/' + maxWorkers, c: '#f57c00' }] : []),
       pmCharts: samples.length ? defs.map(d => this.pmChart(d, samples, null, hoverFrac)) : [],
       pmXLabels: samples.length
         ? [0, 0.25, 0.5, 0.75, 1].map(f => ({ t: shortStamp(samples[Math.round(f * (samples.length - 1))].time) }))

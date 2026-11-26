@@ -2467,7 +2467,14 @@ the `pm` prefix; `computePerf` is spread GUARDED into computeDetail.
   position in `pmHover`, and each chart resolves its own nearest point from
   it — so hovering any chart moves the crosshair + dot + value readout on all
   four, with one shared timestamp above the grid (v1's Chart.js crosshair
-  plugin, ~10 lines). Ranges 1H/24H/3D/7D/14D/ALL + refresh. **Dropped v1's
+  plugin, ~10 lines). Ranges 1H/24H/3D/7D/14D/ALL + refresh.
+- **PHP-FPM health probe (2026-11-26):** When samples carry `php_resp` /
+  `php_code` (from the CLI's lightweight FastCGI `cgi-fcgi` ping against
+  `tmp/cc-php-ping.php`, which bypasses Nginx page cache without booting
+  WordPress or touching the DB), `performance.js` automatically appends **Avg
+  PHP** / **Peak PHP** KPI tiles and a **PHP Response Time (seconds)** chart,
+  and annotates non-200 probe/response hover readouts with the status or
+  `timeout`. Older logs without `php_resp` stay on the 4-chart layout. **Dropped v1's
   "reset zoom"** — there is no zoom plugin to reset; drag-to-zoom is the
   obvious future add.
 - Verified live on a real monitored environment: card + 30s copy, toggle
