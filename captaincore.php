@@ -4198,6 +4198,22 @@ function captaincore_site_kinsta_accounts_func( WP_REST_Request $request ) {
 	return [ 'linked' => ! empty( $site->provider_site_id ), 'accounts' => $out ];
 }
 
+function captaincore_kinsta_links_audit_func( WP_REST_Request $request ) {
+	return CaptainCore\KinstaLinks::audit();
+}
+
+function captaincore_kinsta_links_fix_accounts_func( WP_REST_Request $request ) {
+	return CaptainCore\KinstaLinks::fix_accounts();
+}
+
+function captaincore_site_kinsta_link_func( WP_REST_Request $request ) {
+	$params = $request->get_json_params();
+	if ( ! is_array( $params ) ) {
+		$params = $request->get_params();
+	}
+	return CaptainCore\KinstaLinks::link_site( intval( $request['id'] ), $params );
+}
+
 function captaincore_site_environment_update_func( WP_REST_Request $request ) {
 	$site_id = intval( $request['id'] );
 	$env_id  = intval( $request['environment_id'] );
@@ -15231,6 +15247,30 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/kinsta-accounts', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_site_kinsta_accounts_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/kinsta-link', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_kinsta_link_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/kinsta/links', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_kinsta_links_audit_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/kinsta/links/fix-accounts', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_kinsta_links_fix_accounts_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]

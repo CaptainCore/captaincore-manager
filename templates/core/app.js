@@ -924,6 +924,7 @@ class Component extends DCLogic {
       provName: '', onProvName: () => {}, provTypeLabel: 'Select type…', provTypeOpen: false, toggleProvType: () => {},
       closeProvType: () => {}, provTypeOpts: [], provCredRows: [], addProvCred: () => {}, closeProvider: () => {},
       saveProvider: () => {}, deleteProvider: () => {},
+      ...(this.kinstaLinksVals ? this.kinstaLinksVals(s) : {}),
       ...(this._hydrated ? this.realSettingsVals(s) : {})
     };
   }

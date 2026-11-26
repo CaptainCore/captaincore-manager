@@ -170,6 +170,7 @@ return array(
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
     'CaptainCore\\KinstaAccess' => $baseDir . '/app/KinstaAccess.php',
     'CaptainCore\\KinstaBots' => $baseDir . '/app/KinstaBots.php',
+    'CaptainCore\\KinstaLinks' => $baseDir . '/app/KinstaLinks.php',
     'CaptainCore\\Licenses' => $baseDir . '/app/Licenses.php',
     'CaptainCore\\Mailer' => $baseDir . '/app/Mailer.php',
     'CaptainCore\\MailgunCLI' => $baseDir . '/app/MailgunCLI.php',

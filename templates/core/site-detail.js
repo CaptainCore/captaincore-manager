@@ -880,23 +880,63 @@ Object.assign(Component.prototype, {
   openEditSite() {
     const real = this._detail;
     if (!real || !real.site) return;
-    this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '', providerId: String(real.site.provider_id || '') };
-    this.setState({ edsOpen: true, edsSaving: false, edsEnvBusy: '' });
+    this._es = { name: real.site.name || '', provider: real.site.provider || '', key: real.site.key || '', providerId: String(real.site.provider_id || ''), kinstaInput: '' };
+    this.setState({ edsOpen: true, edsSaving: false, edsEnvBusy: '', edsLinking: false, edsLinkErr: '' });
     // Kinsta accounts, each checked for this site (where it lives after a
     // transfer between Kinsta companies).
     this._esAccts = null;
     if (real.site.provider === 'kinsta') {
-      const siteId = real.siteId;
-      this.api('/sites/' + siteId + '/kinsta-accounts').then(res => {
-        if (!this._detail || this._detail.siteId !== siteId) return;
-        this._esAccts = res && Array.isArray(res.accounts) ? res : { linked: false, accounts: [] };
-        this.setState({ tick: this.state.tick });
-      }).catch(() => { this._esAccts = { linked: false, accounts: [], failed: true }; this.setState({ tick: this.state.tick }); });
+      this.refreshEditSiteKinstaAccounts(real.siteId);
     }
     if (this._esKeys === undefined) {
       this._esKeys = null; // loading
       this.api('/keys/').then(list => { this._esKeys = Array.isArray(list) ? list : []; this.setState({ tick: this.state.tick }); })
         .catch(() => { this._esKeys = []; this.setState({ tick: this.state.tick }); });
+    }
+  },
+
+  refreshEditSiteKinstaAccounts(siteId) {
+    this._esAccts = null;
+    this.api('/sites/' + siteId + '/kinsta-accounts').then(res => {
+      if (!this._detail || this._detail.siteId !== siteId) return;
+      this._esAccts = res && Array.isArray(res.accounts) ? res : { linked: false, accounts: [] };
+      this.setState({ tick: this.state.tick });
+    }).catch(() => { this._esAccts = { linked: false, accounts: [], failed: true }; this.setState({ tick: this.state.tick }); });
+  },
+
+  async linkEditSiteKinsta() {
+    const real = this._detail, d = this._es || {};
+    if (!real || this.state.edsLinking) return;
+    const raw = (d.kinstaInput || '').trim();
+    if (!raw) { this.setState({ edsLinkErr: 'Paste a MyKinsta URL or Kinsta site UUID.' }); return; }
+    this.setState({ edsLinking: true, edsLinkErr: '' });
+    const send = body => this.api('/sites/' + real.siteId + '/kinsta-link', { method: 'POST', body });
+    try {
+      let res = await send({ input: raw, pull: true });
+      if (res && res.code === 'already_linked') {
+        const ok = await this.uiConfirm((res.message || 'That Kinsta site is already linked to another site.') + '\n\nLink this site to it anyway?');
+        if (!ok) { this.setState({ edsLinking: false }); return; }
+        res = await send({ input: raw, pull: true, force: true });
+      }
+      if (!res || res.code) {
+        this.setState({ edsLinking: false, edsLinkErr: (res && res.message) || 'Could not link Kinsta site.' });
+        return;
+      }
+      if (this._detail === real) {
+        if (res.site) real.site = res.site;
+        if (Array.isArray(res.environments)) real.envs = res.environments;
+      }
+      if (this._es) {
+        this._es.providerId = String(res.provider_id || '');
+        this._es.kinstaInput = '';
+      }
+      if (this.klApplyLinked) this.klApplyLinked(real.siteId, res);
+      this.setState({ edsLinking: false, edsLinkErr: '' });
+      const msg = this.klFormatSyncToast ? this.klFormatSyncToast((real.site && real.site.name) || 'site', res) : 'Linked Kinsta site';
+      this.toast(msg, { kind: res.remote_sync && res.remote_sync.status === 'error' ? 'info' : 'success' });
+      this.refreshEditSiteKinstaAccounts(real.siteId);
+    } catch (e) {
+      this.setState({ edsLinking: false, edsLinkErr: 'Could not reach Kinsta.' });
     }
   },
 
@@ -959,7 +999,7 @@ Object.assign(Component.prototype, {
   computeEditSiteAccounts(real, d) {
     const A = this._esAccts;
     const show = !!real && d.provider === 'kinsta' && (real.site || {}).provider === 'kinsta';
-    if (!show) return { edsAcctShow: false };
+    if (!show) return { edsAcctShow: false, edsKinstaLinkShow: false };
     const accts = A ? A.accounts : [];
     const cur = String((real.site || {}).provider_id || '');
     const pick = d.providerId || cur;
@@ -974,6 +1014,15 @@ Object.assign(Component.prototype, {
       edsAcctShow: true,
       edsAcctLoading: A === null,
       edsAcctNote: note, edsAcctHasNote: !!note,
+      edsKinstaLinkShow: !!(A && !A.failed && (!A.linked || where.length === 0)),
+      edsKinstaInput: d.kinstaInput || '',
+      onEdsKinstaInput: e => { this._es.kinstaInput = e.target.value; this.setState({ edsLinkErr: '', tick: this.state.tick }); },
+      edsKinstaInputKey: e => { if (e.key === 'Enter') this.linkEditSiteKinsta(); },
+      edsKinstaLinkLabel: this.state.edsLinking ? 'Linking…' : 'Link & pull',
+      edsKinstaLinkGo: () => this.linkEditSiteKinsta(),
+      edsKinstaLinkHasErr: !!this.state.edsLinkErr,
+      edsKinstaLinkErr: this.state.edsLinkErr || '',
+      edsOpenResolver: () => this.openKinstaLinksResolver && this.openKinstaLinksResolver(),
       edsAccts: accts.map(a => {
         const id = String(a.provider_id), on = id === pick;
         return {

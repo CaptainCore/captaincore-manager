@@ -6249,6 +6249,107 @@ button.ccc-edited:hover{color:var(--ink)}
                 </div>
               </sc-for>
             </div>
+            <sc-if value="{{ klShow }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:20px;border:1px solid var(--rule);border-radius:13px;background:var(--paper);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                  <div style="flex:1;min-width:220px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font:600 var(--fs-14) var(--sans)">Kinsta site links</span>
+                      <sc-if value="{{ klLoaded }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 var(--fs-12) var(--sans);color:var(--ok)">{{ klValidText }}</span>
+                      </sc-if>
+                    </div>
+                    <p style="margin:3px 0 0;font:400 var(--fs-125)/1.45 var(--sans);color:var(--ink-dim)">Check active Kinsta sites against your Kinsta accounts and resolve missing, moved, or stale IDs.</p>
+                  </div>
+                  <sc-if value="{{ klFixAllShow }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ klFixAll }}" style="border:1px solid var(--brand);background:var(--brand-soft);color:var(--brand-ink);font:500 var(--fs-125) var(--sans);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(.97)">{{ klFixAllLabel }}</button>
+                  </sc-if>
+                  <button onClick="{{ klRun }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-125) var(--sans);padding:7px 13px;border-radius:8px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">{{ klBtnLabel }}</button>
+                </div>
+                <sc-if value="{{ klHasErr }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:12px 16px;font:400 var(--fs-13) var(--sans);color:var(--bad);border-bottom:1px solid var(--rule)">{{ klErr }}</div>
+                </sc-if>
+                <sc-if value="{{ klLoading }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:18px 16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">Fetching live site lists from your Kinsta accounts…</div>
+                </sc-if>
+                <sc-if value="{{ klLoaded }}" hint-placeholder-val="{{ false }}">
+                  <sc-if value="{{ klPartial }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:10px 16px;background:color-mix(in srgb,var(--warn) 10%,var(--paper));color:var(--ink);font:400 var(--fs-125)/1.45 var(--sans);border-bottom:1px solid var(--rule)">{{ klPartialMsg }}</div>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                    <div class="cc-tabs" style="display:inline-flex;gap:2px;background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:3px;flex-wrap:wrap">
+                      <sc-for list="{{ klTabs }}" as="kt" hint-placeholder-count="5">
+                        <span onClick="{{ kt.go }}" style="padding:4px 10px;border-radius:6px;cursor:pointer;font:500 var(--fs-125) var(--sans);color:{{ kt.fg }};background:{{ kt.bg }};white-space:nowrap" style-hover="color:var(--ink)">{{ kt.label }}</span>
+                      </sc-for>
+                    </div>
+                    <div style="flex:1"></div>
+                    <input value="{{ klQ }}" onInput="{{ onKlQ }}" placeholder="Filter domain, slug, SFTP user, UUID…" style="width:250px;max-width:100%;height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:400 var(--fs-125) var(--sans);padding:0 10px;outline:none">
+                  </div>
+                  <sc-if value="{{ klIsIssues }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ klRows }}" as="kr" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                        <div style="flex:1;min-width:240px">
+                          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <span onClick="{{ kr.open }}" style="font:500 var(--fs-135) var(--sans);color:var(--ink);cursor:pointer" style-hover="color:var(--brand-ink);text-decoration:underline">{{ kr.name }}</span>
+                            <span style="font:500 var(--fs-11) var(--sans);color:{{ kr.badgeFg }};background:{{ kr.badgeBg }};border-radius:99px;padding:2px 8px">{{ kr.badge }}</span>
+                            <sc-if value="{{ kr.hasConnErr }}" hint-placeholder-val="{{ false }}">
+                              <span style="font:500 var(--fs-11) var(--sans);color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);border-radius:99px;padding:2px 8px">{{ kr.connErr }}</span>
+                            </sc-if>
+                          </div>
+                          <div style="margin-top:3px;font:400 var(--fs-115) var(--mono);color:var(--ink-dim);word-break:break-word">{{ kr.meta }}</div>
+                          <sc-if value="{{ kr.isWrongAcct }}" hint-placeholder-val="{{ false }}">
+                            <div style="margin-top:3px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">Kinsta site: <span style="font-family:var(--mono)">{{ kr.wrongRemoteLabel }}</span></div>
+                          </sc-if>
+                          <sc-if value="{{ kr.hasSug }}" hint-placeholder-val="{{ false }}">
+                            <div style="margin-top:4px;font:500 var(--fs-12) var(--sans);color:var(--ok)">{{ kr.sugLabel }}</div>
+                          </sc-if>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                          <sc-if value="{{ kr.isWrongAcct }}" hint-placeholder-val="{{ false }}">
+                            <button onClick="{{ kr.move }}" style="border:none;background:var(--brand);color:white;font:500 var(--fs-12) var(--sans);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(1.08)">{{ kr.moveLabel }}</button>
+                          </sc-if>
+                          <sc-if value="{{ kr.hasSug }}" hint-placeholder-val="{{ false }}">
+                            <button onClick="{{ kr.linkSug }}" style="border:none;background:var(--brand);color:white;font:500 var(--fs-12) var(--sans);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(1.08)">{{ kr.linkSugLabel }}</button>
+                          </sc-if>
+                          <sc-if value="{{ kr.canPick }}" hint-placeholder-val="{{ false }}">
+                            <button onClick="{{ kr.pick }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand)">{{ kr.pickLabel }}</button>
+                          </sc-if>
+                          <sc-if value="{{ kr.canClear }}" hint-placeholder-val="{{ false }}">
+                            <span onClick="{{ kr.clear }}" style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer;padding:4px 6px" style-hover="color:var(--bad)">Clear ID</span>
+                          </sc-if>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ klIsUnclaimed }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ klUnclaimedRows }}" as="ku" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap">
+                        <div style="flex:1;min-width:220px">
+                          <div style="font:500 var(--fs-135) var(--sans);color:var(--ink)">{{ ku.name }}</div>
+                          <div style="margin-top:2px;font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ ku.slug }} · {{ ku.prov }} · {{ ku.uuid }}</div>
+                        </div>
+                        <span onClick="{{ ku.copy }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Copy UUID</span>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ klEmpty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:20px 16px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">{{ klEmptyText }}</div>
+                  </sc-if>
+                  <sc-if value="{{ klShowPager }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel)">
+                      <span style="font:400 var(--fs-12) var(--sans);color:var(--ink-dim)">{{ klPagerText }}</span>
+                      <div style="flex:1"></div>
+                      <sc-if value="{{ klCanPrev }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ klPrev }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:5px 10px;border-radius:7px;cursor:pointer">Previous</button>
+                      </sc-if>
+                      <sc-if value="{{ klCanNext }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ klNext }}" style="border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:500 var(--fs-12) var(--sans);padding:5px 10px;border-radius:7px;cursor:pointer">Next</button>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </sc-if>
+              </div>
+            </sc-if>
           </sc-if>
 
           <sc-if value="{{ setTabDef }}" hint-placeholder-val="{{ false }}">
@@ -7453,6 +7554,22 @@ button.ccc-edited:hover{color:var(--ink)}
               </div>
               <sc-if value="{{ edsAcctHasNote }}" hint-placeholder-val="{{ false }}">
                 <p style="margin:6px 0 0;font:400 var(--fs-125)/1.5 var(--sans);color:var(--ink-dim)">{{ edsAcctNote }}</p>
+              </sc-if>
+              <sc-if value="{{ edsKinstaLinkShow }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px;padding:10px 11px;border:1px solid var(--rule);border-radius:10px;background:var(--panel);display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Link Kinsta site</span>
+                    <div style="flex:1"></div>
+                    <span onClick="{{ edsOpenResolver }}" style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);cursor:pointer" style-hover="text-decoration:underline">Review all unlinked →</span>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <input value="{{ edsKinstaInput }}" onInput="{{ onEdsKinstaInput }}" onKeyDown="{{ edsKinstaInputKey }}" placeholder="Paste MyKinsta URL or site UUID…" style="flex:1;min-width:0;height:32px;border:1px solid var(--rule);border-radius:7px;background:var(--paper);color:var(--ink);font:400 var(--fs-12) var(--mono);padding:0 9px;outline:none">
+                    <button onClick="{{ edsKinstaLinkGo }}" style="border:none;background:var(--brand);color:white;font:500 var(--fs-12) var(--sans);padding:0 12px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(1.08)">{{ edsKinstaLinkLabel }}</button>
+                  </div>
+                  <sc-if value="{{ edsKinstaLinkHasErr }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:400 var(--fs-12) var(--sans);color:var(--bad)">{{ edsKinstaLinkErr }}</span>
+                  </sc-if>
+                </div>
               </sc-if>
             </div>
           </sc-if>
@@ -9009,6 +9126,59 @@ button.ccc-edited:hover{color:var(--ink)}
           <div style="flex:1"></div>
           <span onClick="{{ closeDefaults }}" style="font:500 var(--fs-13) var(--sans);color:var(--ink-dim);cursor:pointer">Cancel</span>
           <button onClick="{{ saveDefaults }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-13) var(--sans);padding:8px 16px;border-radius:9px;cursor:pointer" style-hover="filter:brightness(1.08)">Save defaults</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══ Link Kinsta site picker dialog ══ -->
+  <sc-if value="{{ klPickOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ klClosePick }}" style="position:fixed;inset:0;background:rgb(10 14 22/.45);z-index:72;display:flex;justify-content:center;align-items:flex-start;padding:7vh 20px">
+      <div onClick="{{ stopProp }}" style="width:580px;max-width:calc(100vw - 40px);max-height:84vh;background:var(--paper);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:ccfade .15s ease">
+        <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule)">
+          <div style="min-width:0;flex:1">
+            <div style="font:600 var(--fs-15) var(--sans)">Link Kinsta site · {{ klPickSiteName }}</div>
+            <div style="margin-top:2px;font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ klPickSiteMeta }}</div>
+          </div>
+          <span onClick="{{ klClosePick }}" style="cursor:pointer;color:var(--ink-dim);width:26px;height:26px;display:grid;place-items:center;border-radius:6px" style-hover="background:var(--panel-2);color:var(--ink)">✕</span>
+        </div>
+        <div style="flex:none;padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px;background:var(--panel)">
+          <span style="font:500 var(--fs-12) var(--sans);color:var(--ink-dim)">Paste a MyKinsta URL or site UUID</span>
+          <div style="display:flex;gap:8px">
+            <input value="{{ klPickInput }}" onInput="{{ onKlPickInput }}" onKeyDown="{{ klPickInputKey }}" placeholder="https://my.kinsta.com/sites/details/… or UUID" style="flex:1;min-width:0;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);font:400 var(--fs-125) var(--mono);padding:0 10px;outline:none">
+            <button onClick="{{ klPickSubmit }}" style="border:none;background:var(--brand);color:white;font:600 var(--fs-125) var(--sans);padding:0 14px;border-radius:8px;cursor:pointer;white-space:nowrap" style-hover="filter:brightness(1.08)">{{ klPickSubmitLabel }}</button>
+          </div>
+          <sc-if value="{{ klPickHasErr }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 var(--fs-12) var(--sans);color:var(--bad)">{{ klPickErr }}</span>
+          </sc-if>
+        </div>
+        <div style="flex:none;padding:12px 18px 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px;display:flex;align-items:center;gap:6px;height:34px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:0 10px">
+            <input value="{{ klPickQ }}" onInput="{{ onKlPickQ }}" placeholder="Search Kinsta display name, SFTP user, account…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);font:400 var(--fs-13) var(--sans)">
+            <sc-if value="{{ klPickHasQ }}" hint-placeholder-val="{{ false }}">
+              <span onClick="{{ klPickClearQ }}" style="cursor:pointer;color:var(--ink-dim);font:500 var(--fs-12) var(--sans)">Clear</span>
+            </sc-if>
+          </div>
+          <div onClick="{{ klPickToggleLinked }}" role="switch" aria-checked="{{ klPickShowLinked }}" style="display:inline-flex;align-items:center;gap:7px;font:400 var(--fs-12) var(--sans);color:var(--ink-dim);cursor:pointer;user-select:none">
+            <span style="width:30px;height:18px;border-radius:99px;background:{{ klPickLinkedBg }};display:flex;align-items:center;padding:2px;justify-content:{{ klPickLinkedJust }}"><span style="width:14px;height:14px;border-radius:50%;background:white"></span></span>
+            <span>Include already linked</span>
+          </div>
+        </div>
+        <div style="flex:none;padding:0 18px 8px;font:400 var(--fs-115) var(--sans);color:var(--ink-dim)">{{ klPickCountText }}</div>
+        <div style="flex:1;overflow-y:auto;border-top:1px solid var(--rule)">
+          <sc-for list="{{ klPickOpts }}" as="ko" hint-placeholder-count="5">
+            <div onClick="{{ ko.pick }}" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--panel-2)">
+              <div style="flex:1;min-width:0">
+                <div style="font:500 var(--fs-13) var(--sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ko.name }}</div>
+                <div style="margin-top:2px;font:400 var(--fs-115) var(--mono);color:var(--ink-dim)">{{ ko.meta }}</div>
+              </div>
+              <span style="font:500 var(--fs-115) var(--sans);color:{{ ko.linkedFg }};white-space:nowrap">{{ ko.linkedLabel }}</span>
+              <span style="font:500 var(--fs-12) var(--sans);color:var(--brand-ink);white-space:nowrap">Link & pull</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ klPickEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px 18px;font:400 var(--fs-13) var(--sans);color:var(--ink-dim)">No matching Kinsta sites. Clear the search, include already linked sites, or paste a MyKinsta URL above.</div>
+          </sc-if>
         </div>
       </div>
     </div>
